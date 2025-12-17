@@ -1,8 +1,8 @@
 const teamData = [ // Renamed the constant to avoid conflict
     {image:'bar.jpg', sec : 0.2,  name: 'Innocent Ukoha', socialMeida1:'', socialMeida2:'', socialMeida3:'', socialMeida4:'', profession: 'Legal Advisor'}, 
     {image:'team-founder-CB7GGyME.jpg', sec : 0.4,  name: 'Habeeb Bright', socialMeida1:'', socialMeedia2:'', socialMeida3:'', socialMeida4:'', profession: 'Tech Bro'},
-    {image:'1761238885388.jpeg', sec : 0.6,  name: 'Davidson Okhuoya', socialMeida1:'', socialMeida2:'', socialMeida3:'', socialMeida4:'', profession: 'Business Developer'},
-    {image:'team-compliance-CO3-DPpB.jpg', sec : 0.8,  name: 'Joy Zakaa', socialMeida1:'', socialMeida2:'', socialMeida3:'', socialMeida4:'', profession: 'Financial Expert'}
+    {image:'1761238885388.jpeg', sec : 0.6,  name: 'D. O. F Okhuoya', socialMeida1:'', socialMeida2:'', socialMeida3:'', socialMeida4:'', profession: 'Business Dev'},
+    {image:'team-compliance-CO3-DPpB.jpg', sec : 0.8,  name: 'Joy Zakaa', socialMeida1:'', socialMeida2:'', socialMeida3:'', socialMeida4:'', profession: 'Financial Consultant'}
 ];
 
 // Renamed the function to renderTeam to avoid name collision with the constant
