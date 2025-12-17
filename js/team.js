@@ -17,7 +17,7 @@ function renderTeam(){
             htmlcode += `<div class ="col-md-6 col-lg-6 col-xl-3 wow fadeInUp" data-wow-delay="${element.sec}">
                          <div class="team-item">
                             <div class="team-img">
-                                <img src="img/${element.image}" class="img-fluid"  style="height: 200px; width: 250px;" alt="">
+                                <img src="img/${element.image}" class="img-fluid"  style="height: 205px; width: 250px;" alt="">
                             </div>
                             <div class="team-title">
                                 <h4 class="mb-0">${element.name}</h4>
