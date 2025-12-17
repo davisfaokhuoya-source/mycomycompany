@@ -1,7 +1,7 @@
 const teamData = [ // Renamed the constant to avoid conflict
     {image:'bar.jpg', sec : 0.2,  name: 'Innocent Ukoha', socialMeida1:'', socialMeida2:'', socialMeida3:'', socialMeida4:'', profession: 'Legal Advisor'}, 
     {image:'team-founder-CB7GGyME.jpg', sec : 0.4,  name: 'Habeeb Bright', socialMeida1:'', socialMeedia2:'', socialMeida3:'', socialMeida4:'', profession: 'Tech Bro'},
-    {image:'1761238885388.jpeg', sec : 0.6,  name: 'Davidson Okhuoya', socialMeida1:'', socialMeida2:'', socialMeida3:'', socialMeida4:'', profession: 'Project Manager'},
+    {image:'1761238885388.jpeg', sec : 0.6,  name: 'Davidson Okhuoya', socialMeida1:'', socialMeida2:'', socialMeida3:'', socialMeida4:'', profession: 'Business Developer'},
     {image:'team-compliance-CO3-DPpB.jpg', sec : 0.8,  name: 'Joy Zakaa', socialMeida1:'', socialMeida2:'', socialMeida3:'', socialMeida4:'', profession: 'Financial Expert'}
 ];
 
@@ -17,7 +17,7 @@ function renderTeam(){
             htmlcode += `<div class ="col-md-6 col-lg-6 col-xl-3 wow fadeInUp" data-wow-delay="${element.sec}">
                          <div class="team-item">
                             <div class="team-img">
-                                <img src="img/${element.image}" class="img-fluid"  style="height: 220px; width: 250px;" alt="">
+                                <img src="img/${element.image}" class="img-fluid"  style="height: 200px; width: 250px;" alt="">
                             </div>
                             <div class="team-title">
                                 <h4 class="mb-0">${element.name}</h4>
