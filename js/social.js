@@ -33,6 +33,7 @@ function navbar() {
                         <a href="service.html" class="nav-item nav-link">Services</a>
                         <a href="contact.html" class="nav-item nav-link">Contact Us</a>
                         <a href="policy.html" class="nav-item nav-link">Policies</a>
+                         <a href="portal.html" class="nav-item nav-link">Portal</a>
                     </div>
                     <a href="https://flutterwave.com/pay/cxbndrtmjsdj" class="btn btn-primary rounded-pill py-2 px-4 my-3 my-lg-0 flex-shrink-0">Make Payment</a>
                 </div>`}
