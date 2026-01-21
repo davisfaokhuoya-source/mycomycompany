@@ -31,6 +31,8 @@ function navbar() {
                         <a href="index.html" class="nav-item nav-link ">Home</a>
                         <a href="about.html" class="nav-item nav-link">About</a>
                         <a href="service.html" class="nav-item nav-link">Services</a>
+                        <a href="pricelist.html" class="nav-item nav-link">Prices List</a>
+                        <a href="value.html" class="nav-item nav-link">Request Services</a>
                         <a href="contact.html" class="nav-item nav-link">Contact Us</a>
                         <a href="policy.html" class="nav-item nav-link">Policies</a>
                          <a href="portal.html" class="nav-item nav-link">Portal</a>
