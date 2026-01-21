@@ -41,7 +41,6 @@ function navbar() {
                 </div>`}
 navbar();
 
-
 // Get all elements with the class 'nav-link'
     const navLinks = document.querySelectorAll('.nav-link');
 
