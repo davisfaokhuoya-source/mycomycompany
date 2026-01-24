@@ -35,12 +35,15 @@ function navbar() {
                         <a href="value.html" class="nav-item nav-link">Request Services</a>
                         <a href="contact.html" class="nav-item nav-link">Contact Us</a>
                         <a href="policy.html" class="nav-item nav-link">Policies</a>
-                        <div class="dropdown">
-                            <a href="#" class="dropdown-toggle text-dark" data-bs-toggle="dropdown"><a href="#" class="dropdown-item">For Staff</a>
-                            <div class="dropdown-menu rounded">
+                         <div class="nav-item dropdown">
+                            <a href="#" class="nav-link active" data-bs-toggle="dropdown">
+                                <span class="dropdown-toggle">For Staff</span>
+                            </a>
+                            <div class="dropdown-menu m-0">
                                 <a href="portal.html" class="dropdown-item">Staff Portal</a>
-                                <a href="email.html" class="dropdown-item"> Email Portal</a>
+                                <a href="email.html" class="dropdown-item active">Email Portal</a>
                             </div>
+                        </div>
                     </div>
                     <a href="https://flutterwave.com/pay/cxbndrtmjsdj" class="btn btn-primary rounded-pill py-2 px-4 my-3 my-lg-0 flex-shrink-0">Make Payment</a>
                 </div>`}
