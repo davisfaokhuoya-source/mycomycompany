@@ -35,7 +35,6 @@ function navbar() {
                         <a href="value.html" class="nav-item nav-link">Request Services</a>
                         <a href="contact.html" class="nav-item nav-link">Contact Us</a>
                         <a href="policy.html" class="nav-item nav-link">Policies</a>
-                         <a href="portal.html" class="nav-item nav-link">Staff Portal</a>
                         <div class="dropdown">
                             <a href="#" class="dropdown-toggle text-dark" data-bs-toggle="dropdown"><a href="#" class="dropdown-item">For Staff</a>
                             <div class="dropdown-menu rounded">
