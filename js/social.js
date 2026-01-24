@@ -37,7 +37,7 @@ function navbar() {
                         <a href="policy.html" class="nav-item nav-link">Policies</a>
                          <div class="nav-item dropdown">
                             <a href="#" class="nav-link active" data-bs-toggle="dropdown">
-                                <span class="dropdown-toggle">For Staff</span>
+                                <span class="dropdown-toggle">Staff</span>
                             </a>
                             <div class="dropdown-menu m-0">
                                 <a href="portal.html" class="dropdown-item">Staff Portal</a>
