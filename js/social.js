@@ -37,9 +37,8 @@ function navbar() {
                         <a href="policy.html" class="nav-item nav-link">Policies</a>
                          <a href="portal.html" class="nav-item nav-link">Staff Portal</a>
                         <div class="dropdown">
-                            <a href="#" class="dropdown-toggle text-dark" data-bs-toggle="dropdown"><small><i class="fa fa-home text-primary me-2"></i> My Dashboard</small></a>
+                            <a href="#" class="dropdown-toggle text-dark" data-bs-toggle="dropdown"><a href="#" class="dropdown-item">For Staff</a>
                             <div class="dropdown-menu rounded">
-                                <a href="#" class="dropdown-item">For Staff</a>
                                 <a href="portal.html" class="dropdown-item">Staff Portal</a>
                                 <a href="email.html" class="dropdown-item"> Email Portal</a>
                             </div>
