@@ -31,11 +31,18 @@ function navbar() {
                         <a href="index.html" class="nav-item nav-link ">Home</a>
                         <a href="about.html" class="nav-item nav-link">About</a>
                         <a href="service.html" class="nav-item nav-link">Services</a>
-                        <a href="pricelist.html" class="nav-item nav-link">Prices List</a>
+                        <a href="pricelist.html" class="nav-item nav-link">Service Fees</a>
                         <a href="value.html" class="nav-item nav-link">Request Services</a>
                         <a href="contact.html" class="nav-item nav-link">Contact Us</a>
                         <a href="policy.html" class="nav-item nav-link">Policies</a>
-                         <a href="portal.html" class="nav-item nav-link">Portal</a>
+                         <a href="portal.html" class="nav-item nav-link">Staff Portal</a>
+                        <div class="dropdown">
+                            <a href="#" class="dropdown-toggle text-dark" data-bs-toggle="dropdown"><small><i class="fa fa-home text-primary me-2"></i> My Dashboard</small></a>
+                            <div class="dropdown-menu rounded">
+                                <a href="#" class="dropdown-item">For Staff</a>
+                                <a href="portal.html" class="dropdown-item">Staff Portal</a>
+                                <a href="email.html" class="dropdown-item"> Email Portal</a>
+                            </div>
                     </div>
                     <a href="https://flutterwave.com/pay/cxbndrtmjsdj" class="btn btn-primary rounded-pill py-2 px-4 my-3 my-lg-0 flex-shrink-0">Make Payment</a>
                 </div>`}
