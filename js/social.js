@@ -31,7 +31,6 @@ function navbar() {
                         <a href="index.html" class="nav-item nav-link ">Home</a>
                         <a href="about.html" class="nav-item nav-link">About</a>
                         <a href="service.html" class="nav-item nav-link">Services</a>
-                        <a href="pricelist.html" class="nav-item nav-link">Service Fees</a>
                         <a href="value.html" class="nav-item nav-link">Request Services</a>
                         <a href="contact.html" class="nav-item nav-link">Contact Us</a>
                         <a href="policy.html" class="nav-item nav-link">Policies</a>
@@ -42,6 +41,16 @@ function navbar() {
                             <div class="dropdown-menu m-0">
                                 <a href="portal.html" class="dropdown-item">Staff Portal</a>
                                 <a href="email.html" class="dropdown-item active">Email Portal</a>
+                            </div>
+                        </div>
+                        <div class="nav-item dropdown">
+                            <a href="#" class="nav-link active" data-bs-toggle="dropdown">
+                                <span class="dropdown-toggle">Others</span>
+                            </a>
+                            <div class="dropdown-menu m-0">
+                                <a href="/appointment.html" class="dropdown-item">Book Appointment</a>
+                                <a href="/list.html" class="dropdown-item">Service Fees</a>
+                                <a href="/gaas.html" class="dropdown-item">Premium Services</a>
                             </div>
                         </div>
                     </div>
