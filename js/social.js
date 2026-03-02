@@ -48,9 +48,7 @@ function navbar() {
                                 <span class="dropdown-toggle">Others</span>
                             </a>
                             <div class="dropdown-menu m-0">
-                                <a href="/appointment.html" class="dropdown-item">Book Appointment</a>
-                                <a href="/list.html" class="dropdown-item">Service Fees</a>
-                                <a href="/gaas.html" class="dropdown-item">Premium Services</a>
+                                <a href="/appointment.html" class="dropdown-item">Book Appointment</a><a href="/gaas.html" class="dropdown-item">Premium Services</a>
                             </div>
                         </div>
                     </div>
