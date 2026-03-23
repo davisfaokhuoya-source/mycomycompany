@@ -30,8 +30,7 @@ function navbar() {
                     <div class="navbar-nav ms-auto py-0">
                         <a href="index.html" class="nav-item nav-link ">Home</a>
                         <a href="about.html" class="nav-item nav-link">About</a>
-                        <a href="service.html" class="nav-item nav-link">Services</a>
-                        <a href="value.html" class="nav-item nav-link">Request Services</a>
+                        <a href="/appointment.html" class="dropdown-item">Book Appointment</a>
                         <a href="contact.html" class="nav-item nav-link">Contact Us</a>
                         <a href="policy.html" class="nav-item nav-link">Policies</a>
                          <div class="nav-item dropdown">
@@ -45,10 +44,11 @@ function navbar() {
                         </div>
                         <div class="nav-item dropdown">
                             <a href="#" class="nav-link active" data-bs-toggle="dropdown">
-                                <span class="dropdown-toggle">Others</span>
+                                <span class="dropdown-toggle">Services</span>
                             </a>
-                            <div class="dropdown-menu m-0">
-                                <a href="/appointment.html" class="dropdown-item">Book Appointment</a><a href="/gaas.html" class="dropdown-item">Premium Services</a>
+                            <div class="dropdown-menu m-0"><a href="service.html" class="nav-item nav-link">Services</a>
+                                <a href="value.html" class="nav-item nav-link">Request Services</a>
+                                <a href="/gaas.html" class="dropdown-item">Premium Services</a>
                             </div>
                         </div>
                     </div>

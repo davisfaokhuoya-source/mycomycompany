@@ -13,15 +13,7 @@ const ourservices = [
     // General Contract
     { category: 'General Contract', link: 'procurement-supply', topic: 'Procurement and Supply', text: 'Sourcing goods, managing vendors, and ensuring timely delivery of essential supplies.', image: 'closeup-businessman-using-mobile-phone.jpg' },
     { category: 'General Contract', link: 'printing-designing-branding', topic: 'Printing, Designing and Branding', text: 'Logo design, branding strategy, complementary cards, flyers, brochures, and professional printing services.', image: 'happy-african-american-businesswoman-working-touchpad-office.jpg' },
-    { category: 'General Contract', link: 'construction-infrastructural-project', topic: 'Construction and Infrastructural Projects', text: 'Handling diverse construction and infrastructure development projects.', image: 'construction.jpg'},
-    { category: 'General Contract', link: 'project-supervision', topic: 'Project Supervision', text: 'Monitoring and managing project execution to ensure quality and timely delivery.', image: 'business-people-discussion.jpg'},
-     { 
-        category: 'General Contract', 
-        link: 'web-development', 
-        topic: 'Web Development Services', 
-        text: 'End-to-end website design, development, maintenance, and e-commerce solutions tailored to your business needs.', 
-        image: 'istockphoto-1075599562-612x612.jpg'
-    },
+    { category: 'General Contract', link: 'construction-infrastructural-project', topic: 'Construction and Renovations', text: 'Handling diverse construction and renovations project.', image: 'construction.jpg'},
 ];
 
 
