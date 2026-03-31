@@ -35,11 +35,12 @@ function navbar() {
                         <a href="policy.html" class="nav-item nav-link">Policies</a>
                          <div class="nav-item dropdown">
                             <a href="#" class="nav-link active" data-bs-toggle="dropdown">
-                                <span class="dropdown-toggle">Staff</span>
+                                <span class="dropdown-toggle">Login</span>
                             </a>
                             <div class="dropdown-menu m-0">
+                                <a href="portal.html" class="dropdown-item">Support Programme</a>
                                 <a href="portal.html" class="dropdown-item">Staff Portal</a>
-                                <a href="email.html" class="dropdown-item active">Email Portal</a>
+                                <a href="email.html" class="dropdown-item">Email Portal</a>
                             </div>
                         </div>
                         <div class="nav-item dropdown">
@@ -160,6 +161,94 @@ function getstartedbody(){
 // Call the functions after defining the corrected feactured array
 getstartedlink();
 getstartedbody();
+
+const spp = [
+    {
+        topic: 'Earn Up to $300+ Monthly from Home',
+        link: 'sppcollapseOne',
+        image: '30s-Adult.jpg',
+        text: 'Work from anywhere, at your own pace. As a Victorias Affiliate Partner, you can earn substantial commissions by simply referring clients for CAC, SCUML, and other corporate compliance services. Top performers consistently earn $200 to $400+ every month with zero inventory or overhead costs.'
+    },
+    {
+        topic: 'Flexible Work-from-Home Opportunity',
+        link: 'sppcollapseTwo',
+        image: 'pexels-mart-production-7709254.jpg',
+        text: 'No office, no fixed hours, no boss. Join our affiliate programme and build your own income stream from the comfort of your home. Whether you\'re a student, full-time worker, or entrepreneur, you can start earning today by connecting businesses and individuals with our fast corporate registration services.'
+    },
+    {
+        topic: 'Progressive Commissions & Level System',
+        link: 'sppcollapseThree',
+        image: '30s-Adult.jpg',
+        text: 'Start at Level 1 and grow with us. The more clients you successfully refer, the higher your level and commission rates become. Enjoy increasing earnings per client as you unlock better rewards. Our transparent level system rewards consistent performers with higher payouts and exclusive benefits.'
+    },
+    {
+        topic: 'Be Part of a Trusted & Growing Network',
+        link: 'sppcollapseFour',
+        image: 'pexels-mart-production-7709254.jpg',
+        text: 'Join thousands of ambitious Nigerians building sustainable income with The Victorias Ltd. Gain access to high-demand services, professional support, timely payments, and a reputable brand name. Turn your network into a profitable asset and become a key player in Nigeria’s corporate compliance industry.'
+    }
+];
+
+// ====================== GENERATE LINKS (Left Sidebar) ======================
+function spplink() {
+    const container = document.querySelector('.spplink');
+    if (!container) return;
+
+    let htmlcode = '';
+
+    spp.forEach((item, index) => {
+        const activeClass = index === 0 ? 'active' : '';
+        
+        htmlcode += `
+            <a class="accordion-link p-4 mb-4 ${activeClass}" 
+               data-bs-toggle="pill" 
+               href="#${item.link}">
+                <h5 class="mb-0">${item.topic}</h5>
+            </a>`;
+    });
+    
+    container.innerHTML = htmlcode;
+}
+
+// ====================== GENERATE CONTENT (Right Side Panels) ======================
+function sppbody() {
+    const container = document.querySelector('.sppbody');
+    if (!container) return;
+
+    let htmlcode = '';
+
+    spp.forEach((item, index) => {
+        const activeClass = index === 0 ? 'active show' : '';
+
+        htmlcode += `
+            <div id="${item.link}" class="tab-pane fade p-0 ${activeClass}">
+                <div class="row g-4">
+                    <div class="col-md-7">
+                        <img src="img/${item.image}" 
+                             class="img-fluid w-100 rounded" 
+                             alt="${item.topic}">
+                    </div>
+                    <div class="col-md-5">
+                        <h1 class="display-5 mb-4">${item.topic}</h1>
+                        <p class="mb-4">${item.text}</p>
+                        <a class="btn btn-primary rounded-pill py-3 px-5" 
+                           href="https://thevictorias.com.ng/spp.html">
+                            Join Now - Get Started
+                        </a>
+                    </div>
+                </div>
+            </div>`;
+    });
+    
+    container.innerHTML = htmlcode;
+}
+
+// ====================== INITIALIZE ======================
+document.addEventListener('DOMContentLoaded', () => {
+    spplink();
+    sppbody();
+});
+
 
 const blogHolder = [
     {topic:'Ethics for K-12 Management Staff', image: 'https://www.shutterstock.com/image-photo/question-black-woman-smile-seminar-600nw-2485563421.jpg?ixlib=rb-4.0.3&auto=format&fit=crop&q=80" alt="ethics for school', photo: 'img/thevictoriaslogo.png',text: 'Helping teachers to understand ethics and integrity to install value in k-12 students', writer: 'Admin', date: 'Dec 2025'},
