@@ -91,7 +91,9 @@
                             <h4 class="text-center mb-4 text-primary">Login</h4>
                             <div class="mb-3"><input type="email" id="loginEmail" class="form-control" placeholder="Email"></div>
                             <div class="mb-3"><input type="password" id="loginPassword" class="form-control" placeholder="Password"></div>
-                            <button onclick="handleLogin()" class="btn btn-primary w-100 py-3">Login</button>
+                            <button onclick="handleLogin()" class="btn btn-primary w-100 py-3">Login</button><br><a href="#" onclick="document.getElementById('forgotModal').classList.add('show');" data-bs-toggle="modal" data-bs-target="#forgotModal">
+  Forgot Password?
+</a>
                         </div>
 
                         <div class="tab-pane fade" id="registerTab">
@@ -272,8 +274,69 @@
                 </table>
             </div>
         </div>
+    <!-- Update Profile Section (add inside your dashboard tab, e.g. tabContent3 or a new tab) -->
+<div id="profileTab" class="tab-pane">
+  <h4>Edit Profile</h4>
+  <form id="profileForm">
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label>Name</label>
+        <input type="text" id="editName" class="form-control">
+      </div>
+      <div class="col-md-6 mb-3">
+        <label>State</label>
+        <input type="text" id="editState" class="form-control">
+      </div>
+      <div class="col-md-6 mb-3">
+        <label>Phone</label>
+        <input type="tel" id="editPhone" class="form-control">
+      </div>
+      <div class="col-md-6 mb-3">
+        <label>Account Number</label>
+        <input type="text" id="editAccountNumber" class="form-control">
+      </div>
+      <div class="col-md-6 mb-3">
+        <label>Account Name</label>
+        <input type="text" id="editAccountName" class="form-control">
+      </div>
+      <div class="col-md-6 mb-3">
+        <label>Bank Name</label>
+        <input type="text" id="editBankName" class="form-control">
+      </div>
+    </div>
+    <button type="button" class="btn btn-success" onclick="updateProfile()">Save Changes</button>
+  </form>
+</div>
     </div>
 </div>
+<!-- Forgot Password Modal -->
+<div class="modal fade" id="forgotModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Forgot Password</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="forgotStep1">
+          <p>Enter your registered email address</p>
+          <input type="email" id="forgotEmail" class="form-control" placeholder="your@email.com" required>
+        </div>
+        <div id="forgotStep2" class="d-none">
+          <p>Enter the 6-digit code sent to your email</p>
+          <input type="text" id="resetCode" class="form-control mb-3" maxlength="6" placeholder="123456">
+          <input type="password" id="newPassword" class="form-control" placeholder="New Password">
+          <small class="text-muted">Password must be 8+ characters with uppercase, lowercase, number & symbol</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="forgotBtn" onclick="handleForgotPassword()">Send Reset Code</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <div class="addfooter"></div>
 
@@ -711,6 +774,106 @@ window.onload = () => {
         loadDashboard();
     }
 };
+
+// ====================== FORGOT & RESET PASSWORD ======================
+let currentResetEmail = "";
+
+async function handleForgotPassword() {
+  const btn = document.getElementById("forgotBtn");
+  const step1 = document.getElementById("forgotStep1");
+  const step2 = document.getElementById("forgotStep2");
+
+  if (!step2.classList.contains("d-none")) {
+    // Step 2: Reset password
+    const code = document.getElementById("resetCode").value.trim();
+    const newPass = document.getElementById("newPassword").value.trim();
+
+    if (!code || !newPass) {
+      alert("Please enter code and new password");
+      return;
+    }
+
+    const res = await apiCall("resetPassword", {
+      email: currentResetEmail,
+      code: code,
+      newPassword: newPass
+    });
+
+    if (res.success) {
+      alert(res.message);
+      bootstrap.Modal.getInstance(document.getElementById("forgotModal")).hide();
+      // Clear fields
+      document.getElementById("resetCode").value = "";
+      document.getElementById("newPassword").value = "";
+    } else {
+      alert(res.message || "Reset failed");
+    }
+  } else {
+    // Step 1: Send reset code
+    const email = document.getElementById("forgotEmail").value.trim();
+    if (!email) {
+      alert("Please enter your email");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Sending...";
+
+    const res = await apiCall("forgotPassword", { email });
+
+    btn.disabled = false;
+    btn.textContent = "Send Reset Code";
+
+    if (res.success) {
+      currentResetEmail = email;
+      step1.classList.add("d-none");
+      step2.classList.remove("d-none");
+      btn.textContent = "Reset Password";
+      alert("Reset code has been sent to your email");
+    } else {
+      alert(res.message || "Failed to send reset code");
+    }
+  }
+}
+
+// ====================== UPDATE PROFILE ======================
+async function updateProfile() {
+  if (!currentToken) {
+    alert("Please login first");
+    return;
+  }
+
+  const data = {
+    name: document.getElementById("editName").value.trim(),
+    state: document.getElementById("editState").value.trim(),
+    phone: document.getElementById("editPhone").value.trim(),
+    accountNumber: document.getElementById("editAccountNumber").value.trim(),
+    accountName: document.getElementById("editAccountName").value.trim(),
+    bankName: document.getElementById("editBankName").value.trim()
+  };
+
+  const res = await apiCall("updateProfile", { token: currentToken, ...data });
+
+  if (res.success) {
+    alert("Profile updated successfully!");
+    // Optional: refresh dashboard
+    loadDashboard();
+  } else {
+    alert(res.message || "Failed to update profile");
+  }
+}
+
+// Add this to your window.onload or after login success
+function showProfileTab() {
+  // Example: switch to profile tab (adjust tab number as needed)
+  showTab(3); // Change number based on your tab order
+}
+
+// Optional: Pre-fill profile form when dashboard loads
+async function loadProfileData() {
+  // You can expand this later to fetch current user data if needed
+  // For now, you can leave the fields empty or pre-fill from currentUser
+}
 </script>
 <script src="lib/wow/wow.min.js"></script>
         <script src="lib/easing/easing.min.js"></script>
