@@ -655,14 +655,14 @@ async function handleLogin() {
     }
 }
 
-// ====================== DASHBOARD - FIXED FOR LEVEL REFRESH ======================
+// ====================== DASHBOARD ======================
 async function loadDashboard() {
     if (!currentUser) return;
 
-    // Force refresh user data (including latest level) from backend
+    // Refresh latest user data including level
     const refreshRes = await apiCall("getDashboard", { token: currentToken });
     if (refreshRes.success && refreshRes.user) {
-        currentUser = refreshRes.user;   // This fixes stagnant level
+        currentUser = refreshRes.user;
     }
 
     document.getElementById("dashUsername").textContent = currentUser.username || currentUser.name || "Partner";
@@ -735,10 +735,96 @@ function markTrainingComplete() {
     }
 }
 
-// ====================== OTHER FUNCTIONS (unchanged) ======================
-async function loadMyRecords() { /* your existing code */ }
-async function submitClientForm() { /* your existing code */ }
-async function loadMyUpgrades() { /* your existing code */ }
+// ====================== REAL FUNCTIONS (NO PLACEHOLDERS) ======================
+async function loadMyRecords() {
+    const tbody = document.querySelector("#recordsTable tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "<tr><td colspan='6' class='text-center'>Loading...</td></tr>";
+
+    const res = await apiCall("getMyRecords", { token: currentToken });
+    tbody.innerHTML = "";
+
+    if (res.success && res.records && res.records.length > 0) {
+        res.records.forEach(r => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${new Date(r.date).toLocaleDateString('en-GB')}</td>
+                <td>${r.clientName || r.name}</td>
+                <td>${r.service}</td>
+                <td><span class="badge bg-${r.status === 'Approved' ? 'success' : 'warning'}">${r.status}</span></td>
+                <td class="text-end">₦${(r.earnings || 0).toLocaleString()}</td>
+                <td>${r.payoutStatus || 'Pending'}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    } else {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No records yet.</td></tr>`;
+    }
+}
+
+async function submitClientForm() {
+    const formData = {
+        clientName: document.getElementById("cName").value.trim(),
+        location: document.getElementById("cLocation").value.trim(),
+        phone: document.getElementById("cPhone").value.trim(),
+        whatsapp: document.getElementById("cWhatsapp").value.trim(),
+        email: document.getElementById("cEmail").value.trim(),
+        areaSourced: document.getElementById("cArea").value.trim(),
+        service: document.getElementById("cService").value,
+        urgency: document.getElementById("cUrgency").value,
+        prefComm: document.getElementById("cComm").value,
+        comments: document.getElementById("cComments").value.trim()
+    };
+
+    if (!formData.clientName || !formData.phone || !formData.service) {
+        return alert("Client Name, Phone and Service are required");
+    }
+
+    const res = await apiCall("submitClient", { token: currentToken, formData });
+    if (res.success) {
+        alert("✅ Client submitted successfully!");
+        clearClientForm();
+        loadMyRecords();
+        showTab(1);
+    } else {
+        alert(res.message || "Failed to submit client");
+    }
+}
+
+function clearClientForm() {
+    document.getElementById("cName").value = "";
+    document.getElementById("cLocation").value = "";
+    document.getElementById("cPhone").value = "";
+    document.getElementById("cWhatsapp").value = "";
+    document.getElementById("cEmail").value = "";
+    document.getElementById("cArea").value = "";
+    document.getElementById("cComments").value = "";
+}
+
+async function loadMyUpgrades() {
+    const tbody = document.querySelector("#upgradeTable tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "<tr><td colspan='4' class='text-center'>Loading...</td></tr>";
+
+    const res = await apiCall("getMyUpgrades", { token: currentToken });
+    tbody.innerHTML = "";
+
+    if (res.success && res.upgrades && res.upgrades.length > 0) {
+        res.upgrades.forEach(u => {
+            const badge = u.status === "Approved" ? "success" : u.status === "Rejected" ? "danger" : "warning";
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${new Date(u.date).toLocaleDateString('en-GB')}</td>
+                <td>${u.type}</td>
+                <td><span class="badge bg-${badge}">${u.status}</span></td>
+                <td>${u.notes || "—"}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    } else {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No upgrade requests yet.</td></tr>`;
+    }
+}
 
 async function populateAvailableTasks() {
     const select = document.getElementById("cService");
@@ -763,12 +849,115 @@ async function populateAvailableTasks() {
     }
 }
 
-async function loadEarningsAndPayout() { /* your existing code */ }
-async function requestPayout() { /* your existing code */ }
-async function sendUpgradeRequest() { /* your existing code */ }
-async function loadProfileData() { /* your existing code */ }
-async function updateProfile() { /* your existing code */ }
-async function handleForgotPassword() { /* your existing code */ }
+async function loadEarningsAndPayout() {
+    const res = await apiCall("getMyEarnings", { token: currentToken });
+    if (!res.success) return;
+
+    document.getElementById("totalEarned").textContent = `₦${(res.totalNaira || 0).toLocaleString()}`;
+    document.getElementById("successRate").textContent = `${res.successRate || 0}%`;
+    document.getElementById("currentLevel").textContent = res.currentLevel || 1;
+    document.getElementById("balanceAmount").textContent = `₦${(res.totalNaira || 0).toLocaleString()}`;
+
+    const payoutBtn = document.getElementById("payoutBtn");
+    payoutBtn.disabled = (res.totalNaira || 0) < 15000;
+}
+
+async function requestPayout() {
+    alert("Payout request feature coming soon.");
+}
+
+async function sendUpgradeRequest() {
+    const requestType = document.getElementById("upgradeType").value;
+    const message = document.getElementById("upgradeMessage").value.trim();
+    if (!message) return alert("Please describe your request");
+
+    const res = await apiCall("requestUpgrade", { token: currentToken, requestType, message });
+    if (res.success) {
+        alert("✅ Upgrade request submitted!");
+        document.getElementById("upgradeMessage").value = "";
+        loadMyUpgrades();
+        showTab(3);
+    } else {
+        alert(res.message || "Failed to submit request");
+    }
+}
+
+async function loadProfileData() {
+    if (!currentUser) return;
+    document.getElementById("editName").value = currentUser.name || "";
+    document.getElementById("editState").value = currentUser.state || "";
+    document.getElementById("editPhone").value = currentUser.phone || "";
+    document.getElementById("editAccountNumber").value = currentUser.accountNumber || "";
+    document.getElementById("editAccountName").value = currentUser.accountName || "";
+    document.getElementById("editBankName").value = currentUser.bankName || "";
+}
+
+async function updateProfile() {
+    if (!currentToken) return alert("Please login first");
+
+    const data = {
+        name: document.getElementById("editName").value.trim(),
+        state: document.getElementById("editState").value.trim(),
+        phone: document.getElementById("editPhone").value.trim(),
+        accountNumber: document.getElementById("editAccountNumber").value.trim(),
+        accountName: document.getElementById("editAccountName").value.trim(),
+        bankName: document.getElementById("editBankName").value.trim()
+    };
+
+    Object.keys(data).forEach(key => { if (!data[key]) delete data[key]; });
+
+    if (Object.keys(data).length === 0) return alert("No changes to save");
+
+    const res = await apiCall("updateProfile", { token: currentToken, ...data });
+    if (res.success) {
+        alert("✅ Profile updated successfully!");
+        loadDashboard();
+    } else {
+        alert(res.message || "Failed to update profile");
+    }
+}
+
+async function handleForgotPassword() {
+    const btn = document.getElementById("forgotBtn");
+    const step1 = document.getElementById("forgotStep1");
+    const step2 = document.getElementById("forgotStep2");
+
+    if (!step2.classList.contains("d-none")) {
+        const code = document.getElementById("resetCode").value.trim();
+        const newPass = document.getElementById("newPassword").value.trim();
+
+        if (!code || !newPass) return alert("Please enter code and new password");
+
+        const res = await apiCall("resetPassword", { email: currentResetEmail, code, newPassword: newPass });
+        if (res.success) {
+            alert(res.message);
+            bootstrap.Modal.getInstance(document.getElementById("forgotModal")).hide();
+        } else {
+            alert(res.message || "Reset failed");
+        }
+    } else {
+        const email = document.getElementById("forgotEmail").value.trim();
+        if (!email) return alert("Please enter your email");
+
+        btn.disabled = true;
+        btn.textContent = "Sending...";
+
+        const res = await apiCall("forgotPassword", { email });
+
+        btn.disabled = false;
+        btn.textContent = "Send Reset Code";
+
+        if (res.success) {
+            currentResetEmail = email;
+            step1.classList.add("d-none");
+            step2.classList.remove("d-none");
+            btn.textContent = "Reset Password";
+            alert("Reset code has been sent to your email");
+        } else {
+            alert(res.message || "Failed to send reset code");
+        }
+    }
+}
 
 function logout() {
     localStorage.clear();
