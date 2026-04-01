@@ -655,9 +655,15 @@ async function handleLogin() {
     }
 }
 
-// ====================== DASHBOARD ======================
+// ====================== DASHBOARD - FIXED FOR LEVEL REFRESH ======================
 async function loadDashboard() {
     if (!currentUser) return;
+
+    // Force refresh user data (including latest level) from backend
+    const refreshRes = await apiCall("getDashboard", { token: currentToken });
+    if (refreshRes.success && refreshRes.user) {
+        currentUser = refreshRes.user;   // This fixes stagnant level
+    }
 
     document.getElementById("dashUsername").textContent = currentUser.username || currentUser.name || "Partner";
     document.getElementById("dashUniqueID").textContent = currentUser.uniqueID || "VS-XXXX";
@@ -698,27 +704,16 @@ function loadTrainingAcademy() {
     
     document.getElementById("currentLevelBadge").innerHTML = `Current Level: <strong>Level ${userLevel}</strong> (${getCommissionRate(userLevel)} Commission)`;
 
-    // Show Level 1 for everyone
     document.getElementById("level1").classList.remove("d-none");
 
-    // Show higher levels only if user has reached them
-    if (userLevel >= 2) {
-        document.getElementById("level2").classList.remove("d-none");
-    } else {
-        document.getElementById("level2").classList.add("d-none");
-    }
+    if (userLevel >= 2) document.getElementById("level2").classList.remove("d-none");
+    else document.getElementById("level2").classList.add("d-none");
 
-    if (userLevel >= 3) {
-        document.getElementById("level3").classList.remove("d-none");
-    } else {
-        document.getElementById("level3").classList.add("d-none");
-    }
+    if (userLevel >= 3) document.getElementById("level3").classList.remove("d-none");
+    else document.getElementById("level3").classList.add("d-none");
 
-    if (userLevel >= 4) {
-        document.getElementById("level4").classList.remove("d-none");
-    } else {
-        document.getElementById("level4").classList.add("d-none");
-    }
+    if (userLevel >= 4) document.getElementById("level4").classList.remove("d-none");
+    else document.getElementById("level4").classList.add("d-none");
 
     const certNote = document.getElementById("certificateNote");
     if (userLevel >= 3) certNote.classList.remove("d-none");
@@ -744,7 +739,30 @@ function markTrainingComplete() {
 async function loadMyRecords() { /* your existing code */ }
 async function submitClientForm() { /* your existing code */ }
 async function loadMyUpgrades() { /* your existing code */ }
-async function populateAvailableTasks() { /* your existing code */ }
+
+async function populateAvailableTasks() {
+    const select = document.getElementById("cService");
+    if (!select) return;
+    select.innerHTML = '<option value="">Loading available tasks...</option>';
+
+    const res = await apiCall("getMyAvailableTasks", { token: currentToken });
+    select.innerHTML = "";
+
+    if (res.success && res.tasks && res.tasks.length > 0) {
+        res.tasks.forEach(t => {
+            const option = document.createElement("option");
+            option.value = t.taskName;
+            option.textContent = `${t.taskName} (₦${(t.commissionNaira || 0).toLocaleString()})`;
+            select.appendChild(option);
+        });
+    } else {
+        const option = document.createElement("option");
+        option.textContent = res.message || "No tasks available for your current level yet";
+        option.disabled = true;
+        select.appendChild(option);
+    }
+}
+
 async function loadEarningsAndPayout() { /* your existing code */ }
 async function requestPayout() { /* your existing code */ }
 async function sendUpgradeRequest() { /* your existing code */ }
