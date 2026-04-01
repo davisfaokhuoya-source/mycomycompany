@@ -258,7 +258,7 @@
             </div>
         </div>
 
-        <!-- My Profile Tab (Properly Integrated) -->
+        <!-- My Profile Tab -->
         <div id="tabContent5" class="d-none">
             <div class="card portal-card">
                 <div class="card-header bg-light">
@@ -387,7 +387,7 @@ async function apiCall(action, body = {}) {
     }
 }
 
-// ====================== AUTH FUNCTIONS ======================
+// ====================== AUTH ======================
 async function handleRegister() {
     const data = {
         name: document.getElementById("regName").value.trim(),
@@ -502,7 +502,6 @@ function showTab(tabIndex) {
 async function loadProfileData() {
     if (!currentUser) return;
     document.getElementById("editName").value = currentUser.name || "";
-    // You can add more pre-filling later if needed
 }
 
 async function updateProfile() {
@@ -573,11 +572,163 @@ async function handleForgotPassword() {
     }
 }
 
-// ====================== OTHER FUNCTIONS (keep your existing ones) ======================
-// loadMyRecords, loadMyUpgrades, populateAvailableTasks, submitClientForm, 
-// loadEarningsAndPayout, requestPayout, sendUpgradeRequest, logout, etc.
-// ... (paste all your existing functions here - they remain unchanged)
+// ====================== MISSING FUNCTIONS (ADDED) ======================
+async function loadMyRecords() {
+    const tbody = document.querySelector("#recordsTable tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "<tr><td colspan='6' class='text-center'>Loading...</td></tr>";
 
+    const res = await apiCall("getMyRecords", { token: currentToken });
+    tbody.innerHTML = "";
+
+    if (res.success && res.records && res.records.length > 0) {
+        res.records.forEach(r => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${new Date(r.date).toLocaleDateString('en-GB')}</td>
+                <td>${r.name}</td>
+                <td>${r.service}</td>
+                <td><span class="badge bg-warning">${r.status}</span></td>
+                <td class="text-end">—</td>
+                <td>—</td>
+            `;
+            tbody.appendChild(row);
+        });
+    } else {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No records yet.</td></tr>`;
+    }
+}
+
+async function submitClientForm() {
+    const formData = {
+        clientName: document.getElementById("cName").value.trim(),
+        location: document.getElementById("cLocation").value.trim(),
+        phone: document.getElementById("cPhone").value.trim(),
+        whatsapp: document.getElementById("cWhatsapp").value.trim(),
+        email: document.getElementById("cEmail").value.trim(),
+        areaSourced: document.getElementById("cArea").value.trim(),
+        service: document.getElementById("cService").value,
+        urgency: document.getElementById("cUrgency").value,
+        prefComm: document.getElementById("cComm").value,
+        comments: document.getElementById("cComments").value.trim()
+    };
+
+    if (!formData.clientName || !formData.phone || !formData.service) {
+        return alert("Client Name, Phone and Service are required");
+    }
+
+    const res = await apiCall("submitClient", { token: currentToken, formData });
+    if (res.success) {
+        alert("✅ Client submitted successfully!");
+        clearClientForm();
+        loadMyRecords();
+        showTab(1);
+    } else {
+        alert(res.message || "Failed to submit client");
+    }
+}
+
+function clearClientForm() {
+    document.getElementById("cName").value = "";
+    document.getElementById("cLocation").value = "";
+    document.getElementById("cPhone").value = "";
+    document.getElementById("cWhatsapp").value = "";
+    document.getElementById("cEmail").value = "";
+    document.getElementById("cArea").value = "";
+    document.getElementById("cComments").value = "";
+}
+
+async function loadMyUpgrades() {
+    const tbody = document.querySelector("#upgradeTable tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "<tr><td colspan='4' class='text-center'>Loading...</td></tr>";
+
+    const res = await apiCall("getMyUpgrades", { token: currentToken });
+    tbody.innerHTML = "";
+
+    if (res.success && res.upgrades && res.upgrades.length > 0) {
+        res.upgrades.forEach(u => {
+            const badge = u.status === "Approved" ? "success" : u.status === "Rejected" ? "danger" : "warning";
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${new Date(u.date).toLocaleDateString('en-GB')}</td>
+                <td>${u.type}</td>
+                <td><span class="badge bg-${badge}">${u.status}</span></td>
+                <td>${u.notes || "—"}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    } else {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No upgrade requests yet.</td></tr>`;
+    }
+}
+
+async function populateAvailableTasks() {
+    const select = document.getElementById("cService");
+    if (!select) return;
+    select.innerHTML = '<option value="">Loading tasks...</option>';
+
+    const res = await apiCall("getMyAvailableTasks", { token: currentToken });
+    select.innerHTML = "";
+
+    if (res.success && res.tasks && res.tasks.length > 0) {
+        res.tasks.forEach(t => {
+            const option = document.createElement("option");
+            option.value = t.taskName;
+            option.textContent = `${t.taskName} (₦${(t.commissionNaira || 0).toLocaleString()})`;
+            select.appendChild(option);
+        });
+    } else {
+        const option = document.createElement("option");
+        option.textContent = res.message || "No tasks available yet";
+        option.disabled = true;
+        select.appendChild(option);
+    }
+}
+
+async function loadEarningsAndPayout() {
+    const res = await apiCall("getMyEarnings", { token: currentToken });
+    if (!res.success) return;
+
+    document.getElementById("totalEarned").textContent = `₦${(res.totalNaira || 0).toLocaleString()}`;
+    document.getElementById("successRate").textContent = `${res.successRate || 0}%`;
+    document.getElementById("currentLevel").textContent = res.currentLevel || 1;
+    document.getElementById("balanceAmount").textContent = `₦${(res.totalNaira || 0).toLocaleString()}`;
+
+    const payoutBtn = document.getElementById("payoutBtn");
+    if ((res.totalNaira || 0) >= 15000) {
+        payoutBtn.disabled = false;
+    } else {
+        payoutBtn.disabled = true;
+    }
+}
+
+async function requestPayout() {
+    alert("Payout request feature coming soon.");
+}
+
+async function sendUpgradeRequest() {
+    const requestType = document.getElementById("upgradeType").value;
+    const message = document.getElementById("upgradeMessage").value.trim();
+    if (!message) return alert("Please describe your request");
+
+    const res = await apiCall("requestUpgrade", { token: currentToken, requestType, message });
+    if (res.success) {
+        alert("✅ Upgrade request submitted!");
+        document.getElementById("upgradeMessage").value = "";
+        loadMyUpgrades();
+        showTab(3);
+    } else {
+        alert(res.message || "Failed to submit request");
+    }
+}
+
+function logout() {
+    localStorage.clear();
+    location.reload();
+}
+
+// ====================== PAGE LOAD ======================
 window.onload = () => {
     const params = new URLSearchParams(window.location.search);
     const emailParam = params.get('email');
