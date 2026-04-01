@@ -387,7 +387,7 @@ async function apiCall(action, body = {}) {
     }
 }
 
-// ====================== AUTH ======================
+// ====================== AUTH FUNCTIONS ======================
 async function handleRegister() {
     const data = {
         name: document.getElementById("regName").value.trim(),
@@ -417,12 +417,16 @@ async function handleVerify() {
     const res = await apiCall("verify", { email: currentRegEmail, code });
     if (res.success) {
         showVerifyStatus("✅ Email verified successfully!", "success");
+        
+        // Clean URL (remove ?email=...&code=...)
+        window.history.replaceState({}, document.title, window.location.pathname);
+
         setTimeout(() => {
             closeVerifyModal();
-            alert("Email verified! Account pending admin approval.");
+            alert("Email verified successfully! Your account is now pending admin approval.");
         }, 1500);
     } else {
-        showVerifyStatus("❌ Invalid or expired code", "danger");
+        showVerifyStatus("❌ " + (res.message || "Invalid or expired code"), "danger");
         document.getElementById("verifyCode").value = "";
     }
 }
@@ -448,8 +452,13 @@ async function handleLogin() {
     if (res.success) {
         currentToken = res.token;
         currentUser = res.user;
+
+        // Remember for 5 days
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 5);
         localStorage.setItem("victoriasToken", currentToken);
         localStorage.setItem("victoriasUser", JSON.stringify(currentUser));
+        localStorage.setItem("victoriasExpiry", expiryDate.getTime());
 
         document.getElementById("authSection").classList.add("d-none");
         document.getElementById("dashboardSection").classList.remove("d-none");
@@ -572,7 +581,7 @@ async function handleForgotPassword() {
     }
 }
 
-// ====================== MISSING FUNCTIONS (ADDED) ======================
+// ====================== OTHER DASHBOARD FUNCTIONS ======================
 async function loadMyRecords() {
     const tbody = document.querySelector("#recordsTable tbody");
     if (!tbody) return;
@@ -629,13 +638,10 @@ async function submitClientForm() {
 }
 
 function clearClientForm() {
-    document.getElementById("cName").value = "";
-    document.getElementById("cLocation").value = "";
-    document.getElementById("cPhone").value = "";
-    document.getElementById("cWhatsapp").value = "";
-    document.getElementById("cEmail").value = "";
-    document.getElementById("cArea").value = "";
-    document.getElementById("cComments").value = "";
+    ["cName","cLocation","cPhone","cWhatsapp","cEmail","cArea","cComments"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+    });
 }
 
 async function loadMyUpgrades() {
@@ -738,17 +744,24 @@ window.onload = () => {
         currentRegEmail = emailParam;
         document.getElementById("verifyCode").value = codeParam;
         setTimeout(handleVerify, 600);
+        window.history.replaceState({}, document.title, window.location.pathname);
         return;
     }
 
     currentToken = localStorage.getItem("victoriasToken");
     const savedUser = localStorage.getItem("victoriasUser");
+    const expiry = localStorage.getItem("victoriasExpiry");
 
-    if (currentToken && savedUser) {
-        currentUser = JSON.parse(savedUser);
-        document.getElementById("authSection").classList.add("d-none");
-        document.getElementById("dashboardSection").classList.remove("d-none");
-        loadDashboard();
+    if (currentToken && savedUser && expiry) {
+        if (Date.now() < parseInt(expiry)) {
+            currentUser = JSON.parse(savedUser);
+            document.getElementById("authSection").classList.add("d-none");
+            document.getElementById("dashboardSection").classList.remove("d-none");
+            loadDashboard();
+            return;
+        } else {
+            localStorage.clear();
+        }
     }
 };
 </script>
