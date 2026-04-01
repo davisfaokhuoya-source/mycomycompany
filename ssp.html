@@ -292,15 +292,23 @@ let currentRegEmail = '';
 // ====================== API CALL ======================
 async function apiCall(action, body = {}) {
     try {
-        const res = await fetch(WEBAPP_URL, {
+        const response = await fetch(WEBAPP_URL, {
             method: "POST",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            headers: { 
+                "Content-Type": "text/plain;charset=utf-8",
+                "X-Origin": window.location.origin   // ← This sends the domain
+            },
             body: JSON.stringify({ action, ...body })
         });
-        return await res.json();
-    } catch (e) {
-        console.error(e);
-        alert("Connection error. Please check your internet.");
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error(`[ERROR] ${action}:`, error);
+        alert("Connection error. Please try again later.");
         return { success: false, message: "Connection failed" };
     }
 }
@@ -382,18 +390,57 @@ async function handleLogin() {
 }
 
 // ====================== DASHBOARD & TABS ======================
-function loadDashboard() {
+async function loadDashboard() {
     if (!currentUser) return;
 
+    // Update user info
     document.getElementById("dashUsername").textContent = currentUser.username || currentUser.name || "Partner";
     document.getElementById("dashUniqueID").textContent = currentUser.uniqueID || "VS-XXXX";
 
+    // Default to first tab
     showTab(0);
+
+    // Load all dashboard sections
     loadMyRecords();
     loadMyUpgrades();
-    populateAvailableTasks();
+    populateAvailableTasks();     // This will now handle "No tasks available" properly
     updateLevelInfo();
     loadEarningsAndPayout();
+}
+
+// ====================== POPULATE AVAILABLE TASKS (Improved) ======================
+async function populateAvailableTasks() {
+    const select = document.getElementById("cService");
+    if (!select) return;
+
+    select.innerHTML = '<option value="">Loading available tasks...</option>';
+
+    const tasksRes = await apiCall("getMyAvailableTasks", { token: currentToken });
+
+    select.innerHTML = "";   // Clear loading message
+
+    if (tasksRes.success) {
+        if (tasksRes.tasks && tasksRes.tasks.length > 0) {
+            tasksRes.tasks.forEach(t => {
+                const option = document.createElement("option");
+                option.value = t.taskName;
+                option.textContent = `${t.taskName} (₦${t.commissionNaira ? t.commissionNaira.toLocaleString() : '0'})`;
+                select.appendChild(option);
+            });
+        } else {
+            const option = document.createElement("option");
+            option.value = "";
+            option.textContent = tasksRes.message || "No tasks available for your current level yet.";
+            option.disabled = true;
+            select.appendChild(option);
+        }
+    } else {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "Failed to load tasks. Please try again.";
+        option.disabled = true;
+        select.appendChild(option);
+    }
 }
 
 function showTab(tabIndex) {

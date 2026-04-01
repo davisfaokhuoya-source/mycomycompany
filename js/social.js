@@ -38,7 +38,7 @@ function navbar() {
                                 <span class="dropdown-toggle">Login</span>
                             </a>
                             <div class="dropdown-menu m-0">
-                                <a href="portal.html" class="dropdown-item">Support Programme</a>
+                                <a href="ssp.html" class="dropdown-item">Support Programme</a>
                                 <a href="portal.html" class="dropdown-item">Staff Portal</a>
                                 <a href="email.html" class="dropdown-item">Email Portal</a>
                             </div>
@@ -164,28 +164,28 @@ getstartedbody();
 
 const spp = [
     {
-        topic: 'Earn Up to $300+ Monthly from Home',
+        topic: 'Earn Up to $500 While Gaining Real Work Experience',
         link: 'sppcollapseOne',
         image: '30s-Adult.jpg',
-        text: 'Work from anywhere, at your own pace. As a Victorias Affiliate Partner, you can earn substantial commissions by simply referring clients for CAC, SCUML, and other corporate compliance services. Top performers consistently earn $200 to $400+ every month with zero inventory or overhead costs.'
+        text: 'The Victorias Career Hub gives you the opportunity to earn money while acquiring practical professional experience. Work flexibly from home or anywhere, build your CV with real client handling experience, and get paid for every successful referral.'
     },
     {
-        topic: 'Flexible Work-from-Home Opportunity',
+        topic: 'Flexible Remote Opportunity for Students & Youths',
         link: 'sppcollapseTwo',
         image: 'pexels-mart-production-7709254.jpg',
-        text: 'No office, no fixed hours, no boss. Join our affiliate programme and build your own income stream from the comfort of your home. Whether you\'re a student, full-time worker, or entrepreneur, you can start earning today by connecting businesses and individuals with our fast corporate registration services.'
+        text: 'No 9-5 pressure. No experience required. Join The Victorias Career Hub and start earning while still in school or early in your career. Work at your own pace, develop valuable skills in client relations and business development, and turn your free time into a meaningful income stream.'
     },
     {
-        topic: 'Progressive Commissions & Level System',
+        topic: 'Grow Your Income with Our Level System',
         link: 'sppcollapseThree',
         image: '30s-Adult.jpg',
-        text: 'Start at Level 1 and grow with us. The more clients you successfully refer, the higher your level and commission rates become. Enjoy increasing earnings per client as you unlock better rewards. Our transparent level system rewards consistent performers with higher payouts and exclusive benefits.'
+        text: 'Start at Level 1 and advance as you gain experience. The more clients you successfully support, the higher your level and commission rate become. Our progressive system rewards consistent effort, helping students and young professionals increase their earnings while building a strong professional profile.'
     },
     {
-        topic: 'Be Part of a Trusted & Growing Network',
+        topic: 'Launch Your Career with a Trusted Organisation',
         link: 'sppcollapseFour',
         image: 'pexels-mart-production-7709254.jpg',
-        text: 'Join thousands of ambitious Nigerians building sustainable income with The Victorias Ltd. Gain access to high-demand services, professional support, timely payments, and a reputable brand name. Turn your network into a profitable asset and become a key player in Nigeria’s corporate compliance industry.'
+        text: 'Be part of a structured career development programme backed by The Victorias Ltd. Gain hands-on experience in corporate services, receive professional mentorship, and earn income at the same time. Build your network, strengthen your resume, and position yourself for better opportunities in the future.'
     }
 ];
 
@@ -232,7 +232,7 @@ function sppbody() {
                         <h1 class="display-5 mb-4">${item.topic}</h1>
                         <p class="mb-4">${item.text}</p>
                         <a class="btn btn-primary rounded-pill py-3 px-5" 
-                           href="https://thevictorias.com.ng/spp.html">
+                           href="https://thevictorias.com.ng/ssp.html">
                             Join Now - Get Started
                         </a>
                     </div>
