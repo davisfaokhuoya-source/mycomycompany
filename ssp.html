@@ -695,29 +695,60 @@ function showTab(tabIndex) {
     if (tabIndex === 3) loadMyUpgrades();
     if (tabIndex === 4) loadEarningsAndPayout();
     if (tabIndex === 5) loadProfileData();
-    if (tabIndex === 6) loadTrainingAcademy();
+    if (tabIndex === 6) loadTrainingAcademy();   
+    // ← This must stay (it is now async)
 }
 
 // ====================== TRAINING ACADEMY ======================
-function loadTrainingAcademy() {
-    const userLevel = parseInt(currentUser.level) || 1;
-    
-    document.getElementById("currentLevelBadge").innerHTML = `Current Level: <strong>Level ${userLevel}</strong> (${getCommissionRate(userLevel)} Commission)`;
+async function loadTrainingAcademy() {
+    if (!currentUser || !currentToken) return;
 
+    let userLevel = parseInt(currentUser.level) || 1;
+
+    // Force refresh the latest user level from backend (this fixes stagnant level)
+    try {
+        const refreshRes = await apiCall("getDashboard", { token: currentToken });
+        if (refreshRes.success && refreshRes.user && refreshRes.user.level) {
+            currentUser.level = refreshRes.user.level;   // Update currentUser with latest level
+            userLevel = parseInt(refreshRes.user.level) || 1;
+        }
+    } catch (e) {
+        console.warn("Could not refresh user level for training tab");
+    }
+
+    // Update the level badge
+    document.getElementById("currentLevelBadge").innerHTML = 
+        `Current Level: <strong>Level ${userLevel}</strong> (${getCommissionRate(userLevel)} Commission)`;
+
+    // Show Level 1 for everyone
     document.getElementById("level1").classList.remove("d-none");
 
-    if (userLevel >= 2) document.getElementById("level2").classList.remove("d-none");
-    else document.getElementById("level2").classList.add("d-none");
+    // Show higher levels only if user has reached them
+    if (userLevel >= 2) {
+        document.getElementById("level2").classList.remove("d-none");
+    } else {
+        document.getElementById("level2").classList.add("d-none");
+    }
 
-    if (userLevel >= 3) document.getElementById("level3").classList.remove("d-none");
-    else document.getElementById("level3").classList.add("d-none");
+    if (userLevel >= 3) {
+        document.getElementById("level3").classList.remove("d-none");
+    } else {
+        document.getElementById("level3").classList.add("d-none");
+    }
 
-    if (userLevel >= 4) document.getElementById("level4").classList.remove("d-none");
-    else document.getElementById("level4").classList.add("d-none");
+    if (userLevel >= 4) {
+        document.getElementById("level4").classList.remove("d-none");
+    } else {
+        document.getElementById("level4").classList.add("d-none");
+    }
 
+    // Certificate note for Level 3+
     const certNote = document.getElementById("certificateNote");
-    if (userLevel >= 3) certNote.classList.remove("d-none");
-    else certNote.classList.add("d-none");
+    if (userLevel >= 3) {
+        certNote.classList.remove("d-none");
+    } else {
+        certNote.classList.add("d-none");
+    }
 }
 
 function getCommissionRate(level) {
