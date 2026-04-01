@@ -232,7 +232,7 @@ function sppbody() {
                         <h1 class="display-5 mb-4">${item.topic}</h1>
                         <p class="mb-4">${item.text}</p>
                         <a class="btn btn-primary rounded-pill py-3 px-5" 
-                           href="https://thevictorias.com.ng/ssp.html">
+                           href="https://thevictorias.com.ng/careerhub.html">
                             Join Now - Get Started
                         </a>
                     </div>
