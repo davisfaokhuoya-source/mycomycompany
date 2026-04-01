@@ -290,13 +290,16 @@ let currentUser = null;
 let currentRegEmail = '';
 
 // ====================== API CALL ======================
+// Final CORS-safe apiCall
 async function apiCall(action, body = {}) {
+    console.log(`[API] Calling: ${action}`, body);
+
     try {
         const response = await fetch(WEBAPP_URL, {
             method: "POST",
-            headers: { 
-                "Content-Type": "text/plain;charset=utf-8",
-                "X-Origin": window.location.origin   // ← This sends the domain
+            headers: {
+                "Content-Type": "text/plain;charset=utf-8"
+                // Do NOT send X-Origin here - it triggers preflight
             },
             body: JSON.stringify({ action, ...body })
         });
@@ -305,10 +308,13 @@ async function apiCall(action, body = {}) {
             throw new Error(`HTTP ${response.status}`);
         }
 
-        return await response.json();
+        const data = await response.json();
+        console.log(`[API] Response from ${action}:`, data);
+        return data;
+
     } catch (error) {
         console.error(`[ERROR] ${action}:`, error);
-        alert("Connection error. Please try again later.");
+        alert(`Connection failed: ${error.message}\n\nPlease make sure you are on https://thevictorias.com.ng`);
         return { success: false, message: "Connection failed" };
     }
 }

@@ -38,7 +38,7 @@ function navbar() {
                                 <span class="dropdown-toggle">Login</span>
                             </a>
                             <div class="dropdown-menu m-0">
-                                <a href="ssp.html" class="dropdown-item">Support Programme</a>
+                                <a href="ssp.html" class="dropdown-item">Career Hub</a>
                                 <a href="portal.html" class="dropdown-item">Staff Portal</a>
                                 <a href="email.html" class="dropdown-item">Email Portal</a>
                             </div>
