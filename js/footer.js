@@ -15,11 +15,11 @@ document.querySelector('.addfooter').innerHTML=
                     <div class="col-md-6 col-lg-6 col-xl-2">
                         <div class="footer-item">
                             <h4 class="text-white mb-4">Home Links</h4>
-                            <a href="#readfaq"><i class="fas fa-angle-right me-2"></i> FAQ</a>
-                            <a href="#readfeatured"><i class="fas fa-angle-right me-2"></i> Feature</a>
-                            <a href="#readpracticalarea"><i class="fas fa-angle-right me-2"></i> Practical Areas</a>
-                            <a href="#readblog"><i class="fas fa-angle-right me-2"></i> Blog</a>
-                            <a href="#readvalue"><i class="fas fa-angle-right me-2"></i>Core value</a>
+                            <a href="value"><i class="fas fa-angle-right me-2"></i>Service Cost Calculator</a>
+                            <a href="careerhub"><i class="fas fa-angle-right me-2"></i> Earn from Home</a>
+                            <a href="appointment"><i class="fas fa-angle-right me-2"></i> Book Appointment</a>
+                            <a href="services"><i class="fas fa-angle-right me-2"></i> Our Services</a>
+                            <a href="contact"><i class="fas fa-angle-right me-2"></i>Contact Us</a>
                         </div>
                     </div>
                     <div class="col-md-6 col-lg-6 col-xl-3">
