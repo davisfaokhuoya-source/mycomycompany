@@ -44,12 +44,16 @@ function navbar() {
                             </div>
                         </div>
                         <div class="nav-item dropdown">
-                            <a href="#" class="nav-link active" data-bs-toggle="dropdown">
+                            <a href="service.html" class="nav-link active" data-bs-toggle="dropdown">
                                 <span class="dropdown-toggle">Services</span>
                             </a>
-                            <div class="dropdown-menu m-0"><a href="service.html" class="dropdown-item">Services</a>
-                                <a href="value.html" class="dropdown-item">Request Services</a>
-                                <a href="/gaas.html" class="dropdown-item">Premium Services</a>
+                            <div class="dropdown-menu m-0">
+                            <a href="doc-dev.html" class="dropdown-item">Document Development</a>
+                            <a href="social-media-management.html" class="dropdown-item">Social Media Managment</a>
+                            <a href="compliance.html" class="dropdown-item">Corporate Compliance</a>
+                             <a href="localsupport.html" class="dropdown-item">Local Entry</a>
+                            <a href="value.html" class="dropdown-item">Request Services</a>
+                            <a href="/gaas.html" class="dropdown-item">Premium Services</a>
                             </div>
                         </div>
                     </div>
@@ -111,10 +115,55 @@ function coreservices(){const services = document.querySelector('.coreservices')
 coreservices();
 
 const feactured = [
-    {topic:'CAC Registration & Corporate Compliance Services', link: 'collapseOne', image: 'pexels-rimiscky-34968270.jpg', text: 'Business Name Registration | Private/Public Limited Company | Incorporated Trustees (Churches, NGOs, etc) | Company Limited by Guarantee | CAC Annual Returns & Filing | Tax Clearance Certificate (TCC) | PENCOM Certificate | BPP Registration | SCUML Certificate | ITF Compliance Certificate | NSITF Compliance Certificate'},
-    {topic:'Proposal & Project Development', link: 'collapseTwo', image: 'pexels-shvetsa-3727513.jpg', text: 'We transform your ideas into actionable realities. Our service provides expertise in developing persuasive proposals and robust project plans, ensuring your initiatives are well-defined and ready for successful execution'},
-    {topic:'Professional CV & Porfolio', link: 'collapseThree', image: 'pexels-rimiscky-34968270.jpg', text: 'Make an immediate, impactful impression on potential employers and clients. We specialize in crafting and designing professional, ATS-friendly CVs and dynamic portfolios that effectively highlight your expertise, achievements, and unique value proposition, helping you stand out in a competitive job market.'}, 
-    {topic:'Company Profile & Business Website', link: 'collapseFour', image: 'pexels-shvetsa-3727513.jpg', text: 'Establish a powerful, credible digital footprint for your brand. We develop professional company profiles and responsive business websites that articulate your mission, showcase your services, and attract potential clients and investors, transforming casual visitors into engaged business partners.'},
+
+    {
+
+        topic: 'CAC Registration & Corporate Compliance Services', 
+
+        link: 'collapseOne', 
+
+        image: 'pexels-rimiscky-34968270.jpg', 
+
+        text: 'Business Name Registration | Private/Public Limited Company | Incorporated Trustees (Churches, NGOs, etc) | Company Limited by Guarantee | CAC Annual Returns & Filing | Tax Clearance Certificate (TCC) | PENCOM Certificate | BPP Registration | SCUML Certificate | ITF Compliance Certificate | NSITF Compliance Certificate', textlink: 'compliance.html'
+
+    },
+
+    {
+
+        topic: 'Social Media Management', 
+
+        link: 'collapseTwo', 
+
+        image: 'pexels-shvetsa-3727513.jpg', 
+
+        text: 'Build a vibrant online presence and engage your target audience effectively. We handle content strategy, community management, and brand growth across all major social platforms to ensure your business stays relevant and connected.', textlink: 'social-media-mangement.html'
+
+    },
+
+    {
+
+        topic: 'Proposal, CV Development & Market Research', 
+
+        link: 'collapseThree', 
+
+        image: 'pexels-rimiscky-34968270.jpg', 
+
+        text: 'From persuasive grant and business proposals to ATS-optimized CVs and deep-dive market research, we provide the documentation and insights you need to win opportunities and understand your industry landscape.' , textlink: 'doc-dev.html'
+
+    }, 
+
+    {
+
+        topic: 'Local Market Entry', 
+
+        link: 'collapseFour', 
+
+        image: 'pexels-shvetsa-3727513.jpg', 
+
+        text: 'Navigate the complexities of new territories with confidence. We provide strategic guidance on local regulations, consumer behavior, and competitive positioning to help your brand launch and scale successfully in the local market.', textlink: 'localsupport.html'
+
+    },
+
 ];
 
 function getstartedlink(){
@@ -148,7 +197,7 @@ function getstartedbody(){
                                     <div class="col-md-5">
                                         <h1 class="display-5 mb-4">${element.topic}</h1>
                                         <p class="mb-4">${element.text}</p>
-                                        <a class="btn btn-primary rounded-pill py-2 px-4" href="https://api.whatsapp.com/send/?phone=%2B2348055538518&text=Inquiry+about+${element.topic}+&type=phone_number&app_absent=0">Get Started</a>
+                                        <a class="btn btn-primary rounded-pill py-2 px-4" href="${element.textlink}">Get Started</a>
                                     </div>
                                 </div>
                             </div>`;
