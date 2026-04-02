@@ -136,6 +136,7 @@
             <li class="nav-item"><a class="nav-link" onclick="showTab(4)" id="tab4">Earnings & Payout</a></li>
             <li class="nav-item"><a class="nav-link" onclick="showTab(5)" id="tab5">My Profile</a></li>
             <li class="nav-item"><a class="nav-link" onclick="showTab(6)" id="tab6">Training Academy</a></li>
+            <li class="nav-item"><a class="nav-link" onclick="showTab(7)" id="tab7">Service Costs</a></li>
         </ul>
 
         <!-- Submit Client Tab -->
@@ -186,7 +187,12 @@
             <textarea id="upgradeMessage" class="form-control" rows="4" placeholder="Tell us what you need..."></textarea>
             <button onclick="sendUpgradeRequest()" class="btn btn-success w-100 mt-3 py-3">Submit Request</button>
         </div>
-
+      <!--Service Cost Calculator--> 
+        <div id="tabContent7" class="d-none">
+            <h5>Service Cost Calculator</h5>
+            <p>Use our cost calculator to get an instant quote for our services. Select the service, enter the required details, and see your estimated cost before you submit a request.</p>
+            <div id="value-display"></div>
+        </div>
         <!-- My Upgrades Tab -->
         <div id="tabContent3" class="d-none">
             <h5>My Upgrade Requests</h5>
@@ -1025,6 +1031,38 @@ window.onload = () => {
         }
     }
 };
+
+async function loadContent(url, targetSelector, containerId) {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        const html = await response.text();
+
+        // Parse the string into a document
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Select the specific element with id 'getoutvalue'
+        const partialContent = doc.querySelector(targetSelector);
+
+        if (partialContent) {
+            // Use outerHTML to keep the div container and its styles
+            document.getElementById(containerId).innerHTML = partialContent.outerHTML;
+            console.log('Content loaded successfully from:', url);
+        } else {
+            console.error(`Could not find the ID "${targetSelector}" inside ${url}`);
+        }
+    } catch (err) {
+        console.error('Failed to fetch the page:', err);
+    }
+}
+
+// EXECUTION
+// 1. URL: '/value.html'
+// 2. Target ID inside value.html: '#getoutvalue'
+// 3. Destination ID on current page: 'value-display'
+loadContent('/value.html', '#getoutvalue', 'value-display');
 </script>
 
 <script src="lib/wow/wow.min.js"></script>
