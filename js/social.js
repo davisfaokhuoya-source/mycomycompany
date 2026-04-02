@@ -136,7 +136,7 @@ const feactured = [
 
         image: 'pexels-shvetsa-3727513.jpg', 
 
-        text: 'Build a vibrant online presence and engage your target audience effectively. We handle content strategy, community management, and brand growth across all major social platforms to ensure your business stays relevant and connected.', textlink: 'social-media-mangement.html'
+        text: 'Build a vibrant online presence and engage your target audience effectively. We handle content strategy, community management, and brand growth across all major social platforms to ensure your business stays relevant and connected.', textlink: 'social-media-management.html'
 
     },
 

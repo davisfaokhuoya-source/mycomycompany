@@ -73,7 +73,6 @@ function generateServiceCardHTML(service, index) {
         </div>
     `;
 }
-
 // Main function to group and display all services
 function allservices() {
     const servicesContainer = document.querySelector('.ourservices');
