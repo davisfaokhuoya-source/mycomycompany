@@ -35,10 +35,10 @@ function navbar() {
                         <a href="policy.html" class="nav-item nav-link">Policies</a>
                          <div class="nav-item dropdown">
                             <a href="#" class="nav-link active" data-bs-toggle="dropdown">
-                                <span class="dropdown-toggle">Login</span>
+                                <span class="dropdown-toggle">Portals</span>
                             </a>
                             <div class="dropdown-menu m-0">
-                                <a href="ssp.html" class="dropdown-item">Career Hub</a>
+                                <a href="ssp.html" class="dropdown-item">Career Hub Portal</a>
                                 <a href="portal.html" class="dropdown-item">Staff Portal</a>
                                 <a href="email.html" class="dropdown-item">Email Portal</a>
                             </div>
@@ -51,10 +51,11 @@ function navbar() {
                             <a href="doc-dev.html" class="dropdown-item">Document Development</a>
                             <a href="social-media-management.html" class="dropdown-item">Social Media Managment</a>
                             <a href="compliance.html" class="dropdown-item">Corporate Compliance</a>
-                             <a href="localsupport.html" class="dropdown-item">Local Entry</a>
-                            <a href="value.html" class="dropdown-item">Request Services</a>
-                            <a href="/gaas.html" class="dropdown-item">Premium Services</a>
+                             <a href="localsupport.html" class="dropdown-item">Corporate Local Entry</a>
+                            <a href="web-graphics-branding.html" class="dropdown-item">Web, Graphics & Branding</a>
+                            <a href="/gaas.html" class="dropdown-item">Premium Support Services</a>
                             </div>
+                            <a href="value.html" class="dropdown-item">Custom Services</a>
                         </div>
                     </div>
                     <a href="https://flutterwave.com/pay/cxbndrtmjsdj" class="btn btn-primary rounded-pill py-2 px-4 my-3 my-lg-0 flex-shrink-0">Make Payment</a>

@@ -766,7 +766,7 @@ function markTrainingComplete() {
     }
 }
 
-// ====================== REAL FUNCTIONS (NO PLACEHOLDERS) ======================
+// ====================== LOAD MY RECORDS ======================
 async function loadMyRecords() {
     const tbody = document.querySelector("#recordsTable tbody");
     if (!tbody) return;
@@ -780,11 +780,11 @@ async function loadMyRecords() {
             const row = document.createElement("tr");
             row.innerHTML = `
                 <td>${new Date(r.date).toLocaleDateString('en-GB')}</td>
-                <td>${r.clientName || r.name}</td>
+                <td>${r.name || r.client}</td>
                 <td>${r.service}</td>
-                <td><span class="badge bg-${r.status === 'Approved' ? 'success' : 'warning'}">${r.status}</span></td>
-                <td class="text-end">₦${(r.earnings || 0).toLocaleString()}</td>
-                <td>${r.payoutStatus || 'Pending'}</td>
+                <td><span class="badge bg-${r.status === 'Successful' || r.status === 'Approved' ? 'success' : 'warning'}">${r.status}</span></td>
+                <td class="text-end fw-bold">₦${(r.earningsNaira || 0).toLocaleString()}</td>
+                <td>${r.payoutStatus || '—'}</td>
             `;
             tbody.appendChild(row);
         });
@@ -857,45 +857,80 @@ async function loadMyUpgrades() {
     }
 }
 
+// ====================== POPULATE TASKS WITH % ======================
 async function populateAvailableTasks() {
     const select = document.getElementById("cService");
     if (!select) return;
-    select.innerHTML = '<option value="">Loading available tasks...</option>';
+    select.innerHTML = '<option value="">Loading tasks...</option>';
 
     const res = await apiCall("getMyAvailableTasks", { token: currentToken });
     select.innerHTML = "";
 
     if (res.success && res.tasks && res.tasks.length > 0) {
         res.tasks.forEach(t => {
+            const percent = t.commissionNaira || 0;
             const option = document.createElement("option");
             option.value = t.taskName;
-            option.textContent = `${t.taskName} (₦${(t.commissionNaira || 0).toLocaleString()})`;
+            option.textContent = `${t.taskName} (${percent}%)`;
             select.appendChild(option);
         });
     } else {
         const option = document.createElement("option");
-        option.textContent = res.message || "No tasks available for your current level yet";
+        option.textContent = res.message || "No tasks available for your level yet";
         option.disabled = true;
         select.appendChild(option);
     }
 }
 
+
+// ====================== EARNINGS & PAYOUT (FULLY WORKING) ======================
 async function loadEarningsAndPayout() {
     const res = await apiCall("getMyEarnings", { token: currentToken });
     if (!res.success) return;
 
-    document.getElementById("totalEarned").textContent = `₦${(res.totalNaira || 0).toLocaleString()}`;
+    document.getElementById("totalEarned").innerHTML = `₦${(res.totalNaira || 0).toLocaleString()}`;
     document.getElementById("successRate").textContent = `${res.successRate || 0}%`;
     document.getElementById("currentLevel").textContent = res.currentLevel || 1;
-    document.getElementById("balanceAmount").textContent = `₦${(res.totalNaira || 0).toLocaleString()}`;
 
+    // Payment history
+    const histRes = await apiCall("getPaymentHistory", { token: currentToken });
+    const tbody = document.querySelector("#paymentHistoryTable tbody");
+    tbody.innerHTML = "";
+
+    if (histRes.success && histRes.history && histRes.history.length > 0) {
+        histRes.history.forEach(h => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${new Date(h.dateRequested).toLocaleDateString('en-GB')}</td>
+                <td class="fw-bold">₦${h.amount.toLocaleString()}</td>
+                <td><span class="badge bg-${h.status === 'Paid' ? 'success' : h.status === 'In Progress' ? 'primary' : 'warning'}">${h.status}</span></td>
+                <td>${h.paidDate ? new Date(h.paidDate).toLocaleDateString('en-GB') : '—'}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    } else {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No payout requests yet.</td></tr>`;
+    }
+
+    // Payout button
     const payoutBtn = document.getElementById("payoutBtn");
     payoutBtn.disabled = (res.totalNaira || 0) < 15000;
 }
 
+// ====================== REQUEST PAYOUT ======================
 async function requestPayout() {
-    alert("Payout request feature coming soon.");
+    if (!currentToken) return alert("Please login first");
+
+    const res = await apiCall("requestPayment", { token: currentToken, amountNaira: document.getElementById("totalEarned").textContent.replace(/[₦,]/g, '') });
+
+    if (res.success) {
+        alert("✅ Payout request sent successfully!");
+        loadEarningsAndPayout();   // refresh history
+    } else {
+        alert(res.message || "Failed to request payout");
+    }
 }
+
 
 async function sendUpgradeRequest() {
     const requestType = document.getElementById("upgradeType").value;

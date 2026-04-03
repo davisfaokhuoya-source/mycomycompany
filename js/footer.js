@@ -15,11 +15,12 @@ document.querySelector('.addfooter').innerHTML=
                     <div class="col-md-6 col-lg-6 col-xl-2">
                         <div class="footer-item">
                             <h4 class="text-white mb-4">Home Links</h4>
-                            <a href="value"><i class="fas fa-angle-right me-2"></i>Service Cost Calculator</a>
                             <a href="careerhub"><i class="fas fa-angle-right me-2"></i> Earn from Home</a>
                             <a href="appointment"><i class="fas fa-angle-right me-2"></i> Book Appointment</a>
                             <a href="services"><i class="fas fa-angle-right me-2"></i> Our Services</a>
                             <a href="contact"><i class="fas fa-angle-right me-2"></i>Contact Us</a>
+                            <a href="web-graphics-branding"><i class="fas fa-angle-right me-2"></i>Web, Graphics & Branding</a>
+                            <a href="value"><i class="fas fa-angle-right me-2"></i>Service Cost Calculator</a>
                         </div>
                     </div>
                     <div class="col-md-6 col-lg-6 col-xl-3">
@@ -45,6 +46,7 @@ document.querySelector('.addfooter').innerHTML=
                                 <i class="fa fa-phone-alt text-primary me-3"></i>
                                 <p class="text-white mb-0">+2348055538518</p>
                             </div>
+                        
                             <div class="d-flex">
                                 <a class="btn btn-primary btn-sm-square rounded-circle me-3" href="facebook.com/thevictoriasltd"><i class="fab fa-facebook-f text-white"></i></a>
                                 <a class="btn btn-primary btn-sm-square rounded-circle me-3" href="x.com/thevictoriasltd"><i class="fab fa-twitter text-white"></i></a>
