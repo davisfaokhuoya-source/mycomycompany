@@ -882,8 +882,7 @@ async function populateAvailableTasks() {
     }
 }
 
-
-// ====================== LOAD EARNINGS & PAYOUT (with Payment History) ======================
+// ====================== LOAD EARNINGS & PAYOUT ======================
 async function loadEarningsAndPayout() {
     const res = await apiCall("getMyEarnings", { token: currentToken });
     if (!res.success) return;
@@ -900,13 +899,15 @@ async function loadEarningsAndPayout() {
 
     if (histRes.success && histRes.history && histRes.history.length > 0) {
         histRes.history.forEach(h => {
+            const paidDateStr = h.paidDate ? new Date(h.paidDate).toLocaleDateString('en-GB') : '—';
+            
             const row = document.createElement("tr");
             row.innerHTML = `
                 <td>${new Date(h.dateRequested).toLocaleDateString('en-GB')}</td>
                 <td class="fw-bold">₦${h.amount.toLocaleString()}</td>
                 <td><span class="badge bg-${h.status === 'Approved' || h.status === 'Paid' ? 'success' : h.status === 'Investigating' ? 'warning' : 'secondary'}">${h.status}</span></td>
                 <td>${h.progress || '—'}</td>
-                <td>${h.paidDate ? new Date(h.paidDate).toLocaleDateString('en-GB') : '—'}</td>
+                <td>${paidDateStr}</td>
             `;
             tbody.appendChild(row);
         });
