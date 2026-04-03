@@ -766,7 +766,7 @@ function markTrainingComplete() {
     }
 }
 
-// ====================== LOAD MY RECORDS ======================
+// ====================== LOAD MY RECORDS (Fixed display) ======================
 async function loadMyRecords() {
     const tbody = document.querySelector("#recordsTable tbody");
     if (!tbody) return;
@@ -780,9 +780,9 @@ async function loadMyRecords() {
             const row = document.createElement("tr");
             row.innerHTML = `
                 <td>${new Date(r.date).toLocaleDateString('en-GB')}</td>
-                <td>${r.name || r.client}</td>
+                <td>${r.name || r.client || "—"}</td>
                 <td>${r.service}</td>
-                <td><span class="badge bg-${r.status === 'Successful' || r.status === 'Approved' ? 'success' : 'warning'}">${r.status}</span></td>
+                <td><span class="badge bg-${(r.status === 'Successful' || r.status === 'Approved') ? 'success' : 'warning'}">${r.status}</span></td>
                 <td class="text-end fw-bold">₦${(r.earningsNaira || 0).toLocaleString()}</td>
                 <td>${r.payoutStatus || '—'}</td>
             `;
@@ -884,13 +884,22 @@ async function populateAvailableTasks() {
 
 
 // ====================== EARNINGS & PAYOUT (FULLY WORKING) ======================
+// ====================== EARNINGS & PAYOUT (Now correctly shows numbers) ======================
 async function loadEarningsAndPayout() {
     const res = await apiCall("getMyEarnings", { token: currentToken });
     if (!res.success) return;
 
-    document.getElementById("totalEarned").innerHTML = `₦${(res.totalNaira || 0).toLocaleString()}`;
+    // FIXED: Use correct keys from backend
+    document.getElementById("totalEarned").innerHTML = `₦${(res.totalEarned || 0).toLocaleString()}`;
     document.getElementById("successRate").textContent = `${res.successRate || 0}%`;
     document.getElementById("currentLevel").textContent = res.currentLevel || 1;
+
+    // Current balance (unpaid)
+    document.getElementById("balanceAmount").textContent = `₦${(res.currentBalance || 0).toLocaleString()}`;
+
+    // Payout button enabled only if enough balance
+    const payoutBtn = document.getElementById("payoutBtn");
+    payoutBtn.disabled = (res.currentBalance || 0) < 15000;
 
     // Payment history
     const histRes = await apiCall("getPaymentHistory", { token: currentToken });
@@ -911,21 +920,21 @@ async function loadEarningsAndPayout() {
     } else {
         tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No payout requests yet.</td></tr>`;
     }
-
-    // Payout button
-    const payoutBtn = document.getElementById("payoutBtn");
-    payoutBtn.disabled = (res.totalNaira || 0) < 15000;
 }
+
 
 // ====================== REQUEST PAYOUT ======================
 async function requestPayout() {
     if (!currentToken) return alert("Please login first");
 
-    const res = await apiCall("requestPayment", { token: currentToken, amountNaira: document.getElementById("totalEarned").textContent.replace(/[₦,]/g, '') });
+    const res = await apiCall("requestPayment", { 
+        token: currentToken, 
+        amount: document.getElementById("balanceAmount").textContent.replace(/[₦,]/g, '') 
+    });
 
     if (res.success) {
-        alert("✅ Payout request sent successfully!");
-        loadEarningsAndPayout();   // refresh history
+        alert(res.message || "Payout request submitted successfully!");
+        loadEarningsAndPayout();   // Refresh both earnings and history
     } else {
         alert(res.message || "Failed to request payout");
     }
