@@ -63,15 +63,7 @@ function navbar() {
                 <a href="value.html" class="dropdown-item">Custom Services</a>
             </div>
         </div>
-    </div>
-
-    <a href="https://flutterwave.com/pay/cxbndrtmjsdj" 
-       class="btn btn-primary rounded-pill py-2 px-4 my-3 my-lg-0 flex-shrink-0">
-        Make Payment
-    </a>
-</div>
-                    <a href="https://flutterwave.com/pay/cxbndrtmjsdj" class="btn btn-primary rounded-pill py-2 px-4 my-3 my-lg-0 flex-shrink-0">Make Payment</a>
-                </div>`}
+    </div>`}
 navbar();
 
 // Get all elements with the class 'nav-link'
