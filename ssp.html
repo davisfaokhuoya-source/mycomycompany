@@ -882,21 +882,22 @@ async function populateAvailableTasks() {
     }
 }
 
-// ====================== LOAD EARNINGS & PAYOUT (UPDATED) ======================
+// ====================== LOAD EARNINGS & PAYOUT (UPDATED FOR REAL-TIME BALANCE) ======================
 async function loadEarningsAndPayout() {
     const res = await apiCall("getMyEarnings", { token: currentToken });
     if (!res.success) {
-        console.error("Failed to load earnings");
+        console.error("Failed to load earnings:", res.message);
         return;
     }
 
-    // Update earnings cards
+    // Update Total Earned and Current Balance
     document.getElementById("totalEarned").innerHTML = `₦${(res.totalEarned || 0).toLocaleString()}`;
+    document.getElementById("balanceAmount").textContent = `₦${(res.currentBalance || 0).toLocaleString()}`;
+    
     document.getElementById("successRate").textContent = `${res.successRate || 0}%`;
     document.getElementById("currentLevel").textContent = res.currentLevel || 1;
-    document.getElementById("balanceAmount").textContent = `₦${(res.currentBalance || 0).toLocaleString()}`;
 
-    // Enable payout button only if balance >= 15,000
+    // Enable/Disable payout button based on actual balance
     const payoutBtn = document.getElementById("payoutBtn");
     payoutBtn.disabled = (res.currentBalance || 0) < 15000;
 
@@ -925,11 +926,11 @@ async function loadEarningsAndPayout() {
 }
 
 
-// ====================== REQUEST PAYOUT (FIXED) ======================
+// ====================== REQUEST PAYOUT (FIXED - Balance Updates Immediately) ======================
 async function requestPayout() {
     if (!currentToken) return alert("Please login first");
 
-    // Get the actual numeric balance (cleaner way)
+    // Get clean numeric balance from display
     const balanceText = document.getElementById("balanceAmount").textContent;
     const amount = parseFloat(balanceText.replace(/[₦,]/g, '')) || 0;
 
@@ -944,7 +945,13 @@ async function requestPayout() {
 
     if (res.success) {
         alert(res.message || "Payout request submitted successfully!");
-        loadEarningsAndPayout();   // Refresh balance and history
+        
+        // FORCE REFRESH balance and history from backend
+        await loadEarningsAndPayout();
+        
+        // Optional: Disable button immediately if balance is now below minimum
+        const payoutBtn = document.getElementById("payoutBtn");
+        if (payoutBtn) payoutBtn.disabled = true;
     } else {
         alert(res.message || "Failed to request payout");
     }
