@@ -52,7 +52,7 @@ function navbar() {
                 Our Services
             </a>
             <div class="dropdown-menu m-0">
-                <a href="services.html" class="dropdown-item">General Services</a>
+                <a href="service.html" class="dropdown-item">General Services</a>
                 <a href="doc-dev.html" class="dropdown-item">Document Development</a>
                 <a href="social-media-management.html" class="dropdown-item">Social Media Management</a>
                 <a href="compliance.html" class="dropdown-item">Corporate Compliance</a>
