@@ -783,7 +783,7 @@ async function loadMyRecords() {
                 <td>${r.name}</td>
                 <td>${r.service}</td>
                 <td><span class="badge bg-${r.status === 'Successful' || r.status === 'Approved' ? 'success' : 'warning'}">${r.status}</span></td>
-                <td class="text-end fw-bold">₦${(r.earningsNaira * 1000 || 0).toLocaleString()}</td>
+                <td class="text-end fw-bold">₦${(r.earningsNaira || 0).toLocaleString()}</td>
                 <td>${r.payoutStatus || '—'}</td>
             `;
             tbody.appendChild(row);
@@ -882,15 +882,23 @@ async function populateAvailableTasks() {
     }
 }
 
-// ====================== LOAD EARNINGS & PAYOUT ======================
+// ====================== LOAD EARNINGS & PAYOUT (UPDATED) ======================
 async function loadEarningsAndPayout() {
     const res = await apiCall("getMyEarnings", { token: currentToken });
-    if (!res.success) return;
+    if (!res.success) {
+        console.error("Failed to load earnings");
+        return;
+    }
 
+    // Update earnings cards
     document.getElementById("totalEarned").innerHTML = `₦${(res.totalEarned || 0).toLocaleString()}`;
     document.getElementById("successRate").textContent = `${res.successRate || 0}%`;
     document.getElementById("currentLevel").textContent = res.currentLevel || 1;
     document.getElementById("balanceAmount").textContent = `₦${(res.currentBalance || 0).toLocaleString()}`;
+
+    // Enable payout button only if balance >= 15,000
+    const payoutBtn = document.getElementById("payoutBtn");
+    payoutBtn.disabled = (res.currentBalance || 0) < 15000;
 
     // Load Payment History
     const histRes = await apiCall("getPaymentHistory", { token: currentToken });
@@ -914,30 +922,33 @@ async function loadEarningsAndPayout() {
     } else {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No payout requests yet.</td></tr>`;
     }
-
-    const payoutBtn = document.getElementById("payoutBtn");
-    payoutBtn.disabled = (res.currentBalance || 0) < 15000;
 }
 
 
-
-// ====================== REQUEST PAYOUT ======================
+// ====================== REQUEST PAYOUT (FIXED) ======================
 async function requestPayout() {
     if (!currentToken) return alert("Please login first");
 
+    // Get the actual numeric balance (cleaner way)
+    const balanceText = document.getElementById("balanceAmount").textContent;
+    const amount = parseFloat(balanceText.replace(/[₦,]/g, '')) || 0;
+
+    if (amount < 15000) {
+        return alert("Minimum payout is ₦15,000");
+    }
+
     const res = await apiCall("requestPayment", { 
         token: currentToken, 
-        amount: document.getElementById("balanceAmount").textContent.replace(/[₦,]/g, '') 
+        amount: amount 
     });
 
     if (res.success) {
         alert(res.message || "Payout request submitted successfully!");
-        loadEarningsAndPayout();   // Refresh both earnings and history
+        loadEarningsAndPayout();   // Refresh balance and history
     } else {
         alert(res.message || "Failed to request payout");
     }
 }
-
 
 async function sendUpgradeRequest() {
     const requestType = document.getElementById("upgradeType").value;
