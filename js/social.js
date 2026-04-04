@@ -27,37 +27,49 @@ function navbar() {
                     <span class="fa fa-bars"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarCollapse">
-                    <div class="navbar-nav ms-auto py-0">
-                        <a href="index.html" class="nav-item nav-link ">Home</a>
-                        <a href="about.html" class="nav-item nav-link">About</a>
-                        <a href="/appointment.html" class="nav-item nav-link">Book Appointment</a>
-                        <a href="contact.html" class="nav-item nav-link">Contact Us</a>
-                        <a href="policy.html" class="nav-item nav-link">Policies</a>
-                         <div class="nav-item dropdown">
-                            <a href="#" class="nav-link active" data-bs-toggle="dropdown">
-                                <span class="dropdown-toggle">Portals</span>
-                            </a>
-                            <div class="dropdown-menu m-0">
-                                <a href="ssp.html" class="dropdown-item">Career Hub Portal</a>
-                                <a href="portal.html" class="dropdown-item">Staff Portal</a>
-                                <a href="email.html" class="dropdown-item">Email Portal</a>
-                            </div>
-                        </div>
-                        <div class="nav-item dropdown">
-                            <a href="service.html" class="nav-link active" data-bs-toggle="dropdown">
-                                <span class="dropdown-toggle">Services</span>
-                            </a>
-                            <div class="dropdown-menu m-0">
-                            <a href="doc-dev.html" class="dropdown-item">Document Development</a>
-                            <a href="social-media-management.html" class="dropdown-item">Social Media Managment</a>
-                            <a href="compliance.html" class="dropdown-item">Corporate Compliance</a>
-                             <a href="localsupport.html" class="dropdown-item">Corporate Local Entry</a>
-                            <a href="web-graphics-branding.html" class="dropdown-item">Web, Graphics & Branding</a>
-                            <a href="/gaas.html" class="dropdown-item">Premium Support Services</a>
-                            </div>
-                            <a href="value.html" class="dropdown-item">Custom Services</a>
-                        </div>
-                    </div>
+    <div class="navbar-nav ms-auto py-0">
+        <a href="index.html" class="nav-item nav-link">Home</a>
+        <a href="about.html" class="nav-item nav-link">About Us</a>
+        <a href="/appointment.html" class="nav-item nav-link">Book Appointment</a>
+        <a href="contact.html" class="nav-item nav-link">Contact Us</a>
+        <a href="policy.html" class="nav-item nav-link">Policies</a>
+
+        <!-- Portals Dropdown -->
+        <div class="nav-item dropdown">
+            <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                Portals
+            </a>
+            <div class="dropdown-menu m-0">
+                <a href="ssp.html" class="dropdown-item">Career Hub Portal</a>
+                <a href="portal.html" class="dropdown-item">Staff Portal</a>
+                <a href="email.html" class="dropdown-item">Email Portal</a>
+            </div>
+        </div>
+
+        <!-- Services Dropdown -->
+        <div class="nav-item dropdown">
+            <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                Our Services
+            </a>
+            <div class="dropdown-menu m-0">
+                <a href="services.html" class="dropdown-item">General Services</a>
+                <a href="doc-dev.html" class="dropdown-item">Document Development</a>
+                <a href="social-media-management.html" class="dropdown-item">Social Media Management</a>
+                <a href="compliance.html" class="dropdown-item">Corporate Compliance</a>
+                <a href="localsupport.html" class="dropdown-item">Corporate Local Entry Support</a>
+                <a href="web-graphics-branding.html" class="dropdown-item">Web, Graphics & Branding</a>
+                <a href="/gaas.html" class="dropdown-item">Premium Support Services (GAAS)</a>
+                <div class="dropdown-divider"></div>
+                <a href="value.html" class="dropdown-item">Custom Services</a>
+            </div>
+        </div>
+    </div>
+
+    <a href="https://flutterwave.com/pay/cxbndrtmjsdj" 
+       class="btn btn-primary rounded-pill py-2 px-4 my-3 my-lg-0 flex-shrink-0">
+        Make Payment
+    </a>
+</div>
                     <a href="https://flutterwave.com/pay/cxbndrtmjsdj" class="btn btn-primary rounded-pill py-2 px-4 my-3 my-lg-0 flex-shrink-0">Make Payment</a>
                 </div>`}
 navbar();
