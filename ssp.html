@@ -128,15 +128,29 @@
         </div>
 
         <!-- Tabs -->
-        <ul class="nav nav-pills mb-4">
-            <li class="nav-item"><a class="nav-link active" onclick="showTab(0)" id="tab0">Submit Client</a></li>
-            <li class="nav-item"><a class="nav-link" onclick="showTab(1)" id="tab1">My Records</a></li>
-            <li class="nav-item"><a class="nav-link" onclick="showTab(2)" id="tab2">Submit Request</a></li>
-            <li class="nav-item"><a class="nav-link" onclick="showTab(3)" id="tab3">My Upgrades</a></li>
-            <li class="nav-item"><a class="nav-link" onclick="showTab(4)" id="tab4">Earnings & Payout</a></li>
-            <li class="nav-item"><a class="nav-link" onclick="showTab(5)" id="tab5">My Profile</a></li>
-            <li class="nav-item"><a class="nav-link" onclick="showTab(6)" id="tab6">Training Academy</a></li>
+        <div class="mb-4">
+    <div class="dropdown">
+        <button class="btn btn-primary btn-lg dropdown-toggle w-100 text-start" 
+                type="button" 
+                id="tabDropdown" 
+                data-bs-toggle="dropdown" 
+                aria-expanded="false">
+            📤 Submit Client
+        </button>
+        
+        <ul class="dropdown-menu w-100" aria-labelledby="tabDropdown">
+            <li><a class="dropdown-item" href="#" onclick="showTab(0); updateDropdownText(this); closeDropdown();">📤 Submit Client</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showTab(1); updateDropdownText(this); closeDropdown();">📋 My Records</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showTab(2); updateDropdownText(this); closeDropdown();">📨 Submit Request</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showTab(3); updateDropdownText(this); closeDropdown();">⬆️ My Upgrades</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showTab(4); updateDropdownText(this); closeDropdown();">💰 Earnings & Payout</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showTab(5); updateDropdownText(this); closeDropdown();">👤 My Profile</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showTab(6); updateDropdownText(this)">🎓 Training Academy</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#" onclick="showTab(7); updateDropdownText(this)">✉️ Messages</a></li>
         </ul>
+    </div>
+</div>
 
         <!-- Submit Client Tab -->
         <div id="tabContent0">
@@ -489,6 +503,22 @@
                 <p id="certificateNote" class="small text-muted mt-3 d-none">You are eligible to request your official Training Certificate.</p>
             </div>
         </div>
+        <!-- Messages Tab -->
+<div id="tabContent7" class="d-none">
+    <h5><i class="fas fa-envelope"></i> Messages from Admin</h5>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <button onclick="loadMessages()" class="btn btn-primary mb-3">
+                <i class="fas fa-sync"></i> Refresh Messages
+            </button>
+            
+            <div id="messagesContainer">
+                <!-- Messages will be loaded here dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
 
     </div>
 </div>
@@ -1099,6 +1129,116 @@ window.onload = () => {
         }
     }
 };
+
+// ====================== MESSAGES FUNCTIONALITY ======================
+
+// Load all messages for the logged-in user
+async function loadMessages() {
+    const container = document.getElementById("messagesContainer");
+    container.innerHTML = `<p class="text-center text-muted">Loading messages...</p>`;
+
+    const res = await apiCall("sendMessage", { 
+        token: currentToken, 
+        action: "getMessages"   // We'll modify backend slightly for this
+    });
+
+    // Temporary: Since your current sendMessageToUser only sends, we'll create a getMessages function later
+    // For now, let's assume we add a new action "getMyMessages"
+
+    // Better approach - create a dedicated action
+    const result = await apiCall("getMyMessages", { token: currentToken });
+
+    if (result.success && result.messages && result.messages.length > 0) {
+        let html = '';
+        result.messages.forEach(msg => {
+            const isRead = msg.isRead ? 'text-muted' : 'fw-bold';
+            const readBadge = msg.isRead ? 
+                `<span class="badge bg-success">Read</span>` : 
+                `<span class="badge bg-warning">New</span>`;
+
+            html += `
+                <div class="message-card border rounded p-3 mb-3 ${isRead}">
+                    <div class="d-flex justify-content-between">
+                        <strong>${msg.subject}</strong>
+                        <small class="text-muted">${new Date(msg.timestamp).toLocaleDateString('en-GB')}</small>
+                    </div>
+                    <p class="mt-2 mb-2">${msg.message}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        ${readBadge}
+                        ${!msg.isRead ? `<button onclick="markMessageAsRead(${msg.rowIndex})" class="btn btn-sm btn-outline-primary">Mark as Read</button>` : ''}
+                    </div>
+                </div>`;
+        });
+        container.innerHTML = html;
+    } else {
+        container.innerHTML = `<p class="text-center text-muted">No messages yet from the admin.</p>`;
+    }
+}
+
+// Optional: Mark message as read
+async function markMessageAsRead(rowIndex) {
+    const res = await apiCall("markMessageAsRead", { 
+        token: currentToken, 
+        rowIndex: rowIndex 
+    });
+    
+    if (res.success) {
+        loadMessages(); // Refresh
+    }
+}
+
+// ====================== TAB SWITCHER ======================
+function showTab(tabIndex) {
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.style.display = 'none';
+    });
+
+    // Show the selected tab content
+    const activeTab = document.getElementById('tabContent' + tabIndex);
+    if (activeTab) {
+        activeTab.style.display = 'block';
+    }
+
+    // Update the dropdown button text
+    updateDropdownButton(tabIndex);
+
+    // Special action for Messages tab
+    if (tabIndex === 7) {
+        loadMessages();
+    }
+}
+
+// ====================== UPDATE DROPDOWN BUTTON TEXT ======================
+function updateDropdownButton(tabIndex) {
+    const button = document.getElementById("tabDropdown");
+    if (!button) return;
+
+    const items = document.querySelectorAll('.dropdown-item');
+
+    items.forEach(item => {
+        // Extract tab index from onclick="showTab(X)"
+        const match = item.getAttribute('onclick')?.match(/showTab\((\d+)\)/);
+        if (match && parseInt(match[1]) === tabIndex) {
+            button.innerHTML = item.innerHTML;
+            return; // No need to check further
+        }
+    });
+}
+
+// ====================== SET ACTIVE TAB (for page load or manual switch) ======================
+function setActiveTab(tabIndex) {
+    showTab(tabIndex);   // This handles showing content + updating button
+}
+
+// ====================== OPTIONAL: Close dropdown after clicking an item ======================
+function closeDropdown() {
+    const dropdownEl = document.getElementById("tabDropdown");
+    if (dropdownEl) {
+        const dropdown = bootstrap.Dropdown.getInstance(dropdownEl);
+        if (dropdown) dropdown.hide();
+    }
+}
 </script>
 
 <script src="lib/wow/wow.min.js"></script>
