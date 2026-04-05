@@ -131,7 +131,7 @@
         <ul class="nav nav-pills mb-4">
             <li class="nav-item"><a class="nav-link active" onclick="showTab(0)" id="tab0">Submit Client</a></li>
             <li class="nav-item"><a class="nav-link" onclick="showTab(1)" id="tab1">My Records</a></li>
-            <li class="nav-item"><a class="nav-link" onclick="showTab(2)" id="tab2">Request Upgrade</a></li>
+            <li class="nav-item"><a class="nav-link" onclick="showTab(2)" id="tab2">Submit Request</a></li>
             <li class="nav-item"><a class="nav-link" onclick="showTab(3)" id="tab3">My Upgrades</a></li>
             <li class="nav-item"><a class="nav-link" onclick="showTab(4)" id="tab4">Earnings & Payout</a></li>
             <li class="nav-item"><a class="nav-link" onclick="showTab(5)" id="tab5">My Profile</a></li>
@@ -178,10 +178,11 @@
 
         <!-- Request Upgrade Tab -->
         <div id="tabContent2" class="d-none">
-            <h5>Request Upgrade</h5>
+            <h5>Make a Request</h5>
             <select id="upgradeType" class="form-select mb-3">
-                <option value="Access More Tasks">Access More Tasks</option>
-                <option value="Custom Request">Custom Request</option>
+                <option value="Request Upgrade">Request Upgrade - Access More Tasks</option>
+                <option value="Access More Tasks">Request One-Time Task - For Task above your level.</option>
+                <option value="Custom Request">Custom Request - </option>
             </select>
             <textarea id="upgradeMessage" class="form-control" rows="4" placeholder="Tell us what you need..."></textarea>
             <button onclick="sendUpgradeRequest()" class="btn btn-success w-100 mt-3 py-3">Submit Request</button>
@@ -555,26 +556,43 @@ let currentResetEmail = '';
 
 // ====================== API CALL ======================
 async function apiCall(action, body = {}) {
-    console.log(`[API] Calling: ${action}`, body);
     try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+
+        const payload = JSON.stringify({ action, ...body });
+
         const response = await fetch(WEBAPP_URL, {
             method: "POST",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify({ action, ...body })
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"   // ← Best for GAS
+            },
+            body: "payload=" + encodeURIComponent(payload),           // ← Send as form data
+            signal: controller.signal
         });
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        clearTimeout(timeoutId);
 
-        const data = await response.json();
-        console.log(`[API] Response from ${action}:`, data);
-        return data;
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        return result;
+
     } catch (error) {
         console.error(`[ERROR] ${action}:`, error);
-        alert(`Connection failed: ${error.message}`);
-        return { success: false, message: "Connection failed" };
+
+        if (error.name === 'AbortError') {
+            return { success: false, message: "Request timed out. Please try again." };
+        }
+
+        return { 
+            success: false, 
+            message: "Unable to connect to the server. Please check your internet connection and try again." 
+        };
     }
 }
-
 // ====================== AUTH FUNCTIONS ======================
 async function handleRegister() {
     const data = {
