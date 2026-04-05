@@ -128,7 +128,8 @@
         </div>
 
         <!-- Tabs -->
-        <div class="mb-4">
+        <!-- Tabs Dropdown - FIXED -->
+<div class="mb-4">
     <div class="dropdown">
         <button class="btn btn-primary btn-lg dropdown-toggle w-100 text-start" 
                 type="button" 
@@ -139,15 +140,15 @@
         </button>
         
         <ul class="dropdown-menu w-100" aria-labelledby="tabDropdown">
-            <li><a class="dropdown-item" href="#" onclick="showTab(0); updateDropdownText(this);">📤 Submit Client</a></li>
-            <li><a class="dropdown-item" href="#" onclick="showTab(1); updateDropdownText(this);">📋 My Records</a></li>
-            <li><a class="dropdown-item" href="#" onclick="showTab(2); updateDropdownText(this);">📨 Submit Request</a></li>
-            <li><a class="dropdown-item" href="#" onclick="showTab(3); updateDropdownText(this);">⬆️ My Upgrades</a></li>
-            <li><a class="dropdown-item" href="#" onclick="showTab(4); updateDropdownText(this);">💰 Earnings & Payout</a></li>
-            <li><a class="dropdown-item" href="#" onclick="showTab(5); updateDropdownText(this);">👤 My Profile</a></li>
-            <li><a class="dropdown-item" href="#" onclick="showTab(6); updateDropdownText(this)">🎓 Training Academy</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showTab(0); closeDropdown();">📤 Submit Client</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showTab(1); closeDropdown();">📋 My Records</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showTab(2); closeDropdown();">📨 Submit Request</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showTab(3); closeDropdown();">⬆️ My Upgrades</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showTab(4); closeDropdown();">💰 Earnings & Payout</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showTab(5); closeDropdown();">👤 My Profile</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showTab(6); closeDropdown();">🎓 Training Academy</a></li>
             <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="#" onclick="showTab(7); updateDropdownText(this)">✉️ Messages</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showTab(7); closeDropdown();">✉️ Messages</a></li>
         </ul>
     </div>
 </div>
@@ -712,7 +713,7 @@ async function loadDashboard() {
     document.getElementById("dashUsername").textContent = currentUser.username || currentUser.name || "Partner";
     document.getElementById("dashUniqueID").textContent = currentUser.uniqueID || "VS-XXXX";
 
-    showTab(0);
+    setActiveTab(0);   // This ensures dropdown text also updates on load;
     loadMyRecords();
     loadMyUpgrades();
     populateAvailableTasks();
@@ -1188,25 +1189,32 @@ async function markMessageAsRead(rowIndex) {
 }
 
 // ====================== TAB SWITCHER ======================
+// ====================== FIXED TAB SWITCHER ======================
 function showTab(tabIndex) {
-    // Hide all tab contents
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.style.display = 'none';
-    });
-
-    // Show the selected tab content
-    const activeTab = document.getElementById('tabContent' + tabIndex);
-    if (activeTab) {
-        activeTab.style.display = 'block';
+    // Hide ALL tab contents
+    for (let i = 0; i <= 7; i++) {
+        const content = document.getElementById('tabContent' + i);
+        if (content) {
+            content.classList.add('d-none');
+        }
     }
 
-    // Update the dropdown button text
+    // Show the selected tab
+    const activeContent = document.getElementById('tabContent' + tabIndex);
+    if (activeContent) {
+        activeContent.classList.remove('d-none');
+    }
+
+    // Update dropdown button text
     updateDropdownButton(tabIndex);
 
-    // Special action for Messages tab
-    if (tabIndex === 7) {
-        loadMessages();
-    }
+    // Special actions for specific tabs
+    if (tabIndex === 1) loadMyRecords();
+    if (tabIndex === 3) loadMyUpgrades();
+    if (tabIndex === 4) loadEarningsAndPayout();
+    if (tabIndex === 5) loadProfileData();
+    if (tabIndex === 6) loadTrainingAcademy();
+    if (tabIndex === 7) loadMessages();
 }
 
 // ====================== UPDATE DROPDOWN BUTTON TEXT ======================
@@ -1216,28 +1224,27 @@ function updateDropdownButton(tabIndex) {
 
     const items = document.querySelectorAll('.dropdown-item');
 
-    items.forEach(item => {
-        // Extract tab index from onclick="showTab(X)"
+    for (let item of items) {
         const match = item.getAttribute('onclick')?.match(/showTab\((\d+)\)/);
         if (match && parseInt(match[1]) === tabIndex) {
             button.innerHTML = item.innerHTML;
-            return; // No need to check further
+            break;
         }
-    });
+    }
 }
 
-// ====================== SET ACTIVE TAB (for page load or manual switch) ======================
-function setActiveTab(tabIndex) {
-    showTab(tabIndex);   // This handles showing content + updating button
-}
-
-// ====================== OPTIONAL: Close dropdown after clicking an item ======================
+// ====================== CLOSE DROPDOWN AFTER SELECTION ======================
 function closeDropdown() {
     const dropdownEl = document.getElementById("tabDropdown");
     if (dropdownEl) {
         const dropdown = bootstrap.Dropdown.getInstance(dropdownEl);
         if (dropdown) dropdown.hide();
     }
+}
+
+// ====================== SET ACTIVE TAB (Call on load) ======================
+function setActiveTab(tabIndex) {
+    showTab(tabIndex);
 }
 </script>
 
