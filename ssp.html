@@ -557,42 +557,39 @@ let currentResetEmail = '';
 // ====================== API CALL ======================
 async function apiCall(action, body = {}) {
     try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
-
         const payload = JSON.stringify({ action, ...body });
 
         const response = await fetch(WEBAPP_URL, {
             method: "POST",
             headers: {
-                "Content-Type": "application/x-www-form-urlencoded"   // ← Best for GAS
+                "Content-Type": "text/plain;charset=utf-8"   // Important: simple request
             },
-            body: "payload=" + encodeURIComponent(payload),           // ← Send as form data
-            signal: controller.signal
+            body: payload,
+            redirect: "follow"
         });
 
-        clearTimeout(timeoutId);
-
+        // Even if status is 200, check if we can read the body
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
         }
 
-        const result = await response.json();
+        const text = await response.text();   // First get as text
+        console.log("Raw response:", text);   // ← Add this for debugging
+
+        const result = JSON.parse(text);
         return result;
 
     } catch (error) {
         console.error(`[ERROR] ${action}:`, error);
-
-        if (error.name === 'AbortError') {
-            return { success: false, message: "Request timed out. Please try again." };
-        }
+        console.error("Full error object:", error);
 
         return { 
             success: false, 
-            message: "Unable to connect to the server. Please check your internet connection and try again." 
+            message: "Connection error. Please try again or contact support." 
         };
     }
 }
+
 // ====================== AUTH FUNCTIONS ======================
 async function handleRegister() {
     const data = {
