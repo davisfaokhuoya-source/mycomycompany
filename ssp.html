@@ -557,39 +557,37 @@ let currentResetEmail = '';
 // ====================== API CALL ======================
 async function apiCall(action, body = {}) {
     try {
+        // Make it a "simple" request to avoid preflight
         const payload = JSON.stringify({ action, ...body });
 
         const response = await fetch(WEBAPP_URL, {
             method: "POST",
             headers: {
-                "Content-Type": "text/plain;charset=utf-8"   // Important: simple request
+                "Content-Type": "text/plain"   // ← No charset
             },
             body: payload,
             redirect: "follow"
         });
 
-        // Even if status is 200, check if we can read the body
+        // Log raw response for debugging
+        const text = await response.text();
+        console.log(`[${action}] Raw response:`, text);
+
         if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
+            console.error(`HTTP error ${response.status}:`, text);
         }
 
-        const text = await response.text();   // First get as text
-        console.log("Raw response:", text);   // ← Add this for debugging
-
-        const result = JSON.parse(text);
+        const result = JSON.parse(text || "{}");
         return result;
 
     } catch (error) {
-        console.error(`[ERROR] ${action}:`, error);
-        console.error("Full error object:", error);
-
+        console.error(`[ERROR ${action}]:`, error);
         return { 
             success: false, 
-            message: "Connection error. Please try again or contact support." 
+            message: "Connection failed. Try again or check console (F12)." 
         };
     }
 }
-
 // ====================== AUTH FUNCTIONS ======================
 async function handleRegister() {
     const data = {
