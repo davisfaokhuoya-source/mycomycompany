@@ -1,75 +1,44 @@
+const teamData = [
+    {image:'bar.jpg', sec : 0.2,  name: 'Innocent Ukoha', socialMeida1:'', socialMeida2:'', socialMeida3:'', socialMeida4:'', profession: 'Legal Advisor'}, 
+    {image:'Untitled.png', sec : 0.4,  name: 'Habeeb Bright', socialMeida1:'', socialMeedia2:'', socialMeida3:'', socialMeida4:'', profession: 'Tech Bro'},
+    {image:'1761238885388.jpeg', sec : 0.6,  name: 'D. O. F Okhuoya', socialMeida1:'', socialMeida2:'', socialMeida3:'', socialMeida4:'', profession: 'Business Dev'},
+    {image:'team-compliance-CO3-DPpB.jpg', sec : 0.8,  name: 'Joy Zakaa', socialMeida1:'', socialMeida2:'', socialMeida3:'', socialMeida4:'', profession: 'Financial Consultant'}
+];
 
-document.querySelector('.addfooter').innerHTML= 
-`<div class="container-fluid footer py-5 wow fadeIn" data-wow-delay="0.2s">
-            <div class="container py-5 border-start-0 border-end-0" style="border: 1px solid; border-color: rgb(255, 255, 255, 0.08);">
-                <div class="row g-5">
-                    <div class="col-md-6 col-lg-6 col-xl-4">
-                        <div class="footer-item">
-                            <a href="index.html" class="p-0">
-                                <h4 class="text-white">
-                                <img src="img/thevictoriaslogo.png" style="height: 60px; width: 60px" alt="Logo"> <span class="dealyo">The Victorias Ltd </span></h4>
-                            </a>
-                            <p class="mb-4"><strong>A partner you can trust...</strong><br/>At The Victorias Ltd., we are dedicated to fostering long-term partnerships with our clients by delivering exceptional value and measurable results.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-6 col-xl-2">
-                        <div class="footer-item">
-                            <h4 class="text-white mb-4">Home Links</h4>
-                            <a href="careerhub"><i class="fas fa-angle-right me-2"></i> Earn from Home</a>
-                            <a href="appointment"><i class="fas fa-angle-right me-2"></i> Book Appointment</a>
-                            <a href="services"><i class="fas fa-angle-right me-2"></i> Our Services</a>
-                            <a href="contact"><i class="fas fa-angle-right me-2"></i>Contact Us</a>
-                            <a href="web-graphics-branding"><i class="fas fa-angle-right me-2"></i>Web, Graphics & Branding</a>
-                            <a href="value"><i class="fas fa-angle-right me-2"></i>Service Cost Calculator</a>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-6 col-xl-3">
-                        <div class="footer-item">
-                            <h4 class="text-white mb-4">Support</h4>
-                            <a href="policy.html"><i class="fas fa-angle-right me-2"></i>Policies</a>
-                            <a href="contact.html"><i class="fas fa-angle-right me-2"></i>Support</a>
-                            <a href="#readfaq"><i class="fas fa-angle-right me-2"></i> FAQ</a>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-6 col-xl-3">
-                        <div class="footer-item">
-                            <h4 class="text-white mb-4">Contact Info</h4>
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-map-marker-alt text-primary me-3"></i>
-                                <p class="text-white mb-0">Abuja, Nigeria</p>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-envelope text-primary me-3"></i>
-                                <p class="text-white mb-0">@thevictorias.com.ng</p>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <i class="fa fa-phone-alt text-primary me-3"></i>
-                                <p class="text-white mb-0">+2348055538518</p>
-                            </div>
-                        
-                            <div class="d-flex">
-                                <a class="btn btn-primary btn-sm-square rounded-circle me-3" href="facebook.com/thevictoriasltd"><i class="fab fa-facebook-f text-white"></i></a>
-                                <a class="btn btn-primary btn-sm-square rounded-circle me-3" href="x.com/thevictoriasltd"><i class="fab fa-twitter text-white"></i></a>
-                                <a class="btn btn-primary btn-sm-square rounded-circle me-3" href="tiktok.com/thevictoriasltd"><i class="fa fa-tiktok text-white"></i></a>
-                                <a class="btn btn-primary btn-sm-square rounded-circle me-0" href="linkedin.com/company/thevictoriasltd"><i class="fab fa-linkedin-in text-white"></i></a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Footer End -->
+function renderTeam(){
+    document.addEventListener('DOMContentLoaded', () => {
+        const teamContainer = document.querySelector('.teamview');
+        let htmlcode = '';
         
-        <!-- Copyright Start -->
-        <div class="container-fluid copyright py-4">
-            <div class="container">
-                <div class="row g-4 align-items-center">
-                    <div class="col-md-6 text-center text-md-start mb-md-0">
-                        <span class="text-body"><a href="#" class="border-bottom text-white"><i class="fas fa-copyright text-light me-2"></i>The Victorias Ltd</a>, All right reserved.</span>
+        teamData.forEach(element => {
+            htmlcode += `
+                <div class="col-md-6 col-lg-6 col-xl-3 wow fadeInUp" data-wow-delay="${element.sec}s">
+                    <div class="team-item">
+                        <div class="team-img position-relative">
+                            <img src="img/${element.image}" 
+                                 class="img-fluid rounded-circle team-image" 
+                                 alt="${element.name}">
+                        </div>
+                        <div class="team-title text-center mt-3">
+                            <h4 class="mb-0">${element.name}</h4>
+                            <p class="mb-0 text-muted">${element.profession}</p>
+                        </div>
+                        <div class="team-icon text-center mt-3">
+                            <a class="btn btn-primary btn-sm-square rounded-circle me-2" href="${element.socialMeida1 || '#'}"><i class="fab fa-facebook-f"></i></a>
+                            <a class="btn btn-primary btn-sm-square rounded-circle me-2" href="${element.socialMeida2 || '#'}"><i class="fab fa-twitter"></i></a>
+                            <a class="btn btn-primary btn-sm-square rounded-circle me-2" href="${element.socialMeida3 || '#'}"><i class="fab fa-linkedin-in"></i></a>
+                            <a class="btn btn-primary btn-sm-square rounded-circle" href="${element.socialMeida4 || '#'}"><i class="fab fa-instagram"></i></a>
+                        </div>
                     </div>
-                    <div class="col-md-6 text-center text-md-end text-body">
-                        Designed By The Victorias Ltd Tech Team.
-                    </div>
-                </div>
-            </div>
-        </div>`
+                </div>`;
+        });
+        
+        if (teamContainer) {
+            teamContainer.innerHTML = htmlcode;
+        } else {
+            console.error("Error: Could not find element with class '.teamview'");
+        }
+    });
+}
+
+renderTeam();
