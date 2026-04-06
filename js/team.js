@@ -11,7 +11,7 @@ function renderTeam(){
     document.addEventListener('DOMContentLoaded', (event) => {
         const services = document.querySelector('.teamview');
         let htmlcode ='';
-        
+    
         // Use the renamed constant
         teamData.forEach(element => {
             htmlcode += `<div class ="col-md-6 col-lg-6 col-xl-3 wow fadeInUp" data-wow-delay="${element.sec}">
