@@ -2,7 +2,7 @@
 const footerHTML = `<!-- Victoria AI Bubble Integration -->
 <iframe 
   src="https://victoria-ai-1067076389706.us-west1.run.app" 
-  style="position:fixed; bottom:0; right:0; width:450px; height:750px; border:none; z-index:999999; background:transparent;"
+  style="position:fixed; bottom:100px; right:0; width:450px; height:750px; border:none; z-index:999999; background:transparent;"
   allow="clipboard-write"
   title="Victoria AI Concierge"
 ></iframe>
