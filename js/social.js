@@ -157,7 +157,7 @@ const feactured = [
 
         link: 'collapseThree', 
 
-        image: '0d7a3680add52555157a3879eda6efcd.jpg', 
+        image: 'pexels-rimiscky-34968270.jpg', 
 
         text: 'From persuasive grant and business proposals to ATS-optimized CVs and deep-dive market research, we provide the documentation and insights you need to win opportunities and understand your industry landscape.' , textlink: 'doc-dev.html'
 
@@ -169,7 +169,7 @@ const feactured = [
 
         link: 'collapseFour', 
 
-        image: 'cacf056d3112f30f8bac8d390a1ecb10.jpg', 
+        image: 'pexels-shvetsa-3727513.jpg', 
 
         text: 'Navigate the complexities of new territories with confidence. We provide strategic guidance on local regulations, consumer behavior, and competitive positioning to help your brand launch and scale successfully in the local market.', textlink: 'localsupport.html'
 
@@ -181,7 +181,7 @@ const feactured = [
 
         link: 'collapseFive', 
 
-        image: 'download2.jpeg', 
+        image: 'pexels-rimiscky-34968270.jpg', 
 
         text: 'Bring your vision to life with a presence that commands attention. We blend strategic web design, impactful graphics, and cohesive branding to help your business cut through the noise and scale successfully in any market.', textlink: 'web-graphics-branding.html'
 
