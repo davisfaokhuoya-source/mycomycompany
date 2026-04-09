@@ -55,8 +55,8 @@ const footerHTML = `<!-- Victoria AI Bubble Integration -->
                             </div>
                         
                             <div class="d-flex">
-                                <a class="btn btn-primary btn-sm-square rounded-circle me-3" href="facebook.com/thevictoriasltd"><i class="fab fa-facebook-f text-white"></i></a>
-                                <a class="btn btn-primary btn-sm-square rounded-circle me-3" href="x.com/thevictoriasltd"><i class="fab fa-twitter text-white"></i></a>
+                                <a class="btn btn-primary btn-sm-square rounded-circle me-3" href="https://facebook.com/thevictoriasltd"><i class="fab fa-facebook-f text-white"></i></a>
+                                <a class="btn btn-primary btn-sm-square rounded-circle me-3" href="https://x.com/thevictoriasltd"><i class="fab fa-twitter text-white"></i></a>
                                 <a class="btn btn-primary btn-sm-square rounded-circle me-0" href="linkedin.com/company/thevictoriasltd"><i class="fab fa-linkedin-in text-white"></i></a>
                             </div>
                         </div>
