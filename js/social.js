@@ -1,22 +1,4 @@
-function socialmedia() {
-    const media = `
-        <a class="btn btn-md-square btn-light rounded-circle me-2" href="facebook.com"><i class="fab fa-facebook-f"></i></a>
-        <a class="btn btn-md-square btn-light rounded-circle mx-2" href="x.com"><i class="fab fa-twitter"></i></a>
-        <a class="btn btn-md-square btn-light rounded-circle ms-2" href="tiktok.com"><i class="fa-brands fa-tiktok social-icon"></i></a>
-        <a class="btn btn-md-square btn-light rounded-circle ms-2" href="linkedin.com"><i class="fab fa-linkedin-in"></i></a>
-    `;
-    
-    // Select all elements with the class 'mediaicon'
-    document.querySelectorAll('.mediaicon').forEach(element => {
-        // 'element' is the current div in the loop. 
-        // We set its innerHTML directly.
-        element.innerHTML = media;
-    });
-}
 
-// Call the function immediately after defining it in the JS file 
-// (or use the HTML method below, but this is simpler)
-socialmedia();
 
 function navbar() {
     const currentUrl = window.location.href;
@@ -30,10 +12,6 @@ function navbar() {
     <div class="navbar-nav ms-auto py-0">
         <a href="index.html" class="nav-item nav-link">Home</a>
         <a href="about.html" class="nav-item nav-link">About Us</a>
-        <a href="/appointment.html" class="nav-item nav-link">Book Appointment</a>
-        <a href="contact.html" class="nav-item nav-link">Contact Us</a>
-        <a href="policy.html" class="nav-item nav-link">Policies</a>
-
         <!-- Portals Dropdown -->
         <div class="nav-item dropdown">
             <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
@@ -62,6 +40,11 @@ function navbar() {
                 <a href="value.html" class="dropdown-item">Custom Services</a>
             </div>
         </div>
+        <a href="/appointment.html" class="nav-item nav-link">Book Appointment</a>
+        <a href="contact.html" class="nav-item nav-link">Contact Us</a>
+        <a href="policy.html" class="nav-item nav-link">Policies</a>
+
+        
     </div>
 
     <a href="https://flutterwave.com/pay/cxbndrtmjsdj" 

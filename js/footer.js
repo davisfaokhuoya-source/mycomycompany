@@ -1,11 +1,6 @@
 // footer.js
 const footerHTML = `<!-- Victoria AI Bubble Integration -->
-<iframe 
-  src="https://victoria-ai-1021677502943.us-west1.run.app" 
-  style="position:fixed; bottom:70px; right:0; width:450px; height:750px; border:none; z-index:999999; background:transparent;"
-  allow="clipboard-write"
-  title="Victoria AI Concierge"
-></iframe>
+
     <!-- Paste your full footer HTML here -->
     <div class="container-fluid footer py-5 wow fadeIn" data-wow-delay="0.2s">
             <div class="container py-5 border-start-0 border-end-0" style="border: 1px solid; border-color: rgb(255, 255, 255, 0.08);">
@@ -78,6 +73,14 @@ const footerHTML = `<!-- Victoria AI Bubble Integration -->
                     </div>
                 </div>
             </div>
+        </div>
+        <div style="position: fixed; bottom: 0px; right: 20px; width: 450px; height: calc(100vh - 100px); max-height: 700px; z-index: 1010; pointer-events: none;">
+            <iframe 
+                src="https://victoria-ai-1021677502943.us-west1.run.app" 
+                style="width: 100%; height: 100%; border: none; background: transparent; pointer-events: auto;"
+                allow="clipboard-write"
+                title="Victoria AI Concierge">
+            </iframe>
         </div>
 `;
 
