@@ -74,14 +74,13 @@ const footerHTML = `<!-- Victoria AI Bubble Integration -->
                 </div>
             </div>
         </div>
-        <div style="position: fixed; bottom: 0px; right: 20px; width: 450px; height: calc(100vh - 100px); max-height: 700px; z-index: 1010; pointer-events: none;">
-            <iframe 
-                src="https://victoria-ai-1021677502943.us-west1.run.app" 
-                style="width: 100%; height: 100%; border: none; background: transparent; pointer-events: auto;"
-                allow="clipboard-write"
-                title="Victoria AI Concierge">
-            </iframe>
-        </div>
+        <!-- 1. Add this Button anywhere on your page -->
+                <button id="victoria-btn" class="victoria-button">
+        💬 Live Chat
+        </button>
+
+        <!-- Container for iframe -->
+        <div id="victoriaai" class="victoriaai"></div>
 `;
 
 function renderFooter() {
@@ -96,3 +95,43 @@ function renderFooter() {
 
 // Just call it directly
 renderFooter();
+
+document.addEventListener('DOMContentLoaded', function() {
+    const button = document.getElementById('victoria-btn');
+    const container = document.getElementById('victoriaai');
+    
+    let isOpen = false;
+    let iframe = null;
+
+    button.addEventListener('click', function() {
+        if (isOpen) {
+            // Close
+            if (iframe) {
+                iframe.remove();
+                iframe = null;
+            }
+            isOpen = false;
+            button.innerHTML = '💬 Live Chat';
+            button.classList.remove('open');
+        } else {
+            // Open
+            iframe = document.createElement('iframe');
+            iframe.src = "https://victoria-ai-1021677502943.us-west1.run.app";
+            iframe.style.position = "fixed";
+            iframe.style.bottom = "100px";
+            iframe.style.right = "0";
+            iframe.style.width = "450px";
+            iframe.style.height = "650px";
+            iframe.style.border = "none";
+            iframe.style.zIndex = "9999";
+            iframe.style.pointerEvents = "auto";
+            iframe.allow = "clipboard-write";
+            
+            container.appendChild(iframe);
+            
+            isOpen = true;
+            button.innerHTML = '💬 Close Chat';
+            button.classList.add('open');
+        }
+    });
+});
