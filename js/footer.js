@@ -152,3 +152,10 @@ function applyResponsiveStyles() {
         }
     });
 });
+
+function onClick(e) {
+    e.preventDefault();
+    grecaptcha.enterprise.ready(async () => {
+      const token = await grecaptcha.enterprise.execute('6Lew17AsAAAAANmbaXcMBQt2IgSv-d8SM14-f4s0', {action: 'LOGIN'});
+    });
+  }
