@@ -117,15 +117,32 @@ document.addEventListener('DOMContentLoaded', function() {
             // Open
             iframe = document.createElement('iframe');
             iframe.src = "https://victoria-ai-1021677502943.us-west1.run.app";
-            iframe.style.position = "fixed";
-            iframe.style.bottom = "100px";
-            iframe.style.right = "0";
-            iframe.style.width = "450px";
-            iframe.style.height = "650px";
-            iframe.style.border = "none";
-            iframe.style.zIndex = "9999";
-            iframe.style.pointerEvents = "auto";
-            iframe.allow = "clipboard-write";
+iframe.style.position = "fixed";
+iframe.style.border = "none";
+iframe.style.zIndex = "9999";
+iframe.style.pointerEvents = "auto";
+iframe.allow = "clipboard-write";
+
+// Function to handle responsive styling
+function applyResponsiveStyles() {
+    if (window.innerWidth <= 767) {
+        // Mobile Styles
+        iframe.style.bottom = "0px";
+        iframe.style.right = "0px";
+        iframe.style.width = "100%";
+        iframe.style.height = "70%";
+    } else {
+        // Desktop Styles
+        iframe.style.bottom = "100px";
+        iframe.style.right = "20px";
+        iframe.style.width = "450px";
+        iframe.style.height = "650px";
+    }
+}
+
+    // Run on load and whenever the window is resized
+        applyResponsiveStyles();
+        window.addEventListener('resize', applyResponsiveStyles);
             
             container.appendChild(iframe);
             
