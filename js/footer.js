@@ -129,14 +129,14 @@ function applyResponsiveStyles() {
         // Mobile Styles
         iframe.style.bottom = "0px";
         iframe.style.right = "0px";
-        iframe.style.width = "auto";
-        iframe.style.height = "auto";
+        iframe.style.width = "450px";
+        iframe.style.height = "750px";
     } else {
         // Desktop Styles
         iframe.style.bottom = "100px";
         iframe.style.right = "20px";
         iframe.style.width = "450px";
-        iframe.style.height = "650px";
+        iframe.style.height = "750px";
     }
 }
 
