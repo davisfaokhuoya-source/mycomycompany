@@ -1382,6 +1382,102 @@ window.onload = () => {
     }
 };
 
+// ====================== SINGLE REUSABLE CLEAR FUNCTION ======================
+/**
+ * Clears ALL input fields (text, email, tel, password, textarea, select, file)
+ * inside a given container after a successful backend submission.
+ * 
+ * Just call: clearFormAfterSuccess("tabContent0")  ← or any container ID
+ */
+function clearFormAfterSuccess(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.warn(`[ClearForm] Container #${containerId} not found`);
+        return;
+    }
+
+    const fields = container.querySelectorAll(
+        'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])'
+    );
+
+    fields.forEach(field => {
+        if (field.type === 'file') {
+            field.value = '';                    // Clear file input
+        } else if (field.type === 'checkbox' || field.type === 'radio') {
+            field.checked = false;
+        } else {
+            field.value = '';                    // Clear text, number, email, tel, password, textarea, select
+        }
+    });
+
+    console.log(`✅ Form cleared successfully → #${containerId}`);
+}
+
+// ====================== INTEGRATION EXAMPLES ======================
+// (Add these lines in the SUCCESS blocks of your existing functions)
+
+async function submitClientForm() {
+    // ... existing code ...
+    const res = await apiCall("submitClient", { token: currentToken, formData });
+    if (res.success) {
+        alert("✅ Client submitted successfully!");
+        
+        // ←←← ADD THIS LINE (replaces your old clearClientForm())
+        clearFormAfterSuccess("tabContent0");
+        
+        loadMyRecords();
+        showTab(1);
+    } else {
+        alert(res.message || "Failed to submit client");
+    }
+}
+
+async function handleRegister() {
+    // ... existing code ...
+    const res = await apiCall("register", data);
+    if (res.success) {
+        currentRegEmail = data.email;
+        document.getElementById("verifyEmailDisplay").innerHTML = `Code & link sent to <strong>${res.email}</strong>`;
+        new bootstrap.Modal(document.getElementById("verifyModal")).show();
+        
+        // ←←← ADD THIS LINE (clears the entire registration form)
+        clearFormAfterSuccess("registerTab");
+        
+        setTimeout(() => {
+            alert("🎉 Congratulations! You have received a ₦2,000 signup bonus credited to your balance.");
+        }, 800);
+    } else alert(res.message || "Registration failed");
+}
+
+async function sendUpgradeRequest() {
+    // ... existing code ...
+    const res = await apiCall("requestUpgrade", { token: currentToken, requestType, message });
+    if (res.success) {
+        alert("✅ Upgrade request submitted!");
+        
+        // ←←← ADD THIS LINE (clears the upgrade form)
+        clearFormAfterSuccess("tabContent2");
+        
+        loadMyUpgrades();
+        showTab(3);
+    } else {
+        alert(res.message || "Failed to submit request");
+    }
+}
+
+// Optional: Clear profile form after update (if you want)
+async function updateProfile() {
+    // ... existing code ...
+    const res = await apiCall("updateProfile", { token: currentToken, ...data });
+    if (res.success) {
+        alert("✅ Profile updated successfully!");
+        clearFormAfterSuccess("tabContent5");   // optional
+        loadDashboard();
+    } else {
+        alert(res.message || "Failed to update profile");
+    }
+}
+
 </script>
 
 <script src="lib/wow/wow.min.js"></script>
