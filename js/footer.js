@@ -135,8 +135,8 @@ function applyResponsiveStyles() {
         // Desktop Styles
         iframe.style.bottom = "100px";
         iframe.style.right = "20px";
-        iframe.style.width = "450px";
-        iframe.style.height = "750px";
+        iframe.style.width = "550px";
+        iframe.style.height = "600px";
     }
 }
 
