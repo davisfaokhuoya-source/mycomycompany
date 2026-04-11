@@ -154,6 +154,7 @@
                     <li><a class="dropdown-item" href="#" onclick="showTab(6); closeDropdown();">🎓 Training Academy</a></li>
                     <li><a class="dropdown-item" href="#" onclick="showTab(7); closeDropdown();">✉️ Messages</a></li>
                     <li><a class="dropdown-item" href="#" onclick="showTab(8); closeDropdown();">📎 My Documents</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="showTab(9); closeDropdown();">🖼️ Media Resources</a></li>
                     <li><hr class="dropdown-divider"></li>
                 </ul>
             </div>
@@ -163,15 +164,22 @@
         <div id="tabContent0">
             <h5>New Client Registration</h5>
             <div class="row g-3">
-                <div class="col-md-6"><input id="cName" class="form-control" placeholder="Client Name"></div>
-                <div class="col-md-6"><input id="cLocation" class="form-control" placeholder="Location"></div>
-                <div class="col-md-6"><input id="cPhone" class="form-control" placeholder="Phone"></div>
-                <div class="col-md-6"><input id="cWhatsapp" class="form-control" placeholder="WhatsApp"></div>
-                <div class="col-12"><input id="cEmail" class="form-control" placeholder="Client Email"></div>
-                <div class="col-md-6"><input id="cArea" class="form-control" placeholder="Area Sourced"></div>
-                <div class="col-md-6"><select id="cService" class="form-select"></select></div>
-                <div class="col-md-6"><select id="cUrgency" class="form-select"><option>Low</option><option>Medium</option><option>High</option></select></div>
-                <div class="col-md-6"><select id="cComm" class="form-select"><option>WhatsApp</option><option>Phone Call</option><option>Email</option></select></div>
+                <div class="col-md-6"><input id="cName" class="form-control" placeholder="Client's Name"></div>
+                <div class="col-md-6"><input id="cLocation" class="form-control" placeholder="Client's Location"></div>
+                <div class="col-md-6"><input id="cPhone" class="form-control" placeholder="Client's Phone"></div>
+                <div class="col-md-6"><input id="cWhatsapp" class="form-control" placeholder="Client's WhatsApp"></div>
+                <div class="col-12"><input id="cEmail" class="form-control" placeholder="Client's Email"></div>
+                <div class="col-md-6"><input id="cArea" class="form-control" placeholder="Area Sourced - where did you find this client?"></div>
+                <div class="col-md-6">
+                    <select id="cService" class="form-select"></select>
+                </div>
+                <div class="col-12 mt-3">
+                    <div id="taskDescriptionDisplay" class="alert alert-info small d-none" style="border-left: 4px solid #E07410;">
+                        <!-- Task description will appear here -->
+                </div>
+                </div>
+                <div class="col-md-6"><select id="cUrgency" class="form-select"><option>Not Urgent</option><option>Urgent</option><option>Very Urgent</option></select></div>
+                <div class="col-md-6"><select id="cComm" class="form-select"><option>Client prefers WhatsApp</option><option>Client prefers Phone Call</option><option>Client prefers Email</option></select></div>
                 <div class="col-12"><textarea id="cComments" class="form-control" rows="3" placeholder="Additional Comments"></textarea></div>
             </div>
             <button onclick="submitClientForm()" class="btn btn-primary w-100 mt-4 py-3" id="submitClientBtn">Submit Client</button>
@@ -337,6 +345,15 @@
             </div>
 
             <div class="accordion" id="levelTrainingAccordion">
+                <div class="video-wrapper">
+                <iframe 
+                    src="https://drive.google.com/file/d/1caThvyVLdtL0bJIo1E5qNiXnLlIFlr1U/preview" 
+                    allow="autoplay; encrypted-media" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+
+            
                 <!-- LEVEL 1 -->
                 <div class="accordion-item">
                     <h2 class="accordion-header">
@@ -345,6 +362,8 @@
                         </button>
                     </h2>
                     <div id="level1" class="accordion-collapse collapse show" data-bs-parent="#levelTrainingAccordion">
+                    <h1>Media Resources</h1>
+
                         <div class="accordion-body">
                             <h5>Focus: Helping individuals move from “idea” to “entity”</h5>
                             <p><strong>Key Services:</strong> Company Registration (Inc.), Business Name, Graphics, CV Development</p>        
@@ -558,8 +577,27 @@
                 </div>
             </div>
         </div>
+
+        <!-- Media Resources Tab (Tab 9) -->
+        <div id="tabContent9" class="d-none" style="margin-bottom: 20px;">
+            <h5><i class="fas fa-photo-video"></i> Media Resources</h5>
+            
+            <div class="mb-4">
+                <label class="form-label fw-bold">Select Level to View:</label>
+                <div id="levelButtons" class="btn-group flex-wrap" role="group"></div>
+            </div>
+
+            <div id="mediaLevelMessage" class="alert alert-info d-none"></div>
+            
+            <div class="gallery-container">
+                <iframe 
+                    id="mediaIframe"
+                    src="" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+        </div>
     </div>
-</div>
 
 <!-- Forgot Password Modal -->
 <div class="modal fade" id="forgotModal" tabindex="-1">
@@ -828,6 +866,7 @@ function showTab(tabIndex) {
     if (tabIndex === 6) loadTrainingAcademy();
     if (tabIndex === 7) loadMessages();
     if (tabIndex === 8) loadUserDocuments();
+    if (tabIndex === 9) loadMediaResources();
 }
 
 function updateDropdownButton(tabIndex) {
@@ -853,6 +892,68 @@ function closeDropdown() {
 
 function setActiveTab(tabIndex) {
     showTab(tabIndex);
+}
+
+// ====================== MEDIA RESOURCES WITH LEVEL SWITCHER ======================
+async function loadMediaResources() {
+    const userLevel = parseInt(currentUser?.level) || 1;
+    const buttonsContainer = document.getElementById("levelButtons");
+    const iframe = document.getElementById("mediaIframe");
+    const messageEl = document.getElementById("mediaLevelMessage");
+
+    buttonsContainer.innerHTML = "";
+
+    // Create buttons for levels the user can access (1 to their current level)
+    for (let lvl = 1; lvl <= userLevel; lvl++) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `btn ${lvl === 1 ? 'btn-primary' : 'btn-outline-primary'} me-2 mb-2`;
+        btn.textContent = `Level ${lvl}`;
+        btn.dataset.level = lvl;
+        
+        btn.onclick = () => {
+            // Remove active class from all buttons
+            document.querySelectorAll('#levelButtons button').forEach(b => {
+                b.classList.remove('btn-primary');
+                b.classList.add('btn-outline-primary');
+            });
+            // Activate clicked button
+            btn.classList.add('btn-primary');
+            btn.classList.remove('btn-outline-primary');
+            
+            loadLevelContent(lvl);
+        };
+        
+        buttonsContainer.appendChild(btn);
+    }
+
+    // Load Level 1 by default
+    loadLevelContent(1);
+}
+
+// ====================== LOAD SPECIFIC LEVEL CONTENT ======================
+function loadLevelContent(level) {
+    const iframe = document.getElementById("mediaIframe");
+    const messageEl = document.getElementById("mediaLevelMessage");
+
+    // Replace these with your actual Google Drive Folder IDs
+    const folderMap = {
+        1: "1xPQxsVAKaMTLYFueLyu3i_JYwta5ke01",   // Level 1 Folder ID
+        2: "1VB_h8dhOqbOmor3i0VFMgEWaMobZ9Oj1",          // ← Change this
+        3: "1K7Nh5vB3VVY9NXkh8c08tiMKF89S5gT5",          // ← Change this
+        4: "1sOlpjv_kXshh9wBxW3mQ_eFXd2lhyLSh"           // ← Change this
+    };
+
+    const folderId = folderMap[level];
+
+    if (folderId) {
+        iframe.src = `https://drive.google.com/embeddedfolderview?id=${folderId}#grid`;
+        messageEl.classList.add("d-none");
+    } else {
+        iframe.src = "";
+        messageEl.textContent = `Level ${level} resources are not available yet.`;
+        messageEl.classList.remove("d-none");
+    }
 }
 
 // ====================== UPLOAD FEATURE ======================
@@ -1079,21 +1180,20 @@ async function loadMyUpgrades() {
     }
 }
 
-// ====================== TASKS ======================
 async function populateAvailableTasks() {
     const select = document.getElementById("cService");
     if (!select) return;
-    select.innerHTML = '<option value="">Loading tasks...</option>';
+    
+    select.innerHTML = '<option value="">Select a service/task...</option>';
 
     const res = await apiCall("getMyAvailableTasks", { token: currentToken });
-    select.innerHTML = "";
-
+    
     if (res.success && res.tasks && res.tasks.length > 0) {
         res.tasks.forEach(t => {
-            const percent = t.commissionNaira || 0;
             const option = document.createElement("option");
             option.value = t.taskName;
-            option.textContent = `${t.taskName} (${percent}%)`;
+            option.textContent = `${t.taskName} (${t.commissionNaira}%)`;
+            option.dataset.description = t.description || "No additional description available.";
             select.appendChild(option);
         });
     } else {
@@ -1101,6 +1201,28 @@ async function populateAvailableTasks() {
         option.textContent = res.message || "No tasks available for your level yet";
         option.disabled = true;
         select.appendChild(option);
+    }
+
+    // Attach description updater (safe to call multiple times)
+    if (!select.dataset.listenerAdded) {
+        select.addEventListener("change", updateTaskDescription);
+        select.dataset.listenerAdded = "true";
+    }
+}
+
+// ====================== SHOW TASK DESCRIPTION ======================
+function updateTaskDescription() {
+    const select = document.getElementById("cService");
+    const display = document.getElementById("taskDescriptionDisplay");
+    if (!select || !display) return;
+
+    const selected = select.options[select.selectedIndex];
+    
+    if (selected && selected.value && selected.dataset.description) {
+        display.innerHTML = `<strong>${selected.textContent}</strong><br>${selected.dataset.description}`;
+        display.classList.remove("d-none");
+    } else {
+        display.classList.add("d-none");
     }
 }
 
