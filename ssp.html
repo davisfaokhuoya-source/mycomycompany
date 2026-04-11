@@ -716,19 +716,26 @@ async function handleRegister() {
         password: document.getElementById("regPassword").value.trim()
     };
 
-    if (!data.name || !data.email || !data.password) return alert("Name, Email and Password are required");
+    if (!data.name || !data.email || !data.password) {
+        alert("Name, Email and Password are required");
+        return;
+    }
 
     const res = await apiCall("register", data);
+    
     if (res.success) {
         currentRegEmail = data.email;
         document.getElementById("verifyEmailDisplay").innerHTML = `Code & link sent to <strong>${res.email}</strong>`;
         new bootstrap.Modal(document.getElementById("verifyModal")).show();
         
-        // Show signup bonus message
+        clearFormAfterSuccess("registerTab");
+        
         setTimeout(() => {
             alert("🎉 Congratulations! You have received a ₦2,000 signup bonus credited to your balance.");
         }, 800);
-    } else alert(res.message || "Registration failed");
+    } else {
+        alert(res.message || "Registration failed");
+    }
 }
 
 async function handleVerify() {
@@ -1114,9 +1121,11 @@ async function loadMyRecords() {
     }
 }
 
+<!-- ====================== FIXED & UPDATED FUNCTIONS (clears forms + no duplicates) ====================== -->
 async function submitClientForm() {
     const btnId = "submitClientBtn";
     disableButtonTemporarily(btnId, 5000);
+
     const formData = {
         clientName: document.getElementById("cName").value.trim(),
         location: document.getElementById("cLocation").value.trim(),
@@ -1131,13 +1140,15 @@ async function submitClientForm() {
     };
 
     if (!formData.clientName || !formData.phone || !formData.service) {
-        return alert("Client Name, Phone and Service are required");
+        alert("Client Name, Phone and Service are required");
+        return;
     }
 
     const res = await apiCall("submitClient", { token: currentToken, formData });
+    
     if (res.success) {
         alert("✅ Client submitted successfully!");
-        clearClientForm();
+        clearFormAfterSuccess("tabContent0");
         loadMyRecords();
         showTab(1);
     } else {
@@ -1298,14 +1309,20 @@ async function requestPayout() {
 async function sendUpgradeRequest() {
     const btnId = "upgradeBtn";
     disableButtonTemporarily(btnId, 5000);
+
     const requestType = document.getElementById("upgradeType").value;
     const message = document.getElementById("upgradeMessage").value.trim();
-    if (!message) return alert("Please describe your request");
+
+    if (!message) {
+        alert("Please describe your request");
+        return;
+    }
 
     const res = await apiCall("requestUpgrade", { token: currentToken, requestType, message });
+    
     if (res.success) {
         alert("✅ Upgrade request submitted!");
-        document.getElementById("upgradeMessage").value = "";
+        clearFormAfterSuccess("tabContent2");
         loadMyUpgrades();
         showTab(3);
     } else {
@@ -1327,7 +1344,11 @@ async function loadProfileData() {
 async function updateProfile() {
     const btnId = "myProfileBtn";
     disableButtonTemporarily(btnId, 5000);
-    if (!currentToken) return alert("Please login first");
+
+    if (!currentToken) {
+        alert("Please login first");
+        return;
+    }
 
     const data = {
         name: document.getElementById("editName").value.trim(),
@@ -1340,11 +1361,16 @@ async function updateProfile() {
 
     Object.keys(data).forEach(key => { if (!data[key]) delete data[key]; });
 
-    if (Object.keys(data).length === 0) return alert("No changes to save");
+    if (Object.keys(data).length === 0) {
+        alert("No changes to save");
+        return;
+    }
 
     const res = await apiCall("updateProfile", { token: currentToken, ...data });
+    
     if (res.success) {
         alert("✅ Profile updated successfully!");
+        clearFormAfterSuccess("tabContent5");
         loadDashboard();
     } else {
         alert(res.message || "Failed to update profile");
@@ -1535,70 +1561,7 @@ function clearFormAfterSuccess(containerId) {
     console.log(`✅ Form cleared successfully → #${containerId}`);
 }
 
-// ====================== INTEGRATION EXAMPLES ======================
-// (Add these lines in the SUCCESS blocks of your existing functions)
 
-async function submitClientForm() {
-    // ... existing code ...
-    const res = await apiCall("submitClient", { token: currentToken, formData });
-    if (res.success) {
-        alert("✅ Client submitted successfully!");
-        
-        // ←←← ADD THIS LINE (replaces your old clearClientForm())
-        clearFormAfterSuccess("tabContent0");
-        
-        loadMyRecords();
-        showTab(1);
-    } else {
-        alert(res.message || "Failed to submit client");
-    }
-}
-
-async function handleRegister() {
-    // ... existing code ...
-    const res = await apiCall("register", data);
-    if (res.success) {
-        currentRegEmail = data.email;
-        document.getElementById("verifyEmailDisplay").innerHTML = `Code & link sent to <strong>${res.email}</strong>`;
-        new bootstrap.Modal(document.getElementById("verifyModal")).show();
-        
-        // ←←← ADD THIS LINE (clears the entire registration form)
-        clearFormAfterSuccess("registerTab");
-        
-        setTimeout(() => {
-            alert("🎉 Congratulations! You have received a ₦2,000 signup bonus credited to your balance.");
-        }, 800);
-    } else alert(res.message || "Registration failed");
-}
-
-async function sendUpgradeRequest() {
-    // ... existing code ...
-    const res = await apiCall("requestUpgrade", { token: currentToken, requestType, message });
-    if (res.success) {
-        alert("✅ Upgrade request submitted!");
-        
-        // ←←← ADD THIS LINE (clears the upgrade form)
-        clearFormAfterSuccess("tabContent2");
-        
-        loadMyUpgrades();
-        showTab(3);
-    } else {
-        alert(res.message || "Failed to submit request");
-    }
-}
-
-// Optional: Clear profile form after update (if you want)
-async function updateProfile() {
-    // ... existing code ...
-    const res = await apiCall("updateProfile", { token: currentToken, ...data });
-    if (res.success) {
-        alert("✅ Profile updated successfully!");
-        clearFormAfterSuccess("tabContent5");   // optional
-        loadDashboard();
-    } else {
-        alert(res.message || "Failed to update profile");
-    }
-}
 
 </script>
 
