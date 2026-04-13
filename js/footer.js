@@ -181,7 +181,3 @@ window.onload = function() {
   }
 };
 
-function goToAppointment(serviceName) {
-    const url = `/appointment.html?service=${encodeURIComponent(serviceName)}`;
-    window.location.href = url;
-  }

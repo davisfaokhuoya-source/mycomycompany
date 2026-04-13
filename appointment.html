@@ -194,69 +194,80 @@
     <script type="module" src="js/footer.js"></script>
 
     <!-- ====================== APPOINTMENT FORM SCRIPT ====================== -->
-    <script>
-        // Set minimum date to today
-        document.getElementById('date').min = new Date().toISOString().split('T')[0];
+    <!-- Replace ONLY the last <script> block (the appointment form script) with this: -->
 
-        // Auto-fill service from URL parameter (?service=...)
-        const urlParams = new URLSearchParams(window.location.search);
-        const prefillService = urlParams.get('service');
-        if (prefillService) {
-            const serviceSelect = document.getElementById('service');
-            let exists = Array.from(serviceSelect.options).some(opt => opt.value === prefillService);
-            if (!exists) {
-                const newOption = new Option(prefillService, prefillService);
-                serviceSelect.add(newOption);
-            }
-            serviceSelect.value = prefillService;
+<script>
+    // Set minimum date to today
+    document.getElementById('date').min = new Date().toISOString().split('T')[0];
+
+    // Auto-fill service from URL parameter (?service=...)
+    const urlParams = new URLSearchParams(window.location.search);
+    const prefillService = urlParams.get('service');
+    if (prefillService) {
+        const serviceSelect = document.getElementById('service');
+        let exists = Array.from(serviceSelect.options).some(opt => opt.value === prefillService);
+        if (!exists) {
+            const newOption = new Option(prefillService, prefillService);
+            serviceSelect.add(newOption);
         }
+        serviceSelect.value = prefillService;
+    }
 
-        // Form submission
-        document.getElementById('appointmentForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const btn = document.getElementById('submitBtn');
-            const status = document.getElementById('status');
-            
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Submitting...';
+    // CORS-SAFE Form Submission
+    document.getElementById('appointmentForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('submitBtn');
+        const status = document.getElementById('status');
+        
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Submitting...';
+        status.innerHTML = '';
 
-            const formData = {
-                name: document.getElementById('name').value.trim(),
-                email: document.getElementById('email').value.trim(),
-                phone: document.getElementById('phone').value.trim(),
-                company: document.getElementById('company').value.trim(),
-                date: document.getElementById('date').value,
-                time: document.getElementById('time').value,
-                service: document.getElementById('service').value,
-                message: document.getElementById('message').value.trim()
-            };
+        const formDataObj = {
+            name: document.getElementById('name').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            phone: document.getElementById('phone').value.trim(),
+            company: document.getElementById('company').value.trim(),
+            date: document.getElementById('date').value,
+            time: document.getElementById('time').value,
+            service: document.getElementById('service').value,
+            message: document.getElementById('message').value.trim()
+        };
 
-            try {
-                // ← REPLACE WITH YOUR ACTUAL DEPLOYED APPS SCRIPT WEB APP URL
-                const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwbWunC7KreTvjuhRbkBQLy4yOFTsXGXEKsG3-bVDMaJae1SRycTUa65bL20OcpRzl5bg/exec";
+        try {
+            // ← YOUR ACTUAL WEB APP URL (make sure it's the latest deployment)
+            const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwbWunC7KreTvjuhRbkBQLy4yOFTsXGXEKsG3-bVDMaJae1SRycTUa65bL20OcpRzl5bg/exec";
 
-                const response = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ functionName: "bookAppointment", parameters: [formData] })
-                });
+            const payload = new URLSearchParams();
+            payload.append('functionName', 'bookAppointment');
+            payload.append('parameters', JSON.stringify([formDataObj]));
 
-                const result = await response.text();
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'   // This makes it a "simple request" → no preflight
+                },
+                body: payload
+            });
 
-                if (response.ok) {
-                    status.innerHTML = '<span class="text-success">✓ Request submitted successfully! We will contact you soon.</span>';
-                    document.getElementById('appointmentForm').reset();
-                } else {
-                    throw new Error(result || 'Submission failed');
-                }
-            } catch (err) {
-                status.innerHTML = `<span class="text-danger">Error: ${err.message || 'Something went wrong'}</span>`;
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Submit Request';
+            const resultText = await response.text();
+
+            if (response.ok && resultText.includes("Success")) {
+                status.innerHTML = '<span class="text-success">✓ Request submitted successfully! We will contact you soon.</span>';
+                document.getElementById('appointmentForm').reset();
+            } else {
+                throw new Error(resultText || 'Submission failed');
             }
-        });
-    </script>
+        } catch (err) {
+            console.error(err);
+            status.innerHTML = `<span class="text-danger">Error: ${err.message || 'Something went wrong. Please try again later.'}</span>`;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Submit Request';
+        }
+    });
+</script>
 </body>
 </html>
