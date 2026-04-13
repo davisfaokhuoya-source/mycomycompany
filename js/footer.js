@@ -159,3 +159,22 @@ function onClick(e) {
       const token = await grecaptcha.enterprise.execute('6Lew17AsAAAAANmbaXcMBQt2IgSv-d8SM14-f4s0', {action: 'LOGIN'});
     });
   }
+
+  //google translator 
+  function googleTranslateElementInit() {
+  new google.translate.TranslateElement({
+    pageLanguage: 'en',
+    autoDisplay: false,          // Helps with auto behavior
+    layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+  }, 'google_translate_element');
+}
+
+// Optional: Auto translate based on browser language
+window.onload = function() {
+  // This tries to trigger translation based on browser settings
+  var lang = navigator.language || navigator.userLanguage || 'en';
+  if (lang !== 'en') {
+    // You can try to trigger translation here (limited control)
+    console.log('Detected language: ' + lang);
+  }
+};
