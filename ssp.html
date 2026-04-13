@@ -156,6 +156,8 @@
                     <li><a class="dropdown-item" href="#" onclick="showTab(7); closeDropdown();">✉️ Messages</a></li>
                     <li><a class="dropdown-item" href="#" onclick="showTab(8); closeDropdown();">📎 My Documents</a></li>
                     <li><a class="dropdown-item" href="#" onclick="showTab(9); closeDropdown();">🖼️ Media Resources</a></li>
+                    <!-- Add this inside your dropdown menu -->
+                    <li><a class="dropdown-item" href="#" onclick="showTab(10); closeDropdown();">💳 Clients Payment Links</a></li>
                     <li><hr class="dropdown-divider"></li>
                 </ul>
             </div>
@@ -527,18 +529,18 @@
 
         <!-- Messages Tab -->
     <div id="tabContent7" class="d-none">
-        <h5><i class="fas fa-envelope"></i> Messages from Admin</h5>
-        <div class="card mb-4">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <button onclick="loadMessages()" class="btn btn-primary">
-                        <i class="fas fa-sync"></i> Refresh Messages
-                    </button>
-                    <span id="messagesCount" class="text-muted small"></span>
-                </div>
-                <div id="messagesContainer" class="message-list"></div>
+    <h5><i class="fas fa-envelope"></i> Messages from Admin</h5>
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <button onclick="loadMessages()" class="btn btn-primary">
+                    <i class="fas fa-sync"></i> Refresh Messages
+                </button>
+                <span id="messagesCount" class="text-muted small"></span>
             </div>
+            <div id="messagesContainer" class="message-list"></div>
         </div>
+    </div>
     </div>
 
         <!-- NEW: My Documents Tab (Tab 8) -->
@@ -601,6 +603,13 @@
                 </iframe>
             </div>
         </div>
+<!-- Clients Payment Links Tab (Tab 10) -->
+ <div id="tabContent10" class="d-none">
+    <h5><i class="fas fa-credit-card"></i> Clients Payment Links</h5>
+    <div id="paymentLinksContainer" class="mt-3">
+        <!-- Populated dynamically if needed -->
+    </div>
+</div>
 </div>
 <!-- Reply Modal -->
 <div class="modal fade" id="replyModal" tabindex="-1">
@@ -846,15 +855,23 @@ async function loadDashboard() {
 
 function startUnreadPolling() {
     if (unreadPollingInterval) clearInterval(unreadPollingInterval);
+    
     unreadPollingInterval = setInterval(async () => {
         const res = await apiCall("getUnreadCount", { token: currentToken });
         if (res.success) {
             updateUnreadBadge(res.unreadCount);
-            if (res.unreadCount > 0 && document.getElementById("tabContent7").classList.contains("d-none")) {
-                showToast(`You have ${res.unreadCount} new message${res.unreadCount > 1 ? 's' : ''} from Admin!`);
+            
+            // Optional: Auto-refresh messages if user is currently on Messages tab
+            if (res.unreadCount > 0) {
+                const messagesTab = document.getElementById("tabContent7");
+                if (messagesTab && !messagesTab.classList.contains("d-none")) {
+                    loadMessages();
+                } else {
+                    showToast(`You have ${res.unreadCount} new message${res.unreadCount > 1 ? 's' : ''} from Admin!`);
+                }
             }
         }
-    }, 30000);
+    }, 30000); // every 30 seconds
 }
 
 function updateUnreadBadge(count) {
@@ -877,7 +894,7 @@ function showToast(message) {
 // ====================== TAB MANAGEMENT ======================
 function showTab(tabIndex) {
     // Hide ALL tab contents (up to tab 8)
-    for (let i = 0; i <= 9; i++) {
+    for (let i = 0; i <= 10; i++) {
         const content = document.getElementById(`tabContent${i}`);
         if (content) content.classList.add("d-none");
     }
@@ -898,6 +915,7 @@ function showTab(tabIndex) {
     if (tabIndex === 7) loadMessages();
     if (tabIndex === 8) loadUserDocuments();
     if (tabIndex === 9) loadMediaResources();
+    if (tabIndex === 10) loadMyPaymentLinks();
 }
 
 function updateDropdownButton(tabIndex) {
@@ -1502,6 +1520,7 @@ async function handleForgotPassword() {
     updateUnreadBadge(unreadCount);
 }*/
 
+// ====================== MERGED MESSAGES WITH REPLY + PAYMENT LINK SUPPORT ======================
 async function loadMessages() {
     const container = document.getElementById("messagesContainer");
     container.innerHTML = `<p class="text-center text-muted py-4">Loading messages...</p>`;
@@ -1520,7 +1539,7 @@ async function loadMessages() {
         container.innerHTML = `
             <div class="text-center text-muted py-5">
                 <i class="fas fa-envelope fa-3x mb-3 opacity-50"></i>
-                <p class="mb-0">No messages yet.</p>
+                <p class="mb-0">No messages from admin yet.</p>
             </div>`;
         updateUnreadBadge(0);
         return;
@@ -1530,26 +1549,54 @@ async function loadMessages() {
     let unreadCount = 0;
 
     messages.forEach(msg => {
-        const isReadClass = (msg.isRead || msg.isFromUser) ? 'text-muted' : 'fw-bold text-dark';
-        if (!msg.isFromUser && !msg.isRead) unreadCount++;
+        const isRead = msg.isRead || false;
+        const isFromUser = msg.isFromUser || false;
 
-        const badge = msg.isFromUser 
-            ? `<span class="badge bg-info">You replied</span>` 
-            : (msg.isRead 
-                ? `<span class="badge bg-success">✓ Read</span>` 
-                : `<span class="badge bg-warning">New</span>`);
+        // Count only messages FROM admin that are unread
+        if (!isFromUser && !isRead) unreadCount++;
 
-        const replyButton = !msg.isFromUser 
-            ? `<button onclick="openReplyModal(${msg.rowIndex}, '${msg.subject.replace(/'/g, "\\'")}');" class="btn btn-sm btn-outline-success">Reply</button>` 
+        // Detect if this message contains a Flutterwave payment link
+        const isPaymentLink = msg.message.includes("https://checkout.flutterwave.com") || 
+                              msg.subject.toLowerCase().includes("payment");
+
+        let messageContent = msg.message.replace(/\n/g, '<br>');
+
+        // Beautify payment link if detected
+        if (isPaymentLink) {
+            const linkRegex = /(https:\/\/checkout\.flutterwave\.com[^\s]+)/g;
+            messageContent = messageContent.replace(linkRegex, 
+                `<a href="$1" target="_blank" class="btn btn-success btn-sm mt-2 d-block">
+                    💰 Pay Now with Flutterwave
+                </a>`);
+        }
+
+        // Reply button: Only show for messages FROM admin (not user replies)
+        const replyButton = (!isFromUser) 
+            ? `<button onclick="openReplyModal(${msg.rowIndex}, '${msg.subject.replace(/'/g, "\\'")}');" 
+                       class="btn btn-sm btn-outline-success">Reply</button>` 
             : '';
 
+        // Badge logic
+        let badge = '';
+        if (isFromUser) {
+            badge = `<span class="badge bg-info">You replied</span>`;
+        } else if (isRead) {
+            badge = `<span class="badge bg-success">✓ Read</span>`;
+        } else {
+            badge = `<span class="badge bg-warning">New</span>`;
+        }
+
         html += `
-            <div class="border rounded p-3 mb-3 ${isReadClass}" style="background: ${(msg.isRead || msg.isFromUser) ? '#f8f9fa' : '#fff3cd'};">
+            <div class="border rounded p-3 mb-3 ${isRead || isFromUser ? 'text-muted' : 'fw-bold text-dark'}" 
+                 style="background: ${(isRead || isFromUser) ? '#f8f9fa' : '#fff3cd'};">
+                
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <strong>${msg.isFromUser ? 'You:' : 'Admin:'} ${msg.subject}</strong>
+                    <strong>${isFromUser ? 'You:' : 'Admin:'} ${msg.subject}</strong>
                     <small class="text-muted">${new Date(msg.timestamp).toLocaleDateString('en-GB', {hour:'numeric', minute:'2-digit'})}</small>
                 </div>
-                <div class="mb-3">${msg.message.replace(/\n/g, '<br>')}</div>
+                
+                <div class="mb-3">${messageContent}</div>
+                
                 <div class="d-flex justify-content-between align-items-center">
                     ${badge}
                     ${replyButton}
