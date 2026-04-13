@@ -1521,6 +1521,7 @@ async function handleForgotPassword() {
 }*/
 
 // ====================== MERGED MESSAGES WITH REPLY + PAYMENT LINK SUPPORT ======================
+// ====================== MERGED MESSAGES - REPLY + PAYMENT LINK + MARK AS READ ======================
 async function loadMessages() {
     const container = document.getElementById("messagesContainer");
     container.innerHTML = `<p class="text-center text-muted py-4">Loading messages...</p>`;
@@ -1552,16 +1553,16 @@ async function loadMessages() {
         const isRead = msg.isRead || false;
         const isFromUser = msg.isFromUser || false;
 
-        // Count only messages FROM admin that are unread
+        // Count only unread messages from admin
         if (!isFromUser && !isRead) unreadCount++;
 
-        // Detect if this message contains a Flutterwave payment link
+        // Detect payment link
         const isPaymentLink = msg.message.includes("https://checkout.flutterwave.com") || 
                               msg.subject.toLowerCase().includes("payment");
 
         let messageContent = msg.message.replace(/\n/g, '<br>');
 
-        // Beautify payment link if detected
+        // Beautify payment link
         if (isPaymentLink) {
             const linkRegex = /(https:\/\/checkout\.flutterwave\.com[^\s]+)/g;
             messageContent = messageContent.replace(linkRegex, 
@@ -1570,13 +1571,19 @@ async function loadMessages() {
                 </a>`);
         }
 
-        // Reply button: Only show for messages FROM admin (not user replies)
+        // Reply button - only for messages from admin
         const replyButton = (!isFromUser) 
             ? `<button onclick="openReplyModal(${msg.rowIndex}, '${msg.subject.replace(/'/g, "\\'")}');" 
                        class="btn btn-sm btn-outline-success">Reply</button>` 
             : '';
 
-        // Badge logic
+        // Mark as Read button - only for unread messages from admin
+        const markAsReadButton = (!isFromUser && !isRead) 
+            ? `<button onclick="markMessageAsRead(${msg.rowIndex});" 
+                       class="btn btn-sm btn-outline-primary">Mark as Read</button>` 
+            : '';
+
+        // Badge
         let badge = '';
         if (isFromUser) {
             badge = `<span class="badge bg-info">You replied</span>`;
@@ -1599,7 +1606,10 @@ async function loadMessages() {
                 
                 <div class="d-flex justify-content-between align-items-center">
                     ${badge}
-                    ${replyButton}
+                    <div class="d-flex gap-2">
+                        ${replyButton}
+                        ${markAsReadButton}
+                    </div>
                 </div>
             </div>`;
     });
