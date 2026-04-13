@@ -81,6 +81,8 @@ const footerHTML = `<!-- Victoria AI Bubble Integration -->
 
         <!-- Container for iframe -->
         <div id="victoriaai" class="victoriaai"></div>
+
+        
 `;
 
 function renderFooter() {
@@ -178,3 +180,8 @@ window.onload = function() {
     console.log('Detected language: ' + lang);
   }
 };
+
+function goToAppointment(serviceName) {
+    const url = `/appointment.html?service=${encodeURIComponent(serviceName)}`;
+    window.location.href = url;
+  }
