@@ -602,6 +602,26 @@
             </div>
         </div>
 </div>
+<!-- Reply Modal -->
+<div class="modal fade" id="replyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reply to Admin Message</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="replyOriginalSubject" class="fw-bold mb-3 border-bottom pb-2"></div>
+                <textarea id="replyText" class="form-control" rows="5" placeholder="Type your reply here..."></textarea>
+                <input type="hidden" id="replyRowIndex">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button onclick="sendReply()" class="btn btn-primary" id="sendReplyBtn">Send Reply</button>
+            </div>
+        </div>
+    </div>
+</div>
 <div class="addfooter"></div>
 <!-- Forgot Password Modal -->
     <div class="modal fade" id="forgotModal" tabindex="-1">
@@ -1426,7 +1446,7 @@ async function handleForgotPassword() {
 
 // ====================== MESSAGES ======================
 // ====================== MESSAGES (FIXED & IMPROVED) ======================
-async function loadMessages() {
+/**async function loadMessages() {
     const container = document.getElementById("messagesContainer");
     container.innerHTML = `<p class="text-center text-muted py-4">Loading messages...</p>`;
 
@@ -1480,6 +1500,65 @@ async function loadMessages() {
 
     container.innerHTML = html;
     updateUnreadBadge(unreadCount);
+}*/
+
+async function loadMessages() {
+    const container = document.getElementById("messagesContainer");
+    container.innerHTML = `<p class="text-center text-muted py-4">Loading messages...</p>`;
+
+    const result = await apiCall("getMyMessages", { token: currentToken });
+
+    if (!result.success) {
+        container.innerHTML = `<div class="alert alert-danger">Failed to load messages: ${result.message}</div>`;
+        return;
+    }
+
+    const messages = result.messages || [];
+    document.getElementById("messagesCount").textContent = `${messages.length} message(s)`;
+
+    if (messages.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-envelope fa-3x mb-3 opacity-50"></i>
+                <p class="mb-0">No messages yet.</p>
+            </div>`;
+        updateUnreadBadge(0);
+        return;
+    }
+
+    let html = '';
+    let unreadCount = 0;
+
+    messages.forEach(msg => {
+        const isReadClass = (msg.isRead || msg.isFromUser) ? 'text-muted' : 'fw-bold text-dark';
+        if (!msg.isFromUser && !msg.isRead) unreadCount++;
+
+        const badge = msg.isFromUser 
+            ? `<span class="badge bg-info">You replied</span>` 
+            : (msg.isRead 
+                ? `<span class="badge bg-success">✓ Read</span>` 
+                : `<span class="badge bg-warning">New</span>`);
+
+        const replyButton = !msg.isFromUser 
+            ? `<button onclick="openReplyModal(${msg.rowIndex}, '${msg.subject.replace(/'/g, "\\'")}');" class="btn btn-sm btn-outline-success">Reply</button>` 
+            : '';
+
+        html += `
+            <div class="border rounded p-3 mb-3 ${isReadClass}" style="background: ${(msg.isRead || msg.isFromUser) ? '#f8f9fa' : '#fff3cd'};">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <strong>${msg.isFromUser ? 'You:' : 'Admin:'} ${msg.subject}</strong>
+                    <small class="text-muted">${new Date(msg.timestamp).toLocaleDateString('en-GB', {hour:'numeric', minute:'2-digit'})}</small>
+                </div>
+                <div class="mb-3">${msg.message.replace(/\n/g, '<br>')}</div>
+                <div class="d-flex justify-content-between align-items-center">
+                    ${badge}
+                    ${replyButton}
+                </div>
+            </div>`;
+    });
+
+    container.innerHTML = html;
+    updateUnreadBadge(unreadCount);
 }
 
 async function markMessageAsRead(rowIndex) {
@@ -1495,6 +1574,52 @@ async function markMessageAsRead(rowIndex) {
     } else {
         alert("Failed to mark as read: " + (result.message || "Unknown error"));
     }
+}
+
+// ====================== REPLY TO ADMIN ======================
+let currentReplyRowIndex = null;
+
+function openReplyModal(rowIndex, subject) {
+    currentReplyRowIndex = rowIndex;
+    document.getElementById("replyOriginalSubject").innerHTML = `<strong>Re: ${subject}</strong>`;
+    document.getElementById("replyText").value = "";
+    new bootstrap.Modal(document.getElementById("replyModal")).show();
+}
+
+async function sendReply() {
+    const btn = document.getElementById("sendReplyBtn");
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = 'Sending... <span class="spinner-border spinner-border-sm"></span>';
+
+    const replyText = document.getElementById("replyText").value.trim();
+    const rowIndex = currentReplyRowIndex;
+
+    if (!replyText) {
+        alert("Please type your reply");
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        return;
+    }
+
+    const res = await apiCall("replyToMessage", {
+        token: currentToken,
+        originalRowIndex: rowIndex,
+        replyMessage: replyText
+    });
+
+    const modal = bootstrap.Modal.getInstance(document.getElementById("replyModal"));
+    if (modal) modal.hide();
+
+    if (res.success) {
+        alert("✅ Reply sent to admin!");
+        loadMessages();
+    } else {
+        alert(res.message || "Failed to send reply");
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = originalText;
 }
 
 // ====================== LOGOUT ======================
