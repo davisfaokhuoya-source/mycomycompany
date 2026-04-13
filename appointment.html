@@ -208,7 +208,7 @@
         serviceSelect.value = prefillService;
     }
 
-    // CORS-SAFE Form Submission
+    // Production-ready submission (CORS-friendly + better error handling)
     document.getElementById('appointmentForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -223,41 +223,45 @@
             name: document.getElementById('name').value.trim(),
             email: document.getElementById('email').value.trim(),
             phone: document.getElementById('phone').value.trim(),
-            company: document.getElementById('company').value.trim(),
+            company: document.getElementById('company').value.trim() || '',
             date: document.getElementById('date').value,
             time: document.getElementById('time').value,
             service: document.getElementById('service').value,
-            message: document.getElementById('message').value.trim()
+            message: document.getElementById('message').value.trim() || ''
         };
 
         try {
-            // ← YOUR ACTUAL WEB APP URL (make sure it's the latest deployment)
+            // Your production Apps Script URL
             const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwbWunC7KreTvjuhRbkBQLy4yOFTsXGXEKsG3-bVDMaJae1SRycTUa65bL20OcpRzl5bg/exec";
 
             const payload = new URLSearchParams();
-            payload.append('functionName', 'bookAppointment');
-            payload.append('parameters', JSON.stringify([formDataObj]));
+            payload.append("functionName", "bookAppointment");
+            payload.append("parameters", JSON.stringify([formDataObj]));
 
             const response = await fetch(SCRIPT_URL, {
                 method: 'POST',
                 redirect: 'follow',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'   // This makes it a "simple request" → no preflight
+                    'Content-Type': 'application/x-www-form-urlencoded'
                 },
-                body: payload
+                body: payload.toString()
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
             const resultText = await response.text();
 
-            if (response.ok && resultText.includes("Success")) {
+            if (resultText.includes("Success") || resultText.toLowerCase().includes("submitted")) {
                 status.innerHTML = '<span class="text-success">✓ Request submitted successfully! We will contact you soon.</span>';
                 document.getElementById('appointmentForm').reset();
             } else {
                 throw new Error(resultText || 'Submission failed');
             }
         } catch (err) {
-            console.error(err);
-            status.innerHTML = `<span class="text-danger">Error: ${err.message || 'Something went wrong. Please try again later.'}</span>`;
+            console.error("Form submission error:", err);
+            status.innerHTML = `<span class="text-danger">Error: ${err.message || 'Please try again later.'}</span>`;
         } finally {
             btn.disabled = false;
             btn.textContent = 'Submit Request';
