@@ -1060,6 +1060,44 @@ async function uploadUserDocument() {
     reader.readAsDataURL(file);
 }
 
+async function loadMyPaymentLinks() {
+    const container = document.getElementById("paymentLinksContainer");
+    container.innerHTML = `<p class="text-center text-muted py-4">Loading payment links...</p>`;
+
+    const res = await apiCall("getMyPaymentLinks", { token: currentToken });  // ← adjust action name if needed
+
+    if (!res.success || !res.links || res.links.length === 0) {
+        container.innerHTML = `
+            <div class="alert alert-info">
+                No client payment links yet.<br>
+                <small>Payment links will appear here when admin generates them for your clients.</small>
+            </div>`;
+        return;
+    }
+
+    let html = `<div class="table-responsive"><table class="table table-hover"> 
+        <thead><tr><th>Client</th><th>Service</th><th>Amount</th><th>Link</th><th>Date</th></tr></thead>
+        <tbody>`;
+
+    res.links.forEach(link => {
+        html += `
+            <tr>
+                <td>${link.clientName || '-'}</td>
+                <td>${link.service || '-'}</td>
+                <td>₦${parseFloat(link.amount || 0).toLocaleString()}</td>
+                <td>
+                    <a href="${link.paymentLink}" target="_blank" class="btn btn-success btn-sm">
+                        💳 Pay Now
+                    </a>
+                </td>
+                <td>${new Date(link.date).toLocaleDateString('en-GB')}</td>
+            </tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+    container.innerHTML = html;
+}
+
 async function loadUserDocuments() {
     const tbody = document.querySelector("#documentsTable tbody");
     tbody.innerHTML = "<tr><td colspan='5' class='text-center'>Loading documents...</td></tr>";
@@ -1280,7 +1318,7 @@ function updateTaskDescription() {
 }
 
 // ====================== EARNINGS & PAYOUT ======================
-async function loadEarningsAndPayout() {
+/*async function loadEarningsAndPayout() {
     const res = await apiCall("getMyEarnings", { token: currentToken });
     if (!res.success) {
         console.error("Failed to load earnings:", res.message);
@@ -1309,6 +1347,53 @@ async function loadEarningsAndPayout() {
                 <td>${new Date(h.dateRequested).toLocaleDateString('en-GB')}</td>
                 <td class="fw-bold">₦${h.amount.toLocaleString()}</td>
                 <td><span class="badge bg-${h.status === 'Approved' || h.status === 'Paid' ? 'success' : h.status === 'Investigating' ? 'warning' : 'secondary'}">${h.status}</span></td>
+                <td>${h.progress || '—'}</td>
+                <td>${paidDateStr}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    } else {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No payout requests yet.</td></tr>`;
+    }
+}*/
+
+// ====================== EARNINGS & PAYOUT (Uses Column Q from Users sheet) ======================
+async function loadEarningsAndPayout() {
+    const res = await apiCall("getMyEarnings", { token: currentToken });
+    if (!res.success) {
+        console.error("Failed to load earnings:", res.message);
+        document.getElementById("totalEarned").innerHTML = "₦0";
+        return;
+    }
+
+    // Force Total Earned to use value from Column Q of Users sheet
+    const totalFromUsersSheet = parseFloat(res.TotalEarned) || 0;
+
+    document.getElementById("totalEarned").innerHTML = 
+        `₦${totalFromUsersSheet.toLocaleString()}`;
+
+    document.getElementById("balanceAmount").textContent = 
+        `₦${(res.currentBalance || 0).toLocaleString()}`;
+    
+    document.getElementById("successRate").textContent = `${res.successRate || 0}%`;
+    document.getElementById("currentLevel").textContent = res.currentLevel || 1;
+
+    const payoutBtn = document.getElementById("payoutBtn");
+    payoutBtn.disabled = (res.currentBalance || 0) < 15000;
+
+    // Load payment history (unchanged)
+    const histRes = await apiCall("getPaymentHistory", { token: currentToken });
+    const tbody = document.querySelector("#paymentHistoryTable tbody");
+    tbody.innerHTML = "";
+
+    if (histRes.success && histRes.history && histRes.history.length > 0) {
+        histRes.history.forEach(h => {
+            const paidDateStr = h.paidDate ? new Date(h.paidDate).toLocaleDateString('en-GB') : '—';
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${new Date(h.dateRequested).toLocaleDateString('en-GB')}</td>
+                <td class="fw-bold">₦${h.amount.toLocaleString()}</td>
+                <td><span class="badge bg-${h.status === 'Approved' || h.status === 'Paid' ? 'success' : 'warning'}">${h.status}</span></td>
                 <td>${h.progress || '—'}</td>
                 <td>${paidDateStr}</td>
             `;
@@ -1564,12 +1649,20 @@ async function loadMessages() {
 
         // Beautify payment link
         if (isPaymentLink) {
-            const linkRegex = /(https:\/\/checkout\.flutterwave\.com[^\s]+)/g;
-            messageContent = messageContent.replace(linkRegex, 
-                `<a href="$1" target="_blank" class="btn btn-success btn-sm mt-2 d-block">
+    // Improved regex: matches Flutterwave links more precisely and stops before <br> or other text
+    const linkRegex = /(https:\/\/checkout\.flutterwave\.com\/v3\/hosted\/pay\/[a-zA-Z0-9\-_%]+)/g;
+    
+    messageContent = messageContent.replace(linkRegex, (match) => {
+        // Clean any encoded <br> that might have stuck to the URL
+        const cleanLink = match.split('%3Cbr%3E')[0].split('<br>')[0].trim();
+        
+        return `${cleanLink} <br>or click the button <br><a href="${cleanLink}" target="_blank" class="btn btn-success btn-sm mt-2 d-block">
                     💰 Pay Now with Flutterwave
-                </a>`);
-        }
+                </a>
+                <br><br>
+                <small class="text-success fw-bold">Thank you for your prompt payment<br>The Victorias Ltd Team</small>`;
+    });
+}
 
         // Reply button - only for messages from admin
         const replyButton = (!isFromUser) 
