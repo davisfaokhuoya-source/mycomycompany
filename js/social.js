@@ -24,7 +24,7 @@ function navbar() {
                 <a href="learning.html" class="dropdown-item">Learning Portal</a>
             </div>
         </div>
-
+        
         <!-- Services Dropdown -->
         <div class="nav-item dropdown">
             <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
