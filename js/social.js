@@ -21,22 +21,23 @@ function navbar() {
                 <a href="ssp.html" class="dropdown-item">Career Hub Portal</a>
                 <a href="portal.html" class="dropdown-item">Staff Portal</a>
                 <a href="email.html" class="dropdown-item">Email Portal</a>
-                <a href="learning.html" class="dropdown-item">Learning Portal</a>
+                <a href="training.html" class="dropdown-item">Training Portal</a>
             </div>
         </div>
-        
+
         <!-- Services Dropdown -->
         <div class="nav-item dropdown">
             <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
                 Our Services
             </a>
+
             <div class="dropdown-menu m-0">
                 <a href="doc-dev.html" class="dropdown-item">Document Development</a>
                 <a href="social-media-management.html" class="dropdown-item">Social Media Management</a>
                 <a href="compliance.html" class="dropdown-item">Corporate Compliance</a>
                 <a href="localsupport.html" class="dropdown-item">Corporate Local Entry Support</a>
                 <a href="web-graphics-branding.html" class="dropdown-item">Web, Graphics & Branding</a>
-                <a href="learning.html" class="dropdown-item">Training Programmes</a>
+                <a href="training.html" class="dropdown-item">Training Programmes</a>
                 <a href="/gaas.html" class="dropdown-item">Premium Support Services (GAAS)</a>
                 <div class="dropdown-divider"></div>
                 <a href="value.html" class="dropdown-item">Custom Services</a>
