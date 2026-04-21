@@ -251,7 +251,7 @@
 
                         <div class="pt-4 border-top d-flex justify-content-between align-items-center">
                             <small class="text-muted">Assessment opens in 3 days</small>
-                            <button onclick="fakeLoginDemo()" class="btn btn-brand btn-sm">SEE DEMO</button>
+                            <button onclick="showLoginModal()" class="btn btn-brand btn-sm">SEE DEMO</button>
                         </div>
 
                         <div class="position-absolute translate-middle-y top-0 end-0 bg-white shadow-sm px-3 py-2 rounded-pill border" style="transform: rotate(10deg); margin-top: -20px;">
@@ -517,7 +517,7 @@
 <script>
 // ==================== CONFIG & GLOBAL VARIABLES ====================
 // Use this single constant to manage your URL
-const API_BASE_URL = "https://script.google.com/macros/s/AKfycbweuoCwnXE5lH0HVoOTGM_lNJwe1A8nTmVaGFCTsOwrFflnXZQGO-ISKQuelHSRpPes/exec";
+const API_BASE_URL = "https://script.google.com/macros/s/AKfycbzFx59GBXpFKgKarzbXLLQBOElBX1kZQ34nl1egMK0FkKbK407grjYcJgkzKb3p0Zkq/exec";
 
 let currentToken = localStorage.getItem("authToken") || null;
 let currentUser = null;
@@ -560,8 +560,13 @@ async function callAPI(action, payload = {}) {
     try {
         const response = await fetch(API_BASE_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: action, ...payload })
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: action,
+                ...payload
+            })
         });
 
         const text = await response.text();
@@ -569,9 +574,13 @@ async function callAPI(action, payload = {}) {
         const cleanText = jsonStart !== -1 ? text.substring(jsonStart) : text;
         
         return JSON.parse(cleanText);
+
     } catch (error) {
         console.error('API Error:', error);
-        return { success: false, message: "Network error. Please try again." };
+        return { 
+            success: false, 
+            message: "Connection failed. Please redeploy the script and use the latest Web App URL." 
+        };
     }
 }
 
