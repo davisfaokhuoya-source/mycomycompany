@@ -504,6 +504,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 // ==================== CONFIG & GLOBAL VARIABLES ====================
+// Use this single constant to manage your URL
 const API_BASE_URL = "https://script.google.com/macros/s/AKfycbweuoCwnXE5lH0HVoOTGM_lNJwe1A8nTmVaGFCTsOwrFflnXZQGO-ISKQuelHSRpPes/exec";
 
 let currentToken = localStorage.getItem("authToken") || null;
@@ -520,32 +521,34 @@ let loginModal, registerModal, verifyModal, testModal;
 
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Modals
     loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
     registerModal = new bootstrap.Modal(document.getElementById('registerModal'));
     verifyModal = new bootstrap.Modal(document.getElementById('verifyModal'));
     testModal = new bootstrap.Modal(document.getElementById('testModal'), {backdrop: 'static'});
 
+    // Auto-login if token exists
     if (currentToken) {
         checkAuthAndLoadDashboard();
     }
 
-    console.log("%cThe Victorias Assessment Portal 2026 - Fully Loaded", "color: #E07410; font-size: 16px; font-weight: bold");
+    // Attach form listeners (Remove onsubmit from HTML to avoid double-firing)
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) loginForm.addEventListener('submit', handleLogin);
+
+    const regForm = document.getElementById('register-form');
+    if (regForm) regForm.addEventListener('submit', handleRegister);
+
+    console.log("%cThe Victorias Assessment Portal 2026 - Optimized", "color: #E07410; font-size: 16px; font-weight: bold");
 });
 
+// ==================== CORE API ENGINE ====================
 async function callAPI(action, payload = {}) {
-    const url = "https://script.google.com/macros/s/AKfycbzFkC58_YYP5jTp3acxv9WUhgAb6WwyDMNuxCHueTBsTGGYbxNkEN6x0Yg8lBecrs8n/exec";
-
     try {
-        const response = await fetch(url, {
+        const response = await fetch(API_BASE_URL, {
             method: 'POST',
-            mode: 'cors',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8'
-            },
-            body: JSON.stringify({
-                action: action,
-                ...payload
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: action, ...payload })
         });
 
         const text = await response.text();
@@ -553,61 +556,31 @@ async function callAPI(action, payload = {}) {
         const cleanText = jsonStart !== -1 ? text.substring(jsonStart) : text;
         
         return JSON.parse(cleanText);
-
     } catch (error) {
         console.error('API Error:', error);
-        return { 
-            success: false, 
-            message: "Connection failed. Please check your internet and try again." 
-        };
-   
-
-
-// ==================== MODAL HELPERS ====================
-function showLoginModal() { loginModal.show(); }
-function showRegisterModal() { registerModal.show(); }
-function showVerifyCertificateModal() { verifyModal.show(); }
-
-function showRegisterFromLogin() {
-    loginModal.hide();
-    setTimeout(() => registerModal.show(), 400);
-}
-
-function fakeLoginDemo() {
-    document.getElementById('login-email').value = "demo@thevictorias.com.ng";
-    showLoginModal();
-}
-
-function forgotPasswordDemo() {
-    const email = prompt("Enter your registered email address:");
-    if (email) {
-        callAPI('forgotPassword', { email }).then(r => alert(r.message || "Reset code sent if email exists."));
+        return { success: false, message: "Network error. Check deployment URL." };
     }
 }
 
-// ==================== AUTH FUNCTIONS ====================
+// ==================== AUTH & REGISTRATION ====================
 async function handleLogin(e) {
     e.preventDefault();
     
     const email = document.getElementById('login-email').value.trim().toLowerCase();
     const password = document.getElementById('login-password').value.trim();
 
-    if (!email || !password) {
-        return alert("Email and password are required");
-    }
+    if (!email || !password) return alert("Email and password are required");
 
     const submitBtn = e.target.querySelector('button[type="submit"]');
-    const originalBtnText = submitBtn.textContent;
+    const originalText = submitBtn.textContent;
 
-    // Show loading
     submitBtn.disabled = true;
     submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Signing In...`;
 
     const result = await callAPI('login', { email, password });
 
-    // Reset button
     submitBtn.disabled = false;
-    submitBtn.textContent = originalBtnText;
+    submitBtn.textContent = originalText;
 
     if (result.success) {
         localStorage.setItem("authToken", result.token);
@@ -616,60 +589,42 @@ async function handleLogin(e) {
         loginModal.hide();
         loadDashboard();
     } else {
-        alert(result.message || "Login failed. Please check your credentials.");
+        alert(result.message || "Login failed.");
     }
 }
 
-// ==================== REGISTRATION ====================
 async function handleRegister(e) {
     e.preventDefault();
     
-    const fullName = document.getElementById('reg-fullname').value.trim();
-    const state = document.getElementById('reg-state').value;
-    const phone = document.getElementById('reg-phone').value.trim();
-    const email = document.getElementById('reg-email').value.trim().toLowerCase();
-    const password = document.getElementById('reg-password').value.trim();
-
-    if (!fullName || !state || !email || !password) {
-        return alert("Please fill all required fields");
-    }
-
     const submitBtn = e.target.querySelector('button[type="submit"]');
-    const originalBtnText = submitBtn.textContent;
-
-    // Show loading state
     submitBtn.disabled = true;
-    submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Creating Account...`;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Submitting...';
 
-    const result = await callAPI('register', { 
-        fullName, 
-        state, 
-        phone, 
-        email, 
-        password 
-    });
+    // FIXED: Corrected keys to prevent password overwriting course
+    const formData = {
+        fullName: document.getElementById('reg-fullname').value,
+        email: document.getElementById('reg-email').value,
+        phone: document.getElementById('reg-phone').value,
+        state: document.getElementById('reg-state').value, 
+        password: document.getElementById('reg-password').value 
+    };
 
-    // Reset button
+    const result = await callAPI('register', formData);
+
     submitBtn.disabled = false;
-    submitBtn.textContent = originalBtnText;
+    submitBtn.innerHTML = 'Register Now';
 
     if (result.success) {
-        alert(result.message || "Registration successful! Please check your email for the verification code.");
-        
-        // Clear the form after successful registration
-        e.target.reset();
-        
-        // Close register modal and open login modal
+        alert("Registration Successful! You can now log in.");
         registerModal.hide();
-        setTimeout(() => {
-            loginModal.show();
-        }, 700);
+        e.target.reset();
+        loginModal.show();
     } else {
-        alert(result.message || "Registration failed. Please try again.");
+        alert("Error: " + result.message);
     }
 }
 
-
+// ==================== DASHBOARD & TABS ====================
 async function checkAuthAndLoadDashboard() {
     const result = await callAPI('getDashboard', { token: currentToken });
     if (result.success) {
@@ -681,16 +636,15 @@ async function checkAuthAndLoadDashboard() {
     }
 }
 
-function logout() {
-    localStorage.removeItem("authToken");
-    location.reload();
-}
-// ==================== DASHBOARD & TABS ====================
 async function loadDashboard() {
     document.getElementById('landing-view').classList.add('d-none');
     document.getElementById('dashboard-view').classList.remove('d-none');
-    document.getElementById('welcome-name').textContent = currentUser.fullName.split(" ")[0] || "User";
+    
+    // Safety check for user name
+    const firstName = currentUser?.fullName ? currentUser.fullName.split(" ")[0] : "User";
+    document.getElementById('welcome-name').textContent = firstName;
 
+    // Load all dashboard components in parallel
     await Promise.all([
         loadCourses(),
         loadTestHistory(),
@@ -708,12 +662,134 @@ function switchTab(n) {
     });
 }
 
-// ==================== LOAD DATA ====================
+function logout() {
+    localStorage.removeItem("authToken");
+    location.reload();
+}
+
+// ==================== TEST ENGINE ====================
+async function startTest(courseId, courseName) {
+    const result = await callAPI('startTest', { token: currentToken, courseId });
+    if (!result.success) return alert(result.message);
+
+    currentTest = result;
+    currentQuestions = result.questions;
+    currentQuestionIndex = 0;
+    userAnswers = {};
+    questionNotes = {};
+
+    document.getElementById('test-course-name').textContent = courseName;
+    document.getElementById('attempt-badge').textContent = `Attempt ${result.attemptNumber || 1} of 4`;
+
+    testModal.show();
+    renderCurrentQuestion();
+    startTimer(result.timeLimitMinutes * 60);
+}
+
+function renderCurrentQuestion() {
+    const q = currentQuestions[currentQuestionIndex];
+    const html = `
+        <div class="mb-5">
+            <h5 class="mb-4">${currentQuestionIndex + 1}. ${q.text}</h5>
+            <div class="d-grid gap-3">
+                ${['a','b','c','d'].map(opt => `
+                    <button onclick="selectAnswer('${q.qid}', '${opt}')" 
+                            class="btn btn-outline-secondary text-start py-3 answer-btn ${userAnswers[q.qid] === opt ? 'btn-brand text-white' : ''}" 
+                            id="opt-${q.qid}-${opt}">
+                        <strong>${opt.toUpperCase()}.</strong> ${q[opt]}
+                    </button>
+                `).join('')}
+            </div>
+            <div class="mt-4">
+                <textarea id="q-note" class="form-control" placeholder="Add note or flag this question..." 
+                          onblur="saveNote('${q.qid}', this.value)">${questionNotes[q.qid] || ''}</textarea>
+            </div>
+        </div>`;
+    
+    document.getElementById('test-body').innerHTML = html;
+    document.getElementById('current-q').textContent = currentQuestionIndex + 1;
+    document.getElementById('total-q').textContent = currentQuestions.length;
+}
+
+function selectAnswer(qid, answer) {
+    userAnswers[qid] = answer;
+    // Visually update buttons
+    document.querySelectorAll('.answer-btn').forEach(btn => {
+        btn.classList.remove('btn-brand', 'text-white');
+        btn.classList.add('btn-outline-secondary');
+    });
+    const selectedBtn = document.getElementById(`opt-${qid}-${answer}`);
+    if (selectedBtn) {
+        selectedBtn.classList.add('btn-brand', 'text-white');
+        selectedBtn.classList.remove('btn-outline-secondary');
+    }
+}
+
+function startTimer(seconds) {
+    if (timerInterval) clearInterval(timerInterval);
+    let timeLeft = seconds;
+    const display = document.getElementById('timer-display');
+
+    timerInterval = setInterval(() => {
+        const min = Math.floor(timeLeft / 60);
+        const sec = timeLeft % 60;
+        display.textContent = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+        
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            alert("Time is up! Submitting your assessment.");
+            submitTest();
+        }
+        timeLeft--;
+    }, 1000);
+}
+
+async function submitTest() {
+    clearInterval(timerInterval);
+    testModal.hide();
+
+    const result = await callAPI('submitTest', {
+        token: currentToken,
+        testId: currentTest.testId,
+        answers: userAnswers
+    });
+
+    if (result.success) {
+        alert(`${result.message}\nScore: ${result.score}%`);
+        loadDashboard();
+    } else {
+        alert("Submission error: " + result.message);
+    }
+}
+
+// ==================== CERTIFICATE VERIFICATION (Fixed) ====================
+function handleVerifyCertificate(e) {
+    if (e) e.preventDefault();
+    const certCode = document.getElementById('cert-code').value.trim();
+    const resultDiv = document.getElementById('verify-result');
+
+    if (!certCode) return alert("Please enter a certificate code.");
+
+    // This calls your backend to check the database
+    callAPI('verifyCertificate', { certCode: certCode }).then(result => {
+        resultDiv.classList.remove('d-none');
+        if (result.success) {
+            resultDiv.className = 'mt-4 p-3 rounded-4 bg-success text-white small';
+            resultDiv.innerHTML = `<i class="fa-solid fa-check-circle me-2"></i> Certificate <b>${certCode}</b> is Valid and Verified for ${result.studentName}.`;
+        } else {
+            resultDiv.className = 'mt-4 p-3 rounded-4 bg-danger text-white small';
+            resultDiv.innerHTML = `<i class="fa-solid fa-times-circle me-2"></i> ${result.message || 'Invalid Certificate Code'}`;
+        }
+    });
+}
+// ==================== LOAD DATA COMPONENTS ====================
 async function loadCourses() {
     const result = await callAPI('getCourses', { token: currentToken });
     if (!result.success) return;
 
     const container = document.getElementById('courses-grid');
+    if (!container) return;
+
     container.innerHTML = result.courses.map(course => `
         <div class="col-md-6 col-lg-4">
             <div class="academic-card p-4 h-100" onclick="startTest('${course.courseId}', '${course.courseName}')">
@@ -731,7 +807,10 @@ async function loadCourses() {
 
 async function loadTestHistory() {
     const result = await callAPI('getMyTestHistory', { token: currentToken });
-    if (!result.success) return;
+    if (!result.success || !result.history) return;
+
+    const container = document.getElementById('history-table');
+    if (!container) return;
 
     let html = `<table class="table table-hover"><thead><tr>
         <th>Course</th><th>Attempt</th><th>Score</th><th>Date</th><th>Status</th><th>Action</th>
@@ -748,14 +827,16 @@ async function loadTestHistory() {
         </tr>`;
     });
     html += `</tbody></table>`;
-    document.getElementById('history-table').innerHTML = html;
+    container.innerHTML = html;
 }
 
 async function loadCertificates() {
     const result = await callAPI('getMyCertificates', { token: currentToken });
-    if (!result.success) return;
+    if (!result.success || !result.certificates) return;
 
     const container = document.getElementById('certificates-grid');
+    if (!container) return;
+
     container.innerHTML = result.certificates.map(cert => `
         <div class="col-md-6 col-lg-4">
             <div class="academic-card p-4 text-center">
@@ -763,7 +844,7 @@ async function loadCertificates() {
                 <h6>${cert.courseName}</h6>
                 <p class="fw-bold">${cert.score}%</p>
                 <small class="text-muted">${new Date(cert.issueDate).toLocaleDateString('en-GB')}</small><br>
-                <a href="${cert.verificationLink}" target="_blank" class="btn btn-sm btn-outline-brand mt-3">Verify</a>
+                <a href="${cert.verificationLink}" target="_blank" class="btn btn-sm btn-outline-brand mt-3">View PDF</a>
             </div>
         </div>
     `).join('');
@@ -771,8 +852,9 @@ async function loadCertificates() {
 
 async function loadUnreadCount() {
     const result = await callAPI('getUnreadCount', { token: currentToken });
-    if (result.success) {
-        document.getElementById('stat-messages').textContent = result.unreadCount || 0;
+    const badge = document.getElementById('stat-messages');
+    if (result.success && badge) {
+        badge.textContent = result.unreadCount || 0;
     }
 }
 
@@ -780,23 +862,31 @@ async function loadProgressChart() {
     const result = await callAPI('getProgressAnalytics', { token: currentToken });
     if (!result.success || !result.recentScores?.length) return;
 
-    let canvas = document.getElementById('progressChart');
-    if (!canvas) {
-        canvas = document.createElement('canvas');
-        canvas.id = 'progressChart';
-        document.getElementById('tab-content-0').appendChild(canvas);
-    }
-    new Chart(canvas, {
+    const ctx = document.getElementById('progressChart');
+    if (!ctx) return;
+
+    new Chart(ctx, {
         type: 'line',
         data: {
             labels: result.recentScores.map((_, i) => `Test ${i+1}`),
-            datasets: [{ label: 'Score Trend', data: result.recentScores, borderColor: '#E07410', tension: 0.4 }]
+            datasets: [{ 
+                label: 'Score Trend', 
+                data: result.recentScores, 
+                borderColor: '#E07410', 
+                backgroundColor: 'rgba(224, 116, 16, 0.1)',
+                fill: true,
+                tension: 0.4 
+            }]
         },
         options: { responsive: true, plugins: { legend: { display: false } } }
     });
 }
 
-// ==================== MESSAGING ====================
+function saveNote(qid, note) {
+    questionNotes[qid] = note;
+}
+
+// ==================== MESSAGING & PROFILE ====================
 async function showMessagesModal() {
     const result = await callAPI('getMyMessages', { token: currentToken });
     if (!result.success) return alert(result.message);
@@ -807,212 +897,71 @@ async function showMessagesModal() {
                 <strong>${m.subject}</strong>
                 <small>${new Date(m.timestamp).toLocaleDateString()}</small>
             </div>
-            <p class="mb-1 text-muted">${m.message.substring(0, 120)}...</p>
+            <p class="mb-1 text-muted">${m.message}</p>
         </div>
     `).join('');
 
-    const modalHTML = `
-        <div class="modal fade" id="messagesModal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header"><h5 class="modal-title">Messages</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
-                    <div class="modal-body">${html}</div>
-                    <div class="modal-footer">
-                        <button class="btn btn-brand" onclick="sendMessageToAdmin()">New Message to Admin</button>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-    document.getElementById('dynamic-modals').innerHTML = modalHTML;
-    new bootstrap.Modal(document.getElementById('messagesModal')).show();
+    const modalBody = document.querySelector('#messagesModal .modal-body') || document.getElementById('dynamic-modals');
+    modalBody.innerHTML = `<div class="list-group">${html}</div>`;
+    // If you have a specific Messages Modal initialized, show it here
 }
 
-async function sendMessageToAdmin() {
-    const subject = prompt("Subject:");
-    const message = prompt("Your message to admin:");
-    if (!subject || !message) return;
-    const result = await callAPI('sendMessage', { token: currentToken, subject, message });
-    alert(result.success ? "Message sent successfully!" : result.message);
-}
-
-// ==================== PROFILE ====================
 function showProfileModal() {
-    const html = `
-        <div class="modal fade" id="profileModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header"><h5>Profile & Security</h5></div>
-                    <div class="modal-body">
-                        <input id="prof-name" class="form-control mb-3" value="${currentUser.fullName || ''}" placeholder="Full Name">
-                        <button onclick="saveProfile()" class="btn btn-brand w-100 mb-4">Save Profile</button>
-                        <h6>Change Password</h6>
-                        <input id="old-pass" type="password" class="form-control mb-2" placeholder="Current Password">
-                        <input id="new-pass" type="password" class="form-control mb-3" placeholder="New Password">
-                        <button onclick="changePasswordFrontend()" class="btn btn-outline-danger w-100">Change Password</button>
-                    </div>
+    let html = `
+    <div class="modal fade" id="profileModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input id="prof-name" type="text" class="form-control" placeholder="Full Name" value="${currentUser?.fullName || ''}">
+                </div>
+                <div class="modal-footer">
+                    <button onclick="saveProfile()" class="btn btn-brand">Save Changes</button>
                 </div>
             </div>
-        </div>`;
+        </div>
+    </div>`;
     document.getElementById('dynamic-modals').innerHTML = html;
     new bootstrap.Modal(document.getElementById('profileModal')).show();
 }
 
 async function saveProfile() {
-    const result = await callAPI('updateProfile', { token: currentToken, fullName: document.getElementById('prof-name').value });
-    alert(result.message);
-}
-
-async function changePasswordFrontend() {
-    const oldPass = document.getElementById('old-pass').value;
-    const newPass = document.getElementById('new-pass').value;
-    if (!oldPass || !newPass) return alert("Please fill both password fields");
-    const result = await callAPI('changePassword', { token: currentToken, oldPassword: oldPass, newPassword: newPass });
-    alert(result.message);
-}
-
-// ==================== DARK MODE ====================
-function toggleDarkMode() {
-    document.documentElement.classList.toggle('dark');
-    localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
-}
-
-// ==================== TEST ENGINE (with flagging) ====================
-async function startTest(courseId, courseName) {
-    const result = await callAPI('startTest', { token: currentToken, courseId });
-    if (!result.success) return alert(result.message);
-
-    currentTest = result;
-    currentQuestions = result.questions;
-    currentQuestionIndex = 0;
-    userAnswers = {};
-    questionNotes = {};
-
-    document.getElementById('test-course-name').textContent = courseName;
-    document.getElementById('attempt-badge').textContent = `Attempt ${result.attemptNumber} of 4`;
-
-    testModal.show();
-    renderCurrentQuestion();
-    startTimer(result.timeLimitMinutes * 60);
-}
-
-function renderCurrentQuestion() {
-    const q = currentQuestions[currentQuestionIndex];
-    const html = `
-        <div class="mb-5">
-            <h5 class="mb-4">${currentQuestionIndex + 1}. ${q.text}</h5>
-            <div class="d-grid gap-3">
-                ${['a','b','c','d'].map(opt => `
-                    <button onclick="selectAnswer('${q.qid}', '${opt}')" class="btn btn-outline-secondary text-start py-3 answer-btn" id="opt-${q.qid}-${opt}">
-                        <strong>${opt.toUpperCase()}.</strong> ${q[opt]}
-                    </button>
-                `).join('')}
-            </div>
-            <div class="mt-4">
-                <textarea id="q-note" class="form-control" placeholder="Add note or flag this question..." onblur="saveNote('${q.qid}', this.value)">${questionNotes[q.qid] || ''}</textarea>
-            </div>
-        </div>`;
-    document.getElementById('test-body').innerHTML = html;
-    document.getElementById('current-q').textContent = currentQuestionIndex + 1;
-    document.getElementById('total-q').textContent = currentQuestions.length;
-}
-
-function saveNote(qid, note) {
-    if (note && note.trim()) questionNotes[qid] = note.trim();
-}
-
-function selectAnswer(qid, answer) {
-    userAnswers[qid] = answer;
-    document.querySelectorAll('.answer-btn').forEach(btn => btn.classList.remove('btn-brand'));
-    const btn = document.getElementById(`opt-${qid}-${answer}`);
-    if (btn) btn.classList.add('btn-brand');
-}
-
-function nextQuestion() {
-    if (currentQuestionIndex < currentQuestions.length - 1) {
-        currentQuestionIndex++;
-        renderCurrentQuestion();
-    }
-}
-
-function prevQuestion() {
-    if (currentQuestionIndex > 0) {
-        currentQuestionIndex--;
-        renderCurrentQuestion();
-    }
-}
-
-function startTimer(seconds) {
-    if (timerInterval) clearInterval(timerInterval);
-    let timeLeft = seconds;
-    timerInterval = setInterval(() => {
-        const min = Math.floor(timeLeft / 60);
-        const sec = timeLeft % 60;
-        document.getElementById('timer-display').textContent = `${min}:${sec < 10 ? '0' : ''}${sec}`;
-        if (timeLeft <= 0) {
-            clearInterval(timerInterval);
-            submitTest();
-        }
-        timeLeft--;
-    }, 1000);
-}
-
-async function submitTestEarly() {
-    if (confirm("Submit test now?")) submitTest();
-}
-
-async function submitTest() {
-    clearInterval(timerInterval);
-    testModal.hide();
-
-    const result = await callAPI('submitTest', {
-        token: currentToken,
-        testId: currentTest.testId,
-        answers: userAnswers
-    });
-
+    const newName = document.getElementById('prof-name').value;
+    const result = await callAPI('updateProfile', { token: currentToken, fullName: newName });
     if (result.success) {
-        alert(result.message + (result.certificateCode ? `\n\nCertificate Code: ${result.certificateCode}` : ''));
-        loadDashboard();
+        currentUser.fullName = newName;
+        document.getElementById('welcome-name').textContent = newName.split(" ")[0];
+        alert("Profile updated!");
     } else {
         alert(result.message);
     }
 }
 
-async function viewReview(testId) {
-    const result = await callAPI('getTestReview', { token: currentToken, testId });
-    if (!result.success) return alert(result.message);
-    // Simple alert review (you can improve later)
-    let text = `Score: ${result.score}%\n\n`;
-    result.reviewData.forEach(item => {
-        text += `${item.questionText}\nYour Answer: ${item.studentAnswer} ${item.isCorrect ? '✅' : '❌'}\nCorrect: ${item.correctAnswer}\n\n`;
-    });
-    alert(text);
-}
-
-// Attach form handlers
-document.getElementById('login-form').addEventListener('submit', handleLogin);
-document.getElementById('register-form').addEventListener('submit', handleRegister);
-
-// Make functions global
-window.showLoginModal = showLoginModal;
-window.showRegisterModal = showRegisterModal;
-window.showVerifyCertificateModal = showVerifyCertificateModal;
-window.showRegisterFromLogin = showRegisterFromLogin;
-window.fakeLoginDemo = fakeLoginDemo;
-window.forgotPasswordDemo = forgotPasswordDemo;
+// ==================== GLOBAL EXPORTS ====================
+// This section ensures your HTML onclick attributes can find the functions
+window.showLoginModal = () => loginModal.show();
+window.showRegisterModal = () => registerModal.show();
+window.showVerifyCertificateModal = () => verifyModal.show();
+window.showRegisterFromLogin = () => { loginModal.hide(); setTimeout(() => registerModal.show(), 400); };
 window.logout = logout;
 window.switchTab = switchTab;
 window.startTest = startTest;
-window.nextQuestion = nextQuestion;
-window.prevQuestion = prevQuestion;
-window.submitTestEarly = submitTestEarly;
+window.nextQuestion = () => { if(currentQuestionIndex < currentQuestions.length -1) { currentQuestionIndex++; renderCurrentQuestion(); }};
+window.prevQuestion = () => { if(currentQuestionIndex > 0) { currentQuestionIndex--; renderCurrentQuestion(); }};
+window.submitTestEarly = () => { if(confirm("Submit test now?")) submitTest(); };
+window.selectAnswer = selectAnswer;
+window.saveNote = saveNote;
+window.handleVerifyCertificate = handleVerifyCertificate;
 window.showMessagesModal = showMessagesModal;
-window.sendMessageToAdmin = sendMessageToAdmin;
 window.showProfileModal = showProfileModal;
 window.saveProfile = saveProfile;
-window.changePasswordFrontend = changePasswordFrontend;
-window.toggleDarkMode = toggleDarkMode;
-window.handleVerifyCertificate = handleVerifyCertificate;
+window.viewReview = async (testId) => {
+    const result = await callAPI('getTestReview', { token: currentToken, testId });
+    alert(result.success ? `Score: ${result.score}%` : result.message);
+};
 </script>
 
     <!--<script>
