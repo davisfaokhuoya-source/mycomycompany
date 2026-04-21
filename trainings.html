@@ -6,14 +6,12 @@
     <title>2026 Professional Assessment Portal</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="shortcut icon" type="image/x-icon" href="/img/The Victorias Logo.ico">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet"> 
     <link rel="stylesheet" href="css/dealyo.css">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css"/>
+   
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="lib/animate/animate.min.css"/>
     <link href="lib/lightbox/css/lightbox.min.css" rel="stylesheet">
     <link href="lib/owlcarousel/assets.owl.carousel.min.css" rel="stylesheet">
@@ -123,6 +121,12 @@
             background: #1e293b;
             padding: 5px 15px;
             border-radius: 10px;
+        }
+
+        .spinner-border {
+            width: 1.2rem;
+            height: 1.2rem;
+            border-width: 0.2em;
         }
     </style>
 </head>
@@ -528,28 +532,32 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log("%cThe Victorias Assessment Portal 2026 - Fully Loaded", "color: #E07410; font-size: 16px; font-weight: bold");
 });
 
-// ==================== API HELPER ====================
-async function callAPI(formData) {
-    const url = 'https://script.google.com/macros/s/AKfycbweuoCwnXE5lH0HVoOTGM_lNJwe1A8nTmVaGFCTsOwrFflnXZQGO-ISKQuelHSRpPes/exec';
+async function callAPI(action, payload = {}) {
+    const url = "https://script.google.com/macros/s/AKfycbweuoCwnXE5lH0HVoOTGM_lNJwe1A8nTmVaGFCTsOwrFflnXZQGO-ISKQuelHSRpPes/exec";
 
     try {
         const response = await fetch(url, {
             method: 'POST',
-            mode: 'no-cors', // This is key for Google Apps Script redirects
-            cache: 'no-cache',
+            mode: 'cors',
             headers: {
-                'Content-Type': 'text/plain', // Skips the CORS preflight check
+                'Content-Type': 'application/json',
             },
-            body: JSON.stringify(formData)
+            body: JSON.stringify({
+                action: action,
+                ...payload
+            })
         });
 
-        // NOTE: With 'no-cors', you won't be able to read the response body (like 'Success!')
-        // but the data WILL reach your Google Sheet.
-        alert("Registration submitted successfully!"); 
-        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        return await response.json();
+
     } catch (error) {
-        console.error('Error:', error);
-        alert("Something went wrong. Please try again.");
+        console.error('API Error:', error);
+        return { 
+            success: false, 
+            message: "Connection error. Please check your internet and try again." 
+        };
     }
 }
 
@@ -578,12 +586,26 @@ function forgotPasswordDemo() {
 // ==================== AUTH FUNCTIONS ====================
 async function handleLogin(e) {
     e.preventDefault();
-    const email = document.getElementById('login-email').value.trim();
+    
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
     const password = document.getElementById('login-password').value.trim();
 
-    if (!email || !password) return alert("Email and password are required");
+    if (!email || !password) {
+        return alert("Email and password are required");
+    }
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.textContent;
+
+    // Show loading
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Signing In...`;
 
     const result = await callAPI('login', { email, password });
+
+    // Reset button
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalBtnText;
 
     if (result.success) {
         localStorage.setItem("authToken", result.token);
@@ -592,28 +614,59 @@ async function handleLogin(e) {
         loginModal.hide();
         loadDashboard();
     } else {
-        alert(result.message || "Login failed");
+        alert(result.message || "Login failed. Please check your credentials.");
     }
 }
 
+// ==================== REGISTRATION ====================
 async function handleRegister(e) {
     e.preventDefault();
+    
     const fullName = document.getElementById('reg-fullname').value.trim();
     const state = document.getElementById('reg-state').value;
     const phone = document.getElementById('reg-phone').value.trim();
-    const email = document.getElementById('reg-email').value.trim();
+    const email = document.getElementById('reg-email').value.trim().toLowerCase();
     const password = document.getElementById('reg-password').value.trim();
 
-    const result = await callAPI('register', { fullName, state, phone, email, password });
+    if (!fullName || !state || !email || !password) {
+        return alert("Please fill all required fields");
+    }
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.textContent;
+
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Creating Account...`;
+
+    const result = await callAPI('register', { 
+        fullName, 
+        state, 
+        phone, 
+        email, 
+        password 
+    });
+
+    // Reset button
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalBtnText;
 
     if (result.success) {
-        alert(result.message);
+        alert(result.message || "Registration successful! Please check your email for the verification code.");
+        
+        // Clear the form after successful registration
+        e.target.reset();
+        
+        // Close register modal and open login modal
         registerModal.hide();
-        loginModal.show();
+        setTimeout(() => {
+            loginModal.show();
+        }, 700);
     } else {
-        alert(result.message || "Registration failed");
+        alert(result.message || "Registration failed. Please try again.");
     }
 }
+
 
 async function checkAuthAndLoadDashboard() {
     const result = await callAPI('getDashboard', { token: currentToken });
