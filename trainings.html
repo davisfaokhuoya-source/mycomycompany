@@ -540,7 +540,7 @@ async function callAPI(action, payload = {}) {
             method: 'POST',
             mode: 'cors',
             headers: {
-                'Content-Type': 'text/plain;charset=utf-8'   // ← MUST be text/plain
+                'Content-Type': 'text/plain;charset=utf-8'   // ← This is critical
             },
             body: JSON.stringify({
                 action: action,
@@ -549,21 +549,21 @@ async function callAPI(action, payload = {}) {
         });
 
         if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
+            throw new Error(`HTTP ${response.status}`);
         }
 
         const text = await response.text();
-        // Sometimes Apps Script returns extra stuff, so we clean it
+        // Clean possible extra text from Apps Script
         const jsonStart = text.indexOf('{');
-        const cleanJson = jsonStart > -1 ? text.substring(jsonStart) : text;
+        const cleanText = jsonStart !== -1 ? text.substring(jsonStart) : text;
         
-        return JSON.parse(cleanJson);
+        return JSON.parse(cleanText);
 
     } catch (error) {
         console.error('API Error:', error);
         return { 
             success: false, 
-            message: "Unable to connect to server. Please check your internet connection and try again." 
+            message: "Connection failed. Please check your internet and try again." 
         };
     }
 }
