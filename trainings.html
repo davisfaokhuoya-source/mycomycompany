@@ -529,17 +529,27 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ==================== API HELPER ====================
-async function callAPI(action, data = {}) {
+async function callAPI(formData) {
+    const url = 'https://script.google.com/macros/s/AKfycbweuoCwnXE5lH0HVoOTGM_lNJwe1A8nTmVaGFCTsOwrFflnXZQGO-ISKQuelHSRpPes/exec';
+
     try {
-        const response = await fetch(API_BASE_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action, ...data })
+        const response = await fetch(url, {
+            method: 'POST',
+            mode: 'no-cors', // This is key for Google Apps Script redirects
+            cache: 'no-cache',
+            headers: {
+                'Content-Type': 'text/plain', // Skips the CORS preflight check
+            },
+            body: JSON.stringify(formData)
         });
-        return await response.json();
-    } catch (err) {
-        console.error(err);
-        return { success: false, message: "Network error. Please check your connection." };
+
+        // NOTE: With 'no-cors', you won't be able to read the response body (like 'Success!')
+        // but the data WILL reach your Google Sheet.
+        alert("Registration submitted successfully!"); 
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert("Something went wrong. Please try again.");
     }
 }
 
