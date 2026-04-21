@@ -279,7 +279,19 @@
                     </div>
                 </div>
             </div>
-
+            <div class="card shadow-sm">
+    <div class="card-header bg-white">
+        <h6 class="mb-0">📈 Your Performance Trend</h6>
+    </div>
+    <div class="card-body">
+        <div id="progress-chart-container" style="height: 320px;">
+            <canvas id="progressChart"></canvas>
+        </div>
+    </div>
+    <div class="card-footer bg-light text-center small">
+        Average Score: <strong id="avg-score">0</strong>%
+    </div>
+</div>
             <div class="row g-4 mb-5">
                 <div class="col-6 col-lg-3">
                     <div class="p-4 border rounded-4 bg-light">
@@ -517,9 +529,8 @@ let userAnswers = {};
 let questionNotes = {};
 
 // Bootstrap Modals
-let loginModal, registerModal, verifyModal, testModal;
+let loginModal, registerModal, verifyModal, testModal, messagesModal;
 
-// ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize Modals
     loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
@@ -527,19 +538,21 @@ document.addEventListener('DOMContentLoaded', function() {
     verifyModal = new bootstrap.Modal(document.getElementById('verifyModal'));
     testModal = new bootstrap.Modal(document.getElementById('testModal'), {backdrop: 'static'});
 
-    // Auto-login if token exists
-    if (currentToken) {
-        checkAuthAndLoadDashboard();
+    if (document.getElementById('messagesModal')) {
+        messagesModal = new bootstrap.Modal(document.getElementById('messagesModal'));
     }
 
-    // Attach form listeners (Remove onsubmit from HTML to avoid double-firing)
+    // Auto-login
+    if (currentToken) checkAuthAndLoadDashboard();
+
+    // Form listeners
     const loginForm = document.getElementById('login-form');
     if (loginForm) loginForm.addEventListener('submit', handleLogin);
 
     const regForm = document.getElementById('register-form');
     if (regForm) regForm.addEventListener('submit', handleRegister);
 
-    console.log("%cThe Victorias Assessment Portal 2026 - Optimized", "color: #E07410; font-size: 16px; font-weight: bold");
+    console.log("%cThe Victorias Assessment Portal 2026 - Frontend Ready", "color: #E07410; font-size: 16px; font-weight: bold");
 });
 
 // ==================== CORE API ENGINE ====================
@@ -558,29 +571,27 @@ async function callAPI(action, payload = {}) {
         return JSON.parse(cleanText);
     } catch (error) {
         console.error('API Error:', error);
-        return { success: false, message: "Network error. Check deployment URL." };
+        return { success: false, message: "Network error. Please try again." };
     }
 }
 
 // ==================== AUTH & REGISTRATION ====================
 async function handleLogin(e) {
     e.preventDefault();
-    
     const email = document.getElementById('login-email').value.trim().toLowerCase();
     const password = document.getElementById('login-password').value.trim();
 
     if (!email || !password) return alert("Email and password are required");
 
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Signing In...`;
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Signing In...`;
 
     const result = await callAPI('login', { email, password });
 
-    submitBtn.disabled = false;
-    submitBtn.textContent = originalText;
+    btn.disabled = false;
+    btn.textContent = originalText;
 
     if (result.success) {
         localStorage.setItem("authToken", result.token);
@@ -589,40 +600,57 @@ async function handleLogin(e) {
         loginModal.hide();
         loadDashboard();
     } else {
-        alert(result.message || "Login failed.");
+        alert(result.message || "Login failed");
     }
 }
 
 async function handleRegister(e) {
     e.preventDefault();
-    
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Submitting...';
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Registering...';
 
-    // FIXED: Corrected keys to prevent password overwriting course
     const formData = {
-        fullName: document.getElementById('reg-fullname').value,
-        email: document.getElementById('reg-email').value,
-        phone: document.getElementById('reg-phone').value,
-        state: document.getElementById('reg-state').value, 
-        password: document.getElementById('reg-password').value 
+        fullName: document.getElementById('reg-fullname').value.trim(),
+        email: document.getElementById('reg-email').value.trim().toLowerCase(),
+        phone: document.getElementById('reg-phone').value.trim(),
+        state: document.getElementById('reg-state').value.trim(),
+        password: document.getElementById('reg-password').value.trim()
     };
 
     const result = await callAPI('register', formData);
 
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = 'Register Now';
+    btn.disabled = false;
+    btn.textContent = 'Register Now';
 
     if (result.success) {
-        alert("Registration Successful! You can now log in.");
+        alert("✅ Registration successful!\n\nPlease check your email for the verification code.");
         registerModal.hide();
         e.target.reset();
-        loginModal.show();
+        // Optionally auto-open verify modal
+        setTimeout(() => verifyModal.show(), 600);
     } else {
-        alert("Error: " + result.message);
+        alert("❌ " + result.message);
     }
 }
+
+async function handleVerifyCode() {
+    const email = document.getElementById('verify-email').value.trim().toLowerCase();
+    const code = document.getElementById('verify-code').value.trim();
+
+    if (!email || !code) return alert("Email and code are required");
+
+    const result = await callAPI('verifyUser', { email, code });
+
+    if (result.success) {
+        alert("✅ Email verified successfully!\nYou can now log in after admin approval.");
+        verifyModal.hide();
+        loginModal.show();
+    } else {
+        alert("❌ " + result.message);
+    }
+}
+
 
 // ==================== DASHBOARD & TABS ====================
 async function checkAuthAndLoadDashboard() {
@@ -650,8 +678,94 @@ async function loadDashboard() {
         loadTestHistory(),
         loadCertificates(),
         loadProgressChart(),
-        loadUnreadCount()
+        loadUnreadCount(),
     ]);
+}
+
+async function startTest(courseId, courseName) {
+    const result = await callAPI('startTest', { token: currentToken, courseId });
+    if (!result.success) return alert(result.message);
+
+    currentTest = result;
+    currentQuestions = result.questions || [];
+    currentQuestionIndex = 0;
+    userAnswers = {};
+    questionNotes = {};
+
+    document.getElementById('test-course-name').textContent = courseName;
+    document.getElementById('attempt-badge').textContent = `Attempt ${result.attemptNumber || 1} of 4`;
+
+    testModal.show();
+    renderCurrentQuestion();
+    startTimer((result.timeLimitMinutes || 120) * 60);
+}
+
+function renderCurrentQuestion() {
+    const q = currentQuestions[currentQuestionIndex];
+    if (!q) return;
+
+    const html = `
+        <h5 class="mb-4">${currentQuestionIndex + 1}. ${q.text}</h5>
+        <div class="d-grid gap-3">
+            ${['a','b','c','d'].map(opt => `
+                <button onclick="selectAnswer('${q.qid}', '${opt}')" 
+                        class="btn btn-outline-secondary text-start py-3 answer-btn ${userAnswers[q.qid] === opt ? 'btn-brand text-white' : ''}" 
+                        id="opt-${q.qid}-${opt}">
+                    <strong>${opt.toUpperCase()}.</strong> ${q[opt]}
+                </button>
+            `).join('')}
+        </div>
+        <div class="mt-4">
+            <textarea class="form-control" placeholder="Add private note..." 
+                      onblur="saveNote('${q.qid}', this.value)">${questionNotes[q.qid] || ''}</textarea>
+        </div>`;
+
+    document.getElementById('test-body').innerHTML = html;
+    document.getElementById('current-q').textContent = currentQuestionIndex + 1;
+    document.getElementById('total-q').textContent = currentQuestions.length;
+}
+
+
+function selectAnswer(qid, answer) {
+    userAnswers[qid] = answer;
+    document.querySelectorAll('.answer-btn').forEach(btn => btn.classList.remove('btn-brand', 'text-white'));
+    const btn = document.getElementById(`opt-${qid}-${answer}`);
+    if (btn) btn.classList.add('btn-brand', 'text-white');
+}
+
+function startTimer(seconds) {
+    if (timerInterval) clearInterval(timerInterval);
+    let timeLeft = seconds;
+    const display = document.getElementById('timer-display');
+
+    timerInterval = setInterval(() => {
+        const min = Math.floor(timeLeft / 60);
+        const sec = timeLeft % 60;
+        display.textContent = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+        if (--timeLeft < 0) {
+            clearInterval(timerInterval);
+            alert("⏰ Time's up! Submitting automatically.");
+            submitTest();
+        }
+    }, 1000);
+}
+
+async function submitTest() {
+    clearInterval(timerInterval);
+    testModal.hide();
+
+    const result = await callAPI('submitTest', {
+        token: currentToken,
+        testId: currentTest.testId,
+        answers: userAnswers
+    });
+
+    if (result.success) {
+        alert(result.message || `Test submitted! Score: ${result.score}%`);
+        loadDashboard();
+    } else {
+        alert("Submission failed: " + result.message);
+    }
 }
 
 function switchTab(n) {
