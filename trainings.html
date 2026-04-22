@@ -264,103 +264,136 @@
     </div>
 
     <div id="dashboard-view" class="d-none min-vh-100 bg-white">
-        <div class="container py-5">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-5 gap-3">
-                <div>
-                    <h1 class="display-5 fw-bold">Welcome back, <span id="welcome-name" class="text-brand">Professional</span></h1>
-                    <p class="text-muted mb-0">Professional development dashboard • April 20, 2026</p>
+    <div class="container py-5">
+
+        <!-- Top Bar -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="display-5 fw-bold">Welcome back, <span id="welcome-name" class="text-brand">Professional</span></h1>
+                <p class="text-muted mb-0">Professional development dashboard</p>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <button onclick="markPaymentDone()" class="btn btn-warning btn-sm">
+                    <i class="fa-solid fa-money-bill"></i> I Have Made Payment
+                </button>
+                <div onclick="logout()" class="text-muted cursor-pointer" style="cursor: pointer;">
+                    <i class="fa-solid fa-right-from-bracket"></i> Sign out
                 </div>
-                <div class="d-flex align-items-center gap-4">
-                    <div onclick="logout()" class="text-muted cursor-pointer" style="cursor: pointer;">
-                        <i class="fa-solid fa-right-from-bracket"></i> Sign out
-                    </div>
-                    <div onclick="showProfileModal()" class="bg-brand text-white rounded-4 d-flex align-items-center justify-content-center shadow-sm" style="width: 45px; height: 45px; cursor: pointer;">
-                        <i class="fa-solid fa-user"></i>
-                    </div>
+                <div onclick="showProfileModal()" class="bg-brand text-white rounded-4 d-flex align-items-center justify-content-center shadow-sm" 
+                     style="width: 45px; height: 45px; cursor: pointer;">
+                    <i class="fa-solid fa-user"></i>
                 </div>
             </div>
-            <div class="card shadow-sm">
-    <div class="card-header bg-white">
-        <h6 class="mb-0">📈 Your Performance Trend</h6>
-    </div>
-    <div class="card-body">
-        <div id="progress-chart-container" style="height: 320px;">
-            <canvas id="progressChart"></canvas>
         </div>
-    </div>
-    <div class="card-footer bg-light text-center small">
-        Average Score: <strong id="avg-score">0</strong>%
+
+        <!-- Stats Cards -->
+        <div class="row g-4 mb-5">
+            <div class="col-6 col-lg-3">
+                <div class="p-4 border rounded-4 bg-light">
+                    <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Tests Done</small>
+                    <div id="stat-tests" class="display-5 fw-bold">0</div>
+                    <div class="text-success small mt-2"><i class="fa-solid fa-arrow-trend-up"></i> This month</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="p-4 border rounded-4 bg-light">
+                    <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Certs Earned</small>
+                    <div id="stat-certs" class="display-5 fw-bold">0</div>
+                    <div class="text-success small mt-2"><i class="fa-solid fa-medal"></i> Earned</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="p-4 border rounded-4 bg-light">
+                    <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Avg Score</small>
+                    <div id="stat-score" class="display-5 fw-bold">0%</div>
+                    <div id="score-benchmark" class="text-warning small mt-2">Loading...</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="p-4 border rounded-4 bg-light position-relative">
+                    <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Messages</small>
+                    <div id="stat-messages" class="display-5 fw-bold">0</div>
+                    <button onclick="showMessagesModal()" class="btn btn-brand btn-sm position-absolute bottom-0 end-0 m-3" id="inbox-btn">
+                        <i class="fa-solid fa-envelope me-1"></i> Inbox
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Chart -->
+        <div class="card shadow-sm mb-5">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">📈 Your Performance Trend</h6>
+            </div>
+            <div class="card-body">
+                <div id="progress-chart-container" style="height: 320px;">
+                    <canvas id="progressChart"></canvas>
+                </div>
+            </div>
+            <div class="card-footer bg-light text-center small">
+                Average Score: <strong id="avg-score">0</strong>%
+            </div>
+        </div>
+
+        <!-- Tabs -->
+      <!-- TABS -->
+<ul class="nav nav-tabs mb-4 border-bottom" id="main-tabs">
+    <li class="nav-item">
+        <button onclick="switchTab(0)" id="tab-0" class="nav-link active">Courses</button>
+    </li>
+    <li class="nav-item">
+        <button onclick="switchTab(1)" id="tab-1" class="nav-link">History</button>
+    </li>
+    <li class="nav-item">
+        <button onclick="switchTab(2)" id="tab-2" class="nav-link">Certificates</button>
+    </li>
+    <li class="nav-item">
+        <button onclick="switchTab(3)" id="tab-3" class="nav-link">Messages</button>
+    </li>
+</ul>
+
+<!-- TAB CONTENTS -->
+<div id="tab-content-0" class="tab-pane active">
+    <h2 class="h4 fw-bold mb-4">Available Courses</h2>
+    <div id="courses-grid" class="row g-4"></div>
+</div>
+
+<div id="tab-content-1" class="tab-pane d-none">
+    <div id="history-table" class="table-responsive rounded-4 border"></div>
+</div>
+
+<div id="tab-content-2" class="tab-pane d-none">
+    <div id="certificates-grid" class="row g-4"></div>
+</div>
+
+<div id="tab-content-3" class="tab-pane d-none">
+    <div id="messages-list" class="list-group list-group-flush"></div>
+</div>
+
+        <div id="tab-content-0" class="tab-pane active">
+            <h2 class="h4 fw-bold mb-4"></h2>
+            <div id="courses-grid" class="row g-4"></div>
+        </div>
+        <div id="tab-content-1" class="tab-pane d-none">
+            <div id="history-table" class="table-responsive rounded-4 border"></div>
+        </div>
+        <div id="tab-content-2" class="tab-pane d-none">
+            <div id="certificates-grid" class="row g-4"></div>
+        </div>
+        <div id="tab-content-3" class="tab-pane d-none">
+            <div id="messages-list" class="list-group list-group-flush"></div>
+        </div>
     </div>
 </div>
-            <div class="row g-4 mb-5">
-                <div class="col-6 col-lg-3">
-                    <div class="p-4 border rounded-4 bg-light">
-                        <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Tests Done</small>
-                        <div id="stat-tests" class="display-5 fw-bold">12</div>
-                        <div class="text-success small mt-2"><i class="fa-solid fa-arrow-trend-up"></i> +3 this month</div>
-                    </div>
-                </div>
-                <div class="col-6 col-lg-3">
-                    <div class="p-4 border rounded-4 bg-light">
-                        <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Certs Earned</small>
-                        <div id="stat-certs" class="display-5 fw-bold">7</div>
-                        <div class="text-success small mt-2"><i class="fa-solid fa-medal"></i> 2 Pending</div>
-                    </div>
-                </div>
-                <div class="col-6 col-lg-3">
-                    <div class="p-4 border rounded-4 bg-light">
-                        <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Avg Score</small>
-                        <div id="stat-score" class="display-5 fw-bold">84%</div>
-                        <div class="text-warning small mt-2">Above benchmark</div>
-                    </div>
-                </div>
-                <div class="col-6 col-lg-3">
-                    <div class="p-4 border rounded-4 bg-light position-relative">
-                        <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Messages</small>
-                        <div id="stat-messages" class="display-5 fw-bold">3</div>
-                        <button onclick="showMessagesModal()" class="btn btn-brand btn-sm position-absolute bottom-0 end-0 m-3" style="padding: 5px 12px; font-size: 0.7rem;">INBOX</button>
-                    </div>
-                </div>
-            </div>
 
-            <ul class="nav nav-tabs mb-4 border-bottom">
-                <li class="nav-item">
-                    <button onclick="switchTab(0)" id="tab-0" class="nav-link active">Courses</button>
-                </li>
-                <li class="nav-item">
-                    <button onclick="switchTab(1)" id="tab-1" class="nav-link">History</button>
-                </li>
-                <li class="nav-item">
-                    <button onclick="switchTab(2)" id="tab-2" class="nav-link">Certificates</button>
-                </li>
-                <li class="nav-item">
-                    <button onclick="switchTab(3)" id="tab-3" class="nav-link">Messages</button>
-                </li>
-            </ul>
-
-            <div id="tab-content-0" class="tab-pane active">
-                <h2 class="h4 fw-bold mb-4">Available Courses</h2>
-                <div id="courses-grid" class="row g-4"></div>
-            </div>
-            <div id="tab-content-1" class="tab-pane d-none">
-                <div id="history-table" class="table-responsive rounded-4 border"></div>
-            </div>
-            <div id="tab-content-2" class="tab-pane d-none">
-                <div id="certificates-grid" class="row g-4"></div>
-            </div>
-            <div id="tab-content-3" class="tab-pane d-none">
-                <div id="messages-list" class="list-group list-group-flush"></div>
-            </div>
-        </div>
-    </div>
 
     <div class="modal fade" id="loginModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content shadow-lg">
                 <div class="modal-header border-0">
-                    <h2 class="fw-bold h3 mb-0">Login</h2>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
+    <h2 class="fw-bold h3 mb-0" id="verify-modal-title">Login to Portal</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
                 <div class="modal-body py-4">
                     <form id="login-form" onsubmit="handleLogin(event)">
                         <div class="mb-3">
@@ -384,24 +417,27 @@
             </div>
         </div>
     </div>
-
-    <div class="modal fade" id="registerModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content shadow-lg">
-                <div class="modal-header border-0">
-                    <h2 class="fw-bold h3 mb-0">Professional Registration</h2>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body py-4">
-                    <form id="register-form" onsubmit="handleRegister(event)">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold text-muted">Full Legal Name</label>
-                                <input id="reg-fullname" type="text" required class="form-control">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold text-muted">State</label>
-                                <select id="reg-state" class="form-select form-control" required>
+<section id="registrationSection" class="py-5" style="display: none;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 card p-4 shadow-sm">
+                <h2 class="text-center mb-4">Register for Assessment</h2>
+                <form id="registerForm" onsubmit="handleRegister(event)">
+                    <div class="mb-3">
+                        <label>Full Name</label>
+                        <input type="text" id="regFullName" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Email</label>
+                        <input type="email" id="regEmail" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Phone</label>
+                        <input type="tel" id="regPhone" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>State</label>
+                        <select id="reg-state" class="form-select form-control" required>
                                      <option value="">Select State</option>
         <option value="Abia">Abia</option>
         <option value="Adamawa">Adamawa</option>
@@ -441,46 +477,58 @@
         <option value="Yobe">Yobe</option>
         <option value="Zamfara">Zamfara</option>
                                 </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold text-muted">Phone Number</label>
-                                <input id="reg-phone" type="tel" required class="form-control">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold text-muted">Professional Email</label>
-                                <input id="reg-email" type="email" required class="form-control">
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label small fw-bold text-muted">Password</label>
-                                <input id="reg-password" type="password" required class="form-control">
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-brand w-100 mt-4 py-3">CREATE PROFESSIONAL ACCOUNT</button>
-                    </form>
-                </div>
+                    </div>
+                    <div class="mb-3">
+                        <label>Password</label>
+                        <input type="password" id="regPassword" class="form-control" required>
+                    </div>
+                    <div class="form-text mb-4">Your information is securely stored and used only for assessment purposes.</div>
+                    <button type="submit" id="regBtn" class="btn btn-primary w-100">CREATE PROFESSIONAL ACCOUNT</button>
+                </form>
             </div>
         </div>
     </div>
 
-    <div class="modal fade" id="verifyModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content shadow-lg">
-                <div class="modal-header border-0">
-                    <h2 class="fw-bold h3">Verify Certificate</h2>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</section>
+
+<section id="verificationSection" class="py-5" style="display: none;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 card p-4 shadow-sm text-center">
+                
+                <div id="registrationVerifyStep" style="display: block;">
+                    <h3>Verify Your Account</h3>
+                    <p class="text-muted">Enter the 6-digit code sent to your email.</p>
+                    
+                    <input type="text" id="regOtp" class="form-control mb-3 text-center" placeholder="Enter 6-digit Code" maxlength="6">
+                    
+                    <div class="mb-3">
+                        <label>Create Password</label>
+                        <input type="password" id="regPass" class="form-control mb-2" placeholder="Enter Password">
+                    </div>
+                    <div class="mb-3">
+                        <label>Verify Password</label>
+                        <input type="password" id="regPassConfirm" class="form-control" placeholder="Confirm Password">
+                    </div>
+                    
+                    <button onclick="completeRegistration()" id="completeRegBtn" class="btn btn-success w-100 mb-3">Verify & Submit for Approval</button>
+                    
+                    <button onclick="resendVerificationCode()" id="resendBtn" class="btn btn-outline-secondary w-100">
+                        Resend Verification Code
+                    </button>
+                    <small id="resendTimer" class="text-muted d-block mt-2"></small>
                 </div>
-                <div class="modal-body py-4">
-                    <form onsubmit="handleVerifyCertificate(event)">
-                        <div class="bg-light p-4 rounded-4 text-center mb-4">
-                            <input id="cert-code" type="text" placeholder="CERT-XXXXX" class="form-control text-center fw-bold fs-3 border-0 bg-white" required>
-                        </div>
-                        <button type="submit" class="btn btn-brand w-100 py-3">VERIFY NOW</button>
-                    </form>
-                    <div id="verify-result" class="mt-4 p-3 rounded-4 d-none"></div>
+
+                <div id="certificateVerifyStep" style="display: none;">
+                    <h3>Certificate Verification</h3>
+                    <input type="text" id="certId" class="form-control mb-3" placeholder="Certificate ID">
+                    <button class="btn btn-info w-100 text-white">Check Certificate</button>
                 </div>
+
             </div>
         </div>
     </div>
+</section>
 
     <div class="modal fade" id="testModal" data-bs-backdrop="static" tabindex="-1">
         <div class="modal-dialog modal-fullscreen">
@@ -514,10 +562,10 @@
 
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script>
+    <script>
 // ==================== CONFIG & GLOBAL VARIABLES ====================
 // Use this single constant to manage your URL
-const API_BASE_URL = "https://script.google.com/macros/s/AKfycbzFx59GBXpFKgKarzbXLLQBOElBX1kZQ34nl1egMK0FkKbK407grjYcJgkzKb3p0Zkq/exec";
+const API_BASE_URL = "https://script.google.com/macros/s/AKfycby9sdeJ2Y12jyLRE24h5kEmO1J_pq4naquSnYZy_EiM7xTfoAh5ppZ-wsnI5rIzYy1y/exec";
 
 let currentToken = localStorage.getItem("authToken") || null;
 let currentUser = null;
@@ -527,41 +575,40 @@ let currentQuestionIndex = 0;
 let timerInterval = null;
 let userAnswers = {};
 let questionNotes = {};
+let userEmailForVerification = '';
 
 // Bootstrap Modals
 let loginModal, registerModal, verifyModal, testModal, messagesModal;
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize Modals
+    // Initialize Modals - single initialization only
     loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-    registerModal = new bootstrap.Modal(document.getElementById('registerModal'));
-    verifyModal = new bootstrap.Modal(document.getElementById('verifyModal'));
     testModal = new bootstrap.Modal(document.getElementById('testModal'), {backdrop: 'static'});
 
-    if (document.getElementById('messagesModal')) {
-        messagesModal = new bootstrap.Modal(document.getElementById('messagesModal'));
+    // Single form listener attachment to prevent double submissions
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
     }
 
-    // Auto-login
-    if (currentToken) checkAuthAndLoadDashboard();
-
-    // Form listeners
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) loginForm.addEventListener('submit', handleLogin);
-
-    const regForm = document.getElementById('register-form');
-    if (regForm) regForm.addEventListener('submit', handleRegister);
+    const regForm = document.getElementById('registerForm');
+    if (regForm) {
+        regForm.addEventListener('submit', handleRegister);
+    }
 
     console.log("%cThe Victorias Assessment Portal 2026 - Frontend Ready", "color: #E07410; font-size: 16px; font-weight: bold");
+
+    // Auto-login check
+    if (currentToken) checkAuthAndLoadDashboard();
 });
 
-// ==================== CORE API ENGINE ====================
+// ==================== API CALLER ====================
 async function callAPI(action, payload = {}) {
   try {
     const response = await fetch(API_BASE_URL, {
       method: 'POST',
+      redirect: 'follow', 
       headers: {
-        // Change from 'application/json' to 'text/plain;charset=utf-8'
         'Content-Type': 'text/plain;charset=utf-8' 
       },
       body: JSON.stringify({
@@ -570,18 +617,27 @@ async function callAPI(action, payload = {}) {
       })
     });
 
+    if (!response.ok) throw new Error('Network response was not ok');
+
     const text = await response.text();
     const jsonStart = text.indexOf('{');
     const cleanText = jsonStart !== -1 ? text.substring(jsonStart) : text;
 
     return JSON.parse(cleanText);
   } catch (error) {
-    console.error('API Error:', error);
-    return {
-      success: false,
-      message: "Connection failed. Please redeploy the script and use the latest Web App URL."
-    };
+    console.error('Detailed API Error:', error);
+    throw error;
   }
+}
+
+// Helper to switch sections
+function showSection(sectionId) {
+    ['homeSection', 'registrationSection', 'verificationSection', 'loginSection'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    const target = document.getElementById(sectionId);
+    if (target) target.style.display = 'block';
 }
 
 // ==================== AUTH & REGISTRATION ====================
@@ -597,77 +653,159 @@ async function handleLogin(e) {
     btn.disabled = true;
     btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Signing In...`;
 
-    const result = await callAPI('login', { email, password });
+    try {
+        const result = await callAPI('login', { email, password });
 
-    btn.disabled = false;
-    btn.textContent = originalText;
-
-    if (result.success) {
-        localStorage.setItem("authToken", result.token);
-        currentToken = result.token;
-        currentUser = result.user;
-        loginModal.hide();
-        loadDashboard();
-    } else {
-        alert(result.message || "Login failed");
+        if (result.success) {
+            localStorage.setItem("authToken", result.token);
+            currentToken = result.token;
+            currentUser = result.user;
+            loginModal.hide();
+            loadDashboard();
+        } else {
+            alert(result.message || "Login failed");
+        }
+    } catch (error) {
+        alert("Login error. Please try again.");
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 }
 
-async function handleRegister(e) {
-    e.preventDefault();
-    const btn = e.target.querySelector('button[type="submit"]');
+async function handleRegister(event) {
+    if (event) event.preventDefault();
+
+    const btn = document.getElementById('regBtn');
+    if (btn.disabled) return;
+
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Registering...';
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
 
     const formData = {
-        fullName: document.getElementById('reg-fullname').value.trim(),
-        email: document.getElementById('reg-email').value.trim().toLowerCase(),
-        phone: document.getElementById('reg-phone').value.trim(),
-        state: document.getElementById('reg-state').value.trim(),
-        password: document.getElementById('reg-password').value.trim()
+        fullName: document.getElementById('regFullName').value.trim(),
+        email: document.getElementById('regEmail').value.trim().toLowerCase(),
+        phone: document.getElementById('regPhone').value.trim(),
+        state: document.getElementById('reg-state').value,
+        password: document.getElementById('regPassword').value.trim()
     };
 
-    const result = await callAPI('register', formData);
+    if (!formData.email || !formData.password) {
+        alert("Email and password are required");
+        btn.disabled = false;
+        btn.innerHTML = 'CREATE PROFESSIONAL ACCOUNT';
+        return;
+    }
 
-    btn.disabled = false;
-    btn.textContent = 'Register Now';
+    try {
+        const result = await callAPI('register', formData);
 
-    if (result.success) {
-        alert("✅ Registration successful!\n\nPlease check your email for the verification code.");
-        registerModal.hide();
-        e.target.reset();
-        // Optionally auto-open verify modal
-        setTimeout(() => verifyModal.show(), 600);
-    } else {
-        alert("❌ " + result.message);
+        if (result.success) {
+            userEmailForVerification = formData.email;
+            showSection('verificationSection');
+            document.getElementById('registrationVerifyStep').style.display = 'block';
+            document.getElementById('certificateVerifyStep').style.display = 'none';
+            alert("Verification code sent to " + formData.email);
+
+        } else if (result.status === "exists_not_verified") {
+            userEmailForVerification = formData.email;
+            showSection('verificationSection');
+            document.getElementById('registrationVerifyStep').style.display = 'block';
+            document.getElementById('certificateVerifyStep').style.display = 'none';
+            alert("This email is already registered but not verified yet.\nPlease enter the code sent to your email.");
+
+        } else if (result.status === "exists_verified") {
+            alert("This email is already registered and verified.\nPlease login with your credentials.");
+            loginModal.show();
+
+        } else {
+            alert(result.message || "Registration failed. Please try again.");
+        }
+
+    } catch (error) {
+        console.error(error);
+        alert("Registration error. Please try again.");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'CREATE PROFESSIONAL ACCOUNT';
     }
 }
 
-async function handleVerifyCode() {
-    const email = document.getElementById('verify-email').value.trim().toLowerCase();
-    const code = document.getElementById('verify-code').value.trim();
+async function completeRegistration() {
+    const otp = document.getElementById('regOtp')?.value.trim();
+    const password = document.getElementById('regPass')?.value.trim();
+    const passwordConfirm = document.getElementById('regPassConfirm')?.value.trim();
 
-    if (!email || !code) return alert("Email and code are required");
+    const btn = document.getElementById('completeRegBtn');
 
-    const result = await callAPI('verifyUser', { email, code });
+    if (!userEmailForVerification) {
+        alert("Session expired. Please start registration again.");
+        window.location.reload();
+        return;
+    }
+    if (!otp || otp.length !== 6) {
+        alert("Please enter the full 6-digit verification code");
+        document.getElementById('regOtp').focus();
+        return;
+    }
+    if (!password) {
+        alert("Please create a password");
+        document.getElementById('regPass').focus();
+        return;
+    }
+    if (!passwordConfirm) {
+        alert("Please confirm your password");
+        document.getElementById('regPassConfirm').focus();
+        return;
+    }
+    if (password !== passwordConfirm) {
+        alert("❌ Passwords do not match!");
+        document.getElementById('regPassConfirm').focus();
+        return;
+    }
+    if (password.length < 6) {
+        alert("Password must be at least 6 characters.");
+        return;
+    }
 
-    if (result.success) {
-        alert("✅ Email verified successfully!\nYou can now log in after admin approval.");
-        verifyModal.hide();
-        loginModal.show();
-    } else {
-        alert("❌ " + result.message);
+    btn.disabled = true;
+    btn.innerText = "Verifying...";
+
+    try {
+        const result = await callAPI('verifyRegistration', {
+            email: userEmailForVerification,
+            code: otp,           // ← Changed from 'otp' to 'code' to match backend
+            password: password
+        });
+
+        if (result.success) {
+            alert("✅ Verification Successful!\n\nYour account is now pending admin approval.\nYou will be able to login once approved.");
+            window.location.reload();
+        } else {
+            alert(result.message || "Verification failed. Please check your code.");
+            btn.disabled = false;
+            btn.innerText = "Verify & Submit for Approval";
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Connection error. Please try again.");
+        btn.disabled = false;
+        btn.innerText = "Verify & Submit for Approval";
     }
 }
-
 
 // ==================== DASHBOARD & TABS ====================
 async function checkAuthAndLoadDashboard() {
-    const result = await callAPI('getDashboard', { token: currentToken });
-    if (result.success) {
-        currentUser = result.user;
-        loadDashboard();
-    } else {
+    try {
+        const result = await callAPI('getDashboard', { token: currentToken });
+        if (result.success) {
+            currentUser = result.user;
+            loadDashboard();
+        } else {
+            localStorage.removeItem("authToken");
+            currentToken = null;
+        }
+    } catch (e) {
         localStorage.removeItem("authToken");
         currentToken = null;
     }
@@ -677,18 +815,98 @@ async function loadDashboard() {
     document.getElementById('landing-view').classList.add('d-none');
     document.getElementById('dashboard-view').classList.remove('d-none');
     
-    // Safety check for user name
     const firstName = currentUser?.fullName ? currentUser.fullName.split(" ")[0] : "User";
     document.getElementById('welcome-name').textContent = firstName;
 
-    // Load all dashboard components in parallel
     await Promise.all([
         loadCourses(),
         loadTestHistory(),
         loadCertificates(),
         loadProgressChart(),
         loadUnreadCount(),
+        loadUserStats()          // ← New line
     ]);
+}
+async function loadUnreadCount() {
+    try {
+        const result = await callAPI('getUnreadCount', { token: currentToken });
+        if (result.success) {
+            document.getElementById('stat-messages').textContent = result.unreadCount || 0;
+        }
+    } catch (e) {
+        console.error("Failed to load unread count:", e);
+    }
+}
+
+async function loadTestHistory() {
+    const result = await callAPI('getMyTestHistory', { token: currentToken });
+    if (!result.success || !result.history) return;
+
+    const container = document.getElementById('history-table');
+    if (!container) return;
+
+    let html = `<table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Course</th>
+                <th>Attempt</th>
+                <th>Score</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    result.history.forEach(test => {
+        let actionButtons = '';
+
+        if (test.status === "Passed") {
+            actionButtons = `
+                <button onclick="applyForCertificate('${test.testId}')" 
+                        class="btn btn-success btn-sm">
+                    Apply for Certificate
+                </button>`;
+        } 
+        else if (test.status === "Failed") {
+            actionButtons = `<span class="text-muted small">Retake allowed</span>`;
+        }
+
+        html += `<tr>
+            <td><strong>${test.courseId}</strong></td>
+            <td>${test.attemptNumber}</td>
+            <td><strong class="${test.score >= 70 ? 'text-success' : 'text-danger'}">${test.score}%</strong></td>
+            <td>${new Date(test.submitTime || test.startTime).toLocaleDateString('en-GB')}</td>
+            <td><span class="badge ${test.status === 'Passed' ? 'bg-success' : 'bg-danger'}">${test.status}</span></td>
+            <td>${actionButtons}</td>
+        </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+}
+
+// NEW FUNCTION - Add this
+async function loadUserStats() {
+    try {
+        const result = await callAPI('getUserStats', { token: currentToken });
+        if (!result.success) return;
+
+        document.getElementById('stat-tests').textContent = result.testsDone || 0;
+        document.getElementById('stat-certs').textContent = result.certsEarned || 0;
+        document.getElementById('stat-score').textContent = (result.avgScore || 0) + "%";
+        
+        const benchmarkEl = document.getElementById('score-benchmark');
+        if (result.avgScore >= 70) {
+            benchmarkEl.className = "text-success small mt-2";
+            benchmarkEl.innerHTML = `<i class="fa-solid fa-check-circle"></i> Above benchmark`;
+        } else {
+            benchmarkEl.className = "text-warning small mt-2";
+            benchmarkEl.textContent = "Below benchmark";
+        }
+    } catch (e) {
+        console.error("Failed to load user stats:", e);
+    }
 }
 
 async function startTest(courseId, courseName) {
@@ -734,7 +952,6 @@ function renderCurrentQuestion() {
     document.getElementById('total-q').textContent = currentQuestions.length;
 }
 
-
 function selectAnswer(qid, answer) {
     userAnswers[qid] = answer;
     document.querySelectorAll('.answer-btn').forEach(btn => btn.classList.remove('btn-brand', 'text-white'));
@@ -777,256 +994,336 @@ async function submitTest() {
     }
 }
 
-function switchTab(n) {
-    document.querySelectorAll('.nav-link').forEach((btn, i) => btn.classList.toggle('active', i === n));
-    document.querySelectorAll('.tab-pane').forEach((pane, i) => {
-        pane.classList.toggle('d-none', i !== n);
-        pane.classList.toggle('active', i === n);
-    });
+// ==================== FIXED SHOW MESSAGES (Loads only when clicked) ====================
+let isMessagesLoaded = false;   // Prevent multiple calls
+
+async function showMessagesModal(forceReload = false) {
+    const btn = document.getElementById('inbox-btn');
+    const container = document.getElementById('messages-list');
+
+    if (!container) return;
+
+    // Prevent multiple simultaneous calls
+    if (btn && btn.disabled && !forceReload) return;
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Loading...`;
+    }
+
+    try {
+        const result = await callAPI('getMyMessages', { token: currentToken });
+
+        if (!result.success) {
+            container.innerHTML = `
+                <div class="alert alert-warning text-center py-4">
+                    Failed to load messages.<br>
+                    <small>${result.message || 'Please try again'}</small>
+                </div>`;
+            return;
+        }
+
+        if (!result.messages || result.messages.length === 0) {
+            container.innerHTML = `
+                <div class="alert alert-info text-center py-5">
+                    <i class="fa-solid fa-inbox fa-3x mb-3 text-muted"></i><br>
+                    <strong>No messages yet</strong><br>
+                    <small>Your inbox is empty</small>
+                </div>`;
+        } else {
+            let html = '<div class="list-group">';
+            result.messages.forEach(m => {
+                html += `
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <strong>${m.subject || 'No Subject'}</strong>
+                            <small>${new Date(m.timestamp).toLocaleDateString('en-GB')}</small>
+                        </div>
+                        <p class="mb-1">${(m.message || '').replace(/\n/g, '<br>')}</p>
+                    </div>`;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        isMessagesLoaded = true;
+
+    } catch (error) {
+        console.error("Messages error:", error);
+        container.innerHTML = `
+            <div class="alert alert-danger text-center py-4">
+                Could not load messages.<br>
+                <small>Please check your connection and try again.</small>
+            </div>`;
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-envelope me-1"></i> Inbox`;
+        }
+    }
 }
 
 function logout() {
     localStorage.removeItem("authToken");
     location.reload();
 }
-
-// ==================== TEST ENGINE ====================
-async function startTest(courseId, courseName) {
-    const result = await callAPI('startTest', { token: currentToken, courseId });
-    if (!result.success) return alert(result.message);
-
-    currentTest = result;
-    currentQuestions = result.questions;
-    currentQuestionIndex = 0;
-    userAnswers = {};
-    questionNotes = {};
-
-    document.getElementById('test-course-name').textContent = courseName;
-    document.getElementById('attempt-badge').textContent = `Attempt ${result.attemptNumber || 1} of 4`;
-
-    testModal.show();
-    renderCurrentQuestion();
-    startTimer(result.timeLimitMinutes * 60);
-}
-
-function renderCurrentQuestion() {
-    const q = currentQuestions[currentQuestionIndex];
-    const html = `
-        <div class="mb-5">
-            <h5 class="mb-4">${currentQuestionIndex + 1}. ${q.text}</h5>
-            <div class="d-grid gap-3">
-                ${['a','b','c','d'].map(opt => `
-                    <button onclick="selectAnswer('${q.qid}', '${opt}')" 
-                            class="btn btn-outline-secondary text-start py-3 answer-btn ${userAnswers[q.qid] === opt ? 'btn-brand text-white' : ''}" 
-                            id="opt-${q.qid}-${opt}">
-                        <strong>${opt.toUpperCase()}.</strong> ${q[opt]}
-                    </button>
-                `).join('')}
-            </div>
-            <div class="mt-4">
-                <textarea id="q-note" class="form-control" placeholder="Add note or flag this question..." 
-                          onblur="saveNote('${q.qid}', this.value)">${questionNotes[q.qid] || ''}</textarea>
-            </div>
-        </div>`;
-    
-    document.getElementById('test-body').innerHTML = html;
-    document.getElementById('current-q').textContent = currentQuestionIndex + 1;
-    document.getElementById('total-q').textContent = currentQuestions.length;
-}
-
-function selectAnswer(qid, answer) {
-    userAnswers[qid] = answer;
-    // Visually update buttons
-    document.querySelectorAll('.answer-btn').forEach(btn => {
-        btn.classList.remove('btn-brand', 'text-white');
-        btn.classList.add('btn-outline-secondary');
-    });
-    const selectedBtn = document.getElementById(`opt-${qid}-${answer}`);
-    if (selectedBtn) {
-        selectedBtn.classList.add('btn-brand', 'text-white');
-        selectedBtn.classList.remove('btn-outline-secondary');
+// ==================== TEST ENGINE CONTINUED ====================
+function nextQuestion() {
+    if (currentQuestionIndex < currentQuestions.length - 1) {
+        currentQuestionIndex++;
+        renderCurrentQuestion();
     }
 }
 
-function startTimer(seconds) {
-    if (timerInterval) clearInterval(timerInterval);
-    let timeLeft = seconds;
-    const display = document.getElementById('timer-display');
-
-    timerInterval = setInterval(() => {
-        const min = Math.floor(timeLeft / 60);
-        const sec = timeLeft % 60;
-        display.textContent = `${min}:${sec < 10 ? '0' : ''}${sec}`;
-        
-        if (timeLeft <= 0) {
-            clearInterval(timerInterval);
-            alert("Time is up! Submitting your assessment.");
-            submitTest();
-        }
-        timeLeft--;
-    }, 1000);
-}
-
-async function submitTest() {
-    clearInterval(timerInterval);
-    testModal.hide();
-
-    const result = await callAPI('submitTest', {
-        token: currentToken,
-        testId: currentTest.testId,
-        answers: userAnswers
-    });
-
-    if (result.success) {
-        alert(`${result.message}\nScore: ${result.score}%`);
-        loadDashboard();
-    } else {
-        alert("Submission error: " + result.message);
+function prevQuestion() {
+    if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        renderCurrentQuestion();
     }
 }
 
-// ==================== CERTIFICATE VERIFICATION (Fixed) ====================
-function handleVerifyCertificate(e) {
-    if (e) e.preventDefault();
-    const certCode = document.getElementById('cert-code').value.trim();
-    const resultDiv = document.getElementById('verify-result');
-
-    if (!certCode) return alert("Please enter a certificate code.");
-
-    // This calls your backend to check the database
-    callAPI('verifyCertificate', { certCode: certCode }).then(result => {
-        resultDiv.classList.remove('d-none');
-        if (result.success) {
-            resultDiv.className = 'mt-4 p-3 rounded-4 bg-success text-white small';
-            resultDiv.innerHTML = `<i class="fa-solid fa-check-circle me-2"></i> Certificate <b>${certCode}</b> is Valid and Verified for ${result.studentName}.`;
-        } else {
-            resultDiv.className = 'mt-4 p-3 rounded-4 bg-danger text-white small';
-            resultDiv.innerHTML = `<i class="fa-solid fa-times-circle me-2"></i> ${result.message || 'Invalid Certificate Code'}`;
-        }
-    });
-}
-// ==================== LOAD DATA COMPONENTS ====================
-async function loadCourses() {
-    const result = await callAPI('getCourses', { token: currentToken });
-    if (!result.success) return;
-
-    const container = document.getElementById('courses-grid');
-    if (!container) return;
-
-    container.innerHTML = result.courses.map(course => `
-        <div class="col-md-6 col-lg-4">
-            <div class="academic-card p-4 h-100" onclick="startTest('${course.courseId}', '${course.courseName}')">
-                <h5 class="fw-bold">${course.courseName}</h5>
-                <p class="small text-muted">${(course.description || "").substring(0, 120)}...</p>
-                <div class="d-flex justify-content-between mt-3">
-                    <span class="badge bg-light text-dark">${course.timeLimitMinutes} min</span>
-                    <span class="badge bg-brand">${course.difficultyLevel}</span>
-                </div>
-                <button class="btn btn-brand w-100 mt-3">Start Assessment</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-async function loadTestHistory() {
-    const result = await callAPI('getMyTestHistory', { token: currentToken });
-    if (!result.success || !result.history) return;
-
-    const container = document.getElementById('history-table');
-    if (!container) return;
-
-    let html = `<table class="table table-hover"><thead><tr>
-        <th>Course</th><th>Attempt</th><th>Score</th><th>Date</th><th>Status</th><th>Action</th>
-    </tr></thead><tbody>`;
-
-    result.history.forEach(test => {
-        html += `<tr>
-            <td>${test.courseId}</td>
-            <td>${test.attemptNumber}</td>
-            <td><strong>${test.score}%</strong></td>
-            <td>${new Date(test.submitTime || test.startTime).toLocaleDateString('en-GB')}</td>
-            <td><span class="badge ${test.status === 'Passed' ? 'bg-success' : 'bg-danger'}">${test.status}</span></td>
-            <td><button class="btn btn-sm btn-outline-primary" onclick="viewReview('${test.testId}')">Review</button></td>
-        </tr>`;
-    });
-    html += `</tbody></table>`;
-    container.innerHTML = html;
-}
-
-async function loadCertificates() {
-    const result = await callAPI('getMyCertificates', { token: currentToken });
-    if (!result.success || !result.certificates) return;
-
-    const container = document.getElementById('certificates-grid');
-    if (!container) return;
-
-    container.innerHTML = result.certificates.map(cert => `
-        <div class="col-md-6 col-lg-4">
-            <div class="academic-card p-4 text-center">
-                <h4 class="text-brand">🏆</h4>
-                <h6>${cert.courseName}</h6>
-                <p class="fw-bold">${cert.score}%</p>
-                <small class="text-muted">${new Date(cert.issueDate).toLocaleDateString('en-GB')}</small><br>
-                <a href="${cert.verificationLink}" target="_blank" class="btn btn-sm btn-outline-brand mt-3">View PDF</a>
-            </div>
-        </div>
-    `).join('');
-}
-
-async function loadUnreadCount() {
-    const result = await callAPI('getUnreadCount', { token: currentToken });
-    const badge = document.getElementById('stat-messages');
-    if (result.success && badge) {
-        badge.textContent = result.unreadCount || 0;
-    }
-}
-
-async function loadProgressChart() {
-    const result = await callAPI('getProgressAnalytics', { token: currentToken });
-    if (!result.success || !result.recentScores?.length) return;
-
-    const ctx = document.getElementById('progressChart');
-    if (!ctx) return;
-
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: result.recentScores.map((_, i) => `Test ${i+1}`),
-            datasets: [{ 
-                label: 'Score Trend', 
-                data: result.recentScores, 
-                borderColor: '#E07410', 
-                backgroundColor: 'rgba(224, 116, 16, 0.1)',
-                fill: true,
-                tension: 0.4 
-            }]
-        },
-        options: { responsive: true, plugins: { legend: { display: false } } }
-    });
+function submitTestEarly() {
+    if (confirm("Submit test now?")) submitTest();
 }
 
 function saveNote(qid, note) {
     questionNotes[qid] = note;
 }
 
-// ==================== MESSAGING & PROFILE ====================
-async function showMessagesModal() {
-    const result = await callAPI('getMyMessages', { token: currentToken });
-    if (!result.success) return alert(result.message);
+async function loadCertificates() {
+    try {
+        const result = await callAPI('getMyCertificates', { token: currentToken });
+        const container = document.getElementById('certificates-grid');
+        if (!container) return;
 
-    let html = result.messages.map(m => `
-        <div class="list-group-item">
-            <div class="d-flex justify-content-between">
-                <strong>${m.subject}</strong>
-                <small>${new Date(m.timestamp).toLocaleDateString()}</small>
-            </div>
-            <p class="mb-1 text-muted">${m.message}</p>
-        </div>
-    `).join('');
+        if (!result.success || !result.certificates || result.certificates.length === 0) {
+            container.innerHTML = `
+                <div class="col-12 text-center py-5 text-muted">
+                    <i class="fa-solid fa-certificate fa-3x mb-3 opacity-50"></i><br>
+                    No certificates yet.<br>
+                    <small>Pass an assessment to earn your first certificate</small>
+                </div>`;
+            return;
+        }
 
-    const modalBody = document.querySelector('#messagesModal .modal-body') || document.getElementById('dynamic-modals');
-    modalBody.innerHTML = `<div class="list-group">${html}</div>`;
-    // If you have a specific Messages Modal initialized, show it here
+        let html = '';
+        result.certificates.forEach(cert => {
+            html += `
+                <div class="col-md-6 col-lg-4">
+                    <div class="academic-card p-4 text-center">
+                        <h4 class="text-brand mb-3">🏆</h4>
+                        <h6 class="fw-bold">${cert.courseName}</h6>
+                        <p class="fw-bold text-success">${cert.score}%</p>
+                        <small class="text-muted d-block mb-3">
+                            ${new Date(cert.issueDate).toLocaleDateString('en-GB')}
+                        </small>
+                        <a href="${cert.verificationLink}" target="_blank" 
+                           class="btn btn-outline-brand btn-sm">
+                            View Certificate
+                        </a>
+                    </div>
+                </div>`;
+        });
+
+        container.innerHTML = html;
+
+    } catch (e) {
+        console.error("Certificates load error:", e);
+        document.getElementById('certificates-grid').innerHTML = `
+            <div class="col-12 alert alert-warning text-center">
+                Could not load certificates.
+            </div>`;
+    }
+}
+
+// ==================== LOAD DATA COMPONENTS ====================
+async function loadCourses() {
+    const result = await callAPI('getCourses', { token: currentToken });
+    if (!result.success) {
+        document.getElementById('courses-grid').innerHTML = `
+            <div class="col-12">
+                <div class="alert alert-warning">Could not load courses. Please try again later.</div>
+            </div>`;
+        return;
+    }
+
+    const container = document.getElementById('courses-grid');
+    if (!container) return;
+
+    if (result.courses.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <p class="text-muted">No courses available at the moment.</p>
+            </div>`;
+        return;
+    }
+
+    let html = '';
+
+    result.courses.forEach(course => {
+        html += `
+            <div class="col-md-6 col-lg-4">
+                <div class="academic-card p-4 h-100">
+                    <h5 class="fw-bold">${course.courseName}</h5>
+                    <p class="small text-muted">${(course.description || "").substring(0, 100)}...</p>
+                    
+                    <div class="mt-4">
+                        <button onclick="applyForCourse('${course.courseId}', '${course.courseName}')" 
+                                class="btn btn-brand w-100 mb-2">
+                            Apply for Assessment
+                        </button>
+                        <small class="text-muted d-block text-center">Max 4 attempts • ₦15,000</small>
+                    </div>
+                </div>
+            </div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+// User clicks "Apply for Assessment"
+async function applyForCourse(courseId, courseName) {
+    if (!confirm(`Apply for "${courseName}"?\n\nYou will need to pay after admin approval.`)) return;
+
+    const result = await callAPI('applyForAssessment', {
+        token: currentToken,
+        courseId: courseId,
+        courseName: courseName
+    });
+
+    if (result.success) {
+        alert(result.message);
+        loadDashboard(); // Refresh
+    } else {
+        alert(result.message);
+    }
+}
+
+// Show Active Assessments (only those with "Active" status)
+async function loadActiveAssessments() {
+    // You can call a new backend function getActiveAssessments() if you want
+    // For now, we'll reuse getCourses and filter later if needed
+}
+
+// Mark Payment as Done
+async function markPaymentDone() {
+    const appID = prompt("Enter your Application ID (APP-XXXXXX):");
+    if (!appID) return;
+
+    const reference = prompt("Enter Payment Reference / Transaction ID:");
+    if (!reference) return;
+
+    const result = await callAPI('markPaymentAsDone', {
+        token: currentToken,
+        appID: appID,
+        paymentReference: reference
+    });
+
+    if (result.success) {
+        alert("✅ Payment marked successfully!\nAdmin will verify shortly.");
+        loadDashboard();
+    } else {
+        alert(result.message);
+    }
+}
+
+// Apply for Certificate after passing
+async function applyForCertificate(testId) {
+    if (!confirm("Apply for official certificate?")) return;
+
+    const result = await callAPI('applyForCertificate', {
+        token: currentToken,
+        testId: testId
+    });
+
+    alert(result.message || "Application submitted.");
+}
+
+// Download Certificate (called from email link or button)
+async function downloadCertificate(downloadToken, certCode) {
+    const result = await callAPI('downloadCertificate', {
+        token: downloadToken,   // download token, not auth token
+        certCode: certCode
+    });
+
+    if (result.success) {
+        window.open(result.downloadUrl, '_blank');
+    } else {
+        alert(result.message || "Download link expired or invalid.");
+    }
+}
+
+async function loadProgressChart() {
+    try {
+        const result = await callAPI('getProgressAnalytics', { token: currentToken });
+        
+        if (!result.success || !result.recentScores || result.recentScores.length === 0) {
+            const container = document.getElementById('progress-chart-container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <i class="fa-solid fa-chart-line fa-3x mb-3 opacity-50"></i><br>
+                        No test data yet.<br>
+                        <small>Take your first assessment to see the progress chart</small>
+                    </div>`;
+            }
+            return;
+        }
+
+        const ctx = document.getElementById('progressChart');
+        if (!ctx) return;
+
+        // Destroy previous chart if it exists (prevents duplicate errors)
+        if (window.progressChartInstance) {
+            window.progressChartInstance.destroy();
+        }
+
+        window.progressChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: result.courseNames && result.courseNames.length > 0 
+                    ? result.courseNames 
+                    : result.recentScores.map((_, i) => `Test ${i+1}`),
+                datasets: [{
+                    label: 'Score (%)',
+                    data: result.recentScores,
+                    borderColor: '#E07410',
+                    backgroundColor: 'rgba(224, 116, 16, 0.15)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#E07410',
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#333',
+                        titleColor: '#fff',
+                        bodyColor: '#E07410'
+                    }
+                },
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 100,
+                        ticks: { color: '#666' }
+                    },
+                    x: {
+                        ticks: { color: '#666' }
+                    }
+                }
+            }
+        });
+
+    } catch (e) {
+        console.error("Progress chart error:", e);
+    }
 }
 
 function showProfileModal() {
@@ -1051,6 +1348,70 @@ function showProfileModal() {
     new bootstrap.Modal(document.getElementById('profileModal')).show();
 }
 
+// Resend Verification Code with 3-minute cooldown and 3 attempts limit
+let resendCount = 0;
+let lastResendTime = null;
+const COOLDOWN_MS = 3 * 60 * 1000; // 3 minutes
+const MAX_RESENDS = 3;
+
+async function resendVerificationCode() {
+    const btn = document.getElementById('resendBtn');
+    const timerText = document.getElementById('resendTimer');
+
+    if (resendCount >= MAX_RESENDS) {
+        return alert("You have reached the maximum number of resend attempts (3) in 24 hours.");
+    }
+
+    const now = Date.now();
+    if (lastResendTime && (now - lastResendTime) < COOLDOWN_MS) {
+        const remaining = Math.ceil((COOLDOWN_MS - (now - lastResendTime)) / 1000);
+        timerText.textContent = `Please wait ${remaining} seconds before resending.`;
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Sending...`;
+
+    try {
+        const result = await callAPI('resendVerificationCode', {
+            email: userEmailForVerification
+        });
+
+        if (result.success) {
+            resendCount++;
+            lastResendTime = Date.now();
+            alert("✅ New verification code has been sent to your email.");
+            
+            // Start cooldown timer
+            startResendCooldown();
+        } else {
+            alert(result.message || "Failed to resend code.");
+        }
+    } catch (error) {
+        alert("Error resending code. Please try again.");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = "Resend Verification Code";
+    }
+}
+
+function startResendCooldown() {
+    const btn = document.getElementById('resendBtn');
+    const timerText = document.getElementById('resendTimer');
+    let timeLeft = COOLDOWN_MS / 1000;
+
+    const interval = setInterval(() => {
+        timeLeft--;
+        timerText.textContent = `You can resend again in ${timeLeft} seconds`;
+        
+        if (timeLeft <= 0) {
+            clearInterval(interval);
+            timerText.textContent = '';
+            btn.disabled = false;
+        }
+    }, 1000);
+}
+
 async function saveProfile() {
     const newName = document.getElementById('prof-name').value;
     const result = await callAPI('updateProfile', { token: currentToken, fullName: newName });
@@ -1063,28 +1424,81 @@ async function saveProfile() {
     }
 }
 
-// ==================== GLOBAL EXPORTS ====================
-// This section ensures your HTML onclick attributes can find the functions
+function switchTab(n) {
+    // Deactivate all tabs
+    document.querySelectorAll('#main-tabs .nav-link').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    // Activate selected tab
+    const activeTab = document.getElementById(`tab-${n}`);
+    if (activeTab) activeTab.classList.add('active');
+
+    // Hide all panes
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+        pane.classList.add('d-none');
+        pane.classList.remove('active');
+    });
+
+    // Show selected pane
+    const selectedPane = document.getElementById(`tab-content-${n}`);
+    if (selectedPane) {
+        selectedPane.classList.remove('d-none');
+        selectedPane.classList.add('active');
+    }
+
+    // Load Messages ONLY when Messages tab is clicked
+    if (n === 3) {
+        setTimeout(() => {
+            showMessagesModal();
+        }, 30);
+    }
+
+    // Load Certificates when Certificates tab is clicked
+    if (n === 2) {
+        setTimeout(() => {
+            loadCertificates();
+        }, 30);
+    }
+}
+
+async function viewReview(testId) {
+    const result = await callAPI('getTestReview', { token: currentToken, testId });
+    alert(result.success ? `Score: ${result.score}%` : result.message);
+}
+
+// ==================== GLOBAL WINDOW EXPORTS FOR ONCLICK HANDLERS ====================
 window.showLoginModal = () => loginModal.show();
-window.showRegisterModal = () => registerModal.show();
-window.showVerifyCertificateModal = () => verifyModal.show();
-window.showRegisterFromLogin = () => { loginModal.hide(); setTimeout(() => registerModal.show(), 400); };
+window.showRegisterModal = () => {
+    showSection('registrationSection');
+};
+window.showVerifyCertificateModal = () => {
+    showSection('verificationSection');
+    document.getElementById('registrationVerifyStep').style.display = 'none';
+    document.getElementById('certificateVerifyStep').style.display = 'block';
+};
+window.showRegisterFromLogin = () => {
+    loginModal.hide();
+    setTimeout(() => {
+        showSection('registrationSection');
+    }, 400);
+};
 window.logout = logout;
 window.switchTab = switchTab;
 window.startTest = startTest;
-window.nextQuestion = () => { if(currentQuestionIndex < currentQuestions.length -1) { currentQuestionIndex++; renderCurrentQuestion(); }};
-window.prevQuestion = () => { if(currentQuestionIndex > 0) { currentQuestionIndex--; renderCurrentQuestion(); }};
-window.submitTestEarly = () => { if(confirm("Submit test now?")) submitTest(); };
+window.nextQuestion = nextQuestion;
+window.prevQuestion = prevQuestion;
+window.submitTestEarly = submitTestEarly;
 window.selectAnswer = selectAnswer;
 window.saveNote = saveNote;
-window.handleVerifyCertificate = handleVerifyCertificate;
 window.showMessagesModal = showMessagesModal;
 window.showProfileModal = showProfileModal;
 window.saveProfile = saveProfile;
-window.viewReview = async (testId) => {
-    const result = await callAPI('getTestReview', { token: currentToken, testId });
-    alert(result.success ? `Score: ${result.score}%` : result.message);
-};
+window.viewReview = viewReview;
+window.handleRegister = handleRegister;
+window.completeRegistration = completeRegistration;
+window.handleLogin = handleLogin;
+
 </script>
 
     <!--<script>
@@ -1109,19 +1523,29 @@ window.viewReview = async (testId) => {
             setTimeout(() => registerModal.show(), 400);
         }
 
-        function switchTab(index) {
-            // Update UI buttons
-            document.querySelectorAll('.nav-link').forEach((btn, i) => {
-                btn.classList.toggle('active', i === index);
-            });
-            // Update Panels
-            [0,1,2,3].forEach(i => {
-                const pane = document.getElementById(`tab-content-${i}`);
-                pane.classList.toggle('d-none', i !== index);
-                pane.classList.toggle('active', i === index);
-            });
-        }
+        function switchTab(n) {
+    // Remove active from all tab buttons
+    document.querySelectorAll('#main-tabs .nav-link').forEach(btn => {
+        btn.classList.remove('active');
+    });
 
+    // Activate the clicked tab
+    const activeTab = document.getElementById(`tab-${n}`);
+    if (activeTab) activeTab.classList.add('active');
+
+    // Hide all content panes
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+        pane.classList.add('d-none');
+        pane.classList.remove('active');
+    });
+
+    // Show the selected content
+    const contentPane = document.getElementById(`tab-content-${n}`);
+    if (contentPane) {
+        contentPane.classList.remove('d-none');
+        contentPane.classList.add('active');
+    }
+}
         // ==================== MOCK LOGIC (PRESERVING YOUR FUNCTIONALITY) ====================
         function handleLogin(e) {
             e.preventDefault();
