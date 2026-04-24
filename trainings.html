@@ -350,6 +350,9 @@
     <li class="nav-item">
         <button onclick="switchTab(3)" id="tab-3" class="nav-link">Messages</button>
     </li>
+    <li class="nav-item">
+    <button onclick="switchTab(4)" id="tab-4" class="nav-link">Applications</button>
+</li>
 </ul>
 
 <!-- TAB CONTENTS -->
@@ -370,10 +373,6 @@
     <div id="messages-list" class="list-group list-group-flush"></div>
 </div>
 
-        <div id="tab-content-0" class="tab-pane active">
-            <h2 class="h4 fw-bold mb-4"></h2>
-            <div id="courses-grid" class="row g-4"></div>
-        </div>
         <div id="tab-content-1" class="tab-pane d-none">
             <div id="history-table" class="table-responsive rounded-4 border"></div>
         </div>
@@ -382,6 +381,10 @@
         </div>
         <div id="tab-content-3" class="tab-pane d-none">
             <div id="messages-list" class="list-group list-group-flush"></div>
+        </div>
+            <div id="tab-content-4" class="tab-pane d-none">
+            <h2 class="h4 fw-bold mb-4">My Applications</h2>
+            <div id="applications-list" class="list-group"></div>
         </div>
     </div>
 </div>
@@ -1172,18 +1175,54 @@ async function loadCourses() {
                                 class="btn btn-brand w-100 mb-2">
                             Apply for Assessment
                         </button>
-                        <small class="text-muted d-block text-center">Max 4 attempts • ₦15,000</small>
+                        <small class="text-muted d-block text-center">
+  Max 4 attempts • ${course.amountFormatted || '₦15,000'}
+</small> 
                     </div>
                 </div>
             </div>`;
+    if (!confirm(`Apply for "${courseName}" assessment?\n\nFee: ${course.amountFormatted || '₦15,000'}\nYou will need to pay after admin approval.`)) 
+    return;
     });
 
     container.innerHTML = html;
 }
 
+// Admin: Approve Application
+async function approveApplication(appID) {
+    if (!confirm("Approve this application and send invoice?")) return;
+    
+    const result = await callAPI('approveApplication', { appID });
+    alert(result.message || "Application approved");
+    loadMyApplications(); // refresh if in applications tab
+}
+
+// Admin: Verify Payment
+async function verifyPayment(appID) {
+    if (!confirm("Verify payment and activate assessment?")) return;
+    
+    const result = await callAPI('verifyPayment', { appID });
+    alert(result.message || "Payment verified successfully");
+    loadMyApplications();
+}
+
+// Admin: Approve Certificate
+async function approveCertificate(certCode, studentEmail, courseName, score) {
+    if (!confirm(`Approve certificate for ${courseName} (${score}%)?`)) return;
+    
+    const result = await callAPI('approveCertificate', {
+        certCode,
+        studentEmail,
+        courseName,
+        scorePercent: score
+    });
+    alert(result.message || "Certificate approved and link sent");
+}
+
 // User clicks "Apply for Assessment"
 async function applyForCourse(courseId, courseName) {
-    if (!confirm(`Apply for "${courseName}"?\n\nYou will need to pay after admin approval.`)) return;
+    if (!confirm(`Apply for "${courseName}" assessment?\n\nFee: ₦15,000\nYou will need to pay after admin approval.`)) 
+        return;
 
     const result = await callAPI('applyForAssessment', {
         token: currentToken,
@@ -1192,11 +1231,23 @@ async function applyForCourse(courseId, courseName) {
     });
 
     if (result.success) {
-        alert(result.message);
-        loadDashboard(); // Refresh
+        alert(result.message || "Application submitted successfully!");
+        loadDashboard();   // Refresh courses and stats
     } else {
-        alert(result.message);
+        alert(result.message || "Failed to submit application");
     }
+}
+
+async function applyForAssessment(courseId) {
+    if (!confirm("Submit application for this course?")) return;
+
+    const result = await callAPI('applyForAssessment', { 
+        token: currentToken, 
+        courseId 
+    });
+
+    alert(result.message || "Application submitted successfully");
+    loadDashboard();
 }
 
 // Show Active Assessments (only those with "Active" status)
@@ -1207,7 +1258,7 @@ async function loadActiveAssessments() {
 
 // Mark Payment as Done
 async function markPaymentDone() {
-    const appID = prompt("Enter your Application ID (APP-XXXXXX):");
+    const appID = prompt("Enter your Application ID (e.g. APP-XXXXXX):");
     if (!appID) return;
 
     const reference = prompt("Enter Payment Reference / Transaction ID:");
@@ -1215,15 +1266,18 @@ async function markPaymentDone() {
 
     const result = await callAPI('markPaymentAsDone', {
         token: currentToken,
-        appID: appID,
-        paymentReference: reference
+        appID: appID.trim(),
+        paymentReference: reference.trim()
     });
 
     if (result.success) {
-        alert("✅ Payment marked successfully!\nAdmin will verify shortly.");
+        alert("✅ Payment marked successfully!\n\nAdmin will verify shortly.");
         loadDashboard();
+        if (!document.getElementById('tab-content-4').classList.contains('d-none')) {
+            loadMyApplications();
+        }
     } else {
-        alert(result.message);
+        alert("Error: " + (result.message || "Failed to mark payment"));
     }
 }
 
@@ -1460,6 +1514,53 @@ function switchTab(n) {
             loadCertificates();
         }, 30);
     }
+
+    if (n === 4) loadMyApplications();
+}
+
+// Load My Applications
+async function loadMyApplications() {
+    const container = document.getElementById('applications-list');
+    if (!container) return;
+
+    try {
+        const result = await callAPI('getMyApplications', { token: currentToken });
+        
+        if (!result.success || !result.applications || result.applications.length === 0) {
+            container.innerHTML = `
+                <div class="alert alert-info text-center py-5">
+                    <i class="fa-solid fa-file-contract fa-3x mb-3 text-muted"></i><br>
+                    <strong>No applications yet</strong><br>
+                    <small>Apply for a course from the Courses tab</small>
+                </div>`;
+            return;
+        }
+
+        let html = '';
+        result.applications.forEach(app => {
+            let statusBadge = '';
+            if (app.status === "Approved") statusBadge = `<span class="badge bg-success">Approved - Pay Now</span>`;
+            else if (app.status === "Active") statusBadge = `<span class="badge bg-brand">Active - Start Test</span>`;
+            else if (app.status === "Payment Submitted") statusBadge = `<span class="badge bg-warning">Payment Submitted</span>`;
+            else statusBadge = `<span class="badge bg-secondary">${app.status}</span>`;
+
+            html += `
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${app.courseName}</strong><br>
+                        <small class="text-muted">ID: ${app.applicationID}</small>
+                    </div>
+                    <div class="text-end">
+                        ${statusBadge}<br>
+                        <small>${new Date(app.appliedAt).toLocaleDateString('en-GB')}</small>
+                    </div>
+                </div>`;
+        });
+
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = `<div class="alert alert-danger">Failed to load applications</div>`;
+    }
 }
 
 async function viewReview(testId) {
@@ -1498,6 +1599,10 @@ window.viewReview = viewReview;
 window.handleRegister = handleRegister;
 window.completeRegistration = completeRegistration;
 window.handleLogin = handleLogin;
+window.showRegisterModal = () => {
+    document.getElementById('landing-view').classList.add('d-none');
+    document.getElementById('registrationSection').style.display = 'block';
+};
 
 </script>
 
