@@ -558,7 +558,7 @@
     <button onclick="prevQuestion()" class="btn btn-outline-secondary px-4 rounded-pill">PREVIOUS</button>
     
     <div>
-        <button onclick="submitTestEarly()" class="btn btn-danger btn-sm me-3">QUIT TEST</button>
+        <button onclick="submitTestEarly()" class="btn btn-danger btn-sm me-3">SUBMIt TEST</button>
         <button onclick="finishTest()" id="finish-btn" class="btn btn-success px-5 rounded-pill" style="display:none;">
             SUBMIT TEST
         </button>
@@ -1224,7 +1224,7 @@ async function loadCertificates() {
                 <div class="col-12 text-center py-5 text-muted">
                     <i class="fa-solid fa-certificate fa-3x mb-3 opacity-50"></i><br>
                     No certificates yet.<br>
-                    <small>Pass an assessment to earn your first certificate</small>
+                    <small>Pass an assessment and apply for certificate</small>
                 </div>`;
             return;
         }
@@ -1238,11 +1238,12 @@ async function loadCertificates() {
                         <h6 class="fw-bold">${cert.courseName}</h6>
                         <p class="fw-bold text-success">${cert.score}%</p>
                         <small class="text-muted d-block mb-3">
-                            ${new Date(cert.issueDate).toLocaleDateString('en-GB')}
+                            Issued: ${new Date(cert.issueDate).toLocaleDateString('en-GB')}
                         </small>
-                        <a href="${cert.verificationLink}" target="_blank" 
-                           class="btn btn-outline-brand btn-sm">
-                            View Certificate
+                        <a href="${cert.verificationLink}" 
+                           target="_blank" 
+                           class="btn btn-brand btn-sm w-100">
+                            <i class="fa-solid fa-download me-2"></i> Download Certificate
                         </a>
                     </div>
                 </div>`;
@@ -1254,7 +1255,7 @@ async function loadCertificates() {
         console.error("Certificates load error:", e);
         document.getElementById('certificates-grid').innerHTML = `
             <div class="col-12 alert alert-warning text-center">
-                Could not load certificates.
+                Could not load certificates at the moment.
             </div>`;
     }
 }
@@ -1411,16 +1412,53 @@ async function applyForCourse(courseId, courseName) {
     }
 }
 
-async function applyForAssessment(courseId) {
-    if (!confirm("Submit application for this course?")) return;
+function applyForAssessment(d) {
+  const email = validateToken(d.token);
+  if (!email) return createErrorResponse("Session expired");
 
-    const result = await callAPI('applyForAssessment', { 
-        token: currentToken, 
-        courseId 
-    });
+  const { courseId } = d;
+  const courseName = getCourseName(courseId);
 
-    alert(result.message || "Application submitted successfully");
-    loadDashboard();
+  if (!courseId || !courseName) return createErrorResponse("Invalid course");
+
+  const appSheet = getSheet("Applications");
+  const apps = appSheet.getDataRange().getValues();
+
+  for (let i = 1; i < apps.length; i++) {
+    if (String(apps[i][2]).toLowerCase() === email.toLowerCase() && 
+        apps[i][3] === courseId) {
+      
+      const status = String(apps[i][5] || "").toLowerCase();
+      if (status === "pending" || status === "approved" || status === "active") {
+        return createErrorResponse(`You have already applied for "${courseName}". Check your Applications tab.`);
+      }
+    }
+  }
+
+  const appID = generateUniqueID("APP");
+
+  appSheet.appendRow([
+    new Date(), 
+    appID, 
+    email, 
+    courseId, 
+    courseName, 
+    "Pending", 
+    "New application", 
+    new Date(), 
+    "", 
+    false, 
+    "", 
+    ""
+  ]);
+
+  logActivity("ASSESSMENT_APPLIED", email, { appID, courseId, courseName });
+
+  return { 
+    success: true, 
+    message: `Application for "${courseName}" submitted successfully!`, 
+    applicationID: appID 
+  };
 }
 
 // Show Active Assessments (only those with "Active" status)
@@ -1466,9 +1504,20 @@ async function applyForCertificate(testId) {
     if (result.success) {
         alert(result.message);
         loadTestHistory();   // Refresh history
-    } else {
+    } 
+    else 
+    {
         alert(result.message || "Failed to apply");
     }
+    const courseId = testRow[3];   // from the test record
+
+const certSheet = getSheet("Certificates");
+const certValues = certSheet.getDataRange().getValues();
+
+for (let i = 1; i < certValues.length; i++) {
+  if (certValues[i][2] === email && certValues[i][3] === courseId) {
+    return createErrorResponse("You have already applied for a certificate for this course.");
+  }
 }
 
 // Download Certificate (called from email link or button)
