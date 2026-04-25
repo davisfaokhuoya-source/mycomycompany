@@ -1261,12 +1261,12 @@ async function loadCourses() {
 
                     <div class="mt-auto">
                         <button onclick="applyForCourse('${course.courseId}', '${course.courseName.replace(/'/g, "\\'")}')" 
-                                class="btn btn-brand w-100 mb-2">
-                            Apply for Assessment
-                        </button>
+        class="btn btn-brand w-100 mb-2">
+    ${course.isFree ? '🚀 Start Free Assessment' : 'Apply for Assessment'}
+</button>
                         <small class="text-muted d-block text-center">
-                            Max 4 attempts • ${course.amountFormatted || '₦15,000'}
-                        </small>
+    Max 4 attempts • <strong>${course.isFree ? 'FREE' : (course.amountFormatted || '₦15,000')}</strong>
+</small>
                     </div>
                 </div>
             </div>`;
@@ -1306,10 +1306,37 @@ function toggleDescription(courseId) {
 
 
 // User clicks "Apply for Assessment"
+// ==================== SMART APPLY FOR COURSE (Free or Paid) ====================
 async function applyForCourse(courseId, courseName) {
-    if (!confirm(`Apply for "${courseName}" assessment?\n\nFee: ₦15,000\nYou will need to pay after admin approval.`)) 
+    // First, get course details to know if it's free
+    let isFree = false;
+    let feeText = "₦15,000";
+
+    try {
+        const result = await callAPI('getCourses', { token: currentToken });
+        if (result.success) {
+            const course = result.courses.find(c => c.courseId === courseId);
+            if (course) {
+                isFree = course.isFree === true;
+                feeText = isFree ? "FREE" : (course.amountFormatted || "₦15,000");
+            }
+        }
+    } catch (e) {
+        console.error("Could not fetch course details", e);
+    }
+
+    let confirmMessage = `Apply for "${courseName}" assessment?\n\n`;
+
+    if (isFree) {
+        confirmMessage += `This is a FREE course.\nNo payment required.\n\nDo you want to proceed?`;
+    } else {
+        confirmMessage += `Fee: ${feeText}\nYou will need to pay after admin approval.\n\nDo you want to proceed?`;
+    }
+
+    if (!confirm(confirmMessage)) 
         return;
 
+    // Proceed with application
     const result = await callAPI('applyForAssessment', {
         token: currentToken,
         courseId: courseId,
@@ -1317,8 +1344,8 @@ async function applyForCourse(courseId, courseName) {
     });
 
     if (result.success) {
-        alert(result.message || "Application submitted successfully!");
-        loadDashboard();   // Refresh courses and stats
+        alert(result.message || `Application for "${courseName}" submitted successfully!`);
+        loadDashboard();   // Refresh everything
     } else {
         alert(result.message || "Failed to submit application");
     }
