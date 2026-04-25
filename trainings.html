@@ -366,7 +366,7 @@
 </li>
 </ul>
 
-<!-- TAB CONTENTS -->
+<!-- TAB CONTENTS - CLEANED (No Duplicates) -->
 <div id="tab-content-0" class="tab-pane active">
     <h2 class="h4 fw-bold mb-4">Available Courses</h2>
     <div id="courses-grid" class="row g-4"></div>
@@ -384,19 +384,11 @@
     <div id="messages-list" class="list-group list-group-flush"></div>
 </div>
 
-        <div id="tab-content-1" class="tab-pane d-none">
-            <div id="history-table" class="table-responsive rounded-4 border"></div>
-        </div>
-        <div id="tab-content-2" class="tab-pane d-none">
-            <div id="certificates-grid" class="row g-4"></div>
-        </div>
-        <div id="tab-content-3" class="tab-pane d-none">
-            <div id="messages-list" class="list-group list-group-flush"></div>
-        </div>
-            <div id="tab-content-4" class="tab-pane d-none">
-            <h2 class="h4 fw-bold mb-4">My Applications</h2>
-            <div id="applications-list" class="list-group"></div>
-        </div>
+<div id="tab-content-4" class="tab-pane d-none">
+    <h2 class="h4 fw-bold mb-4">My Applications</h2>
+    <div id="applications-list" class="list-group"></div>
+</div>
+
     </div>
 </div>
 
@@ -841,39 +833,30 @@ async function loadDashboard() {
         loadUserStats()
     ]);
 
-    // Show toast for new messages only
     const currentTotal = await loadUnreadCount();
     showNewMessageToast(currentTotal);
-
-    // Save current count as "seen"
-    lastSeenMessageCount = currentTotal;
 }
 
-// ==================== LOAD UNREAD COUNT ====================
 // ==================== LOAD TOTAL MESSAGES COUNT ====================
 async function loadUnreadCount() {
     try {
         const result = await callAPI('getUnreadCount', { token: currentToken });
         if (!result.success) return 0;
 
-        const totalMessages = parseInt(result.totalMessages || result.unreadCount || 0); // We'll improve backend too
+        const total = parseInt(result.totalMessages || result.unreadCount || 0);
 
         const badge = document.getElementById('unread-badge');
         if (badge) {
-            if (totalMessages > 0) {
-                badge.textContent = totalMessages > 99 ? '99+' : totalMessages;
-                badge.style.display = 'inline-block';
-            } else {
-                badge.style.display = 'none';
-            }
+            badge.textContent = total > 99 ? '99+' : total;
+            badge.style.display = total > 0 ? 'inline-block' : 'none';
         }
 
-        const statMessages = document.getElementById('stat-messages');
-        if (statMessages) statMessages.textContent = totalMessages;
+        const stat = document.getElementById('stat-messages');
+        if (stat) stat.textContent = total;
 
-        return totalMessages;
+        return total;
     } catch (e) {
-        console.error("Failed to load message count:", e);
+        console.error("loadUnreadCount error:", e);
         return 0;
     }
 }
@@ -1034,9 +1017,6 @@ async function submitTest() {
     }
 }
 
-// ==================== FIXED SHOW MESSAGES (Loads only when clicked) ====================
-let isMessagesLoaded = false;   // Prevent multiple calls
-
 // ==================== SHOW MESSAGES + MARK AS READ + SMART TOAST ====================
 async function showMessagesModal() {
     switchTab(3);   // Open Messages tab
@@ -1053,12 +1033,7 @@ async function showMessagesModal() {
     try {
         const result = await callAPI('getMyMessages', { token: currentToken });
 
-        if (!result.success || !result.messages) {
-            container.innerHTML = `<div class="alert alert-warning text-center py-4">Failed to load messages.</div>`;
-            return;
-        }
-
-        if (result.messages.length === 0) {
+        if (!result.success || !result.messages || result.messages.length === 0) {
             container.innerHTML = `
                 <div class="alert alert-info text-center py-5">
                     <i class="fa-solid fa-inbox fa-3x mb-3 text-muted"></i><br>
@@ -1068,7 +1043,6 @@ async function showMessagesModal() {
         }
 
         let html = '<div class="list-group">';
-
         result.messages.forEach(m => {
             const formattedMessage = makeLinksClickable(m.message || '');
             html += `
@@ -1078,38 +1052,36 @@ async function showMessagesModal() {
                         <small class="text-muted">${new Date(m.timestamp).toLocaleDateString('en-GB')}</small>
                     </div>
                     <p class="mb-1 message-body">${formattedMessage}</p>
-                    ${m.fromEmail ? `<small class="text-muted">From: ${m.fromEmail}</small>` : ''}
                 </div>`;
         });
-
         html += '</div>';
         container.innerHTML = html;
 
-        // Mark all as read when user views inbox
+        // Mark all messages as read when user opens inbox
         await callAPI('markAllMessagesAsRead', { token: currentToken });
 
     } catch (error) {
-        console.error("Messages error:", error);
+        console.error(error);
         container.innerHTML = `<div class="alert alert-danger text-center py-4">Could not load messages.</div>`;
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = `
-                <i class="fa-solid fa-envelope me-1"></i> Inbox 
-                <span id="unread-badge" class="badge bg-danger ms-1" style="display:none;">0</span>
-            `;
+            btn.innerHTML = `<i class="fa-solid fa-envelope me-1"></i> Inbox <span id="unread-badge" class="badge bg-danger ms-1" style="display:none;">0</span>`;
         }
-        loadUnreadCount();
+        const total = await loadUnreadCount();
+        localStorage.setItem('lastSeenMessageCount', total);   // Remember as seen
     }
 }
 
-// Show toast only when there are NEW messages since last view
-let lastSeenMessageCount = 0;
-
+// ==================== SMART NEW MESSAGE TOAST (Persists across refresh) ====================
 function showNewMessageToast(currentTotal) {
-    if (currentTotal <= lastSeenMessageCount || currentTotal === 0) return;
+    if (currentTotal <= 0) return;
 
-    const newCount = currentTotal - lastSeenMessageCount;
+    const lastSeen = parseInt(localStorage.getItem('lastSeenMessageCount') || '0');
+
+    if (currentTotal <= lastSeen) return;   // No new messages since last view
+
+    const newCount = currentTotal - lastSeen;
 
     const toastHTML = `
         <div id="message-toast" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
@@ -1125,15 +1097,14 @@ function showNewMessageToast(currentTotal) {
             </div>
         </div>`;
 
+    document.getElementById('message-toast')?.remove();
     document.body.insertAdjacentHTML('beforeend', toastHTML);
 
     setTimeout(() => {
-        const toast = document.getElementById('message-toast');
-        if (toast) toast.remove();
-    }, 5000);
+        document.getElementById('message-toast')?.remove();
+    }, 6000);
 
-    // Update last seen count
-    lastSeenMessageCount = currentTotal;
+    localStorage.setItem('lastSeenMessageCount', currentTotal);
 }
 
 // Mark all messages as read when inbox is opened
@@ -1145,85 +1116,13 @@ async function markAllMessagesAsRead() {
     } catch(e) {}
 }
 
-// Smart New Message Toast - Only show if there are truly new unread messages
-function showNewMessageToast(unreadCount) {
-    if (unreadCount <= 0) return;
-
-    const toastHTML = `
-        <div id="message-toast" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
-            <div class="toast show bg-brand text-white" role="alert">
-                <div class="toast-header bg-brand text-white border-0">
-                    <i class="fa-solid fa-envelope me-2"></i>
-                    <strong class="me-auto">New Message${unreadCount > 1 ? 's' : ''}</strong>
-                    <button type="button" class="btn-close btn-close-white" onclick="this.closest('.toast').remove()"></button>
-                </div>
-                <div class="toast-body">
-                    You have <strong>${unreadCount}</strong> new unread message${unreadCount > 1 ? 's' : ''}.
-                </div>
-            </div>
-        </div>`;
-
-    // Remove old toast
-    const old = document.getElementById('message-toast');
-    if (old) old.remove();
-
-    document.body.insertAdjacentHTML('beforeend', toastHTML);
-
-    setTimeout(() => {
-        const toast = document.getElementById('message-toast');
-        if (toast) toast.remove();
-    }, 5000);
-}
-
-// Show a nice toast when there are new messages
-function showNewMessageToast(count) {
-    if (count <= 0) return;
-
-    const toastHTML = `
-        <div id="message-toast" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
-            <div class="toast show bg-brand text-white" role="alert">
-                <div class="toast-header bg-brand text-white">
-                    <i class="fa-solid fa-envelope me-2"></i>
-                    <strong class="me-auto">New Message${count > 1 ? 's' : ''}</strong>
-                    <button type="button" class="btn-close btn-close-white" onclick="this.closest('.toast').remove()"></button>
-                </div>
-                <div class="toast-body">
-                    You have <strong>${count}</strong> new message${count > 1 ? 's' : ''} in your inbox.
-                    <br><small>Click Inbox to view</small>
-                </div>
-            </div>
-        </div>`;
-
-    // Remove old toast if exists
-    const oldToast = document.getElementById('message-toast');
-    if (oldToast) oldToast.remove();
-
-    document.body.insertAdjacentHTML('beforeend', toastHTML);
-
-    // Auto hide after 6 seconds
-    setTimeout(() => {
-        const toast = document.getElementById('message-toast');
-        if (toast) toast.remove();
-    }, 6000);
-}
-
-
 // Convert URLs in text to clickable links
 function makeLinksClickable(text) {
     if (!text) return '';
-
-    // Regex to detect URLs (http, https, www.)
     const urlRegex = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
-
-    return text.replace(urlRegex, (url) => {
-        let href = url;
-        if (!url.startsWith('http')) {
-            href = 'https://' + url;   // make www. links work
-        }
-        return `<a href="${href}" target="_blank" rel="noopener noreferrer" 
-                   style="color: var(--brand-color); text-decoration: underline;">
-                   ${url}
-                </a>`;
+    return text.replace(urlRegex, url => {
+        let href = url.startsWith('http') ? url : 'https://' + url;
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:#E07410; text-decoration:underline;">${url}</a>`;
     });
 }
 
@@ -1306,9 +1205,26 @@ async function loadCourses() {
     
     if (!result.success) {
         document.getElementById('courses-grid').innerHTML = `
-            <div class="col-12">
-                <div class="alert alert-warning">Could not load courses. Please try again later.</div>
-            </div>`;
+            <div class="col-md-6 col-lg-4">
+        <div class="academic-card p-4 h-100 d-flex flex-column">
+            <h5 class="fw-bold mb-2">${course.courseName}</h5>
+            
+            <p class="small text-muted flex-grow-1 desc-text" id="desc-${course.courseId}" ... >
+                ${shortDesc}
+                ${fullDesc.length > 85 ? `<span onclick="toggleDescription('${course.courseId}')" class="text-brand fw-bold ms-1" style="cursor:pointer;">...</span>` : ''}
+            </p>
+
+            <div class="mt-auto">
+                <button onclick="applyForCourse('${course.courseId}', '${course.courseName.replace(/'/g, "\\'")}')" 
+                        class="btn btn-brand w-100 mb-2">
+                    ${course.isFree ? 'Start Free Assessment' : 'Apply for Assessment'}
+                </button>
+                <small class="text-muted d-block text-center">
+                    Max 4 attempts • ${course.isFree ? '<strong class="text-success">FREE</strong>' : (course.amountFormatted)}
+                </small>
+            </div>
+        </div>
+    </div>`;
         return;
     }
 
@@ -1670,6 +1586,10 @@ function switchTab(n) {
         selectedPane.classList.remove('d-none');
         selectedPane.classList.add('active');
     }
+
+    if (n === 4) {
+    setTimeout(loadMyApplications, 100);
+}
 }
 
 // Load My Applications
@@ -1693,10 +1613,23 @@ async function loadMyApplications() {
         let html = '';
         result.applications.forEach(app => {
             let statusBadge = '';
-            if (app.status === "Approved") statusBadge = `<span class="badge bg-success">Approved - Pay Now</span>`;
-            else if (app.status === "Active") statusBadge = `<span class="badge bg-brand">Active - Start Test</span>`;
-            else if (app.status === "Payment Submitted") statusBadge = `<span class="badge bg-warning">Payment Submitted</span>`;
-            else statusBadge = `<span class="badge bg-secondary">${app.status}</span>`;
+            let actionButton = '';
+
+            if (app.status === "Active") {
+                statusBadge = `<span class="badge bg-success">Active - Ready</span>`;
+                actionButton = `<button onclick="startTestFromApplication('${app.courseId}', '${app.courseName.replace(/'/g, "\\'")}')" class="btn btn-brand btn-sm">Start Test Now</button>`;
+            } 
+            else if (app.status === "Approved") {
+                statusBadge = `<span class="badge bg-warning">Approved - Pay Now</span>`;
+                actionButton = `<small class="text-muted">Waiting for payment verification</small>`;
+            } 
+            else if (app.status === "Payment Submitted") {
+                statusBadge = `<span class="badge bg-info">Payment Submitted</span>`;
+                actionButton = `<small class="text-muted">Admin verifying payment...</small>`;
+            } 
+            else {
+                statusBadge = `<span class="badge bg-secondary">${app.status}</span>`;
+            }
 
             html += `
                 <div class="list-group-item d-flex justify-content-between align-items-center">
@@ -1706,7 +1639,8 @@ async function loadMyApplications() {
                     </div>
                     <div class="text-end">
                         ${statusBadge}<br>
-                        <small>${new Date(app.appliedAt).toLocaleDateString('en-GB')}</small>
+                        ${actionButton}
+                        <small class="d-block mt-1">${new Date(app.appliedAt).toLocaleDateString('en-GB')}</small>
                     </div>
                 </div>`;
         });
@@ -1715,6 +1649,29 @@ async function loadMyApplications() {
     } catch (e) {
         container.innerHTML = `<div class="alert alert-danger">Failed to load applications</div>`;
     }
+}
+
+async function startTestFromApplication(courseId, courseName) {
+    if (!courseId) return alert("Invalid course");
+
+    const result = await callAPI('startTest', { token: currentToken, courseId });
+    if (!result.success) {
+        return alert(result.message || "Cannot start test at this time.");
+    }
+
+    // Proceed with test
+    currentTest = result;
+    currentQuestions = result.questions || [];
+    currentQuestionIndex = 0;
+    userAnswers = {};
+    questionNotes = {};
+
+    document.getElementById('test-course-name').textContent = courseName;
+    document.getElementById('attempt-badge').textContent = `Attempt ${result.attemptNumber || 1} of 4`;
+
+    testModal.show();
+    renderCurrentQuestion();
+    startTimer((result.timeLimitMinutes || 120) * 60);
 }
 
 async function viewReview(testId) {
