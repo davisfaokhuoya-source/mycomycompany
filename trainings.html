@@ -128,6 +128,16 @@
             height: 1.2rem;
             border-width: 0.2em;
         }
+
+        .message-body a {
+            color: #E07410;
+            text-decoration: underline;
+            word-break: break-all;
+        }
+
+        .message-body a:hover {
+            color: #c65f0d;
+        }
     </style>
 </head>
 <body>
@@ -314,8 +324,9 @@
                     <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Messages</small>
                     <div id="stat-messages" class="display-5 fw-bold">0</div>
                     <button onclick="showMessagesModal()" class="btn btn-brand btn-sm position-absolute bottom-0 end-0 m-3" id="inbox-btn">
-                        <i class="fa-solid fa-envelope me-1"></i> Inbox
-                    </button>
+    <i class="fa-solid fa-envelope me-1"></i> Inbox
+    <span id="unread-badge" class="badge bg-danger ms-1" style="display:none;">0</span>
+</button>
                 </div>
             </div>
         </div>
@@ -826,16 +837,38 @@ async function loadDashboard() {
         loadTestHistory(),
         loadCertificates(),
         loadProgressChart(),
-        loadUnreadCount(),
-        loadUserStats()          // ← New line
+        loadUnreadCount(),        // ← Already here
+        loadUserStats()
     ]);
+
+    // Show toast if there are unread messages
+    const unreadEl = document.getElementById('unread-badge');
+    if (unreadEl && parseInt(unreadEl.textContent) > 0) {
+        showNewMessageToast(parseInt(unreadEl.textContent));
+    }
 }
+
 async function loadUnreadCount() {
     try {
         const result = await callAPI('getUnreadCount', { token: currentToken });
-        if (result.success) {
-            document.getElementById('stat-messages').textContent = result.unreadCount || 0;
+        if (!result.success) return;
+
+        const unread = result.unreadCount || 0;
+        const badge = document.getElementById('unread-badge');
+        
+        if (badge) {
+            if (unread > 0) {
+                badge.textContent = unread > 99 ? '99+' : unread;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
         }
+
+        // Optional: Update stat card too
+        const statMessages = document.getElementById('stat-messages');
+        if (statMessages) statMessages.textContent = unread;
+
     } catch (e) {
         console.error("Failed to load unread count:", e);
     }
@@ -1000,14 +1033,12 @@ async function submitTest() {
 // ==================== FIXED SHOW MESSAGES (Loads only when clicked) ====================
 let isMessagesLoaded = false;   // Prevent multiple calls
 
+// ==================== FIXED SHOW MESSAGES (with clickable links) ====================
 async function showMessagesModal(forceReload = false) {
     const btn = document.getElementById('inbox-btn');
     const container = document.getElementById('messages-list');
 
     if (!container) return;
-
-    // Prevent multiple simultaneous calls
-    if (btn && btn.disabled && !forceReload) return;
 
     if (btn) {
         btn.disabled = true;
@@ -1033,37 +1064,101 @@ async function showMessagesModal(forceReload = false) {
                     <strong>No messages yet</strong><br>
                     <small>Your inbox is empty</small>
                 </div>`;
-        } else {
-            let html = '<div class="list-group">';
-            result.messages.forEach(m => {
-                html += `
-                    <div class="list-group-item">
-                        <div class="d-flex justify-content-between">
-                            <strong>${m.subject || 'No Subject'}</strong>
-                            <small>${new Date(m.timestamp).toLocaleDateString('en-GB')}</small>
-                        </div>
-                        <p class="mb-1">${(m.message || '').replace(/\n/g, '<br>')}</p>
-                    </div>`;
-            });
-            html += '</div>';
-            container.innerHTML = html;
+            return;
         }
 
-        isMessagesLoaded = true;
+        let html = '<div class="list-group">';
+
+        result.messages.forEach(m => {
+            const formattedMessage = makeLinksClickable(m.message || '');
+
+            html += `
+                <div class="list-group-item ${!m.isRead ? 'bg-light border-start border-brand border-4' : ''}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <strong>${m.subject || 'No Subject'}</strong>
+                        <small class="text-muted">${new Date(m.timestamp).toLocaleDateString('en-GB')}</small>
+                    </div>
+                    <p class="mb-1 message-body">${formattedMessage}</p>
+                    ${m.fromEmail ? `<small class="text-muted">From: ${m.fromEmail}</small>` : ''}
+                </div>`;
+        });
+
+        html += '</div>';
+        container.innerHTML = html;
+
+        // Mark messages as read when viewed (optional but recommended)
+        // You can call markMessageAsRead here if you want
 
     } catch (error) {
         console.error("Messages error:", error);
         container.innerHTML = `
             <div class="alert alert-danger text-center py-4">
                 Could not load messages.<br>
-                <small>Please check your connection and try again.</small>
+                <small>Please check your connection.</small>
             </div>`;
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = `<i class="fa-solid fa-envelope me-1"></i> Inbox`;
+            btn.innerHTML = `
+                <i class="fa-solid fa-envelope me-1"></i> Inbox 
+                <span id="unread-badge" class="badge bg-danger ms-1" style="display:none;">0</span>
+            `;
+            // Refresh badge after opening
+            loadUnreadCount();
         }
     }
+}
+
+// Show a nice toast when there are new messages
+function showNewMessageToast(count) {
+    if (count <= 0) return;
+
+    const toastHTML = `
+        <div id="message-toast" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+            <div class="toast show bg-brand text-white" role="alert">
+                <div class="toast-header bg-brand text-white">
+                    <i class="fa-solid fa-envelope me-2"></i>
+                    <strong class="me-auto">New Message${count > 1 ? 's' : ''}</strong>
+                    <button type="button" class="btn-close btn-close-white" onclick="this.closest('.toast').remove()"></button>
+                </div>
+                <div class="toast-body">
+                    You have <strong>${count}</strong> new message${count > 1 ? 's' : ''} in your inbox.
+                    <br><small>Click Inbox to view</small>
+                </div>
+            </div>
+        </div>`;
+
+    // Remove old toast if exists
+    const oldToast = document.getElementById('message-toast');
+    if (oldToast) oldToast.remove();
+
+    document.body.insertAdjacentHTML('beforeend', toastHTML);
+
+    // Auto hide after 6 seconds
+    setTimeout(() => {
+        const toast = document.getElementById('message-toast');
+        if (toast) toast.remove();
+    }, 6000);
+}
+
+
+// Convert URLs in text to clickable links
+function makeLinksClickable(text) {
+    if (!text) return '';
+
+    // Regex to detect URLs (http, https, www.)
+    const urlRegex = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
+
+    return text.replace(urlRegex, (url) => {
+        let href = url;
+        if (!url.startsWith('http')) {
+            href = 'https://' + url;   // make www. links work
+        }
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer" 
+                   style="color: var(--brand-color); text-decoration: underline;">
+                   ${url}
+                </a>`;
+    });
 }
 
 function logout() {
@@ -1142,6 +1237,7 @@ async function loadCertificates() {
 // ==================== LOAD DATA COMPONENTS ====================
 async function loadCourses() {
     const result = await callAPI('getCourses', { token: currentToken });
+    
     if (!result.success) {
         document.getElementById('courses-grid').innerHTML = `
             <div class="col-12">
@@ -1151,41 +1247,78 @@ async function loadCourses() {
     }
 
     const container = document.getElementById('courses-grid');
-    if (!container) return;
+    container.innerHTML = '';
 
     if (result.courses.length === 0) {
-        container.innerHTML = `
-            <div class="col-12 text-center py-5">
-                <p class="text-muted">No courses available at the moment.</p>
-            </div>`;
+        container.innerHTML = `<div class="col-12 text-center py-5 text-muted">No courses available at the moment.</div>`;
         return;
     }
 
     let html = '';
-
     result.courses.forEach(course => {
+        const fullDesc = (course.description || "No detailed description available for this course.").trim();
+        const shortDesc = fullDesc.length > 85 
+            ? fullDesc.substring(0, 85) + "" 
+            : fullDesc;
+
         html += `
             <div class="col-md-6 col-lg-4">
-                <div class="academic-card p-4 h-100">
-                    <h5 class="fw-bold">${course.courseName}</h5>
-                    <p class="small text-muted">${(course.description || "").substring(0, 100)}...</p>
+                <div class="academic-card p-4 h-100 d-flex flex-column">
+                    <h5 class="fw-bold mb-2">${course.courseName}</h5>
                     
-                    <div class="mt-4">
-                        <button onclick="applyForCourse('${course.courseId}', '${course.courseName}')" 
+                    <p class="small text-muted flex-grow-1 desc-text" 
+                       id="desc-${course.courseId}"
+                       data-full="${fullDesc.replace(/"/g, '&quot;')}"
+                       data-short="${shortDesc.replace(/"/g, '&quot;')}">
+                        ${shortDesc}
+                        ${fullDesc.length > 85 ? 
+                            `<span onclick="toggleDescription('${course.courseId}')" 
+                                   class="text-brand fw-bold ms-1" style="cursor:pointer;">...</span>` 
+                            : ''}
+                    </p>
+
+                    <div class="mt-auto">
+                        <button onclick="applyForCourse('${course.courseId}', '${course.courseName.replace(/'/g, "\\'")}')" 
                                 class="btn btn-brand w-100 mb-2">
                             Apply for Assessment
                         </button>
                         <small class="text-muted d-block text-center">
-  Max 4 attempts • ${course.amountFormatted || '₦15,000'}
-</small> 
+                            Max 4 attempts • ${course.amountFormatted || '₦15,000'}
+                        </small>
                     </div>
                 </div>
             </div>`;
-    if (!confirm(`Apply for "${courseName}" assessment?\n\nFee: ${course.amountFormatted || '₦15,000'}\nYou will need to pay after admin approval.`)) 
-    return;
     });
 
     container.innerHTML = html;
+}
+
+// ==================== TOGGLE DESCRIPTION (FIXED) ====================
+function toggleDescription(courseId) {
+    const el = document.getElementById(`desc-${courseId}`);
+    if (!el) return;
+
+    const isExpanded = el.getAttribute('data-expanded') === 'true';
+    const fullDesc = el.getAttribute('data-full');
+    const shortDesc = el.getAttribute('data-short');
+
+    if (isExpanded) {
+        // Collapse
+        el.innerHTML = `
+            ${shortDesc}
+            <span onclick="toggleDescription('${courseId}')" 
+                  class="text-brand fw-bold ms-1" style="cursor:pointer;">...</span>
+        `;
+        el.setAttribute('data-expanded', 'false');
+    } else {
+        // Expand
+        el.innerHTML = `
+            ${fullDesc}
+            <span onclick="toggleDescription('${courseId}')" 
+                  class="text-brand fw-bold ms-1" style="cursor:pointer; font-size:0.95em;"> (less)</span>
+        `;
+        el.setAttribute('data-expanded', 'true');
+    }
 }
 
 
