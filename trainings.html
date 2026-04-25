@@ -554,10 +554,18 @@
                 </div>
                 <div class="modal-body bg-light p-5" id="test-body">
                     </div>
-                <div class="p-4 border-top bg-white d-flex justify-content-between">
-                    <button onclick="prevQuestion()" class="btn btn-outline-secondary px-4 rounded-pill">PREVIOUS</button>
-                    <button onclick="nextQuestion()" id="next-btn" class="btn btn-brand px-5 rounded-pill">NEXT QUESTION</button>
-                </div>
+                <div class="p-4 border-top bg-white d-flex justify-content-between align-items-center">
+    <button onclick="prevQuestion()" class="btn btn-outline-secondary px-4 rounded-pill">PREVIOUS</button>
+    
+    <div>
+        <button onclick="submitTestEarly()" class="btn btn-danger btn-sm me-3">QUIT TEST</button>
+        <button onclick="finishTest()" id="finish-btn" class="btn btn-success px-5 rounded-pill" style="display:none;">
+            SUBMIT TEST
+        </button>
+    </div>
+    
+    <button onclick="nextQuestion()" id="next-btn" class="btn btn-brand px-5 rounded-pill">NEXT QUESTION</button>
+</div>
             </div>
         </div>
     </div>
@@ -828,13 +836,63 @@ async function loadDashboard() {
         loadCourses(),
         loadTestHistory(),
         loadCertificates(),
-        loadProgressChart(),
+        loadProgressChart(),     // ← Make sure this is here
         loadUnreadCount(),
         loadUserStats()
     ]);
 
     const currentTotal = await loadUnreadCount();
     showNewMessageToast(currentTotal);
+}
+
+// ==================== FINISH TEST (Main Submit) ====================
+function finishTest() {
+    if (confirm("Are you sure you want to submit your test? You cannot change answers after submission.")) {
+        submitTest();
+    }
+}
+
+// ==================== IMPROVED nextQuestion() ====================
+function nextQuestion() {
+    if (currentQuestionIndex < currentQuestions.length - 1) {
+        currentQuestionIndex++;
+        renderCurrentQuestion();
+    } else {
+        // Last question → show Submit button
+        document.getElementById('next-btn').style.display = 'none';
+        document.getElementById('finish-btn').style.display = 'inline-block';
+    }
+}
+
+// ==================== IMPROVED renderCurrentQuestion() ====================
+function renderCurrentQuestion() {
+    const q = currentQuestions[currentQuestionIndex];
+    if (!q) return;
+
+    const html = `
+        <h5 class="mb-4">${currentQuestionIndex + 1}. ${q.text}</h5>
+        <div class="d-grid gap-3">
+            ${['a','b','c','d'].map(opt => `
+                <button onclick="selectAnswer('${q.qid}', '${opt}')" 
+                        class="btn btn-outline-secondary text-start py-3 answer-btn ${userAnswers[q.qid] === opt ? 'btn-brand text-white' : ''}" 
+                        id="opt-${q.qid}-${opt}">
+                    <strong>${opt.toUpperCase()}.</strong> ${q[opt]}
+                </button>
+            `).join('')}
+        </div>
+        <div class="mt-4">
+            <textarea class="form-control" placeholder="Add private note (optional)..." 
+                      onblur="saveNote('${q.qid}', this.value)">${questionNotes[q.qid] || ''}</textarea>
+        </div>`;
+
+    document.getElementById('test-body').innerHTML = html;
+    document.getElementById('current-q').textContent = currentQuestionIndex + 1;
+    document.getElementById('total-q').textContent = currentQuestions.length;
+
+    // Show/hide buttons based on question number
+    const isLastQuestion = currentQuestionIndex === currentQuestions.length - 1;
+    document.getElementById('next-btn').style.display = isLastQuestion ? 'none' : 'inline-block';
+    document.getElementById('finish-btn').style.display = isLastQuestion ? 'inline-block' : 'none';
 }
 
 // ==================== LOAD TOTAL MESSAGES COUNT ====================
@@ -885,12 +943,12 @@ async function loadTestHistory() {
         let actionButtons = '';
 
         if (test.status === "Passed") {
-            actionButtons = `
-                <button onclick="applyForCertificate('${test.testId}')" 
-                        class="btn btn-success btn-sm">
-                    Apply for Certificate
-                </button>`;
-        } 
+    actionButtons = `
+        <button onclick="applyForCertificate('${test.testId}')" 
+                class="btn btn-success btn-sm">
+            Apply for Certificate
+        </button>`;
+} 
         else if (test.status === "Failed") {
             actionButtons = `<span class="text-muted small">Retake allowed</span>`;
         }
@@ -1000,7 +1058,7 @@ function startTimer(seconds) {
 }
 
 async function submitTest() {
-    clearInterval(timerInterval);
+    if (timerInterval) clearInterval(timerInterval);
     testModal.hide();
 
     const result = await callAPI('submitTest', {
@@ -1010,10 +1068,12 @@ async function submitTest() {
     });
 
     if (result.success) {
-        alert(result.message || `Test submitted! Score: ${result.score}%`);
-        loadDashboard();
+        alert(result.message || `Test submitted successfully! Your score: ${result.score}%`);
+        
+        // Refresh everything including the chart
+        await loadDashboard();           // This will reload stats + chart
     } else {
-        alert("Submission failed: " + result.message);
+        alert("Submission failed: " + (result.message || "Unknown error"));
     }
 }
 
@@ -1403,7 +1463,12 @@ async function applyForCertificate(testId) {
         testId: testId
     });
 
-    alert(result.message || "Application submitted.");
+    if (result.success) {
+        alert(result.message);
+        loadTestHistory();   // Refresh history
+    } else {
+        alert(result.message || "Failed to apply");
+    }
 }
 
 // Download Certificate (called from email link or button)
@@ -1424,23 +1489,23 @@ async function loadProgressChart() {
     try {
         const result = await callAPI('getProgressAnalytics', { token: currentToken });
         
+        const container = document.getElementById('progress-chart-container');
+        if (!container) return;
+
         if (!result.success || !result.recentScores || result.recentScores.length === 0) {
-            const container = document.getElementById('progress-chart-container');
-            if (container) {
-                container.innerHTML = `
-                    <div class="text-center text-muted py-5">
-                        <i class="fa-solid fa-chart-line fa-3x mb-3 opacity-50"></i><br>
-                        No test data yet.<br>
-                        <small>Take your first assessment to see the progress chart</small>
-                    </div>`;
-            }
+            container.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fa-solid fa-chart-line fa-3x mb-3 opacity-50"></i><br>
+                    No test data yet.<br>
+                    <small>Take your first assessment to see the progress chart</small>
+                </div>`;
             return;
         }
 
         const ctx = document.getElementById('progressChart');
         if (!ctx) return;
 
-        // Destroy previous chart if it exists (prevents duplicate errors)
+        // Destroy previous chart instance to prevent duplication error
         if (window.progressChartInstance) {
             window.progressChartInstance.destroy();
         }
@@ -1472,7 +1537,10 @@ async function loadProgressChart() {
                     tooltip: {
                         backgroundColor: '#333',
                         titleColor: '#fff',
-                        bodyColor: '#E07410'
+                        bodyColor: '#E07410',
+                        callbacks: {
+                            label: (context) => `${context.raw}%`
+                        }
                     }
                 },
                 scales: {
