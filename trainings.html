@@ -1079,49 +1079,46 @@ async function loadUserStats() {
     }
 }
 
-// ====================== UPDATED: START TEST WITH RE-APPLY SUPPORT ======================
 async function startTest(courseId, courseName) {
- try {
- const result = await callAPI('startTest', { 
- token: currentToken, 
- courseId: courseId 
- });
+    try {
+        const result = await callAPI('startTest', { 
+            token: currentToken, 
+            courseId: courseId 
+        });
 
- if (result.success) {
- // Normal flow - test started successfully
- currentTest = result;
- currentQuestions = result.questions || [];
- currentQuestionIndex = 0;
- userAnswers = {};
- questionNotes = {};
+        if (result.success) {
+            currentTest = result;
+            currentQuestions = result.questions || [];
+            currentQuestionIndex = 0;
+            userAnswers = {};
+            questionNotes = {};
 
- document.getElementById('test-course-name').textContent = courseName;
- document.getElementById('attempt-badge').textContent = `Attempt ${result.attemptNumber || 1} of 4`;
+            document.getElementById('test-course-name').textContent = courseName;
+            document.getElementById('attempt-badge').textContent = `Attempt ${result.attemptNumber || 1} of 4`;
 
- testModal.show();
- renderCurrentQuestion();
- startTimer((result.timeLimitMinutes || 120) * 60);
- } 
- else if (result.requiresReapply) {
- // Max attempts reached or certificate expired
- const confirmReapply = confirm(
- `You have used all 4 attempts for "${result.courseName || courseName}".\n\n` +
- `Would you like to re-apply now to get 4 fresh attempts?`
- );
+            testModal.show();
+            renderCurrentQuestion();
+            startTimer((result.timeLimitMinutes || 120) * 60);
+        } 
+        else if (result.requiresReapply === true) {
+            // Show Re-apply option
+            const userChoice = confirm(
+                `You have used all 4 attempts for "${result.courseName}".\n\n` +
+                `Would you like to re-apply now to get 4 new attempts?`
+            );
 
- if (confirmReapply) {
- applyForCourse(result.courseId || courseId, result.courseName || courseName);
- }
- } 
- else {
- // Other errors
- alert(result.message || "Unable to start test. Please try again.");
- }
+            if (userChoice) {
+                await applyForCourse(result.courseId, result.courseName);
+            }
+        } 
+        else {
+            alert(result.message || "Cannot start the test at this time.");
+        }
 
- } catch (error) {
- console.error("Start test error:", error);
- alert("An error occurred while starting the test.");
- }
+    } catch (error) {
+        console.error("Start test error:", error);
+        alert("An error occurred. Please try again.");
+    }
 }
 
 
@@ -1502,36 +1499,27 @@ function toggleDescription(courseId) {
 
 
 
-// ====================== UPDATED: APPLY FOR COURSE (Supports Re-apply) ======================
 async function applyForCourse(courseId, courseName) {
- if (!courseId || !courseName) return alert("Invalid course");
+    if (!confirm(`Submit re-application for "${courseName}"?\n\nThis will give you 4 new attempts once approved.`)) {
+        return;
+    }
 
- const confirmMessage = `Submit re-application for "${courseName}"?\n\n` +
- `This will give you 4 new attempts once approved.`;
+    try {
+        const result = await callAPI('applyForAssessment', {
+            token: currentToken,
+            courseId: courseId
+        });
 
- if (!confirm(confirmMessage)) return;
-
- try {
- const result = await callAPI('applyForAssessment', {
- token: currentToken,
- courseId: courseId
- });
-
- if (result.success) {
- alert(result.message || "Re-application submitted successfully!\n\nYou will be notified once it is approved.");
- 
- // Refresh dashboard to show Applications tab
- await loadDashboard();
- 
- // Switch to Applications tab automatically
- switchTab(4);
- } else {
- alert(result.message || "Failed to submit re-application.");
- }
- } catch (e) {
- console.error(e);
- alert("Connection error. Please try again.");
- }
+        if (result.success) {
+            alert(result.message);
+            switchTab(4);        // Switch to Applications tab
+            loadDashboard();     // Refresh everything
+        } else {
+            alert(result.message || "Failed to submit re-application.");
+        }
+    } catch (e) {
+        alert("Connection error. Please try again later.");
+    }
 }
 
 function applyForAssessment(d) {
