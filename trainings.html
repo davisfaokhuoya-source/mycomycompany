@@ -963,11 +963,11 @@ async function loadTestHistory() {
 
         if (test.status === "Passed") {
     actionButtons = `
-        <button onclick="applyForCertificate('${test.testId}')" 
+        <button onclick="applyForCertificateFromHistory('${test.testId}')" 
                 class="btn btn-success btn-sm">
             Apply for Certificate
         </button>`;
-} 
+}
         else if (test.status === "Failed") {
             actionButtons = `<span class="text-muted small">Retake allowed</span>`;
         }
@@ -984,6 +984,27 @@ async function loadTestHistory() {
 
     html += `</tbody></table>`;
     container.innerHTML = html;
+}
+
+async function applyForCertificateFromHistory(testId) {
+    if (!confirm("Apply for official certificate for this passed test?")) return;
+
+    try {
+        const result = await callAPI('applyForCertificate', { 
+            token: currentToken, 
+            testId: testId 
+        });
+
+        if (result.success) {
+            alert(result.message || "Certificate request sent! Admin will review and approve shortly.");
+            loadTestHistory();   // Refresh history
+            loadCertificates();  // Refresh certs tab if needed
+        } else {
+            alert(result.message || "Failed to apply.");
+        }
+    } catch (e) {
+        alert("Error applying for certificate.");
+    }
 }
 
 // NEW FUNCTION - Add this
@@ -1226,22 +1247,30 @@ async function loadCertificates() {
 
         let html = '';
         result.certificates.forEach(cert => {
-            html += `
-                <div class="col-md-6 col-lg-4">
+           // In loadCertificates(), for each cert:
+if (cert.verificationLink && cert.verificationLink.includes("drive.google.com")) {
+    html += `<div class="col-md-6 col-lg-4">
                     <div class="academic-card p-4 text-center">
                         <h4 class="text-brand mb-3">🏆</h4>
                         <h6 class="fw-bold">${cert.courseName}</h6>
-                        <p class="fw-bold text-success">${cert.score}%</p>
-                        <small class="text-muted d-block mb-3">
+                        <p class="fw-bold text-success">${cert.score}%</p>  <small class="text-muted d-block mb-3">
                             Issued: ${new Date(cert.issueDate).toLocaleDateString('en-GB')}
                         </small>
-                        <a href="${cert.verificationLink}" 
-                           target="_blank" 
+        <a href="${cert.verificationLink}"target="_blank" 
                            class="btn btn-brand btn-sm w-100">
                             <i class="fa-solid fa-download me-2"></i> Download Certificate
-                        </a>
-                    </div>
+                        </a></div>
                 </div>`;
+} else {
+    // Still pending
+    html += `  <div class="col-md-6 col-lg-4">
+                    <div class="academic-card p-4 text-center">
+                        <h4 class="text-brand mb-3">🥈</h4>
+                        <h6 class="fw-bold">${cert.courseName}</h6>
+                        <p class="fw-bold text-success">${cert.score}%</p>
+                        <span class="text-muted small">Pending Admin Approval</span> </div>
+                </div>`;
+}     
         });
 
         container.innerHTML = html;
