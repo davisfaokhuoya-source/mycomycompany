@@ -938,52 +938,101 @@ async function loadUnreadCount() {
     }
 }
 
+// ====================== IMPROVED LOAD TEST HISTORY ======================
 async function loadTestHistory() {
-    const result = await callAPI('getMyTestHistory', { token: currentToken });
-    if (!result.success || !result.history) return;
-
     const container = document.getElementById('history-table');
     if (!container) return;
 
-    let html = `<table class="table table-hover align-middle">
-        <thead class="table-light">
-            <tr>
-                <th>Course</th>
-                <th>Attempt</th>
-                <th>Score</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>`;
+    container.innerHTML = `<div class="text-center py-4"><span class="spinner-border spinner-border-sm"></span> Loading history...</div>`;
 
-    result.history.forEach(test => {
-        let actionButtons = '';
+    try {
+        const result = await callAPI('getMyTestHistory', { token: currentToken });
 
-        if (test.status === "Passed") {
-    actionButtons = `
-        <button onclick="applyForCertificateFromHistory('${test.testId}')" 
-                class="btn btn-success btn-sm">
-            Apply for Certificate
-        </button>`;
-}
-        else if (test.status === "Failed") {
-            actionButtons = `<span class="text-muted small">Retake allowed</span>`;
+        if (!result.success) {
+            container.innerHTML = `
+                <div class="alert alert-danger text-center py-4">
+                    Failed to load test history.
+                </div>`;
+            return;
         }
 
-        html += `<tr>
-            <td><strong>${test.courseId}</strong></td>
-            <td>${test.attemptNumber}</td>
-            <td><strong class="${test.score >= 70 ? 'text-success' : 'text-danger'}">${test.score}%</strong></td>
-            <td>${new Date(test.submitTime || test.startTime).toLocaleDateString('en-GB')}</td>
-            <td><span class="badge ${test.status === 'Passed' ? 'bg-success' : 'bg-danger'}">${test.status}</span></td>
-            <td>${actionButtons}</td>
-        </tr>`;
-    });
+        if (!result.history || result.history.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="fa-solid fa-clipboard-list fa-4x mb-3 opacity-50"></i>
+                    <h5>No Test History Yet</h5>
+                    <p>Go to the Courses tab to start your first assessment.</p>
+                    <button onclick="switchTab(0)" class="btn btn-brand btn-sm mt-3">Browse Courses</button>
+                </div>`;
+            return;
+        }
 
-    html += `</tbody></table>`;
-    container.innerHTML = html;
+        // Build table
+        let html = `
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Course</th>
+                        <th>Attempt</th>
+                        <th>Score</th>
+                        <th>Submitted On</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        result.history.forEach(test => {
+            let statusBadge = '';
+            let actionHTML = '';
+
+            if (test.status === "InProgress") {
+                statusBadge = `<span class="badge bg-warning">In Progress</span>`;
+                actionHTML = `<small class="text-muted">Test is still in progress</small>`;
+            } 
+            else if (test.status === "Passed") {
+                statusBadge = `<span class="badge bg-success">Passed</span>`;
+                actionHTML = `
+                    <button onclick="applyForCertificateFromHistory('${test.testId}')" 
+                            class="btn btn-success btn-sm">
+                        Apply for Certificate
+                    </button>`;
+            } 
+            else if (test.status === "Failed") {
+                statusBadge = `<span class="badge bg-danger">Failed</span>`;
+                actionHTML = `<small class="text-muted">You can re-apply if needed</small>`;
+            } 
+            else {
+                statusBadge = `<span class="badge bg-secondary">${test.status}</span>`;
+            }
+
+            const submitDate = test.submitTime 
+                ? new Date(test.submitTime).toLocaleDateString('en-GB') 
+                : new Date(test.startTime).toLocaleDateString('en-GB');
+
+            html += `
+                <tr>
+                    <td><strong>${test.courseId}</strong></td>
+                    <td>${test.attemptNumber}</td>
+                    <td>
+                        ${test.score > 0 ? `<strong class="${test.score >= 70 ? 'text-success' : 'text-danger'}">${test.score}%</strong>` : '-'}
+                    </td>
+                    <td>${submitDate}</td>
+                    <td>${statusBadge}</td>
+                    <td>${actionHTML}</td>
+                </tr>`;
+        });
+
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+
+    } catch (error) {
+        console.error("loadTestHistory error:", error);
+        container.innerHTML = `
+            <div class="alert alert-warning text-center py-4">
+                Could not load test history. Please try again.
+            </div>`;
+    }
 }
 
 async function applyForCertificateFromHistory(testId) {
