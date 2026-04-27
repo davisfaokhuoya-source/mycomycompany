@@ -1493,32 +1493,72 @@ async function markPaymentDone() {
 }
 
 // Apply for Certificate after passing
-async function applyForCertificate(testId) {
-    if (!confirm("Apply for official certificate?")) return;
+function applyForCertificate(d) {
+  const email = validateToken(d.token);
+  if (!email) return createErrorResponse("Session expired");
 
-    const result = await callAPI('applyForCertificate', {
-        token: currentToken,
-        testId: testId
-    });
+  const { testId } = d;
+  if (!testId) return createErrorResponse("Test ID is required");
 
-    if (result.success) {
-        alert(result.message);
-        loadTestHistory();   // Refresh history
-    } 
-    else 
-    {
-        alert(result.message || "Failed to apply");
+  const testsSheet = getSheet("Tests");
+  const testValues = testsSheet.getDataRange().getValues();
+
+  let testRow = null;
+  let testRowIndex = -1;
+  for (let i = 1; i < testValues.length; i++) {
+    if (testValues[i][1] === testId && testValues[i][2] === email) {
+      testRow = testValues[i];
+      testRowIndex = i + 1;
+      break;
     }
-    const courseId = testRow[3];   // from the test record
-
-const certSheet = getSheet("Certificates");
-const certValues = certSheet.getDataRange().getValues();
-
-for (let i = 1; i < certValues.length; i++) {
-  if (certValues[i][2] === email && certValues[i][3] === courseId) {
-    return createErrorResponse("You have already applied for a certificate for this course.");
   }
-}}
+
+  if (!testRow || testRow[8] !== "Passed") {
+    return createErrorResponse("You can only apply for a certificate on a passed test.");
+  }
+
+  const courseId = testRow[3];
+  const scorePercent = parseFloat(testRow[7]) || 0;
+  const courseName = getCourseName(courseId);
+
+  // Check if already applied
+  const certSheet = getSheet("Certificates");
+  const certValues = certSheet.getDataRange().getValues();
+  for (let i = 1; i < certValues.length; i++) {
+    if (certValues[i][2] === email && certValues[i][3] === courseId) {
+      return createErrorResponse("You have already applied for a certificate for this course.");
+    }
+  }
+
+  const certCode = generateUniqueID("CERT");
+
+  certSheet.appendRow([
+    new Date(), 
+    certCode, 
+    email, 
+    courseId, 
+    courseName, 
+    scorePercent,
+    new Date(), 
+    getUserNameByEmail(email) || "Student",
+    "",                     // VerificationLink / DownloadLink (empty until approved)
+    new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Expiry
+    "Pending"               // Column K: Status
+  ]);
+
+  // Notify Admin
+  sendCustomZeptoEmail(ADMIN_EMAIL, "Admin", 
+    `New Certificate Request - ${courseName}`, 
+    `<p>Student: ${email}<br>Course: ${courseName}<br>Score: ${scorePercent}%<br>Cert Code: ${certCode}</p>`);
+
+  logActivity("CERTIFICATE_APPLIED", email, { certCode, courseId, score: scorePercent });
+
+  return { 
+    success: true, 
+    message: "Certificate application submitted successfully. Admin will review it shortly.",
+    certCode: certCode 
+  };
+}
 
 // Download Certificate (called from email link or button)
 async function downloadCertificate(downloadToken, certCode) {
