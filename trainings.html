@@ -558,7 +558,7 @@
     <button onclick="prevQuestion()" class="btn btn-outline-secondary px-4 rounded-pill">PREVIOUS</button>
     
     <div>
-        <button onclick="submitTestEarly()" class="btn btn-danger btn-sm me-3">SUBMIt TEST</button>
+        <button onclick="submitTestEarly()" class="btn btn-danger btn-sm me-3">QUIT TEST</button>
         <button onclick="finishTest()" id="finish-btn" class="btn btn-success px-5 rounded-pill" style="display:none;">
             SUBMIT TEST
         </button>
@@ -865,7 +865,7 @@ function nextQuestion() {
 }
 
 // ==================== IMPROVED renderCurrentQuestion() ====================
-/**function renderCurrentQuestion() {
+function renderCurrentQuestion() {
     const q = currentQuestions[currentQuestionIndex];
     if (!q) return;
 
@@ -893,7 +893,7 @@ function nextQuestion() {
     const isLastQuestion = currentQuestionIndex === currentQuestions.length - 1;
     document.getElementById('next-btn').style.display = isLastQuestion ? 'none' : 'inline-block';
     document.getElementById('finish-btn').style.display = isLastQuestion ? 'inline-block' : 'none';
-}**/
+}
 
 // ==================== LOAD TOTAL MESSAGES COUNT ====================
 async function loadUnreadCount() {
@@ -1008,30 +1008,6 @@ async function startTest(courseId, courseName) {
     startTimer((result.timeLimitMinutes || 120) * 60);
 }
 
-function renderCurrentQuestion() {
-    const q = currentQuestions[currentQuestionIndex];
-    if (!q) return;
-
-    const html = `
-        <h5 class="mb-4">${currentQuestionIndex + 1}. ${q.text}</h5>
-        <div class="d-grid gap-3">
-            ${['a','b','c','d'].map(opt => `
-                <button onclick="selectAnswer('${q.qid}', '${opt}')" 
-                        class="btn btn-outline-secondary text-start py-3 answer-btn ${userAnswers[q.qid] === opt ? 'btn-brand text-white' : ''}" 
-                        id="opt-${q.qid}-${opt}">
-                    <strong>${opt.toUpperCase()}.</strong> ${q[opt]}
-                </button>
-            `).join('')}
-        </div>
-        <div class="mt-4">
-            <textarea class="form-control" placeholder="Add private note..." 
-                      onblur="saveNote('${q.qid}', this.value)">${questionNotes[q.qid] || ''}</textarea>
-        </div>`;
-
-    document.getElementById('test-body').innerHTML = html;
-    document.getElementById('current-q').textContent = currentQuestionIndex + 1;
-    document.getElementById('total-q').textContent = currentQuestions.length;
-}
 
 function selectAnswer(qid, answer) {
     userAnswers[qid] = answer;
