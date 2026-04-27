@@ -1951,72 +1951,94 @@ async function startTestFromApplication(courseId, courseName) {
     startTimer((result.timeLimitMinutes || 120) * 60);
 }
 
-// ====================== VERIFY CERTIFICATE FROM MODAL ======================
 async function verifyCertificatePublicModal() {
     const certCode = document.getElementById('certIdModal').value.trim().toUpperCase();
     const resultDiv = document.getElementById('verifyResultModal');
-
-    // Clear previous result
-    resultDiv.innerHTML = '';
 
     if (!certCode) {
         resultDiv.innerHTML = `
             <div class="alert alert-warning text-center">
                 <i class="fa-solid fa-exclamation-triangle"></i><br>
-                Please enter a Certificate ID
+                Please enter a Certificate ID (e.g. CERT-ABC123)
             </div>`;
         return;
     }
 
-    // Show loading state
+    // Loading state
     resultDiv.innerHTML = `
-        <div class="alert alert-info text-center">
+        <div class="alert alert-info text-center py-4">
             <span class="spinner-border spinner-border-sm me-2"></span>
             Verifying certificate...
         </div>`;
 
     try {
-        const result = await callAPI('verifyCertificate', { 
-            certCode: certCode 
-        });
+        const result = await callAPI('verifyCertificate', { certCode: certCode });
 
         if (result.success && result.valid === true) {
-            // Successful verification
+            const issueDate = result.issueDate 
+                ? new Date(result.issueDate).toLocaleDateString('en-GB') 
+                : 'N/A';
+
+            const expiryText = result.expiryDate 
+                ? `Expires: ${new Date(result.expiryDate).toLocaleDateString('en-GB')}` 
+                : `<span class="text-success">Lifetime Certificate (No Expiry)</span>`;
+
             resultDiv.innerHTML = `
-                <div class="alert alert-success">
-                    <h5 class="mb-3">
-                        <i class="fa-solid fa-circle-check text-success"></i> 
-                        Certificate Verified Successfully
-                    </h5>
-                    <div class="border rounded-3 p-3 bg-white">
-                        <p><strong>Course:</strong> ${result.courseName || 'N/A'}</p>
-                        <p><strong>Score:</strong> <span class="fw-bold text-success">${result.score}%</span></p>
-                        <p><strong>Issued On:</strong> ${result.issueDate ? new Date(result.issueDate).toLocaleDateString('en-GB') : 'N/A'}</p>
-                        ${result.studentEmail ? `<p><strong>Recipient:</strong> ${result.studentEmail}</p>` : ''}
-                        ${result.expiryDate ? 
-                            `<small class="text-muted">Expires: ${new Date(result.expiryDate).toLocaleDateString('en-GB')}</small>` : ''}
+                <div class="alert alert-success p-4">
+                    <div class="text-center mb-4">
+                        <i class="fa-solid fa-circle-check fa-3x text-success"></i>
                     </div>
-                    <div class="text-center mt-3 small text-muted">
+                    <h5 class="text-center mb-4">✅ Certificate Verified Successfully</h5>
+                    
+                    <div class="border rounded-4 p-4 bg-white">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <strong>Recipient</strong><br>
+                                <span class="text-muted">${result.studentName || 'Professional'}</span>
+                            </div>
+                            <div class="col-6">
+                                <strong>Email</strong><br>
+                                <span class="text-muted">${result.studentEmail || 'N/A'}</span>
+                            </div>
+                            <div class="col-12">
+                                <strong>Course</strong><br>
+                                <span class="fw-bold">${result.courseName}</span>
+                            </div>
+                            <div class="col-6">
+                                <strong>Score</strong><br>
+                                <span class="fw-bold text-success">${result.score}%</span>
+                            </div>
+                            <div class="col-6">
+                                <strong>Issued On</strong><br>
+                                <span>${issueDate}</span>
+                            </div>
+                            <div class="col-12">
+                                <strong>Validity</strong><br>
+                                <span>${expiryText}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4 small text-muted">
                         This certificate is officially issued by The Victorias Assessment Portal
                     </div>
                 </div>`;
         } 
         else {
-            // Invalid certificate
             resultDiv.innerHTML = `
-                <div class="alert alert-danger text-center">
-                    <i class="fa-solid fa-triangle-exclamation fa-2x mb-3"></i><br>
-                    <strong>Invalid or Expired Certificate</strong><br>
-                    <small>${result.message || 'The certificate code you entered could not be found or has expired.'}</small>
+                <div class="alert alert-danger text-center p-4">
+                    <i class="fa-solid fa-triangle-exclamation fa-3x mb-3 text-danger"></i>
+                    <h5>❌ Invalid or Expired Certificate</h5>
+                    <p class="mb-0">${result.message || 'The certificate code could not be found.'}</p>
                 </div>`;
         }
 
     } catch (error) {
-        console.error("Certificate verification error:", error);
+        console.error(error);
         resultDiv.innerHTML = `
-            <div class="alert alert-danger text-center">
-                <i class="fa-solid fa-wifi-slash"></i><br>
-                Verification failed. Please check your internet connection and try again.
+            <div class="alert alert-danger text-center p-4">
+                <i class="fa-solid fa-wifi-slash fa-2x mb-3"></i>
+                <p>Verification failed. Please check your connection and try again.</p>
             </div>`;
     }
 }
