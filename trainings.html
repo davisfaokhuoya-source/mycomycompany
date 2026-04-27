@@ -1642,6 +1642,39 @@ function renderCurrentQuestion() {
   document.getElementById('current-q').textContent = currentQuestionIndex + 1;
 }
 
+// Add this to your test results logic in your HTML script
+function showResults(scorePercent) {
+  const passMark = 70; // Set your pass mark
+  let resultHTML = `<h4>Your Score: ${scorePercent}%</h4>`;
+
+  if (scorePercent >= passMark) {
+    resultHTML += `
+      <p class="text-success">Congratulations! You passed.</p>
+      <button id="claim-btn" class="btn btn-primary" onclick="requestCertificate()">
+        Claim Certificate
+      </button>
+    `;
+  } else {
+    resultHTML += `<p class="text-danger">You did not pass this time.</p>`;
+  }
+  document.getElementById('result-container').innerHTML = resultHTML;
+}
+
+function requestCertificate() {
+  const btn = document.getElementById('claim-btn');
+  btn.disabled = true;
+  btn.innerText = "Processing...";
+
+  google.script.run.withSuccessHandler(res => {
+    alert(res.message);
+    btn.innerText = "Request Sent";
+  }).requestCertificateInternal({
+    courseId: currentCourseId,
+    courseName: currentCourseName,
+    score: finalScore
+  });
+}
+
 function showProfileModal() {
     let html = `
     <div class="modal fade" id="profileModal" tabindex="-1">
