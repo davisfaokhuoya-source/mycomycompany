@@ -368,7 +368,25 @@
 
 <!-- TAB CONTENTS - CLEANED (No Duplicates) -->
 <div id="tab-content-0" class="tab-pane active">
-    <h2 class="h4 fw-bold mb-4">Available Courses</h2>
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
+        <h2 class="h4 fw-bold mb-3 mb-md-0">Available Courses</h2>
+        
+        <!-- Search Bar -->
+        <div class="col-md-5 col-lg-4">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0">
+                    <i class="fa-solid fa-search text-muted"></i>
+                </span>
+                <input 
+                    type="text" 
+                    id="course-search" 
+                    class="form-control border-start-0" 
+                    placeholder="Search courses... (e.g. Ethical, Leadership, K12)"
+                    onkeyup="filterCourses()">
+            </div>
+        </div>
+    </div>
+    
     <div id="courses-grid" class="row g-4"></div>
 </div>
 
@@ -609,6 +627,7 @@ let timerInterval = null;
 let userAnswers = {};
 let questionNotes = {};
 let userEmailForVerification = '';
+let allCourses = [];
 
 // Bootstrap Modals
 let loginModal, registerModal, verifyModal, testModal, messagesModal;
@@ -1087,6 +1106,7 @@ async function startTest(courseId, courseName) {
         });
 
         if (result.success) {
+            // Normal test start
             currentTest = result;
             currentQuestions = result.questions || [];
             currentQuestionIndex = 0;
@@ -1101,15 +1121,15 @@ async function startTest(courseId, courseName) {
             startTimer((result.timeLimitMinutes || 120) * 60);
         } 
         else if (result.requiresReapply === true) {
-            // Show Re-apply option
-            const userChoice = confirm(
-                `You have used all 4 attempts for "${result.courseName}".\n\n` +
-                `Would you like to re-apply now to get 4 new attempts?`
+            // Show friendly message with guidance
+            alert(
+                `Maximum attempts reached for "${result.courseName}".\n\n` +
+                `You have used all 4 attempts.\n\n` +
+                `Please go to the Courses tab and click "Re-apply for this Course" to submit a new application.`
             );
-
-            if (userChoice) {
-                await applyForCourse(result.courseId, result.courseName);
-            }
+            
+            // Optional: Auto switch to Courses tab
+            switchTab(0);
         } 
         else {
             alert(result.message || "Cannot start the test at this time.");
@@ -1357,7 +1377,7 @@ if (cert.verificationLink && cert.verificationLink.includes("drive.google.com"))
     }
 }
 
-// ====================== FULL UPDATED LOAD COURSES FUNCTION ======================
+// ====================== UPDATED LOAD COURSES ======================
 async function loadCourses() {
     const container = document.getElementById('courses-grid');
     if (!container) return;
@@ -1371,86 +1391,90 @@ async function loadCourses() {
     try {
         const result = await callAPI('getCourses', { token: currentToken });
 
-        if (!result.success) {
-            container.innerHTML = `
-                <div class="alert alert-danger text-center py-4">
-                    Failed to load courses. Please try again later.
-                </div>`;
+        if (!result.success || !result.courses) {
+            container.innerHTML = `<div class="alert alert-danger text-center">Failed to load courses.</div>`;
             return;
         }
 
-        if (!result.courses || result.courses.length === 0) {
-            container.innerHTML = `
-                <div class="text-center py-5 text-muted">
-                    <i class="fa-solid fa-book fa-3x mb-3 opacity-50"></i>
-                    <h5>No courses available at the moment</h5>
-                </div>`;
-            return;
-        }
-
-        let html = '';
-
-        for (const course of result.courses) {
-            const fullDesc = (course.description || "No description available.").trim();
-            const shortDesc = fullDesc.length > 85 
-                ? fullDesc.substring(0, 85) + "..." 
-                : fullDesc;
-
-            const hasMaxAttempts = await hasReachedMaxAttempts(course.courseId);
-
-            html += `
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="academic-card p-4 h-100 d-flex flex-column">
-                        <h5 class="fw-bold mb-3">${course.courseName}</h5>
-                        
-                        <p class="small text-muted flex-grow-1" 
-                           id="desc-${course.courseId}"
-                           data-full="${fullDesc.replace(/"/g, '&quot;')}"
-                           data-short="${shortDesc.replace(/"/g, '&quot;')}">
-                            ${shortDesc}
-                            ${fullDesc.length > 85 ? 
-                                `<span onclick="toggleDescription('${course.courseId}')" 
-                                       class="text-brand fw-bold ms-1" style="cursor:pointer;">more</span>` 
-                                : ''}
-                        </p>
-
-                        <div class="mt-auto">
-                            ${hasMaxAttempts ? 
-                                `<button onclick="reApplyForCourse('${course.courseId}', '${course.courseName.replace(/'/g, "\\'")}')" 
-                                         class="btn btn-warning w-100 mb-2 fw-bold">
-                                    <i class="fa-solid fa-redo me-2"></i> Re-apply for this Course
-                                 </button>` 
-                                : 
-                                `<button onclick="applyForCourse('${course.courseId}', '${course.courseName.replace(/'/g, "\\'")}')" 
-                                         class="btn btn-brand w-100 mb-2">
-                                    ${course.isFree ? '🚀 Start Free Assessment' : 'Apply for Assessment'}
-                                 </button>`
-                            }
-                            
-                            <small class="text-muted d-block text-center">
-                                Max 4 attempts • 
-                                ${course.isFree ? 
-                                    '<strong class="text-success">FREE</strong>' : 
-                                    (course.amountFormatted || '₦15,000')}
-                            </small>
-                        </div>
-                    </div>
-                </div>`;
-        }
-
-        container.innerHTML = html;
+        allCourses = result.courses;   // Store courses globally for searching
+        renderCourses(allCourses);
 
     } catch (error) {
         console.error("loadCourses error:", error);
         container.innerHTML = `
             <div class="alert alert-warning text-center py-4">
-                Could not load courses at the moment. Please refresh the page.
+                Could not load courses. Please refresh the page.
             </div>`;
     }
 }
 
+// ====================== RENDER COURSES FUNCTION ======================
+function renderCourses(courses) {
+    const container = document.getElementById('courses-grid');
+    if (!container) return;
+
+    if (courses.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center py-5 text-muted">
+                <i class="fa-solid fa-search fa-3x mb-3 opacity-50"></i>
+                <h5>No courses found</h5>
+                <p>Try different keywords</p>
+            </div>`;
+        return;
+    }
+
+    let html = '';
+
+    courses.forEach(course => {
+        const fullDesc = (course.description || "No description available.").trim();
+        const shortDesc = fullDesc.length > 85 ? fullDesc.substring(0, 85) + "..." : fullDesc;
+
+        const hasMaxAttempts = false; // You can integrate hasReachedMaxAttempts later
+
+        html += `
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="academic-card p-4 h-100 d-flex flex-column">
+                    <h5 class="fw-bold mb-3">${course.courseName}</h5>
+                    
+                    <p class="small text-muted flex-grow-1">${shortDesc}</p>
+
+                    <div class="mt-auto">
+                        <button onclick="applyForCourse('${course.courseId}', '${course.courseName.replace(/'/g, "\\'")}')" 
+                                class="btn btn-brand w-100 mb-2">
+                            ${course.isFree ? '🚀 Start Free Assessment' : 'Apply for Assessment'}
+                        </button>
+                        
+                        <small class="text-muted d-block text-center">
+                            Max 4 attempts • ${course.isFree ? '<strong class="text-success">FREE</strong>' : (course.amountFormatted || '₦15,000')}
+                        </small>
+                    </div>
+                </div>
+            </div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+// ====================== COURSE SEARCH FILTER ======================
+function filterCourses() {
+    const searchTerm = document.getElementById('course-search').value.toLowerCase().trim();
+    
+    if (!searchTerm) {
+        renderCourses(allCourses);
+        return;
+    }
+
+    const filtered = allCourses.filter(course => 
+        course.courseName.toLowerCase().includes(searchTerm) ||
+        (course.description && course.description.toLowerCase().includes(searchTerm)) ||
+        (course.category && course.category.toLowerCase().includes(searchTerm))
+    );
+
+    renderCourses(filtered);
+}
+
 async function reApplyForCourse(courseId, courseName) {
-    if (!confirm(`You have used all 4 attempts for "${courseName}".\n\nDo you want to submit a new re-application?`)) {
+    if (!confirm(`Submit a new application for "${courseName}"?\n\nThis will replace your previous application and give you 4 new attempts once approved.`)) {
         return;
     }
 
