@@ -1377,7 +1377,8 @@ if (cert.verificationLink && cert.verificationLink.includes("drive.google.com"))
     }
 }
 
-// ====================== UPDATED LOAD COURSES ======================
+// ====================== FULL LOAD COURSES WITH SEARCH + RE-APPLY ======================
+
 async function loadCourses() {
     const container = document.getElementById('courses-grid');
     if (!container) return;
@@ -1396,7 +1397,7 @@ async function loadCourses() {
             return;
         }
 
-        allCourses = result.courses;   // Store courses globally for searching
+        allCourses = result.courses;
         renderCourses(allCourses);
 
     } catch (error) {
@@ -1408,8 +1409,8 @@ async function loadCourses() {
     }
 }
 
-// ====================== RENDER COURSES FUNCTION ======================
-function renderCourses(courses) {
+// ====================== RENDER COURSES (WITH RE-APPLY LOGIC) ======================
+async function renderCourses(courses) {
     const container = document.getElementById('courses-grid');
     if (!container) return;
 
@@ -1425,11 +1426,12 @@ function renderCourses(courses) {
 
     let html = '';
 
-    courses.forEach(course => {
+    for (const course of courses) {
         const fullDesc = (course.description || "No description available.").trim();
         const shortDesc = fullDesc.length > 85 ? fullDesc.substring(0, 85) + "..." : fullDesc;
 
-        const hasMaxAttempts = false; // You can integrate hasReachedMaxAttempts later
+        // Check if user has reached 4 attempts
+        const hasMaxAttempts = await hasReachedMaxAttempts(course.courseId);
 
         html += `
             <div class="col-md-6 col-lg-4 mb-4">
@@ -1439,23 +1441,33 @@ function renderCourses(courses) {
                     <p class="small text-muted flex-grow-1">${shortDesc}</p>
 
                     <div class="mt-auto">
-                        <button onclick="applyForCourse('${course.courseId}', '${course.courseName.replace(/'/g, "\\'")}')" 
-                                class="btn btn-brand w-100 mb-2">
-                            ${course.isFree ? '🚀 Start Free Assessment' : 'Apply for Assessment'}
-                        </button>
+                        ${hasMaxAttempts ? 
+                            `<button onclick="reApplyForCourse('${course.courseId}', '${course.courseName.replace(/'/g, "\\'")}')" 
+                                     class="btn btn-warning w-100 mb-2 fw-bold">
+                                <i class="fa-solid fa-redo me-2"></i> Re-apply for this Course
+                             </button>` 
+                            : 
+                            `<button onclick="applyForCourse('${course.courseId}', '${course.courseName.replace(/'/g, "\\'")}')" 
+                                     class="btn btn-brand w-100 mb-2">
+                                ${course.isFree ? '🚀 Start Free Assessment' : 'Apply for Assessment'}
+                             </button>`
+                        }
                         
                         <small class="text-muted d-block text-center">
-                            Max 4 attempts • ${course.isFree ? '<strong class="text-success">FREE</strong>' : (course.amountFormatted || '₦15,000')}
+                            Max 4 attempts • 
+                            ${course.isFree ? 
+                                '<strong class="text-success">FREE</strong>' : 
+                                (course.amountFormatted || '₦15,000')}
                         </small>
                     </div>
                 </div>
             </div>`;
-    });
+    }
 
     container.innerHTML = html;
 }
 
-// ====================== COURSE SEARCH FILTER ======================
+// ====================== SEARCH FILTER ======================
 function filterCourses() {
     const searchTerm = document.getElementById('course-search').value.toLowerCase().trim();
     
