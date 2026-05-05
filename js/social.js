@@ -221,7 +221,7 @@ getstartedbody();
 
 const spp = [
     {
-        topic: 'Earn While Gaining Real Work Experience',
+        topic: 'Work, Earn & Grow',
         link: 'sppcollapseOne',
         image: '30s-Adult.jpg',
         text: 'The Victorias Career Hub gives you the opportunity to earn money while acquiring practical professional experience. Work flexibly from home or anywhere, build your CV with real client handling experience, and get paid for every successful referral.'
