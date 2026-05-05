@@ -83,9 +83,9 @@ navbar();
     });
 
 const coreservice = [
-    {image:'pexels-jep-gambardella-7690084.jpg', sec : 0.2,  topic: 'Administrative Support', text:'We provide top-tier operational management to ensure your daily business runs seamlessly and efficiently. Our expert team handles essential functions—from data and documentation management to scheduling and general office administration—allowing you to focus on core strategic objectives with complete peace of mind.'}, 
-    {image:'pexels-divinetechygirl-1181605.jpg', sec : 0.4, topic: 'Business Solution', text:'We deliver strategic and tailored business solutions designed to optimize your processes and drive growth. This area focuses on leveraging technology (such as custom software development) and rapid, effective communication to solve complex operational challenges and deliver precise, cost-effective results.'},
-    {image:'businessman-with-contract.jpg', sec : 0.6, topic: 'General Contracting', text:"We provide strategic business support to formalize your operations and drive growth. Our team handles essential legal and strategic processes, from CAC registration and ongoing compliance management to conducting thorough market research, developing robust project plans, and crafting compelling, winning proposals that enhance your credibility."}
+    {image:'pexels-jep-gambardella-7690084.jpg', sec : 0.2,  topic: 'Administrative Support', text:'We provide top-tier operational management powered by AI to ensure your daily business runs seamlessly and efficiently. Our expert team handles essential functions—from data and documentation management to scheduling and general office administration—allowing you to focus on core strategic objectives with complete peace of mind'}, 
+    {image:'pexels-divinetechygirl-1181605.jpg', sec : 0.4, topic: 'Business Solution', text:'We provide strategic business support powered by AI to formalize your operations and drive growth. Our team handles essential legal and strategic processes, from CAC registration and ongoing compliance management to conducting thorough market research, developing robust project plans, and crafting compelling, winning proposals that enhance your credibility.'},
+    {image:'businessman-with-contract.jpg', sec : 0.6, topic: 'General Contracting', text:"We offer comprehensive general contracting services to bring your projects to life with precision and professionalism. Our experienced team manages every aspect of the contracting process—from initial planning and budgeting to execution and final delivery—ensuring your project is completed on time, within budget, and to the highest standards of quality."}
 ];
 
 function coreservices(){const services = document.querySelector('.coreservices');
@@ -100,7 +100,7 @@ function coreservices(){const services = document.querySelector('.coreservices')
                                 <h4> ${element.topic}</h4>
                                 <p class="mb-4">${element.text}
                                 </p>
-                                <a class="btn btn-primary rounded-pill py-2 px-4" href="service.html">More Services</a>
+                              
                             </div>
                         </div>
                     </div>`;
