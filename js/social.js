@@ -4,7 +4,7 @@ function navbar() {
     const currentUrl = window.location.href;
     document.querySelector('.navbar').innerHTML=`<a href="" class="navbar-brand p-0">
      <img src="img/thevictoriaslogo.png" alt="Logo">
-                </a><span class="dealyo" style="font-size: 30px"> The Victorias Ltd.</span>
+                </a><span class="dealyo" style="font-size: 30px"> The Victorias</span>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
                     <span class="fa fa-bars"></span>
                 </button>
