@@ -19,7 +19,6 @@ function navbar() {
             </a>
             <div class="dropdown-menu m-0">
                 <a href="ssp.html" class="dropdown-item">Career Hub Portal</a>
-                <a href="portal.html" class="dropdown-item">Staff Portal</a>
                 <a href="email.html" class="dropdown-item">Email Portal</a>
                 <a href="trainings.html" class="dropdown-item">Training Portal</a>
             </div>
@@ -38,7 +37,6 @@ function navbar() {
                 <a href="localsupport.html" class="dropdown-item">Corporate Local Entry Support</a>
                 <a href="web-graphics-branding.html" class="dropdown-item">Web, Graphics & Branding</a>
                 <a href="trainings.html" class="dropdown-item">Training Programmes</a>
-                <a href="/gaas.html" class="dropdown-item">Premium Support Services (GAAS)</a>
                 <div class="dropdown-divider"></div>
                 <a href="value.html" class="dropdown-item">Custom Services</a>
             </div>
