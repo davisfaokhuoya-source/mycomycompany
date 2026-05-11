@@ -1,84 +1,124 @@
 
 
+// ====================== 1. CONFIG ======================
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzikeY27jY5TDmpn0zh0WI539Fo7MAbf9XRdzlbJW1oC6XQM_MlTwC08FshITl1zZX4/exec";
+
+// ====================== 2. NAVBAR FUNCTION (UPDATED) ======================
 function navbar() {
-    const currentUrl = window.location.href;
-    document.querySelector('.navbar').innerHTML=`<a href="" class="navbar-brand p-0">
-     <img src="img/thevictoriaslogo.png" alt="Logo">
-                </a><span class="dealyo" style="font-size: 30px"> The Victorias Ltd.</span>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
-                    <span class="fa fa-bars"></span>
+    const navbarEl = document.querySelector('.navbar');
+    if (!navbarEl) return;
+    navbarEl.innerHTML = `
+        <a href="" class="navbar-brand p-0">
+            <img src="img/thevictoriaslogo.png" alt="Logo">
+        </a>
+        <span class="dealyo" style="font-size: 30px"> The Victorias Ltd.</span>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+            <span class="fa fa-bars"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+            <div class="navbar-nav ms-auto py-0">
+                <a href="index.html" class="nav-item nav-link">Home</a>
+                <a href="about.html" class="nav-item nav-link">About Us</a>
+
+                <!-- Portals Dropdown -->
+                <div class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Portals</a>
+                    <div class="dropdown-menu m-0">
+                        <a href="ssp.html" class="dropdown-item">Career Hub Portal</a>
+                        <a href="email.html" class="dropdown-item">Email Portal</a>
+                        <a href="trainings.html" class="dropdown-item">Training Portal</a>
+                    </div>
+                </div>
+
+                <!-- Services Dropdown -->
+                <div class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Our Services</a>
+                    <div class="dropdown-menu m-0">
+                        <a href="doc-dev.html" class="dropdown-item">Document Development</a>
+                        <a href="social-media-management.html" class="dropdown-item">Social Media Management</a>
+                        <a href="compliance.html" class="dropdown-item">Corporate Compliance</a>
+                        <a href="localsupport.html" class="dropdown-item">Corporate Local Entry Support</a>
+                        <a href="web-graphics-branding.html" class="dropdown-item">Web, Graphics & Branding</a>
+                        <a href="trainings.html" class="dropdown-item">Training Programmes</a>
+                        <div class="dropdown-divider"></div>
+                        <a href="value.html" class="dropdown-item">Custom Services</a>
+                    </div>
+                </div>
+
+                <!-- Track Job Link -->
+                <a class="nav-item nav-link track-job-link" role="button" tabindex="0" style="cursor: pointer;">
+                    <i class="fas fa-search"></i> Track Job
+                </a>
+                <a href="/appointment.html" class="nav-item nav-link">Book Appointment</a>
+                <a href="contact.html" class="nav-item nav-link">Contact Us</a>
+                <a href="policy.html" class="nav-item nav-link">Policies</a>
+            </div>
+
+            <a href="https://flutterwave.com/pay/cxbndrtmjsdj" 
+               class="btn btn-primary rounded-pill py-2 px-4 my-3 my-lg-0 flex-shrink-0">
+                Make Payment
+            </a>
+        </div>
+
+        <!-- ==================== FLOATING TRACKER PANEL ==================== -->
+        <div id="trackerPanel" class="tracker-panel">
+            <div class="tracker-header">
+                <h5><i class="fas fa-tasks"></i> Track Your Job</h5>
+                <button type="button" class="close-btn tracker-close-btn">✕</button>
+            </div>
+            <div class="tracker-body">
+                <input type="text" id="floatTrackingCode" 
+                       class="form-control form-control-lg mb-3" 
+                       placeholder="Enter Tracking Code (e.g. VCH-ABCD1234)"
+                       style="text-transform: uppercase; font-size: 1.1rem;">
+                
+                <button type="button" class="btn btn-primary w-100 py-3 tracker-submit-btn">
+                    <i class="fas fa-search"></i> Check Status
                 </button>
-                <div class="collapse navbar-collapse" id="navbarCollapse">
-    <div class="navbar-nav ms-auto py-0">
-        <a href="index.html" class="nav-item nav-link">Home</a>
-        <a href="about.html" class="nav-item nav-link">About Us</a>
-        <!-- Portals Dropdown -->
-        <div class="nav-item dropdown">
-            <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-                Portals
-            </a>
-            <div class="dropdown-menu m-0">
-                <a href="ssp.html" class="dropdown-item">Career Hub Portal</a>
-                <a href="email.html" class="dropdown-item">Email Portal</a>
-                <a href="trainings.html" class="dropdown-item">Training Portal</a>
+
+                <div id="floatResult" class="mt-4"></div>
             </div>
         </div>
-
-        <!-- Services Dropdown -->
-        <div class="nav-item dropdown">
-            <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-                Our Services
-            </a>
-
-            <div class="dropdown-menu m-0">
-                <a href="doc-dev.html" class="dropdown-item">Document Development</a>
-                <a href="social-media-management.html" class="dropdown-item">Social Media Management</a>
-                <a href="compliance.html" class="dropdown-item">Corporate Compliance</a>
-                <a href="localsupport.html" class="dropdown-item">Corporate Local Entry Support</a>
-                <a href="web-graphics-branding.html" class="dropdown-item">Web, Graphics & Branding</a>
-                <a href="trainings.html" class="dropdown-item">Training Programmes</a>
-                <div class="dropdown-divider"></div>
-                <a href="value.html" class="dropdown-item">Custom Services</a>
-            </div>
-        </div>
-        <a href="/appointment.html" class="nav-item nav-link">Book Appointment</a>
-        <a href="contact.html" class="nav-item nav-link">Contact Us</a>
-        <a href="policy.html" class="nav-item nav-link">Policies</a>
-
-        
-    </div>
-
-    <a href="https://flutterwave.com/pay/cxbndrtmjsdj" 
-       class="btn btn-primary rounded-pill py-2 px-4 my-3 my-lg-0 flex-shrink-0">
-        Make Payment
-    </a>
-</div>`}
-navbar();
-
-// Get all elements with the class 'nav-link'
+    `;
+}
+// ====================== 3. ACTIVE NAV LINK ======================
+function highlightActiveNavLink() {
     const navLinks = document.querySelectorAll('.nav-link');
-
-    // Get the current page's URL pathname (e.g., '/index.html' or '/about.html')
     const currentPathname = window.location.pathname;
 
-    // Iterate over each link found
     navLinks.forEach(link => {
-        // Get the 'href' attribute value of the current link being looped through
         const linkHref = link.getAttribute('href');
-        
-        /* 
-          Compare the link's href to the current URL.
-          We use .endsWith() because the window.location.pathname might include a leading slash, 
-          but the href in the HTML might not (e.g., '/index.html' vs 'index.html').
-        */
-        if (currentPathname.endsWith(linkHref)) {
-            // If they match, add the 'active' class to that specific link element
+        if (linkHref && currentPathname.endsWith(linkHref)) {
             link.classList.add('active');
         } else {
-            // Optional: Ensure other links don't have the active class if they were set previously
             link.classList.remove('active');
         }
     });
+}
+
+function attachTrackerEvents() {
+    const trackLink = document.querySelector('.track-job-link');
+    const closeBtn = document.querySelector('.tracker-close-btn');
+    const submitBtn = document.querySelector('.tracker-submit-btn');
+
+     if (trackLink) {
+        trackLink.onclick = null; // clear inline if any
+        trackLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            toggleTracker();
+        }, { once: false });
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', toggleTracker);
+    }
+
+    if (submitBtn) {
+        submitBtn.addEventListener('click', trackJobFloating);
+    }
+}
 
 const coreservice = [
     {image:'pexels-jep-gambardella-7690084.jpg', sec : 0.2,  topic: 'Administrative Support', text:'Top-tier operational management powered by AI to ensure your daily business runs seamlessly and efficiently. Our expert team handles essential functions—from data and documentation management to scheduling and general office administration—allowing you to focus on core strategic objectives with complete peace of mind'}, 
@@ -86,27 +126,29 @@ const coreservice = [
     {image:'businessman-with-contract.jpg', sec : 0.6, topic: 'General Contracting', text:"Comprehensive general contracting services to bring your projects to life with precision and professionalism. Our experienced team manages every aspect of the contracting process—from initial planning and budgeting to execution and final delivery—ensuring your project is completed on time, within budget, and to the highest standards of quality."}
 ];
 
-function coreservices(){const services = document.querySelector('.coreservices');
+function coreservices(){
+    const services = document.querySelector('.coreservices');
+    if (!services) return;
+
     let htmlcode ='';
     let code ='';
-    coreservice.forEach(element => {code = `<div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="${element.sec}">
+    coreservice.forEach(element => {
+        code = `<div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="${element.sec}">
                         <div class="service-item">
                             <div class="service-img">
                                 <img src="img/${element.image}" class="img-fluid rounded-top w-100" alt="Image">
                             </div>
                             <div class="rounded-bottom p-4">
                                 <h4> ${element.topic}</h4>
-                                <p class="mb-4">${element.text}
-                                </p>
-                              
+                                <p class="mb-4">${element.text}</p>
                             </div>
                         </div>
                     </div>`;
-                 htmlcode = htmlcode + code;}
-                )
-                    services.innerHTML = htmlcode;
+        htmlcode = htmlcode + code;
+    });
+
+    services.innerHTML = htmlcode;
 }
-coreservices();
 
 const feactured = [
 
@@ -174,12 +216,12 @@ const feactured = [
 
 function getstartedlink(){
     const services = document.querySelector('.getstartedlink');
+    if (!services) return;
+
     let htmlcode = '';
     
     feactured.forEach((element, index) => {
-        // Add 'active' class only to the first element (index 0)
         const activeClass = index === 0 ? 'active' : ''; 
-        
         const code = `<a class="accordion-link p-4 mb-4 ${activeClass}" data-bs-toggle="pill" href="#${element.link}"> <h5 class="mb-0">${element.topic}</h5></a>`;
         htmlcode += code;
     });
@@ -189,10 +231,11 @@ function getstartedlink(){
 
 function getstartedbody(){
     const services = document.querySelector('.getstartedbody');
+    if (!services) return;
+
     let htmlcode = '';
     
     feactured.forEach((element, index) => {
-        // Add 'active' and 'show' classes only to the first element (index 0)
         const activeClass = index === 0 ? 'active show' : ''; 
 
         const code = `<div id="${element.link}" class="tab-pane fade p-0 ${activeClass}">
@@ -212,10 +255,6 @@ function getstartedbody(){
     
     services.innerHTML = htmlcode;
 }
-
-// Call the functions after defining the corrected feactured array
-getstartedlink();
-getstartedbody();
 
 const spp = [
     {
@@ -298,11 +337,34 @@ function sppbody() {
     container.innerHTML = htmlcode;
 }
 
-// ====================== INITIALIZE ======================
-document.addEventListener('DOMContentLoaded', () => {
+function initPage() {
+    navbar();
+    highlightActiveNavLink();
+    coreservices();
+    getstartedlink();
+    getstartedbody();
     spplink();
     sppbody();
-});
+    blogger();
+    roll();
+    attachTrackerEvents();
+
+    setTimeout(() => {
+        const input = document.getElementById("floatTrackingCode");
+        if (input) {
+            input.addEventListener("keypress", (e) => {
+                if (e.key === "Enter") trackJobFloating();
+            });
+        }
+    }, 500);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPage);
+} else {
+    initPage();
+}
+
 
 
 const blogHolder = [
@@ -310,9 +372,6 @@ const blogHolder = [
     {topic:'Ethics for Career Advancement', image: 'img/people-office-work-day.jpg', photo: 'img/thevictoriaslogo.png',text: 'Train workforce on ethics essential to outstanding office practices.', writer: 'Admin', date: 'Dec 2025'}, 
     {topic:'Our Partnership with YASNigeria ', image: 'img/1763763143498.jpeg', photo: 'img/thevictoriaslogo.png',text: 'YASNigeria has partnerted with us on training for K-12 Teachers in 2026.', writer: 'Admin', date: 'Dec 2025'}
 ];
-
-
-
 
 function blogger(){
     const services = document.querySelector('.listing');
@@ -345,6 +404,7 @@ function blogger(){
     services.innerHTML = `<div class=" carousel-wrapper"><ul class="carousel-slides" data-carousel>${htmlcode}</ul></div>`;
 }
 blogger();
+
 
 function roll(){const carousel = document.querySelector("[data-carousel]");
 const slideItems = carousel.querySelectorAll(".slide-item");
@@ -382,4 +442,108 @@ carousel.addEventListener('mouseleave', () => {
 roll();
 
 
+// ====================== 5. TRACKER FUNCTIONS ======================
+function toggleTracker() {
+    const panel = document.getElementById("trackerPanel");
+    if (!panel) return;
 
+    const isOpen = !panel.classList.contains("open");
+    panel.classList.toggle("open", isOpen);
+    panel.style.display = isOpen ? "block" : "none";
+
+    if (isOpen) {
+        setTimeout(() => {
+            const input = document.getElementById("floatTrackingCode");
+            if (input) input.focus();
+        }, 300);
+    }
+}
+
+async function trackJobFloating() {
+    const codeInput = document.getElementById("floatTrackingCode");
+    const trackingCode = codeInput.value.trim().toUpperCase();
+    const resultDiv = document.getElementById("floatResult");
+
+    if (!trackingCode) {
+        resultDiv.innerHTML = `<div class="alert alert-danger">Please enter a tracking code.</div>`;
+        return;
+    }
+
+    resultDiv.innerHTML = `
+        <div class="text-center py-4">
+            <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+            <p class="mt-2">Checking status...</p>
+        </div>`;
+
+    try {
+        const response = await fetch(WEBAPP_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                action: "trackJob",
+                trackingCode: trackingCode
+            })
+        });
+
+        const res = await response.json();
+
+        if (res.success && res.job) {
+            const job = res.job;
+            const statusLower = job.status.toLowerCase();
+            let statusClass = "warning";
+            
+            if (statusLower.includes("complete") || statusLower.includes("delivered")) statusClass = "success";
+            else if (statusLower.includes("progress")) statusClass = "info";
+
+            resultDiv.innerHTML = `
+                <div class="card border-${statusClass} shadow-sm">
+                    <div class="card-body">
+                        <h6>Status: <span class="badge bg-${statusClass}">${job.status}</span></h6>
+                        <p><strong>Service:</strong> ${job.service || 'N/A'}</p>
+                        <p><strong>Amount:</strong> ₦${parseFloat(job.amount || 0).toLocaleString()}</p>
+                        <p><strong>Last Updated:</strong> ${job.lastUpdated ? new Date(job.lastUpdated).toLocaleDateString('en-GB') : 'N/A'}</p>
+                        <hr>
+                        <strong>Progress Update:</strong>
+                        <p>${job.progressNotes || "Your job is being processed."}</p>
+                    </div>
+                </div>`;
+        } else {
+            resultDiv.innerHTML = `<div class="alert alert-danger">${res.message || "Invalid tracking code"}</div>`;
+        }
+    } catch (err) {
+        resultDiv.innerHTML = `<div class="alert alert-danger">Connection error. Please try again.</div>`;
+        console.error(err);
+    }
+}
+
+// expose functions to inline handlers in module pages
+if (typeof window !== 'undefined') {
+    window.toggleTracker = toggleTracker;
+    window.trackJobFloating = trackJobFloating;
+}
+
+// ====================== FINAL INITIALIZATION ======================
+document.addEventListener('DOMContentLoaded', () => {
+    navbar();                    // ← Must come first
+    highlightActiveNavLink();
+    
+    coreservices();
+    getstartedlink();
+    getstartedbody();
+    spplink();
+    sppbody();
+    blogger();
+    roll();
+
+    attachTrackerEvents();       // ← After navbar()
+
+    // Enter key support
+    setTimeout(() => {
+        const input = document.getElementById("floatTrackingCode");
+        if (input) {
+            input.addEventListener("keypress", (e) => {
+                if (e.key === "Enter") trackJobFloating();
+            });
+        }
+    }, 600);
+});
