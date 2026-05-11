@@ -7,6 +7,7 @@ const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzikeY27jY5TDmpn0zh0
 function navbar() {
     const navbarEl = document.querySelector('.navbar');
     if (!navbarEl) return;
+
     navbarEl.innerHTML = `
         <a href="" class="navbar-brand p-0">
             <img src="img/thevictoriaslogo.png" alt="Logo">
@@ -48,9 +49,10 @@ function navbar() {
                 </div>
 
                 <!-- Track Job Link -->
-                <a class="nav-item nav-link track-job-link" role="button" tabindex="0" style="cursor: pointer;">
+                <a href="#" class="nav-item nav-link track-job-link" style="cursor: pointer;">
                     <i class="fas fa-search"></i> Track Job
                 </a>
+
                 <a href="/appointment.html" class="nav-item nav-link">Book Appointment</a>
                 <a href="contact.html" class="nav-item nav-link">Contact Us</a>
                 <a href="policy.html" class="nav-item nav-link">Policies</a>
@@ -62,17 +64,15 @@ function navbar() {
             </a>
         </div>
 
-        <!-- ==================== FLOATING TRACKER PANEL ==================== -->
+        <!-- FLOATING TRACKER PANEL -->
         <div id="trackerPanel" class="tracker-panel">
             <div class="tracker-header">
                 <h5><i class="fas fa-tasks"></i> Track Your Job</h5>
                 <button type="button" class="close-btn tracker-close-btn">✕</button>
             </div>
             <div class="tracker-body">
-                <input type="text" id="floatTrackingCode" 
-                       class="form-control form-control-lg mb-3" 
-                       placeholder="Enter Tracking Code (e.g. VCH-ABCD1234)"
-                       style="text-transform: uppercase; font-size: 1.1rem;">
+                <input type="text" id="floatTrackingCode" class="form-control form-control-lg mb-3" 
+                       placeholder="Enter Tracking Code (e.g. VCH-ABCD1234)" style="text-transform: uppercase; font-size: 1.1rem;">
                 
                 <button type="button" class="btn btn-primary w-100 py-3 tracker-submit-btn">
                     <i class="fas fa-search"></i> Check Status
@@ -82,6 +82,11 @@ function navbar() {
             </div>
         </div>
     `;
+
+    // === ATTACH EVENTS IMMEDIATELY AFTER INJECTING HTML ===
+    setTimeout(() => {
+        attachTrackerEvents();
+    }, 100);
 }
 // ====================== 3. ACTIVE NAV LINK ======================
 function highlightActiveNavLink() {
@@ -99,25 +104,26 @@ function highlightActiveNavLink() {
 }
 
 function attachTrackerEvents() {
+    console.log("attachTrackerEvents() called");
+
     const trackLink = document.querySelector('.track-job-link');
     const closeBtn = document.querySelector('.tracker-close-btn');
     const submitBtn = document.querySelector('.tracker-submit-btn');
 
-     if (trackLink) {
-        trackLink.onclick = null; // clear inline if any
-        trackLink.addEventListener('click', function(e) {
+    if (trackLink) {
+        console.log("✅ Track Job link found");
+        
+        trackLink.addEventListener('click', (e) => {
+            console.log("🔥 Track Job CLICKED!");
             e.preventDefault();
             toggleTracker();
-        }, { once: false });
+        });
+    } else {
+        console.log("❌ Track Job link NOT found");
     }
 
-    if (closeBtn) {
-        closeBtn.addEventListener('click', toggleTracker);
-    }
-
-    if (submitBtn) {
-        submitBtn.addEventListener('click', trackJobFloating);
-    }
+    if (closeBtn) closeBtn.addEventListener('click', toggleTracker);
+    if (submitBtn) submitBtn.addEventListener('click', trackJobFloating);
 }
 
 const coreservice = [
@@ -478,22 +484,28 @@ async function trackJobFloating() {
     try {
         const response = await fetch(WEBAPP_URL, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "text/plain"   // ← THIS IS THE KEY FIX
+            },
             body: JSON.stringify({
                 action: "trackJob",
                 trackingCode: trackingCode
             })
         });
 
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
         const res = await response.json();
 
         if (res.success && res.job) {
             const job = res.job;
-            const statusLower = job.status.toLowerCase();
+            const statusLower = (job.status || "").toLowerCase();
             let statusClass = "warning";
             
             if (statusLower.includes("complete") || statusLower.includes("delivered")) statusClass = "success";
-            else if (statusLower.includes("progress")) statusClass = "info";
+            else if (statusLower.includes("progress") || statusLower.includes("in")) statusClass = "info";
 
             resultDiv.innerHTML = `
                 <div class="card border-${statusClass} shadow-sm">
@@ -503,16 +515,20 @@ async function trackJobFloating() {
                         <p><strong>Amount:</strong> ₦${parseFloat(job.amount || 0).toLocaleString()}</p>
                         <p><strong>Last Updated:</strong> ${job.lastUpdated ? new Date(job.lastUpdated).toLocaleDateString('en-GB') : 'N/A'}</p>
                         <hr>
-                        <strong>Progress Update:</strong>
-                        <p>${job.progressNotes || "Your job is being processed."}</p>
+                        <strong>Progress:</strong>
+                        <p class="mb-0">${job.progressNotes || "Your job is being processed."}</p>
                     </div>
                 </div>`;
         } else {
-            resultDiv.innerHTML = `<div class="alert alert-danger">${res.message || "Invalid tracking code"}</div>`;
+            resultDiv.innerHTML = `<div class="alert alert-danger">${res.message || "Invalid or expired tracking code"}</div>`;
         }
     } catch (err) {
-        resultDiv.innerHTML = `<div class="alert alert-danger">Connection error. Please try again.</div>`;
-        console.error(err);
+        console.error("Track Job Error:", err);
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                Connection error. Please check your internet and try again.<br>
+                <small>If this persists, the tracking service may be temporarily down.</small>
+            </div>`;
     }
 }
 
