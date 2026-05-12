@@ -138,9 +138,19 @@
         .message-body a:hover {
             color: #c65f0d;
         }
+
+        .loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: none; justify-content: center; align-items: center; z-index: 99999; }
+        .loader-overlay.active { display: flex; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #E07410; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+    <!-- Loading Overlay -->
+    <div id="loaderOverlay" class="loader-overlay">
+        <div class="spinner"></div>
+    </div>
+
     <nav class="navbar navbar-expand-lg navbar-light px-4 px-lg-5 py-3 py-lg-0">
         <a href="" class="navbar-brand p-0">
             <h1 class="text-primary"><i class="fas fa-search-dollar me-3"></i>The Victorias</h1>
@@ -283,13 +293,16 @@
                 <p class="text-muted mb-0">Professional development dashboard</p>
             </div>
             <div class="d-flex align-items-center gap-3">
+                <button onclick="location.reload()" class="btn btn-outline-secondary btn-sm">
+                    <i class="fa-solid fa-sync-alt"></i> Refresh
+                </button>
                 <button onclick="markPaymentDone()" class="btn btn-warning btn-sm">
                     <i class="fa-solid fa-money-bill"></i> I Have Made Payment
                 </button>
                 <div onclick="logout()" class="text-muted cursor-pointer" style="cursor: pointer;">
                     <i class="fa-solid fa-right-from-bracket"></i> Sign out
                 </div>
-                <div onclick="showProfileModal()" class="bg-brand text-white rounded-4 d-flex align-items-center justify-content-center shadow-sm" 
+                <div onclick="showProfileModal()" class="bg-brand text-white rounded-4 d-flex align-items-center justify-content-center shadow-sm"
                      style="width: 45px; height: 45px; cursor: pointer;">
                     <i class="fa-solid fa-user"></i>
                 </div>
@@ -628,6 +641,9 @@ let userAnswers = {};
 let questionNotes = {};
 let userEmailForVerification = '';
 let allCourses = [];
+let allTrainingMessages = [];
+let trainingMessageCurrentPage = 0;
+const trainingMessagesPerPage = 6;
 
 // Bootstrap Modals
 let loginModal, registerModal, verifyModal, testModal, messagesModal;
@@ -654,14 +670,24 @@ document.addEventListener('DOMContentLoaded', function() {
     if (currentToken) checkAuthAndLoadDashboard();
 });
 
+// ==================== LOADING SPINNER ====================
+function showLoader() {
+    document.getElementById("loaderOverlay").classList.add("active");
+}
+
+function hideLoader() {
+    document.getElementById("loaderOverlay").classList.remove("active");
+}
+
 // ==================== API CALLER ====================
 async function callAPI(action, payload = {}) {
   try {
+    showLoader();
     const response = await fetch(API_BASE_URL, {
       method: 'POST',
-      redirect: 'follow', 
+      redirect: 'follow',
       headers: {
-        'Content-Type': 'text/plain;charset=utf-8' 
+        'Content-Type': 'text/plain;charset=utf-8'
       },
       body: JSON.stringify({
         action: action,
@@ -675,8 +701,10 @@ async function callAPI(action, payload = {}) {
     const jsonStart = text.indexOf('{');
     const cleanText = jsonStart !== -1 ? text.substring(jsonStart) : text;
 
+    hideLoader();
     return JSON.parse(cleanText);
   } catch (error) {
+    hideLoader();
     console.error('Detailed API Error:', error);
     throw error;
   }
@@ -939,18 +967,18 @@ async function loadUnreadCount() {
         const result = await callAPI('getUnreadCount', { token: currentToken });
         if (!result.success) return 0;
 
-        const total = parseInt(result.totalMessages || result.unreadCount || 0);
+        const unreadCount = parseInt(result.unreadCount || 0);
 
         const badge = document.getElementById('unread-badge');
         if (badge) {
-            badge.textContent = total > 99 ? '99+' : total;
-            badge.style.display = total > 0 ? 'inline-block' : 'none';
+            badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+            badge.style.display = unreadCount > 0 ? 'inline-block' : 'none';
         }
 
         const stat = document.getElementById('stat-messages');
-        if (stat) stat.textContent = total;
+        if (stat) stat.textContent = unreadCount;
 
-        return total;
+        return unreadCount;
     } catch (e) {
         console.error("loadUnreadCount error:", e);
         return 0;
@@ -1211,20 +1239,12 @@ async function showMessagesModal() {
             return;
         }
 
-        let html = '<div class="list-group">';
-        result.messages.forEach(m => {
-            const formattedMessage = makeLinksClickable(m.message || '');
-            html += `
-                <div class="list-group-item">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <strong>${m.subject || 'No Subject'}</strong>
-                        <small class="text-muted">${new Date(m.timestamp).toLocaleDateString('en-GB')}</small>
-                    </div>
-                    <p class="mb-1 message-body">${formattedMessage}</p>
-                </div>`;
-        });
-        html += '</div>';
-        container.innerHTML = html;
+        // Sort by newest first (timestamp descending)
+        allTrainingMessages = result.messages;
+        allTrainingMessages.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        trainingMessageCurrentPage = 0;
+        displayTrainingMessagesPage();
 
         // Mark all messages as read when user opens inbox
         await callAPI('markAllMessagesAsRead', { token: currentToken });
@@ -1239,6 +1259,61 @@ async function showMessagesModal() {
         }
         const total = await loadUnreadCount();
         localStorage.setItem('lastSeenMessageCount', total);   // Remember as seen
+    }
+}
+
+function displayTrainingMessagesPage() {
+    const container = document.getElementById('messages-list');
+    if (!container) return;
+
+    const start = trainingMessageCurrentPage * trainingMessagesPerPage;
+    const end = start + trainingMessagesPerPage;
+    const displayMessages = allTrainingMessages.slice(start, end);
+    const totalMessages = allTrainingMessages.length;
+
+    let html = '<div class="list-group">';
+    displayMessages.forEach(m => {
+        const formattedMessage = makeLinksClickable(m.message || '');
+        html += `
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <strong>${m.subject || 'No Subject'}</strong>
+                    <small class="text-muted">${new Date(m.timestamp).toLocaleDateString('en-GB')}</small>
+                </div>
+                <p class="mb-1 message-body">${formattedMessage}</p>
+            </div>`;
+    });
+
+    // Add pagination buttons
+    if (totalMessages > trainingMessagesPerPage) {
+        const totalPages = Math.ceil(totalMessages / trainingMessagesPerPage);
+        html += `<div class="d-flex justify-content-between align-items-center mt-3 p-3 border-top">
+            <button onclick="previousTrainingMessagesPage()" class="btn btn-outline-secondary btn-sm" ${trainingMessageCurrentPage === 0 ? 'disabled' : ''}>
+                <i class="fas fa-chevron-left"></i> Previous
+            </button>
+            <span class="text-muted small">Page ${trainingMessageCurrentPage + 1} of ${totalPages} | ${totalMessages} total</span>
+            <button onclick="nextTrainingMessagesPage()" class="btn btn-outline-secondary btn-sm" ${trainingMessageCurrentPage === totalPages - 1 ? 'disabled' : ''}>
+                Next <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>`;
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function nextTrainingMessagesPage() {
+    const totalPages = Math.ceil(allTrainingMessages.length / trainingMessagesPerPage);
+    if (trainingMessageCurrentPage < totalPages - 1) {
+        trainingMessageCurrentPage++;
+        displayTrainingMessagesPage();
+    }
+}
+
+function previousTrainingMessagesPage() {
+    if (trainingMessageCurrentPage > 0) {
+        trainingMessageCurrentPage--;
+        displayTrainingMessagesPage();
     }
 }
 

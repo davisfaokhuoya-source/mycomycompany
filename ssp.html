@@ -27,12 +27,22 @@
         .earnings-card { transition: all 0.3s; }
         .message-badge { background-color: #e53e3e; color: white; font-size: 12px; padding: 2px 8px; border-radius: 50%; position: relative; top: -2px; }
         .toast { position: fixed; bottom: 20px; right: 20px; z-index: 99999; }
+
+        .loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: none; justify-content: center; align-items: center; z-index: 99999; }
+        .loader-overlay.active { display: flex; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #E07410; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
+<!-- Loading Overlay -->
+<div id="loaderOverlay" class="loader-overlay">
+    <div class="spinner"></div>
+</div>
+
 <!-- Topbar -->
- 
+
 
 <!-- Navbar & Hero -->
 <div class="container-fluid position-relative p-0">
@@ -105,6 +115,10 @@
             <h3>Welcome, <span id="dashUsername" class="text-primary"></span></h3>
             <div class="d-flex align-items-center gap-3">
                 <span class="badge bg-success me-2" id="dashUniqueID"></span>
+                <!-- Refresh Button -->
+                <button onclick="location.reload()" class="btn btn-outline-secondary btn-sm" title="Refresh page">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
                 <!-- Message Notification Bell -->
                 <div onclick="showTab(7); closeDropdown();" style="cursor:pointer; position:relative;">
                     <i class="fas fa-bell fa-2x text-primary"></i>
@@ -711,6 +725,15 @@ function disableButtonTemporarily(btnId, duration = 3000) {
     }, duration);
 }
 
+// ====================== LOADING SPINNER ======================
+function showLoader() {
+    document.getElementById("loaderOverlay").classList.add("active");
+}
+
+function hideLoader() {
+    document.getElementById("loaderOverlay").classList.remove("active");
+}
+
 // ====================== CONFIG ======================
 const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzikeY27jY5TDmpn0zh0WI539Fo7MAbf9XRdzlbJW1oC6XQM_MlTwC08FshITl1zZX4/exec";
 
@@ -719,10 +742,14 @@ let currentUser = null;
 let currentRegEmail = '';
 let currentResetEmail = '';
 let unreadPollingInterval = null;
+let allMessages = [];
+let messageCurrentPage = 0;
+const messagesPerPage = 6;
 
 // ====================== API CALL ======================
 async function apiCall(action, body = {}) {
     try {
+        showLoader();
         const payload = JSON.stringify({ action, ...body });
         const response = await fetch(WEBAPP_URL, {
             method: "POST",
@@ -733,8 +760,10 @@ async function apiCall(action, body = {}) {
 
         const text = await response.text();
         const result = JSON.parse(text || "{}");
+        hideLoader();
         return result;
     } catch (error) {
+        hideLoader();
         console.error(`[ERROR ${action}]:`, error);
         return { success: false, message: "Connection failed. Try again or check console (F12)." };
     }
@@ -1625,10 +1654,25 @@ async function loadMessages() {
         return;
     }
 
-    const messages = result.messages || [];
-    document.getElementById("messagesCount").textContent = `${messages.length} message(s)`;
+    allMessages = result.messages || [];
 
-    if (messages.length === 0) {
+    // Sort by newest first (timestamp descending)
+    allMessages.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    messageCurrentPage = 0;
+    displayMessagesPage();
+}
+
+function displayMessagesPage() {
+    const container = document.getElementById("messagesContainer");
+    const start = messageCurrentPage * messagesPerPage;
+    const end = start + messagesPerPage;
+    const displayMessages = allMessages.slice(start, end);
+    const totalMessages = allMessages.length;
+
+    document.getElementById("messagesCount").textContent = `Page ${messageCurrentPage + 1} of ${Math.ceil(totalMessages / messagesPerPage)} | ${totalMessages} total message(s)`;
+
+    if (allMessages.length === 0) {
         container.innerHTML = `
             <div class="text-center text-muted py-5">
                 <i class="fas fa-envelope fa-3x mb-3 opacity-50"></i>
@@ -1641,7 +1685,7 @@ async function loadMessages() {
     let html = '';
     let unreadCount = 0;
 
-    messages.forEach(msg => {
+    displayMessages.forEach(msg => {
         const isRead = msg.isRead || false;
         const isFromUser = msg.isFromUser || false;
 
@@ -1649,7 +1693,7 @@ async function loadMessages() {
         if (!isFromUser && !isRead) unreadCount++;
 
         // Detect payment link
-        const isPaymentLink = msg.message.includes("https://checkout.flutterwave.com") || 
+        const isPaymentLink = msg.message.includes("https://checkout.flutterwave.com") ||
                               msg.subject.toLowerCase().includes("payment");
 
         let messageContent = msg.message.replace(/\n/g, '<br>');
@@ -1658,11 +1702,11 @@ async function loadMessages() {
         if (isPaymentLink) {
     // Improved regex: matches Flutterwave links more precisely and stops before <br> or other text
     const linkRegex = /(https:\/\/checkout\.flutterwave\.com\/v3\/hosted\/pay\/[a-zA-Z0-9\-_%]+)/g;
-    
+
     messageContent = messageContent.replace(linkRegex, (match) => {
         // Clean any encoded <br> that might have stuck to the URL
         const cleanLink = match.split('%3Cbr%3E')[0].split('<br>')[0].trim();
-        
+
         return `${cleanLink} <br>or click the button <br><a href="${cleanLink}" target="_blank" class="btn btn-success btn-sm mt-2 d-block">
                     💰 Pay Now with Flutterwave
                 </a>
@@ -1672,15 +1716,15 @@ async function loadMessages() {
 }
 
         // Reply button - only for messages from admin
-        const replyButton = (!isFromUser) 
-            ? `<button onclick="openReplyModal(${msg.rowIndex}, '${msg.subject.replace(/'/g, "\\'")}');" 
-                       class="btn btn-sm btn-outline-success">Reply</button>` 
+        const replyButton = (!isFromUser)
+            ? `<button onclick="openReplyModal(${msg.rowIndex}, '${msg.subject.replace(/'/g, "\\'")}');"
+                       class="btn btn-sm btn-outline-success">Reply</button>`
             : '';
 
         // Mark as Read button - only for unread messages from admin
-        const markAsReadButton = (!isFromUser && !isRead) 
-            ? `<button onclick="markMessageAsRead(${msg.rowIndex});" 
-                       class="btn btn-sm btn-outline-primary">Mark as Read</button>` 
+        const markAsReadButton = (!isFromUser && !isRead)
+            ? `<button onclick="markMessageAsRead(${msg.rowIndex});"
+                       class="btn btn-sm btn-outline-primary">Mark as Read</button>`
             : '';
 
         // Badge
@@ -1694,16 +1738,16 @@ async function loadMessages() {
         }
 
         html += `
-            <div class="border rounded p-3 mb-3 ${isRead || isFromUser ? 'text-muted' : 'fw-bold text-dark'}" 
+            <div class="border rounded p-3 mb-3 ${isRead || isFromUser ? 'text-muted' : 'fw-bold text-dark'}"
                  style="background: ${(isRead || isFromUser) ? '#f8f9fa' : '#fff3cd'};">
-                
+
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <strong>${isFromUser ? 'You:' : 'Admin:'} ${msg.subject}</strong>
                     <small class="text-muted">${new Date(msg.timestamp).toLocaleDateString('en-GB', {hour:'numeric', minute:'2-digit'})}</small>
                 </div>
-                
+
                 <div class="mb-3">${messageContent}</div>
-                
+
                 <div class="d-flex justify-content-between align-items-center">
                     ${badge}
                     <div class="d-flex gap-2">
@@ -1714,8 +1758,37 @@ async function loadMessages() {
             </div>`;
     });
 
+    // Add pagination buttons
+    if (totalMessages > messagesPerPage) {
+        const totalPages = Math.ceil(totalMessages / messagesPerPage);
+        html += `<div class="d-flex justify-content-between align-items-center mt-4">
+            <button onclick="previousMessagesPage()" class="btn btn-outline-secondary btn-sm" ${messageCurrentPage === 0 ? 'disabled' : ''}>
+                <i class="fas fa-chevron-left"></i> Previous
+            </button>
+            <span class="text-muted small">Page ${messageCurrentPage + 1} of ${totalPages}</span>
+            <button onclick="nextMessagesPage()" class="btn btn-outline-secondary btn-sm" ${messageCurrentPage === totalPages - 1 ? 'disabled' : ''}>
+                Next <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>`;
+    }
+
     container.innerHTML = html;
     updateUnreadBadge(unreadCount);
+}
+
+function nextMessagesPage() {
+    const totalPages = Math.ceil(allMessages.length / messagesPerPage);
+    if (messageCurrentPage < totalPages - 1) {
+        messageCurrentPage++;
+        displayMessagesPage();
+    }
+}
+
+function previousMessagesPage() {
+    if (messageCurrentPage > 0) {
+        messageCurrentPage--;
+        displayMessagesPage();
+    }
 }
 
 async function markMessageAsRead(rowIndex) {
@@ -1786,6 +1859,7 @@ function logout() {
 
 // ====================== PAGE LOAD ======================
 window.onload = () => {
+    showLoader();
     const params = new URLSearchParams(window.location.search);
     const emailParam = params.get('email');
     const codeParam = params.get('code');
@@ -1795,6 +1869,7 @@ window.onload = () => {
         document.getElementById("verifyCode").value = codeParam;
         setTimeout(handleVerify, 600);
         window.history.replaceState({}, document.title, window.location.pathname);
+        hideLoader();
         return;
     }
 
@@ -1808,11 +1883,13 @@ window.onload = () => {
             document.getElementById("authSection").classList.add("d-none");
             document.getElementById("dashboardSection").classList.remove("d-none");
             loadDashboard();
+            setTimeout(hideLoader, 500);
             return;
         } else {
             localStorage.clear();
         }
     }
+    hideLoader();
 };
 
 // ====================== SINGLE REUSABLE CLEAR FUNCTION ======================
