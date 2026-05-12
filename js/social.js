@@ -27,9 +27,8 @@ function navbar() {
                 <div class="nav-item dropdown">
                     <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Portals</a>
                     <div class="dropdown-menu m-0">
-                        <a href="ssp.html" class="dropdown-item">Career Hub Portal</a>
-                        <a href="email.html" class="dropdown-item">Email Portal</a>
-                        <a href="trainings.html" class="dropdown-item">Training Portal</a>
+                        <a href="careerhub.html" class="dropdown-item">Career</a>
+                        <a href="email.html" class="dropdown-item">Email</a>
                     </div>
                 </div>
 
@@ -42,7 +41,7 @@ function navbar() {
                         <a href="compliance.html" class="dropdown-item">Corporate Compliance</a>
                         <a href="localsupport.html" class="dropdown-item">Corporate Local Entry Support</a>
                         <a href="web-graphics-branding.html" class="dropdown-item">Web, Graphics & Branding</a>
-                        <a href="trainings.html" class="dropdown-item">Training Programmes</a>
+                        <a href="trainings.html" class="dropdown-item">Career Programmes</a>
                         <div class="dropdown-divider"></div>
                         <a href="value.html" class="dropdown-item">Custom Services</a>
                     </div>
@@ -262,86 +261,6 @@ function getstartedbody(){
     services.innerHTML = htmlcode;
 }
 
-const spp = [
-    {
-        topic: 'Work, Earn & Grow',
-        link: 'sppcollapseOne',
-        image: '30s-Adult.jpg',
-        text: 'The Victorias Career Hub gives you the opportunity to earn money while acquiring practical professional experience. Work flexibly from home or anywhere, build your CV with real client handling experience, and get paid for every successful referral.'
-    },
-    {
-        topic: 'Flexible Remote Opportunity for Students & Youths',
-        link: 'sppcollapseTwo',
-        image: 'pexels-mart-production-7709254.jpg',
-        text: 'No 9-5 pressure. No experience required. Join The Victorias Career Hub and start earning while still in school or early in your career. Work at your own pace, develop valuable skills in client relations and business development, and turn your free time into a meaningful income stream.'
-    },
-    {
-        topic: 'Grow Your Income with Our Level System',
-        link: 'sppcollapseThree',
-        image: '30s-Adult.jpg',
-        text: 'Start at Level 1 and advance as you gain experience. The more clients you successfully support, the higher your level and commission rate become. Our progressive system rewards consistent effort, helping students and young professionals increase their earnings while building a strong professional profile.'
-    },
-    {
-        topic: 'Launch Your Career with a Trusted Organisation',
-        link: 'sppcollapseFour',
-        image: 'pexels-mart-production-7709254.jpg',
-        text: 'Be part of a structured career development programme backed by The Victorias Ltd. Gain hands-on experience in corporate services, receive professional mentorship, and earn income at the same time. Build your network, strengthen your resume, and position yourself for better opportunities in the future.'
-    }
-];
-
-// ====================== GENERATE LINKS (Left Sidebar) ======================
-function spplink() {
-    const container = document.querySelector('.spplink');
-    if (!container) return;
-
-    let htmlcode = '';
-
-    spp.forEach((item, index) => {
-        const activeClass = index === 0 ? 'active' : '';
-        
-        htmlcode += `
-            <a class="accordion-link p-4 mb-4 ${activeClass}" 
-               data-bs-toggle="pill" 
-               href="#${item.link}">
-                <h5 class="mb-0">${item.topic}</h5>
-            </a>`;
-    });
-    
-    container.innerHTML = htmlcode;
-}
-
-// ====================== GENERATE CONTENT (Right Side Panels) ======================
-function sppbody() {
-    const container = document.querySelector('.sppbody');
-    if (!container) return;
-
-    let htmlcode = '';
-
-    spp.forEach((item, index) => {
-        const activeClass = index === 0 ? 'active show' : '';
-
-        htmlcode += `
-            <div id="${item.link}" class="tab-pane fade p-0 ${activeClass}">
-                <div class="row g-4">
-                    <div class="col-md-7">
-                        <img src="img/${item.image}" 
-                             class="img-fluid w-100 rounded" 
-                             alt="${item.topic}">
-                    </div>
-                    <div class="col-md-5">
-                        <h1 class="display-5 mb-4">${item.topic}</h1>
-                        <p class="mb-4">${item.text}</p>
-                        <a class="btn btn-primary rounded-pill py-3 px-5" 
-                           href="https://thevictorias.com.ng/careerhub.html">
-                            Join Now - Get Started
-                        </a>
-                    </div>
-                </div>
-            </div>`;
-    });
-    
-    container.innerHTML = htmlcode;
-}
 
 function initPage() {
     navbar();
@@ -349,8 +268,6 @@ function initPage() {
     coreservices();
     getstartedlink();
     getstartedbody();
-    spplink();
-    sppbody();
     blogger();
     roll();
     attachTrackerEvents();
@@ -546,8 +463,6 @@ document.addEventListener('DOMContentLoaded', () => {
     coreservices();
     getstartedlink();
     getstartedbody();
-    spplink();
-    sppbody();
     blogger();
     roll();
 
