@@ -940,10 +940,68 @@
         </div>
         <!-- CTA End -->
 
+        <!-- Reviews Section (Before Footer) -->
+        <div class="container-fluid py-5" style="background: #f8f9fa;">
+            <div class="container">
+                <div class="text-center mx-auto mb-5 wow fadeInUp" data-wow-delay="0.2s">
+                    <h4 class="text-primary">Client Testimonials</h4>
+                    <h1 class="display-5 mb-4">What Our Clients Say</h1>
+                </div>
+                <div class="reviews-carousel-container">
+                    <div class="reviews-carousel-wrapper">
+                        <div id="reviewsContainer" class="reviews-carousel-row">
+                            <!-- Reviews will load here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Reviews End -->
+
         <!-- === YOUR ORIGINAL FOOTER (ENHANCED) === -->
     <div class="addfooter"></div>
 
-    <!-- Back to Top -->
+    <!-- Floating Review Button -->
+    <button id="floatingReviewBtn" class="floating-review-btn" onclick="openReviewModal()">
+        <i class="fas fa-star"></i>
+        <span>Leave Review</span>
+    </button>
+
+    <!-- Review Modal -->
+    <div id="reviewModal" class="review-modal" onclick="closeReviewModal(event)">
+        <div class="review-modal-content" onclick="event.stopPropagation()">
+            <button class="close-review-btn" onclick="closeReviewModal()">
+                <i class="fas fa-times"></i>
+            </button>
+            <h3 class="mb-4">Share Your Experience</h3>
+            <form id="reviewForm" onsubmit="submitReview(event)">
+                <div class="mb-3">
+                    <label class="form-label">Your Name</label>
+                    <input type="text" class="form-control" id="reviewName" required placeholder="Enter your name">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="reviewEmail" required placeholder="Enter your email">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Rating</label>
+                    <div class="rating-stars" id="ratingStars">
+                        <i class="far fa-star" data-rating="1" onclick="setRating(1)"></i>
+                        <i class="far fa-star" data-rating="2" onclick="setRating(2)"></i>
+                        <i class="far fa-star" data-rating="3" onclick="setRating(3)"></i>
+                        <i class="far fa-star" data-rating="4" onclick="setRating(4)"></i>
+                        <i class="far fa-star" data-rating="5" onclick="setRating(5)"></i>
+                    </div>
+                    <input type="hidden" id="reviewRating" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Your Review</label>
+                    <textarea class="form-control" id="reviewText" rows="4" required placeholder="Share your feedback..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Submit Review</button>
+            </form>
+        </div>
+    </div>
     <a href="#" class="btn btn-primary btn-lg-square rounded-circle back-to-top"><i class="fa fa-arrow-up"></i></a>
 
     <!-- Optimized JavaScript Loading -->
@@ -1082,6 +1140,221 @@
         }
       ]
     }
+    </script>
+
+    <!-- Review System Script -->
+    <script>
+        const REVIEW_FORM_ID = '1FAIpQLSemrgLPZ5LB9wgouBxZUq_HoEqSxTe3_XymW8lqfC26OGlyIg';
+
+        // Show floating review button after 3 minutes (only if not already reviewed)
+        setTimeout(() => {
+            if (!localStorage.getItem('userHasReviewed')) {
+                const btn = document.getElementById('floatingReviewBtn');
+                if (btn) btn.classList.add('show');
+            }
+        }, 180000); // 3 minutes
+
+        function openReviewModal() {
+            document.getElementById('reviewModal').classList.add('active');
+        }
+
+        function closeReviewModal(event) {
+            if (event && event.target.id !== 'reviewModal') return;
+            document.getElementById('reviewModal').classList.remove('active');
+        }
+
+        function setRating(rating) {
+            document.getElementById('reviewRating').value = rating;
+            document.querySelectorAll('.rating-stars i').forEach((star, idx) => {
+                if (idx < rating) {
+                    star.classList.remove('far');
+                    star.classList.add('fas', 'active');
+                } else {
+                    star.classList.remove('fas', 'active');
+                    star.classList.add('far');
+                }
+            });
+        }
+
+        async function submitReview(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('reviewName').value;
+            const email = document.getElementById('reviewEmail').value;
+            const rating = document.getElementById('reviewRating').value;
+            const text = document.getElementById('reviewText').value;
+
+            if (!rating) {
+                alert('Please select a rating');
+                return;
+            }
+
+            try {
+                // Submit to Google Form
+                const formData = new FormData();
+                formData.append('entry.1827123620', name); // Name field
+                formData.append('entry.596424024', email); // Email field
+                formData.append('entry.929799065', rating); // Rating field
+                formData.append('entry.1455263862', text); // Review field
+
+                await fetch(`https://docs.google.com/forms/d/e/${REVIEW_FORM_ID}/formResponse`, {
+                    method: 'POST',
+                    body: formData,
+                    mode: 'no-cors'
+                });
+
+                // Mark as reviewed
+                localStorage.setItem('userHasReviewed', 'true');
+
+                // Show appreciation message
+                showAppreciationMessage(name);
+
+            } catch (error) {
+                console.error('Error submitting review:', error);
+                alert('Error submitting review. Please try again.');
+            }
+        }
+
+        function showAppreciationMessage(name) {
+            const modal = document.getElementById('reviewModal');
+            const content = modal.querySelector('.review-modal-content');
+
+            content.innerHTML = `
+                <div style="text-align: center; padding: 40px 20px;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">🙏</div>
+                    <h3 style="margin-bottom: 15px; color: #333;">Thank You, ${name}!</h3>
+                    <p style="color: #666; margin-bottom: 20px; line-height: 1.6;">
+                        We truly appreciate your feedback. Your review helps us improve our services and helps other clients make informed decisions.
+                    </p>
+                    <p style="color: #666; margin-bottom: 30px; font-weight: 600;">
+                        Would you also consider leaving a review on Google? It really helps us grow!
+                    </p>
+                    <a href="https://g.page/r/CUVgq01s7FYTEAE/review" target="_blank" class="btn btn-primary" style="display: inline-block; margin-bottom: 10px;">
+                        <i class="fas fa-star"></i> Leave Review on Google
+                    </a>
+                    <br>
+                    <button onclick="closeReviewModal()" class="btn btn-outline-secondary" style="margin-top: 10px;">
+                        Close
+                    </button>
+                </div>
+            `;
+        }
+
+        // Display sample reviews
+        function loadReviews() {
+            const sampleReviews = [
+                {
+                    name: "John Adeyemi",
+                    rating: 5,
+                    text: "The Victorias Ltd has transformed how we manage our compliance. Highly professional team!",
+                    date: "2 weeks ago"
+                },
+                {
+                    name: "Chioma Okafor",
+                    rating: 5,
+                    text: "Excellent service and incredible support. Highly recommend for CAC services.",
+                    date: "1 month ago"
+                },
+                {
+                    name: "Ibrahim Hassan",
+                    rating: 4,
+                    text: "Great experience. The team was responsive and delivered on time.",
+                    date: "1 month ago"
+                },
+                {
+                    name: "Aisha Mohammed",
+                    rating: 5,
+                    text: "Outstanding support program. I've earned great income working with them.",
+                    date: "3 weeks ago"
+                },
+                {
+                    name: "Emeka Nwosu",
+                    rating: 5,
+                    text: "Amazing automation platform. Reduced our operational costs significantly!",
+                    date: "2 weeks ago"
+                },
+                {
+                    name: "Zainab Ibrahim",
+                    rating: 5,
+                    text: "Professional team with exceptional attention to detail. Highly satisfied!",
+                    date: "1 week ago"
+                }
+            ];
+
+            const container = document.getElementById('reviewsContainer');
+            if (!container) return;
+
+            let currentIndex = 0;
+            let carouselInterval;
+
+            function renderReviews() {
+                const isDesktop = window.innerWidth > 991;
+                const itemsPerView = isDesktop ? 3 : 1;
+                const totalSets = Math.ceil(sampleReviews.length / itemsPerView);
+
+                container.innerHTML = '';
+
+                for (let i = 0; i < sampleReviews.length; i++) {
+                    const review = sampleReviews[i];
+                    const setIndex = Math.floor(i / itemsPerView);
+                    const isActive = setIndex === (currentIndex % totalSets);
+
+                    const reviewHTML = `
+                        <div class="review-carousel-item ${isActive ? 'active' : ''}" data-set="${setIndex}">
+                            <div class="review-card">
+                                <div class="review-card-header">
+                                    <div>
+                                        <div class="review-name">${review.name}</div>
+                                        <div class="review-date">${review.date}</div>
+                                    </div>
+                                    <div class="review-stars">
+                                        ${'★'.repeat(review.rating)}${'☆'.repeat(5-review.rating)}
+                                    </div>
+                                </div>
+                                <p class="review-text">"${review.text}"</p>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += reviewHTML;
+                }
+            }
+
+            function updateCarousel() {
+                const isDesktop = window.innerWidth > 991;
+                const itemsPerView = isDesktop ? 3 : 1;
+                const totalSets = Math.ceil(sampleReviews.length / itemsPerView);
+
+                currentIndex = (currentIndex + 1) % totalSets;
+
+                const items = container.querySelectorAll('.review-carousel-item');
+                items.forEach(item => {
+                    item.classList.remove('active');
+                });
+
+                items.forEach(item => {
+                    if (parseInt(item.dataset.set) === (currentIndex % totalSets)) {
+                        item.classList.add('active');
+                    }
+                });
+            }
+
+            function startCarousel() {
+                clearInterval(carouselInterval);
+                carouselInterval = setInterval(updateCarousel, 5000);
+            }
+
+            renderReviews();
+            startCarousel();
+
+            window.addEventListener('resize', () => {
+                currentIndex = 0;
+                renderReviews();
+                startCarousel();
+            });
+        }
+
+        // Load reviews on page load
+        document.addEventListener('DOMContentLoaded', loadReviews);
     </script>
 
 </body>
