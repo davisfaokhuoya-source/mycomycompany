@@ -1485,6 +1485,7 @@ async function loadCourses() {
 }
 
 // ====================== RENDER COURSES (WITH RE-APPLY LOGIC) ======================
+// ====================== RENDER COURSES (WITH EXPANDABLE DESCRIPTION) ======================
 async function renderCourses(courses) {
     const container = document.getElementById('courses-grid');
     if (!container) return;
@@ -1503,9 +1504,8 @@ async function renderCourses(courses) {
 
     for (const course of courses) {
         const fullDesc = (course.description || "No description available.").trim();
-        const shortDesc = fullDesc.length > 85 ? fullDesc.substring(0, 85) + "..." : fullDesc;
+        const shortDesc = fullDesc.length > 95 ? fullDesc.substring(0, 95) + "..." : fullDesc;
 
-        // Check if user has reached 4 attempts
         const hasMaxAttempts = await hasReachedMaxAttempts(course.courseId);
 
         html += `
@@ -1513,7 +1513,16 @@ async function renderCourses(courses) {
                 <div class="academic-card p-4 h-100 d-flex flex-column">
                     <h5 class="fw-bold mb-3">${course.courseName}</h5>
                     
-                    <p class="small text-muted flex-grow-1">${shortDesc}</p>
+                    <p class="small text-muted flex-grow-1" id="desc-${course.courseId}" 
+                       data-full="${fullDesc.replace(/"/g, '&quot;')}" 
+                       data-short="${shortDesc.replace(/"/g, '&quot;')}" 
+                       data-expanded="false">
+                        ${shortDesc}
+                        ${fullDesc.length > 95 ? 
+                            `<span onclick="toggleDescription('${course.courseId}')" 
+                                  class="text-brand fw-bold ms-1" style="cursor:pointer;">Read more</span>` 
+                            : ''}
+                    </p>
 
                     <div class="mt-auto">
                         ${hasMaxAttempts ? 
@@ -1532,7 +1541,7 @@ async function renderCourses(courses) {
                             Max 4 attempts • 
                             ${course.isFree ? 
                                 '<strong class="text-success">FREE</strong>' : 
-                                (course.amountFormatted || '₦15,000')}
+                                (course.amountFormatted || '₦12,500')}
                         </small>
                     </div>
                 </div>
