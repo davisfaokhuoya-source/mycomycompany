@@ -51,9 +51,7 @@ function generateServiceCardHTML(service, index) {
     return `
         <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="${delay}">
             <div class="servicex-item">
-                <div class="servicex-img">
-                    <img src="img/${service.image}" class="img-fluid rounded-top w-100" alt="${service.topic}">
-                </div>
+               
                 <div class="rounded-bottom p-4">
                     <h4>${service.topic}</h4>
                     <p class="mb-4">${service.text}</p>
