@@ -735,7 +735,7 @@ function hideLoader() {
 }
 
 // ====================== CONFIG ======================
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzikeY27jY5TDmpn0zh0WI539Fo7MAbf9XRdzlbJW1oC6XQM_MlTwC08FshITl1zZX4/exec";
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzjiLeXVQ0dO8WdQu-fCkfM9Ce7G4IgxntRfn2OVVqUCkGHIWa-OZMVk0RB8v05otoF/exec";
 
 let currentToken = null;
 let currentUser = null;
@@ -750,16 +750,28 @@ const messagesPerPage = 6;
 async function apiCall(action, body = {}) {
     try {
         showLoader();
-        const payload = JSON.stringify({ action, ...body });
+        
+        // HARDENING & ROUTING FIX: Inject the "system": "career" identifier flag
+        const payload = JSON.stringify({ 
+            system: "career", // <--- ADD THIS LINE CRITICAL FIX
+            action: action, 
+            ...body 
+        });
+        
         const response = await fetch(WEBAPP_URL, {
             method: "POST",
-            headers: { "Content-Type": "text/plain" },
+            headers: { "Content-Type": "text/plain;charset=utf-8" }, // Added charset-utf-8 for better GAS parsing
             body: payload,
             redirect: "follow"
         });
 
         const text = await response.text();
-        const result = JSON.parse(text || "{}");
+        
+        // Clean handling to strip any unexpected Google warning characters if needed
+        const jsonStart = text.indexOf('{');
+        const cleanText = jsonStart !== -1 ? text.substring(jsonStart) : text; 
+        
+        const result = JSON.parse(cleanText || "{}");
         hideLoader();
         return result;
     } catch (error) {
@@ -1330,7 +1342,6 @@ async function populateAvailableTasks() {
         select.appendChild(option);
     }
 
-    // Attach description updater (safe to call multiple times)
     if (!select.dataset.listenerAdded) {
         select.addEventListener("change", updateTaskDescription);
         select.dataset.listenerAdded = "true";

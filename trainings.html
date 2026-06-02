@@ -629,7 +629,7 @@
     <script>
 // ==================== CONFIG & GLOBAL VARIABLES ====================
 // Use this single constant to manage your URL
-const API_BASE_URL = "https://script.google.com/macros/s/AKfycby9sdeJ2Y12jyLRE24h5kEmO1J_pq4naquSnYZy_EiM7xTfoAh5ppZ-wsnI5rIzYy1y/exec";
+const API_BASE_URL = "https://script.google.com/macros/s/AKfycbzjiLeXVQ0dO8WdQu-fCkfM9Ce7G4IgxntRfn2OVVqUCkGHIWa-OZMVk0RB8v05otoF/exec";
 
 let currentToken = localStorage.getItem("authToken") || null;
 let currentUser = null;
@@ -679,35 +679,37 @@ function hideLoader() {
     document.getElementById("loaderOverlay").classList.remove("active");
 }
 
-// ==================== API CALLER ====================
 async function callAPI(action, payload = {}) {
   try {
     showLoader();
-    const response = await fetch(API_BASE_URL, {
-      method: 'POST',
-      redirect: 'follow',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8'
-      },
-      body: JSON.stringify({
-        action: action,
-        ...payload
-      })
+    const response = await fetch(API_BASE_URL, { 
+      method: 'POST', 
+      // Remove redirect: 'follow' entirely or let it stay default
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
+      body: JSON.stringify({ 
+        system: "assessment",
+        action: action, 
+        ...payload 
+      }) 
     });
 
-    if (!response.ok) throw new Error('Network response was not ok');
-
-    const text = await response.text();
+    if (!response.ok) throw new Error('Network response was not ok'); 
+    const text = await response.text(); 
+    
     const jsonStart = text.indexOf('{');
-    const cleanText = jsonStart !== -1 ? text.substring(jsonStart) : text;
+    if (jsonStart === -1) {
+      throw new Error(`The Server sent an unformatted text response instead of JSON data: "${text}"`);
+    }
 
+    const cleanText = text.substring(jsonStart); 
+    hideLoader(); 
+    return JSON.parse(cleanText); 
+  } catch (error) { 
     hideLoader();
-    return JSON.parse(cleanText);
-  } catch (error) {
-    hideLoader();
-    console.error('Detailed API Error:', error);
-    throw error;
-  }
+    console.error('Detailed API Error:', error); 
+    alert("Connection Error: " + error.message); 
+    throw error; 
+  } 
 }
 
 // Helper to switch sections
@@ -734,7 +736,7 @@ async function handleLogin(e) {
     btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Signing In...`;
 
     try {
-        const result = await callAPI('login', { email, password });
+        const result = await callAPI('loginUser', { email, password });
 
         if (result.success) {
             localStorage.setItem("authToken", result.token);
@@ -778,7 +780,7 @@ async function handleRegister(event) {
     }
 
     try {
-        const result = await callAPI('register', formData);
+        const result = await callAPI('registerUser', formData);
 
         if (result.success) {
             userEmailForVerification = formData.email;
