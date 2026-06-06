@@ -1,0 +1,1753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Victorias Unified Master Administrative Control Panel Suite</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .session-sub-tab.active { background-color: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; color: #10b981; padding-left: 10px; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans antialiased min-h-screen flex flex-col custom-scrollbar">
+
+    <!-- SYSTEM LOADER OVERLAY -->
+    <div id="systemLoader" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[9999] flex justify-center items-center pointer-events-none opacity-0 transition-opacity duration-300">
+        <div class="text-center bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl">
+            <div class="w-12 h-12 border-4 border-slate-700 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4"></div>
+            <div class="text-sm font-semibold tracking-wide text-white">Streaming Secure Bridge Frame Node...</div>
+        </div>
+    </div>
+
+    <!-- 1. MULTI-FACTOR SECURE IDENTITY PORTAL VIEW -->
+    <div id="loginView" class="flex-1 flex items-center justify-center p-6 bg-slate-950 relative overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.08),transparent_70%)]"></div>
+        <div class="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl space-y-6 relative z-10">
+            <div class="text-center">
+                <div class="inline-flex p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20 mb-3">
+                    <i class="fa-solid fa-shield-halved text-2xl"></i>
+                </div>
+                <h2 class="text-xl font-bold text-white tracking-tight">Secure Gateway Portal</h2>
+                <p class="text-xs text-slate-400 mt-1">Multi-Factor Identity Validation Console</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Backend Endpoint URL Target</label>
+                    <input type="text" id="webappUrl" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-xs font-mono text-emerald-400 focus:outline-none focus:border-emerald-500 transition" placeholder="https://script.google.com/macros/s/.../exec">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Administrative Profile Full Name</label>
+                    <input type="text" id="adminName" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 transition" placeholder="e.g. Director Executive Admin">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Administrative User Email Anchor</label>
+                    <input type="email" id="adminEmail" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-xs text-white font-mono focus:outline-none focus:border-emerald-500 transition" placeholder="admin@domain.com">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Master Pass Phrase (Factor 1)</label>
+                    <input type="password" id="adminPass1" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-xs text-white tracking-widest focus:outline-none focus:border-emerald-500 transition" placeholder="............">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Secondary Operational Token (Factor 2)</label>
+                    <input type="password" id="adminPass2" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-xs text-white tracking-widest focus:outline-none focus:border-emerald-500 transition" placeholder="............">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Infrastructure Cryptographic Signature Key (Factor 3)</label>
+                    <input type="password" id="adminPass3" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-xs text-white tracking-widest focus:outline-none focus:border-emerald-500 transition" placeholder="............">
+                </div>
+            </div>
+            <button type="button" onclick="executeMultiFactorLogin()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs tracking-wider uppercase py-3 rounded-lg transition duration-200 shadow-lg shadow-emerald-600/10 cursor-pointer">
+                Verify Clearances & Connect <i class="fa-solid fa-arrow-right ml-1"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. MAIN WORKSPACE VIEWPORT HUB -->
+    <div id="mainDashboardView" class="hidden flex-1 flex flex-col min-h-0">
+        
+        <!-- GLOBAL APP HEADER -->
+        <header class="bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl flex-shrink-0">
+            <div class="flex items-center space-x-3">
+                <div class="bg-emerald-500 text-slate-950 p-2 rounded-xl">
+                    <i class="fa-solid fa-terminal text-lg"></i>
+                </div>
+                <div>
+                    <h1 id="welcomeTitle" class="text-base font-bold tracking-tight text-white">Gateway Terminal Desk: Standing By</h1>
+                    <p class="text-[11px] text-slate-400 font-mono">Environment Status Flag: <span class="text-emerald-400 font-semibold">Active Isolation Node</span></p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                    <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-xs font-mono text-slate-300">Secure Network Bridge Bound</span>
+                </div>
+                <button onclick="executeLogout()" class="bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/20 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer">
+                    <i class="fa-solid fa-power-off mr-1"></i> Terminate Clearance
+                </button>
+            </div>
+        </header>
+
+        <!-- CONTAINER BODY SPLIT -->
+        <div class="flex-1 flex overflow-hidden min-h-0">
+            
+            <!-- MASTER NAVIGATION SIDEBAR -->
+            <aside class="w-72 bg-slate-950 border-r border-slate-800 flex flex-col justify-between flex-shrink-0">
+                <div class="flex flex-col flex-1 min-h-0">
+                    
+                    <!-- HIGH-LEVEL SUITE MODULE TRIGGER SWITCHES -->
+                    <div class="p-4 border-b border-slate-800 space-y-1 flex-shrink-0">
+                        <label class="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-500 block mb-2">Master Suite Modules</label>
+                        
+                        <button onclick="switchMasterHub('career-hub')" id="hubBtn-career-hub" class="master-hub-btn w-full flex items-center justify-between px-3 py-2 rounded-lg font-semibold text-xs border border-transparent transition text-slate-400 hover:bg-slate-900 hover:text-slate-100 cursor-pointer">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-briefcase text-sky-400"></i> Career Hub Management</span>
+                            <i class="fa-solid fa-chevron-right text-[9px] opacity-40"></i>
+                        </button>
+                        
+                        <button onclick="switchMasterHub('assessment-hub')" id="hubBtn-assessment-hub" class="master-hub-btn w-full flex items-center justify-between px-3 py-2 rounded-lg font-semibold text-xs border border-transparent transition text-slate-400 hover:bg-slate-900 hover:text-slate-100 cursor-pointer">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-user-check text-emerald-400"></i> Assessment Management</span>
+                            <i class="fa-solid fa-chevron-right text-[9px] opacity-40"></i>
+                        </button>
+                        
+                        <button onclick="switchMasterHub('leads-hub')" id="hubBtn-leads-hub" class="master-hub-btn w-full flex items-center justify-between px-3 py-2 rounded-lg font-semibold text-xs border border-transparent transition text-slate-400 hover:bg-slate-900 hover:text-slate-100 cursor-pointer">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-address-book text-amber-400"></i> Leads Management</span>
+                            <i class="fa-solid fa-chevron-right text-[9px] opacity-40"></i>
+                        </button>
+                    </div>
+
+                    <!-- INNER SUB-SESSION NAVIGATION GROUPINGS -->
+                    <div class="flex-grow overflow-y-auto custom-scrollbar p-4">
+                        
+                        <!-- CAREER MODULE NESTED INTERFACES -->
+                        <div id="subSessions-career-hub" class="session-nav-group hidden space-y-1">
+                            <label class="text-[10px] font-mono font-bold uppercase text-slate-500 block px-2 mb-1.5">Career Hub Sessions</label>
+                            <button onclick="switchSessionView('career-hub', 'career-users')" id="subBtn-career-users" class="session-sub-tab w-full text-left px-3 py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-users"></i> Users Roster Ledger</button>
+                            <button onclick="switchSessionView('career-hub', 'career-earnings')" id="subBtn-career-earnings" class="session-sub-tab w-full text-left px-3 py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-money-bill"></i> Records Earnings Registry</button>
+                            <button onclick="switchSessionView('career-hub', 'career-payments')" id="subBtn-career-payments" class="session-sub-tab w-full text-left px-3 py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-clock-rotate-left"></i> Settlement Processing Queue</button>
+                            <button onclick="switchSessionView('career-hub', 'career-upgrades')" id="subBtn-career-upgrades" class="session-sub-tab w-full text-left px-3 py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-arrow-up-right-dots"></i> Level Elevation Workspace</button>
+                            <button onclick="switchSessionView('career-hub', 'career-messages')" id="subBtn-career-messages" class="session-sub-tab w-full text-left px-3 py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-comments text-sky-400"></i> Corporate User Messaging</button>
+                        </div>
+
+                        <!-- ASSESSMENT MODULE NESTED INTERFACES -->
+                        <div id="subSessions-assessment-hub" class="session-nav-group hidden space-y-1">
+                            <label class="text-[10px] font-mono font-bold uppercase text-slate-500 block px-2 mb-1.5">Assessment Sessions</label>
+                            <button onclick="switchSessionView('assessment-hub', 'assess-users')" id="subBtn-assess-users" class="session-sub-tab w-full text-left px-3 py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-user-lock"></i> Verification Node Matrix</button>
+                            <button onclick="switchSessionView('assessment-hub', 'assess-intake')" id="subBtn-assess-intake" class="session-sub-tab w-full text-left px-3 py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-clipboard-check"></i> Examination Intake Deck</button>
+                            <button onclick="switchSessionView('assessment-hub', 'assess-curriculum')" id="subBtn-assess-curriculum" class="session-sub-tab w-full text-left px-3 py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-book"></i> Module Catalog Editor</button>
+                            <button onclick="switchSessionView('assessment-hub', 'assess-registry')" id="subBtn-assess-registry" class="session-sub-tab w-full text-left px-3 py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-graduation-cap"></i> Credential Document Portal</button>
+                            <button onclick="switchSessionView('assessment-hub', 'assess-messages')" id="subBtn-assess-messages" class="session-sub-tab w-full text-left px-3 py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-envelope-open-text text-emerald-400"></i> Academic Ticket Terminal</button>
+                        </div>
+
+                        <!-- LEADS MODULE NESTED INTERFACES -->
+                        <div id="subSessions-leads-hub" class="session-nav-group hidden space-y-1">
+                            <label class="text-[10px] font-mono font-bold uppercase text-slate-500 block px-2 mb-1.5">Leads Database Sessions</label>
+                            <button onclick="switchSessionView('leads-hub', 'leads-database')" id="subBtn-leads-database" class="session-sub-tab w-full text-left px-3 py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-database"></i> Core Leads Storage Directory</button>
+                            <button onclick="switchSessionView('leads-hub', 'leads-schema')" id="subBtn-leads-schema" class="session-sub-tab w-full text-left px-3 py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-table-cells"></i> Database Architecture Map</button>
+                            <button onclick="switchSessionView('leads-hub', 'leads-outreach')" id="subBtn-leads-outreach" class="session-sub-tab w-full text-left px-3 py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-bullhorn text-amber-400"></i> Outreach Marketing Router</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LIVE REAL-TIME TELEMETRY SYSTEM CONSOLE -->
+                <div class="p-4 border-t border-slate-800 bg-slate-950 flex-shrink-0">
+                    <div class="text-[10px] uppercase font-mono font-bold tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping"></span> Live Transport Console Logs
+                    </div>
+                    <div id="telemetrySystemConsole" class="bg-slate-900 border border-slate-800/80 rounded-lg p-2.5 font-mono text-[10px] text-cyan-400 h-28 overflow-y-auto custom-scrollbar select-all">
+                        &gt; Secure Gateway Pipeline initialized. Awaiting credentials...
+                    </div>
+                </div>
+            </aside>
+
+            <!-- MAIN WORKSPACE MOUNTING MATRIX CONTENT VIEWPORTS -->
+            <main class="flex-grow overflow-y-auto p-6 bg-slate-900 custom-scrollbar flex flex-col gap-6">
+                
+                <div id="sessionContent-career-users" class="workspace-session-view hidden space-y-4">
+    <div class="bg-slate-950 border border-slate-800 p-6 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+        <div>
+            <h2 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                <i class="fa-solid fa-users text-sky-400"></i> Affiliates & Users Master Roster Ledger
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Central registry of registered platform accounts, unique partner identifiers, and account balances.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="initializeModule_career_users()" class="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+                <i class="fa-solid fa-rotate animate-spin-slow"></i> Refresh Roster Data
+            </button>
+        </div>
+    </div>
+
+    <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500 text-xs"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input type="text" id="rosterSearch" oninput="filterUsersRoster()" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 font-medium" placeholder="Search by name, email, partner ID...">
+        </div>
+        <div>
+            <select id="rosterTierFilter" onchange="filterUsersRoster()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-300 focus:outline-none focus:border-sky-500 cursor-pointer">
+                <option value="">All Verification Tiers</option>
+                <option value="Tier 1">Tier 1 (Standard Entry)</option>
+                <option value="Tier 2">Tier 2 (Verified Partner)</option>
+                <option value="Tier 3">Tier 3 (VIP Master Executive)</option>
+            </select>
+        </div>
+        <div>
+            <select id="rosterStatusFilter" onchange="filterUsersRoster()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-300 focus:outline-none focus:border-sky-500 cursor-pointer">
+                <option value="">All Account Statuses</option>
+                <option value="Active">Active Operational Nodes</option>
+                <option value="Suspended">Suspended / Locked Pools</option>
+                <option value="Pending">Pending Authentication</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                    <tr class="bg-slate-900 border-b border-slate-800 text-slate-400 font-mono uppercase tracking-wider text-[10px]">
+                        <th class="p-3.5 font-semibold">User Details</th>
+                        <th class="p-3.5 font-semibold">Partner Code / Anchor</th>
+                        <th class="p-3.5 font-semibold">Account Tier</th>
+                        <th class="p-3.5 font-semibold text-right">Outstanding Balance</th>
+                        <th class="p-3.5 font-semibold text-right">Lifetime Withdrawn</th>
+                        <th class="p-3.5 font-semibold text-center">Status</th>
+                        <th class="p-3.5 font-semibold text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="usersRosterTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+                    <tr>
+                        <td colspan="7" class="p-8 text-center text-slate-500 font-mono tracking-wide">Awaiting master database connection sync sequence...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="sessionContent-career-earnings" class="workspace-session-view hidden space-y-4">
+    <div class="bg-slate-950 border border-slate-800 p-6 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+        <div>
+            <h2 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                <i class="fa-solid fa-money-bill text-emerald-400"></i> Transactional Earnings & Job Registry
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Comprehensive audit ledger monitoring systemic project milestones, client assignments, and earnings payouts.</p>
+        </div>
+        <button onclick="initializeModule_career_earnings()" class="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+            <i class="fa-solid fa-arrows-rotate"></i> Synchronize Earnings Data
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-[10px] font-mono uppercase text-slate-400 tracking-wider">Gross Platform Earnings</span>
+                <h3 id="statGrossEarnings" class="text-xl font-bold text-white tracking-tight mt-1">₦0.00</h3>
+            </div>
+            <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-lg"><i class="fa-solid fa-vault text-lg"></i></div>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-[10px] font-mono uppercase text-slate-400 tracking-wider">Total Active Milestones</span>
+                <h3 id="statActiveJobs" class="text-xl font-bold text-sky-400 tracking-tight mt-1">0 Records</h3>
+            </div>
+            <div class="p-3 bg-sky-500/10 text-sky-400 rounded-lg"><i class="fa-solid fa-diagram-project text-lg"></i></div>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-[10px] font-mono uppercase text-slate-400 tracking-wider">Average Referred Value</span>
+                <h3 id="statAvgTicket" class="text-xl font-bold text-purple-400 tracking-tight mt-1">₦0.00</h3>
+            </div>
+            <div class="p-3 bg-purple-500/10 text-purple-400 rounded-lg"><i class="fa-solid fa-chart-line text-lg"></i></div>
+        </div>
+    </div>
+
+    <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl flex flex-col sm:flex-row gap-3">
+        <div class="relative flex-grow">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500 text-xs"><i class="fa-solid fa-search"></i></span>
+            <input type="text" id="earningsSearch" oninput="filterEarningsLedger()" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium" placeholder="Filter by partner code, client name, job signature key...">
+        </div>
+        <div class="w-full sm:w-64">
+            <select id="earningsStatusFilter" onchange="filterEarningsLedger()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-300 focus:outline-none focus:border-emerald-500 cursor-pointer">
+                <option value="">All Execution Statuses</option>
+                <option value="Completed">Completed & Settled</option>
+                <option value="Active">Active Processing Workflow</option>
+                <option value="Pending">Pending Audit Clearance</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                    <tr class="bg-slate-900 border-b border-slate-800 text-slate-400 font-mono uppercase tracking-wider text-[10px]">
+                        <th class="p-3.5 font-semibold">Partner Owner</th>
+                        <th class="p-3.5 font-semibold">Client Name</th>
+                        <th class="p-3.5 font-semibold">Assigned Service</th>
+                        <th class="p-3.5 font-semibold text-right">Assigned Value (₦)</th>
+                        <th class="p-3.5 font-semibold text-center">Status</th>
+                        <th class="p-3.5 font-semibold text-center">Log Date</th>
+                    </tr>
+                </thead>
+                <tbody id="earningsTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+                    <tr>
+                        <td colspan="6" class="p-8 text-center text-slate-500 font-mono tracking-wide">Awaiting master spreadsheet tracking synchronization...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="sessionContent-career-payments" class="workspace-session-view hidden space-y-4">
+    <div class="bg-slate-950 border border-slate-800 p-6 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+        <div>
+            <h2 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                <i class="fa-solid fa-clock-rotate-left text-amber-400"></i> Withdrawal Cashout & Settlement Queue
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Process, authorize, or decline outstanding partner balance liquidations and bank transaction payouts.</p>
+        </div>
+        <button onclick="initializeModule_career_payments()" class="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+            <i class="fa-solid fa-shield-cat"></i> Refresh Settlement Requests
+        </button>
+    </div>
+
+    <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                    <tr class="bg-slate-900 border-b border-slate-800 text-slate-400 font-mono uppercase tracking-wider text-[10px]">
+                        <th class="p-3.5 font-semibold">Partner Reference ID</th>
+                        <th class="p-3.5 font-semibold">Filing Date</th>
+                        <th class="p-3.5 font-semibold text-right">Requested Cashout (₦)</th>
+                        <th class="p-3.5 font-semibold">Transaction Reference ID</th>
+                        <th class="p-3.5 font-semibold text-center">Current Status</th>
+                        <th class="p-3.5 font-semibold text-center">Settlement Action Matrix</th>
+                    </tr>
+                </thead>
+                <tbody id="paymentsTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+                    <tr>
+                        <td colspan="6" class="p-8 text-center text-slate-500 font-mono tracking-wide">Awaiting retrieval of core ledger PaymentRequests configurations...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="sessionContent-career-upgrades" class="workspace-session-view hidden space-y-4">
+    <div class="bg-slate-950 border border-slate-800 p-6 rounded-xl shadow-md">
+        <h2 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+            <i class="fa-solid fa-arrow-up-right-dots text-purple-400"></i> Programmatic Level-Elevation Control Console
+        </h2>
+        <p class="text-xs text-slate-400 mt-0.5">Review, process, and clear queued affiliate verification upgrades to elevate user tiers across data arrays.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="bg-slate-950 border border-slate-800 p-6 rounded-xl space-y-4 shadow-lg h-fit">
+            <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-2">Manual Tier Assignment Overrides</h3>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Target Account Email Coordinate</label>
+                    <input type="email" id="upgradeTargetEmail" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white font-mono focus:outline-none focus:border-purple-500" placeholder="user@example.com">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Target Account Operational Level Tier</label>
+                    <select id="upgradeTargetTier" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-300 focus:outline-none focus:border-purple-500 cursor-pointer">
+                        <option value="Tier 1">Tier 1 (Standard Entry Platform access)</option>
+                        <option value="Tier 2">Tier 2 (Verified Professional Affiliate)</option>
+                        <option value="Tier 3">Tier 3 (VIP Platinum Master Node)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="button" onclick="executeManualTierOverride()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs tracking-wider uppercase py-2.5 rounded-lg transition shadow-md shadow-purple-600/10 cursor-pointer">
+                Inject Operational Level Override <i class="fa-solid fa-bolt ml-1"></i>
+            </button>
+        </div>
+
+        <div class="lg:col-span-2 bg-slate-950 border border-slate-800 p-6 rounded-xl space-y-4 shadow-lg flex flex-col justify-between">
+            <div class="space-y-3">
+                <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-2">Automated Batch Level Modification Processing Engine</h3>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    The platform scans the system array to check for any pending tier modifications submitted by standard accounts. Running the synchronization block audits the profiles, processes qualifications, updates corresponding rows, and flushes the buffer blocks.
+                </p>
+                <div class="bg-slate-900/50 border border-slate-800 p-3 rounded-lg text-xs font-mono text-purple-400 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info text-sm"></i>
+                    <span>System Gating Status: Direct Database Array Integration Ready.</span>
+                </div>
+            </div>
+
+            <button type="button" onclick="executeBatchPendingUpgrades()" class="w-full bg-slate-900 hover:bg-slate-800 text-purple-400 border border-purple-500/30 font-bold text-xs tracking-widest uppercase py-4 rounded-lg transition shadow-lg cursor-pointer mt-4">
+                <i class="fa-solid fa-microchip mr-1.5 animate-pulse"></i> Trigger Batch Execution Verification Task Loop
+            </button>
+        </div>
+    </div>
+</div>
+<div id="sessionContent-career-messages" class="workspace-session-view hidden space-y-4">
+    <div class="bg-slate-950 border border-slate-800 p-6 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+        <div>
+            <h2 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                <i class="fa-solid fa-comments text-sky-400"></i> Corporate User Messaging Matrix
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Communicate directly with specific affiliates or broadcast platform notices based on programmatic parameter filters.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="initializeModule_career_messages()" class="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+                <i class="fa-solid fa-sync"></i> Sync Message Logs
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <div class="lg:col-span-4 bg-slate-950 border border-slate-800 p-6 rounded-xl space-y-4 shadow-lg h-fit">
+            <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-2 flex items-center gap-1.5">
+                <i class="fa-solid fa-paper-plane text-sky-400"></i> Dispatch Outbound Campaign
+            </h3>
+            
+            <div class="space-y-3.5">
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Scope Targeting Strategy Mode</label>
+                    <select id="corporateMessageScope" onchange="adjustMessagingFormLayout()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-300 focus:outline-none focus:border-sky-500 cursor-pointer">
+                        <option value="SINGLE">Single Target (Individual Coordinate Email)</option>
+                        <option value="CRITERIA">Multi-Selection Group (Filtered Tier Tier)</option>
+                        <option value="BROADCAST">Global Broadcast (All Registered Users Roster)</option>
+                    </select>
+                </div>
+
+                <div id="wrapperMessageRecipient">
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Recipient Account Email Coordinate</label>
+                    <input type="email" id="corporateMessageRecipient" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white font-mono focus:outline-none focus:border-sky-500" placeholder="affiliate@domain.com">
+                </div>
+
+                <div id="wrapperMessageCriteria" class="hidden">
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Target Account Tier Parameter</label>
+                    <select id="corporateMessageTierCriteria" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-300 focus:outline-none focus:border-sky-500 cursor-pointer">
+                        <option value="Tier 1">Target Tier 1 (Standard Entry Accounts)</option>
+                        <option value="Tier 2">Target Tier 2 (Verified Affiliates Pool)</option>
+                        <option value="Tier 3">Target Tier 3 (VIP Master Nodes Group)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Message Subject Header / Title</label>
+                    <input type="text" id="corporateMessageSubject" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-sky-500" placeholder="System Notice: Account Ledger Statement Upgrade...">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Message Content Text Body</label>
+                    <textarea id="corporateMessageBody" rows="6" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-sky-500 custom-scrollbar resize-none" placeholder="Write standard corporate notification statement text block here..."></textarea>
+                </div>
+            </div>
+
+            <button type="button" onclick="executeOutboundUserMessage()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs tracking-wider uppercase py-3 rounded-lg transition shadow-md shadow-sky-600/10 cursor-pointer flex items-center justify-center gap-2">
+                Deploy System Notification <i class="fa-solid fa-paper-plane text-[10px]"></i>
+            </button>
+        </div>
+
+        <div class="lg:col-span-8 flex flex-col gap-4">
+            
+            <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="flex bg-slate-900 p-1 rounded-lg border border-slate-800 w-full sm:w-auto">
+                    <button onclick="toggleMessageLogFolder('received')" id="msgTab-received" class="flex-1 sm:flex-initial px-4 py-1.5 text-xs font-bold rounded-md transition cursor-pointer text-white bg-slate-800 border border-slate-700">
+                        <i class="fa-solid fa-inbox mr-1"></i> Inbound Inbox
+                    </button>
+                    <button onclick="toggleMessageLogFolder('sent')" id="msgTab-sent" class="flex-1 sm:flex-initial px-4 py-1.5 text-xs font-bold rounded-md transition cursor-pointer text-slate-400 hover:text-white">
+                        <i class="fa-solid fa-share-nodes mr-1"></i> Dispatched Sent Logs
+                    </button>
+                </div>
+                <div class="relative w-full sm:w-72">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500 text-xs"><i class="fa-solid fa-filter"></i></span>
+                    <input type="text" id="messageLogSearch" oninput="filterMessageLogGrids()" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 font-medium" placeholder="Search mail topics, content, accounts...">
+                </div>
+            </div>
+
+            <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-lg flex-grow">
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900 border-b border-slate-800 text-slate-400 font-mono uppercase tracking-wider text-[10px]">
+                                <th class="p-3.5 font-semibold w-1/4" id="msgColActorHeader">Sender Coordinate</th>
+                                <th class="p-3.5 font-semibold w-1/2">Subject & Content Summary</th>
+                                <th class="p-3.5 font-semibold text-center w-1/4">Transmission Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corporateMessagesTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+                            <tr>
+                                <td colspan="3" class="p-8 text-center text-slate-500 font-mono tracking-wide">Connecting data streams... Synchronize to populate log structures.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+               <!-- ========================================================================= -->
+<!-- ASSESSMENT PORTAL MODULE: VIEWPORT CONTROLLERS & DATA INTERFACES -->
+<!-- ========================================================================= -->
+
+<!-- 1. VERIFICATION NODE MATRIX (SUB-SESSION: assess-users) -->
+<div id="sessionContent-assess-users" class="workspace-session-view hidden space-y-4">
+    <div class="bg-slate-950 border border-slate-800 p-6 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+        <div>
+            <h2 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                <i class="fa-solid fa-user-lock text-emerald-400"></i> Academic Verification Node Matrix
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Audit profiles of students enrolled in certification tracks, monitor identity tokens, and track course eligibility locks.</p>
+        </div>
+        <button onclick="initializeModule_assess_users()" class="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+            <i class="fa-solid fa-rotate animate-spin-slow"></i> Synchronize Student Matrix
+        </button>
+    </div>
+
+    <!-- Filter Deck -->
+    <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500 text-xs"><i class="fa-solid fa-search"></i></span>
+            <input type="text" id="assessUserSearch" oninput="filterAssessUsersGrid()" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500" placeholder="Search by student identifier, name, active course tract...">
+        </div>
+        <div>
+            <select id="assessUserStatusFilter" onchange="filterAssessUsersGrid()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-300 focus:outline-none focus:border-emerald-500 cursor-pointer">
+                <option value="">All Verification Statuses</option>
+                <option value="Verified">Fully Verified / Exams Unlocked</option>
+                <option value="Pending">Pending Document Identity Review</option>
+                <option value="Suspended">Suspended Academic Progress Node</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Grid Table Ledger Frame -->
+    <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                    <tr class="bg-slate-900 border-b border-slate-800 text-slate-400 font-mono uppercase tracking-wider text-[10px]">
+                        <th class="p-3.5 font-semibold">Student Identity Block</th>
+                        <th class="p-3.5 font-semibold">Academic Course Track</th>
+                        <th class="p-3.5 font-semibold text-center">Completed Modules</th>
+                        <th class="p-3.5 font-semibold text-center">Node Verification Status</th>
+                        <th class="p-3.5 font-semibold text-center">Action Matrix</th>
+                    </tr>
+                </thead>
+                <tbody id="assessUsersTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+                    <tr>
+                        <td colspan="5" class="p-8 text-center text-slate-500 font-mono tracking-wide">Awaiting connection execution handshake... Synchronize data rows.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 2. EXAMINATION INTAKE DECK (SUB-SESSION: assess-intake) -->
+<div id="sessionContent-assess-intake" class="workspace-session-view hidden space-y-4">
+    <div class="bg-slate-950 border border-slate-800 p-6 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+        <div>
+            <h2 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                <i class="fa-solid fa-clipboard-check text-sky-400"></i> Examination Intake Performance Deck
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Central evaluation log for grading submitted examinations, checking exam compliance flags, and setting test metrics.</p>
+        </div>
+        <button onclick="initializeModule_assess_intake()" class="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+            <i class="fa-solid fa-arrows-up-down"></i> Sync Examination Submissions
+        </button>
+    </div>
+
+    <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                    <tr class="bg-slate-900 border-b border-slate-800 text-slate-400 font-mono uppercase tracking-wider text-[10px]">
+                        <th class="p-3.5 font-semibold">Candidate Reference</th>
+                        <th class="p-3.5 font-semibold">Assigned Module Examination</th>
+                        <th class="p-3.5 font-semibold text-center">Raw Passing Score</th>
+                        <th class="p-3.5 font-semibold text-center">Automated Verdict Status</th>
+                        <th class="p-3.5 font-semibold text-center">Administrative Grading Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="assessIntakeTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+                    <tr>
+                        <td colspan="5" class="p-8 text-center text-slate-500 font-mono tracking-wide">No active examination intake rows loaded.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 3. MODULE CATALOG EDITOR (SUB-SESSION: assess-curriculum) -->
+<div id="sessionContent-assess-curriculum" class="workspace-session-view hidden space-y-4">
+    <div class="bg-slate-950 border border-slate-800 p-6 rounded-xl shadow-md">
+        <h2 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+            <i class="fa-solid fa-book text-purple-400"></i> Course Materials & Module Catalog Editor
+        </h2>
+        <p class="text-xs text-slate-400 mt-0.5">Create new curriculum modules or edit backend inventory settings across platform training tracks.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 bg-slate-950 border border-slate-800 p-6 rounded-xl space-y-4 shadow-lg h-fit">
+            <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-2"><i class="fa-solid fa-folder-plus text-purple-400"></i> Inject/Modify Curriculum Module Form</h3>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Module Catalog Signature/Code ID Key</label>
+                    <input type="text" id="curriculumModuleId" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white font-mono uppercase" placeholder="e.g. MOD-ADV-FINANCE-102">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Course Presentation Title Name</label>
+                    <input type="text" id="curriculumModuleTitle" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white" placeholder="Advanced Corporate Asset Liquidation Structures">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Assigned Track Department Vertical</label>
+                    <select id="curriculumModuleTrack" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-300 cursor-pointer">
+                        <option value="Wealth Management Pipeline">Wealth Management Pipeline Track</option>
+                        <option value="Risk Evaluation Engineering">Risk Evaluation Engineering Vertical</option>
+                        <option value="Corporate Operations Governance">Corporate Operations Governance Hub</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="button" onclick="executeCurriculumMutationSubmit()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs tracking-wider uppercase py-3 rounded-lg transition shadow-md cursor-pointer">
+                Commit Curriculum Catalog Entry <i class="fa-solid fa-database ml-1"></i>
+            </button>
+        </div>
+
+        <div class="lg:col-span-7 bg-slate-950 border border-slate-800 p-6 rounded-xl space-y-4 shadow-lg">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2 flex-shrink-0">
+                <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">Current Catalog Registrations Inventory</h3>
+                <button onclick="initializeModule_assess_curriculum()" class="text-purple-400 text-xs font-semibold hover:underline bg-transparent border-0 cursor-pointer"><i class="fa-solid fa-sync"></i> Refresh Grid</button>
+            </div>
+            
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="bg-slate-900 text-slate-400 font-mono uppercase text-[10px] border-b border-slate-800">
+                            <th class="p-2">Code ID</th>
+                            <th class="p-2">Title Name</th>
+                            <th class="p-2">Assigned Track Track</th>
+                        </tr>
+                    </thead>
+                    <tbody id="assessCurriculumTableBody" class="divide-y divide-slate-800/40 text-slate-300 font-medium">
+                        <tr><td colspan="3" class="p-4 text-center text-slate-500 font-mono">No inventory records downloaded yet.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 4. CREDENTIAL DOCUMENT PORTAL (SUB-SESSION: assess-registry) -->
+<div id="sessionContent-assess-registry" class="workspace-session-view hidden space-y-4">
+    <div class="bg-slate-950 border border-slate-800 p-6 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+        <div>
+            <h2 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                <i class="fa-solid fa-graduation-cap text-amber-400"></i> Cloud Certificate & Digital Credential Ledger
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Review, verify, issue, or revoke structural digital certificates linked to student blockchain or ledger targets.</p>
+        </div>
+        <button onclick="initializeModule_assess_registry()" class="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+            <i class="fa-solid fa-award"></i> Sync Digital Credentials
+        </button>
+    </div>
+
+    <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                    <tr class="bg-slate-900 border-b border-slate-800 text-slate-400 font-mono uppercase tracking-wider text-[10px]">
+                        <th class="p-3.5 font-semibold">Certificate Hash ID</th>
+                        <th class="p-3.5 font-semibold">Student Recipient Name</th>
+                        <th class="p-3.5 font-semibold">Conferred Specialization Track</th>
+                        <th class="p-3.5 font-semibold text-center">Conferral Execution Date</th>
+                        <th class="p-3.5 font-semibold text-center">Administrative Override Control</th>
+                    </tr>
+                </thead>
+                <tbody id="assessRegistryTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+                    <tr>
+                        <td colspan="5" class="p-8 text-center text-slate-500 font-mono tracking-wide">Awaiting secure document transmission sequence loops...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div><!-- 5. ASSESSMENT PORTAL MESSAGING MATRIX (SUB-SESSION: assess-messages) -->
+<div id="sessionContent-assess-messages" class="workspace-session-view hidden space-y-4">
+    <!-- Viewport Header Card -->
+    <div class="bg-slate-950 border border-slate-800 p-6 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+        <div>
+            <h2 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                <i class="fa-solid fa-headset text-teal-400"></i> Academic Helpdesk & Student Ticket Matrix
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Manage direct inbound academic appeals, issue structural exam extensions, and dispatch verified support tickets.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="initializeModule_assess_messages()" class="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+                <i class="fa-solid fa-cloud-arrow-down"></i> Sync Academic Tickets
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN GRID CONTAINER -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- COLUMN A: TICKET DISPATCH & TICKET UTILITY FORMS (4 COLS) -->
+        <div class="lg:col-span-4 bg-slate-950 border border-slate-800 p-6 rounded-xl space-y-4 shadow-lg h-fit">
+            <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-2 flex items-center gap-1.5">
+                <i class="fa-solid fa-ticket text-teal-400"></i> Issue New Academic Ticket
+            </h3>
+            
+            <div class="space-y-3.5">
+                <!-- Target Student Email -->
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Target Student Email Anchor</label>
+                    <input type="email" id="academicTicketRecipient" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white font-mono focus:outline-none focus:border-teal-500" placeholder="student@academic-track.com">
+                </div>
+
+                <!-- Ticket Urgency / Class Type Priority Level Selector -->
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Ticket Urgency / Category Class</label>
+                    <select id="academicTicketPriority" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500 cursor-pointer">
+                        <option value="NORMAL">Standard Inquiries (General Syllabus / Tracks)</option>
+                        <option value="CRITICAL">Critical Flag (Exam Lockout / Appeal Audits)</option>
+                        <option value="NOTICE">System Broadcast (Cohort Schedule Updates)</option>
+                    </select>
+                </div>
+
+                <!-- Subject Title line -->
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Ticket Subject Line Heading</label>
+                    <input type="text" id="academicTicketSubject" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-teal-500" placeholder="e.g., Retake Authorization Window Confirmation">
+                </div>
+
+                <!-- Structural Text Body Markdown Payload area -->
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">Instructional Message Body Content</label>
+                    <textarea id="academicTicketBody" rows="6" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-teal-500 custom-scrollbar resize-none" placeholder="Provide clear technical, grading, or extension parameters here..."></textarea>
+                </div>
+            </div>
+
+            <button type="button" onclick="executeOutboundAcademicTicket()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs tracking-wider uppercase py-3 rounded-lg transition shadow-md shadow-teal-600/10 cursor-pointer flex items-center justify-center gap-2">
+                Dispatch Desk Ticket <i class="fa-solid fa-paper-plane text-[10px]"></i>
+            </button>
+        </div>
+
+        <!-- COLUMN B: SUPPORT QUEUE LEDGERS AND LIVE LIVE SUBMISSIONS (8 COLS) -->
+        <div class="lg:col-span-8 flex flex-col gap-4">
+            
+            <!-- Filters & Dynamic Sort Board -->
+            <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <span class="text-slate-400 text-xs font-mono font-bold uppercase whitespace-nowrap"><i class="fa-solid fa-filter text-teal-400"></i> Queue Filter:</span>
+                    <select id="academicTicketQueueFilter" onchange="filterAcademicTicketGrid()" class="w-full sm:w-48 bg-slate-900 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500 cursor-pointer">
+                        <option value="">Display Whole Pipeline</option>
+                        <option value="CRITICAL">Critical Red Flags Only</option>
+                        <option value="NORMAL">Standard Queues Only</option>
+                        <option value="NOTICE">System Broadcast Notices</option>
+                    </select>
+                </div>
+                <!-- Interactive search matrix filter -->
+                <div class="relative w-full sm:w-64">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500 text-xs"><i class="fa-solid fa-search"></i></span>
+                    <input type="text" id="academicTicketSearch" oninput="filterAcademicTicketGrid()" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-teal-500" placeholder="Search academic tickets...">
+                </div>
+            </div>
+
+            <!-- Ticket Database Registry Viewport Frame -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-lg flex-grow">
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900 border-b border-slate-800 text-slate-400 font-mono uppercase tracking-wider text-[10px]">
+                                <th class="p-3.5 font-semibold w-1/4">Student Reference</th>
+                                <th class="p-3.5 font-semibold w-1/2">Ticket Header / Manifest Details</th>
+                                <th class="p-3.5 font-semibold text-center w-1/4">Incident Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody id="academicTicketsTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+                            <tr>
+                                <td colspan="3" class="p-8 text-center text-slate-500 font-mono tracking-wide">Handshaking academic server threads... Sync pipeline rows.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+            </main>
+        </div>
+
+        <!-- GLOBAL CONTROL FOOTER METRICS -->
+        <footer class="bg-slate-950 border-t border-slate-800 px-6 py-2.5 flex-shrink-0 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] font-mono text-slate-500">
+            <div class="flex items-center gap-2">
+                <span class="h-2 w-2 rounded-full bg-emerald-500 animate-ping"></span>
+                <span id="statusBarText">System telemetry tracking live operational gateway matrices lines.</span>
+            </div>
+            <div>
+                <span>Unified Engine Workspace Configuration: <strong class="text-slate-400">V4.9.0-MASTER-ADMIN</strong></span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- MAIN FRAME PLATFORM CONTROL LOGIC SCRIPT ENGINE -->
+    <script>
+        // GLOBAL STATE MEMORY REGISTRY
+        let WEBAPP_URL = localStorage.getItem('GATEWAY_TARGET_ENDPOINT_URL') || "";
+        let SESSION_MASTER_TOKEN = localStorage.getItem('MASTER_BRIDGE_TOKEN') || "";
+        let CURRENT_ADMIN_IDENTITY = localStorage.getItem('CURRENT_ADMIN_NAME') || "Awaiting Security Handshake Signature";
+
+        /**
+         * CORE SECURE TRANSPORTER PIPELINE BRIDGE ENGINE
+         * Forwards structured payloads down into automated remote execution macros.
+         */
+        async function executeSecureBridgeCall(systemTarget, actionTarget, analyticalPayload = {}) {
+            if (!WEBAPP_URL) {
+                alert("System Transport Blocked: WebApp Target Endpoint Deployment URL reference is undefined.");
+                return { success: false, message: "Missing system target server coordinates." };
+            }
+            if (!SESSION_MASTER_TOKEN && systemTarget !== "auth") {
+                alert("Terminal Blocked: Operational session master token is unallocated or expired.");
+                executeLogout();
+                return { success: false, message: "Security Intercept Warning: Session dropped." };
+            }
+
+            try {
+                showLoader();
+                const liveTimestamp = Date.now();
+                const credentialBlock = {
+                    token: SESSION_MASTER_TOKEN,
+                    secretKey: SESSION_MASTER_TOKEN,
+                    bridgeSecret: SESSION_MASTER_TOKEN,
+                    timestamp: liveTimestamp,
+                    time: liveTimestamp
+                };
+
+                const completePayload = {
+                    system: systemTarget,
+                    action: actionTarget,
+                    ...credentialBlock,
+                    data: {
+                        ...analyticalPayload,
+                        ...credentialBlock
+                    }
+                };
+
+                const response = await fetch(WEBAPP_URL, {
+                    method: "POST",
+                    mode: "cors",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(completePayload),
+                    redirect: "follow"
+                });
+
+                if (!response.ok) throw new Error(`HTTP connection error. Status: ${response.status}`);
+                
+                const text = await response.text();
+                const jsonStart = text.indexOf('{');
+                const result = JSON.parse(jsonStart !== -1 ? text.substring(jsonStart) : text || "{}");
+                
+                hideLoader();
+                logToDashboardConsole(systemTarget, actionTarget, result);
+                return result;
+            } catch (error) {
+                hideLoader();
+                const errBlock = { success: false, message: `Microservice Transaction Broken: ${error.toString()}` };
+                logToDashboardConsole(systemTarget, actionTarget, errBlock);
+                return errBlock;
+            }
+        }
+
+        /**
+         * SIDEBAR COMPONENT SELECTION ENGINE
+         * Manages visible sessions based on active system modules.
+         */
+        function switchMasterHub(targetHubId) {
+            document.querySelectorAll('.master-hub-btn').forEach(btn => {
+                btn.classList.remove('bg-slate-900', 'text-slate-100', 'border-slate-800');
+                btn.classList.add('text-slate-400', 'border-transparent');
+            });
+
+            const activeBtn = document.getElementById(`hubBtn-${targetHubId}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-slate-400', 'border-transparent');
+                activeBtn.classList.add('bg-slate-900', 'text-slate-100', 'border-slate-800');
+            }
+
+            document.querySelectorAll('.session-nav-group').forEach(group => group.classList.add('hidden'));
+            
+            const currentSubNavGroup = document.getElementById(`subSessions-${targetHubId}`);
+            if (currentSubNavGroup) {
+                currentSubNavGroup.classList.remove('hidden');
+                
+                // Set default views on navigation switch
+                if (targetHubId === 'career-hub') switchSessionView('career-hub', 'career-users');
+                if (targetHubId === 'assessment-hub') switchSessionView('assessment-hub', 'assess-users');
+                if (targetHubId === 'leads-hub') switchSessionView('leads-hub', 'leads-database');
+            }
+        }
+
+        function switchSessionView(hubParentKey, sessionTargetKey) {
+            document.querySelectorAll('.session-sub-tab').forEach(tab => tab.classList.remove('active'));
+            
+            const targetTabBtn = document.getElementById(`subBtn-${sessionTargetKey}`);
+            if (targetTabBtn) targetTabBtn.classList.add('active');
+
+            document.querySelectorAll('.workspace-session-view').forEach(view => view.classList.add('hidden'));
+            
+            const targetWorkspaceView = document.getElementById(`sessionContent-${sessionTargetKey}`);
+            if (targetWorkspaceView) {
+                targetWorkspaceView.classList.remove('hidden');
+                // Auto trigger sub-module refresh loops once defined in subsequent batches
+                const triggerHookName = `initializeModule_${sessionTargetKey.replace('-','_')}`;
+                if (typeof window[triggerHookName] === "function") window[triggerHookName]();
+            }
+        }
+
+        /**
+         * SECURE LOGIN VALIDATION ACTION
+         */
+        async function executeMultiFactorLogin() {
+            const url = document.getElementById('webappUrl').value.trim();
+            const name = document.getElementById('adminName').value.trim();
+            const email = document.getElementById('adminEmail').value.trim();
+            const pass1 = document.getElementById('adminPass1').value.trim();
+            const pass2 = document.getElementById('adminPass2').value.trim();
+            const pass3 = document.getElementById('adminPass3').value.trim();
+
+            if (!url || !email || !pass1 || !pass2 || !pass3) {
+                alert("All security parameters and the WebApp endpoint URL target must be filled.");
+                return;
+            }
+
+            try {
+                showLoader();
+                const loginPayload = { system: "auth", action: "loginCheck", name: name, email: email, pass1: pass1, pass2: pass2, pass3: pass3 };
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(loginPayload)
+                });
+                
+                const result = await response.json();
+                if (result && result.success) {
+                    WEBAPP_URL = url;
+                    SESSION_MASTER_TOKEN = result.token;
+                    CURRENT_ADMIN_IDENTITY = name || "Authorized Manager";
+
+                    localStorage.setItem('GATEWAY_TARGET_ENDPOINT_URL', url);
+                    localStorage.setItem('MASTER_BRIDGE_TOKEN', result.token);
+                    localStorage.setItem('CURRENT_ADMIN_NAME', CURRENT_ADMIN_IDENTITY);
+
+                    document.getElementById('welcomeTitle').innerText = `Terminal Access Desk: Locked On - ${CURRENT_ADMIN_IDENTITY}`;
+                    document.getElementById('loginView').classList.add('hidden');
+                    document.getElementById('mainDashboardView').classList.remove('hidden');
+                    
+                    switchMasterHub('career-hub');
+                } else {
+                    alert("Verification Refused: " + (result ? result.message : "Mismatched security context layers."));
+                }
+            } catch (err) {
+                alert("Identity Verification Channel Crash Error: " + err.toString());
+            } finally {
+                hideLoader();
+            }
+        }
+
+        function executeLogout() {
+            localStorage.clear();
+            sessionStorage.clear();
+            location.reload();
+        }
+
+        function showLoader() {
+            const sLoader = document.getElementById('systemLoader');
+            if (sLoader) { sLoader.classList.remove('opacity-0', 'pointer-events-none'); sLoader.classList.add('opacity-100'); }
+        }
+
+        function hideLoader() {
+            const sLoader = document.getElementById('systemLoader');
+            if (sLoader) { sLoader.classList.remove('opacity-100'); sLoader.classList.add('opacity-0', 'pointer-events-none'); }
+        }
+
+        function logToDashboardConsole(sys, act, payload) {
+            const terminalOutBox = document.getElementById('telemetrySystemConsole');
+            if (terminalOutBox) {
+                const timestamp = new Date().toISOString().split('T')[1].substring(0, 8);
+                const logLine = `\n> [${timestamp}] SECURE HUB MODULE [${sys.toUpperCase()}] executed action [${act}] -> Success: ${payload.success || false}`;
+                terminalOutBox.innerText += logLine;
+                terminalOutBox.scrollTop = terminalOutBox.scrollHeight;
+            }
+        }
+
+        // IN-MEMORY COMPILATION CACHE REGISTRIES
+    let LOCAL_USERS_ROSTER_CACHE = [];
+    let LOCAL_EARNINGS_REGISTRY_CACHE = [];
+
+    /**
+     * SUB-SESSION MODULE 1: USERS MASTER ROSTER ROBUST SYNC
+     */
+    async function initializeModule_career_users() {
+        const response = await executeSecureBridgeCall("career", "getMyRecords", { scopeType: "master_roster" });
+        if (response && response.success && Array.isArray(response.records)) {
+            LOCAL_USERS_ROSTER_CACHE = response.records;
+            renderUsersRoster(LOCAL_USERS_ROSTER_CACHE);
+        } else {
+            document.getElementById('usersRosterTableBody').innerHTML = `
+                <tr>
+                    <td colspan="7" class="p-6 text-center text-rose-400 font-mono">
+                        Error mapping roster profiles: ${response.message || 'Unknown network error.'}
+                    </td>
+                </tr>`;
+        }
+    }
+
+    function renderUsersRoster(dataset) {
+        const tBody = document.getElementById('usersRosterTableBody');
+        if (!dataset || dataset.length === 0) {
+            tBody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500 font-mono">No matching registered user profile arrays allocated.</td></tr>`;
+            return;
+        }
+
+        tBody.innerHTML = dataset.map((user, idx) => {
+            const outstandingBalance = parseFloat(user.balance) || parseFloat(user.accountBalanceNaira) || 0;
+            const lifetimeWithdrawn = parseFloat(user.withdrawn) || parseFloat(user.totalWithdrawnNaira) || 0;
+            const status = user.status || "Active";
+            
+            let badgeColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+            if (status === "Suspended") badgeColor = "bg-rose-500/10 text-rose-400 border-rose-500/20";
+            if (status === "Pending") badgeColor = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+
+            return `
+                <tr class="hover:bg-slate-900/40 transition font-medium">
+                    <td class="p-3.5">
+                        <div class="font-bold text-white">${user.name || 'Anonymous Account'}</div>
+                        <div class="text-[11px] text-slate-400 font-mono mt-0.5">${user.email || 'No Linked Email Connection'}</div>
+                    </td>
+                    <td class="p-3.5 font-mono text-xs text-slate-300 font-bold">${user.partnerID || user.uid || 'N/A'}</td>
+                    <td class="p-3.5">
+                        <span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                            ${user.tier || 'Tier 1'}
+                        </span>
+                    </td>
+                    <td class="p-3.5 text-right font-mono text-white font-bold">₦${outstandingBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td class="p-3.5 text-right font-mono text-slate-400">₦${lifetimeWithdrawn.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td class="p-3.5 text-center">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] uppercase font-mono border ${badgeColor}">
+                            ${status}
+                        </span>
+                    </td>
+                    <td class="p-3.5 text-center">
+                        <button onclick="shortcutToUserMessaging('${user.email}')" class="bg-slate-900 hover:bg-sky-600 border border-slate-700 hover:border-sky-500 text-slate-300 hover:text-white px-2 py-1 rounded text-[11px] transition cursor-pointer">
+                            <i class="fa-solid fa-message"></i> Msg
+                        </button>
+                    </td>
+                </tr>`;
+        }).join('');
+    }
+
+    function filterUsersRoster() {
+        const searchStr = document.getElementById('rosterSearch').value.toLowerCase().trim();
+        const tierStr = document.getElementById('rosterTierFilter').value;
+        const statusStr = document.getElementById('rosterStatusFilter').value;
+
+        const filtered = LOCAL_USERS_ROSTER_CACHE.filter(u => {
+            const matchesSearch = !searchStr || 
+                (u.name && u.name.toLowerCase().includes(searchStr)) ||
+                (u.email && u.email.toLowerCase().includes(searchStr)) ||
+                (u.partnerID && u.partnerID.toLowerCase().includes(searchStr));
+            
+            const matchesTier = !tierStr || (u.tier === tierStr);
+            const matchesStatus = !statusStr || ((u.status || "Active") === statusStr);
+
+            return matchesSearch && matchesTier && matchesStatus;
+        });
+        renderUsersRoster(filtered);
+    }
+
+    /**
+     * SUB-SESSION MODULE 2: TRANSACTIONAL EARNINGS AUDIT PLATFORM
+     */
+    async function initializeModule_career_earnings() {
+        const response = await executeSecureBridgeCall("career", "getMyRecords", { queryTarget: "datasheet_ledger" });
+        if (response && response.success && Array.isArray(response.records)) {
+            LOCAL_EARNINGS_REGISTRY_CACHE = response.records;
+            renderEarningsLedger(LOCAL_EARNINGS_REGISTRY_CACHE);
+            computeFinancialKPIMetrics(LOCAL_EARNINGS_REGISTRY_CACHE);
+        } else {
+            document.getElementById('earningsTableBody').innerHTML = `
+                <tr>
+                    <td colspan="6" class="p-6 text-center text-rose-400 font-mono">
+                        Failed to gather execution rows: ${response.message || 'Validation error context.'}
+                    </td>
+                </tr>`;
+        }
+    }
+
+    function renderEarningsLedger(dataset) {
+        const tBody = document.getElementById('earningsTableBody');
+        if (!dataset || dataset.length === 0) {
+            tBody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-500 font-mono">No transactional history entries detected matching filter queries.</td></tr>`;
+            return;
+        }
+
+        tBody.innerHTML = dataset.map(job => {
+            const amt = parseFloat(job.amount) || parseFloat(job.rewardNaira) || 0;
+            const status = job.status || "Completed";
+            let stateStyle = "text-emerald-400";
+            if (status !== "Completed" && status !== "Settled") stateStyle = "text-amber-400 animate-pulse";
+
+            return `
+                <tr class="hover:bg-slate-900/40 transition font-medium text-xs text-slate-300">
+                    <td class="p-3.5 font-mono font-bold text-slate-400">${job.partnerID || 'System Direct'}</td>
+                    <td class="p-3.5 text-white font-bold">${job.clientName || 'N/A'}</td>
+                    <td class="p-3.5 font-mono text-slate-300">${job.serviceRendered || job.title || 'General Allocation Token'}</td>
+                    <td class="p-3.5 text-right font-mono font-bold text-white">₦${amt.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td class="p-3.5 text-center font-mono font-bold ${stateStyle}">${status}</td>
+                    <td class="p-3.5 text-center font-mono text-slate-400 text-[11px]">${job.date || 'N/A'}</td>
+                </tr>`;
+        }).join('');
+    }
+
+    function filterEarningsLedger() {
+        const query = document.getElementById('earningsSearch').value.toLowerCase().trim();
+        const filterStatus = document.getElementById('earningsStatusFilter').value;
+
+        const filtered = LOCAL_EARNINGS_REGISTRY_CACHE.filter(j => {
+            const matchesQuery = !query ||
+                (j.partnerID && j.partnerID.toLowerCase().includes(query)) ||
+                (j.clientName && j.clientName.toLowerCase().includes(query)) ||
+                (j.serviceRendered && j.serviceRendered.toLowerCase().includes(query)) ||
+                (j.title && j.title.toLowerCase().includes(query));
+                
+            const matchesStatus = !filterStatus || ((j.status || "Completed") === filterStatus);
+            return matchesQuery && matchesStatus;
+        });
+        renderEarningsLedger(filtered);
+    }
+
+    function computeFinancialKPIMetrics(records) {
+        let gross = 0;
+        let activeJobs = 0;
+        
+        records.forEach(r => {
+            const val = parseFloat(r.amount) || parseFloat(r.rewardNaira) || 0;
+            gross += val;
+            if (r.status !== "Completed" && r.status !== "Settled") activeJobs++;
+        });
+
+        const averageTicket = records.length > 0 ? (gross / records.length) : 0;
+
+        document.getElementById('statGrossEarnings').innerText = `₦${gross.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+        document.getElementById('statActiveJobs').innerText = `${activeJobs} Active Workflows`;
+        document.getElementById('statAvgTicket').innerText = `₦${averageTicket.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+    }
+
+    /**
+     * SUB-SESSION MODULE 3: PAYMENT CASH OUT AUTHORIZATION QUEUE
+     */
+    async function initializeModule_career_payments() {
+        const response = await executeSecureBridgeCall("career", "getPaymentHistory", { ledgerScope: "PaymentRequests" });
+        if (response && response.success && Array.isArray(response.records)) {
+            renderSettlementQueue(response.records);
+        } else {
+            document.getElementById('paymentsTableBody').innerHTML = `
+                <tr>
+                    <td colspan="6" class="p-6 text-center text-rose-400 font-mono">
+                        Error processing ledger tab records: ${response.message || 'No sheet response.'}
+                    </td>
+                </tr>`;
+        }
+    }
+
+    function renderSettlementQueue(records) {
+        const tBody = document.getElementById('paymentsTableBody');
+        if (!records || records.length === 0) {
+            tBody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-500 font-mono">The withdrawal request tracking ledger queue is clear.</td></tr>`;
+            return;
+        }
+
+        tBody.innerHTML = records.map(p => {
+            const amt = parseFloat(p.amount) || 0;
+            const status = p.status || "Pending";
+            const isPending = (status.toLowerCase() === "pending");
+
+            return `
+                <tr class="hover:bg-slate-900/40 transition font-medium text-slate-300">
+                    <td class="p-3.5 font-mono text-slate-400 font-bold">${p.partnerID || 'N/A'}</td>
+                    <td class="p-3.5 font-mono text-[11px] text-slate-400">${p.date || 'N/A'}</td>
+                    <td class="p-3.5 text-right font-mono font-bold text-white">₦${amt.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td class="p-3.5 font-mono text-slate-400">${p.reference || 'N/A'}</td>
+                    <td class="p-3.5 text-center">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${isPending ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}">
+                            ${status}
+                        </span>
+                    </td>
+                    <td class="p-3.5 text-center flex items-center justify-center gap-1.5">
+                        ${isPending ? `
+                            <button onclick="executeSettlementAction('${p.reference}', 'Approve')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-2.5 py-1 rounded text-[10px] tracking-wide uppercase transition cursor-pointer">Authorize</button>
+                            <button onclick="executeSettlementAction('${p.reference}', 'Decline')" class="bg-rose-600/20 hover:bg-rose-500 text-rose-400 hover:text-white font-bold px-2.5 py-1 rounded text-[10px] tracking-wide uppercase transition cursor-pointer">Decline</button>
+                        ` : `
+                            <span class="text-slate-500 font-mono text-[11px] italic">Audit Complete</span>
+                        `}
+                    </td>
+                </tr>`;
+        }).join('');
+    }
+
+    async function executeSettlementAction(trxRef, statusAction) {
+        if (!confirm(`Confirm execution order: ${statusAction} request reference tracking key "${trxRef}"?`)) return;
+        const result = await executeSecureBridgeCall("career", "updatePaymentStatus", { reference: trxRef, actionCommand: statusAction });
+        alert(result.message);
+        initializeModule_career_payments();
+    }
+
+    /**
+     * SUB-SESSION MODULE 4: LEVEL ELEVATION OVERRIDES & AUTOMATION TASK TRIGGERS
+     */
+    async function executeManualTierOverride() {
+        const email = document.getElementById('upgradeTargetEmail').value.trim();
+        const selectedTier = document.getElementById('upgradeTargetTier').value;
+
+        if (!email) {
+            alert("Please designate a target account email address coordinate execution anchor.");
+            return;
+        }
+
+        const res = await executeSecureBridgeCall("career", "injectManualTierOverride", { userEmail: email, targetTier: selectedTier });
+        alert(res.message);
+        if (res.success) {
+            document.getElementById('upgradeTargetEmail').value = "";
+        }
+    }
+
+    async function executeBatchPendingUpgrades() {
+        if (!confirm("Are you ready to invoke the batch account mutation engine task loops now? This executes edits directly across corresponding user sheet ranges.")) return;
+        const res = await executeSecureBridgeCall("career", "processPendingUpgrades", { executionMode: "automated_bulk_flush" });
+        alert(res.message);
+    }
+
+    /**
+     * SYSTEM REDIRECT ROUTER LINKSHORTCUT HOOKS
+     */
+    function shortcutToUserMessaging(targetUserEmail) {
+        switchSessionView('career-hub', 'career-messages');
+        const msgEmailInput = document.getElementById('corporateMessageRecipient');
+        if (msgEmailInput) {
+            msgEmailInput.value = targetUserEmail;
+        }
+    }
+
+    // IN-MEMORY LOG ENTRIES STORAGE CACHE MATRICES
+let CURRENT_ACTIVE_MESSAGE_FOLDER = "received"; // Defaults to Inbound Inbox view
+let CACHED_INBOUND_MESSAGES_ARRAY = [];
+let CACHED_OUTBOUND_MESSAGES_ARRAY = [];
+
+/**
+ * SUB-SESSION MODULE 5: INBOUND/OUTBOUND MESSAGE MATRIX SYNCHRONIZER
+ */
+async function initializeModule_career_messages() {
+    // Pipeline pulls master communication log vectors from backend spreadsheet tab layers
+    const response = await executeSecureBridgeCall("career", "getMyRecords", { queryTarget: "platform_communications_log" });
+    if (response && response.success) {
+        CACHED_INBOUND_MESSAGES_ARRAY = response.inboundInbox || response.received || [];
+        CACHED_OUTBOUND_MESSAGES_ARRAY = response.outboundSent || response.sent || [];
+        renderMessageLogFolder();
+    } else {
+        document.getElementById('corporateMessagesTableBody').innerHTML = `
+            tr>
+                <td colspan="3" class="p-6 text-center text-rose-400 font-mono">
+                    System error downloading communications log ledger: ${response.message || 'Verification failure.'}
+                </td>
+            </tr>`;
+    }
+}
+
+/**
+ * SWITCH INBOX VS SENT CODES INTERFACES
+ */
+function toggleMessageLogFolder(folderKey) {
+    CURRENT_ACTIVE_MESSAGE_FOLDER = folderKey;
+    
+    const recTab = document.getElementById('msgTab-received');
+    const sentTab = document.getElementById('msgTab-sent');
+    const actorCol = document.getElementById('msgColActorHeader');
+
+    // Reset standard utility classes safely matching dark slate aesthetic
+    recTab.className = "flex-1 sm:flex-initial px-4 py-1.5 text-xs font-bold rounded-md transition cursor-pointer text-slate-400 hover:text-white";
+    sentTab.className = "flex-1 sm:flex-initial px-4 py-1.5 text-xs font-bold rounded-md transition cursor-pointer text-slate-400 hover:text-white";
+
+    if (folderKey === "received") {
+        recTab.className = "flex-1 sm:flex-initial px-4 py-1.5 text-xs font-bold rounded-md transition cursor-pointer text-white bg-slate-800 border border-slate-700";
+        actorCol.innerText = "Sender Coordinate";
+    } else {
+        sentTab.className = "flex-1 sm:flex-initial px-4 py-1.5 text-xs font-bold rounded-md transition cursor-pointer text-white bg-slate-800 border border-slate-700";
+        actorCol.innerText = "Destination Recipient";
+    }
+    
+    renderMessageLogFolder();
+}
+
+/**
+ * RENDER SELECTED COMMUNICATE OBJECTS TO GRID TABLE
+ */
+function renderMessageLogFolder() {
+    const tBody = document.getElementById('corporateMessagesTableBody');
+    const activeDataset = (CURRENT_ACTIVE_MESSAGE_FOLDER === "received") ? CACHED_INBOUND_MESSAGES_ARRAY : CACHED_OUTBOUND_MESSAGES_ARRAY;
+
+    if (!activeDataset || activeDataset.length === 0) {
+        tBody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-slate-500 font-mono">No communication records located inside this file registry folder.</td></tr>`;
+        return;
+    }
+
+    tBody.innerHTML = activeDataset.map(mail => {
+        // Evaluate appropriate address string based on selected workspace perspective
+        const accountActor = (CURRENT_ACTIVE_MESSAGE_FOLDER === "received") ? (mail.senderEmail || mail.from || "User Account") : (mail.recipientEmail || mail.to || "Broadcast Target");
+        const bodyPreview = mail.body || mail.message || "";
+        const truncatedPreview = bodyPreview.length > 90 ? bodyPreview.substring(0, 90) + "..." : bodyPreview;
+
+        return `
+            <tr class="hover:bg-slate-900/40 transition font-medium text-xs text-slate-300 group">
+                <td class="p-3.5 font-mono text-slate-400 font-bold group-hover:text-sky-400 transition">${accountActor}</td>
+                <td class="p-3.5">
+                    <div class="text-white font-bold text-xs flex items-center gap-1.5">${mail.subject || 'Untiled Notification File'}</div>
+                    <div class="text-[11px] text-slate-400 mt-1 leading-relaxed">${truncatedPreview}</div>
+                </td>
+                <td class="p-3.5 text-center font-mono text-slate-500 text-[11px]">${mail.date || mail.timestamp || 'N/A'}</td>
+            </tr>`;
+    }).join('');
+}
+
+/**
+ * CLIENT-SIDE INTERACTIVE CONSOLE FILTER CODES
+ */
+function filterMessageLogGrids() {
+    const query = document.getElementById('messageLogSearch').value.toLowerCase().trim();
+    const baseDataset = (CURRENT_ACTIVE_MESSAGE_FOLDER === "received") ? CACHED_INBOUND_MESSAGES_ARRAY : CACHED_OUTBOUND_MESSAGES_ARRAY;
+
+    const filtered = baseDataset.filter(m => {
+        if (!query) return true;
+        const actorStr = ((CURRENT_ACTIVE_MESSAGE_FOLDER === "received") ? (m.senderEmail || m.from) : (m.recipientEmail || m.to)) || "";
+        const subjectStr = m.subject || "";
+        const bodyStr = m.body || m.message || "";
+
+        return actorStr.toLowerCase().includes(query) || 
+               subjectStr.toLowerCase().includes(query) || 
+               bodyStr.toLowerCase().includes(query);
+    });
+
+    // Re-render table using internal custom subset arrays immediately without triggering fetch
+    const tBody = document.getElementById('corporateMessagesTableBody');
+    if (filtered.length === 0) {
+        tBody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-slate-500 font-mono">No files match your query string parameters.</td></tr>`;
+        return;
+    }
+
+    tBody.innerHTML = filtered.map(mail => {
+        const accountActor = (CURRENT_ACTIVE_MESSAGE_FOLDER === "received") ? (mail.senderEmail || mail.from || "User Account") : (mail.recipientEmail || mail.to || "Broadcast Target");
+        const bodyPreview = mail.body || mail.message || "";
+        return `
+            <tr class="hover:bg-slate-900/40 transition font-medium text-xs text-slate-300">
+                <td class="p-3.5 font-mono text-slate-400 font-bold">${accountActor}</td>
+                <td class="p-3.5">
+                    <div class="text-white font-bold text-xs">${mail.subject || 'Notice Payload'}</div>
+                    <div class="text-[11px] text-slate-400 mt-1">${bodyPreview.substring(0, 90)}...</div>
+                </td>
+                <td class="p-3.5 text-center font-mono text-slate-500 text-[11px]">${mail.date || 'N/A'}</td>
+            </tr>`;
+    }).join('');
+}
+
+/**
+ * FORM INPUT DROPLIST ADJUSTMENT VISUAL CONTROLLER
+ */
+function adjustMessagingFormLayout() {
+    const scopeMode = document.getElementById('corporateMessageScope').value;
+    const recipientWrapper = document.getElementById('wrapperMessageRecipient');
+    const criteriaWrapper = document.getElementById('wrapperMessageCriteria');
+
+    if (scopeMode === "SINGLE") {
+        recipientWrapper.classList.remove('hidden');
+        criteriaWrapper.classList.add('hidden');
+    } else if (scopeMode === "CRITERIA") {
+        recipientWrapper.classList.add('hidden');
+        criteriaWrapper.classList.remove('hidden');
+    } else {
+        recipientWrapper.classList.add('hidden');
+        criteriaWrapper.classList.add('hidden');
+    }
+}
+
+/**
+ * EXECUTE TRANSIT NOTIFICATION COMMAND PIPELINE FORWARDER
+ */
+async function executeOutboundUserMessage() {
+    const scope = document.getElementById('corporateMessageScope').value;
+    const recipient = document.getElementById('corporateMessageRecipient').value.trim();
+    const criteriaTier = document.getElementById('corporateMessageTierCriteria').value;
+    const subject = document.getElementById('corporateMessageSubject').value.trim();
+    const body = document.getElementById('corporateMessageBody').value.trim();
+
+    if (!subject || !body) {
+        alert("Verification Rejected: Content title headers and message text body arrays cannot be empty.");
+        return;
+    }
+    if (scope === "SINGLE" && !recipient) {
+        alert("Target Check Failure: Individual targeting strategy requires a valid profile email anchor.");
+        return;
+    }
+
+    const compiledMessagePackage = {
+        scopeMode: scope,
+        targetEmail: recipient,
+        filterTier: criteriaTier,
+        messageSubject: subject,
+        messageBody: body,
+        systemOrigin: "admin_terminal_desk"
+    };
+
+    const response = await executeSecureBridgeCall("career", "sendMessageToUser", compiledMessagePackage);
+    alert(response.message);
+    
+    if (response.success) {
+        // Reset form controls cleanly
+        document.getElementById('corporateMessageSubject').value = "";
+        document.getElementById('corporateMessageBody').value = "";
+        initializeModule_career_messages(); // Automatically refresh data layouts
+    }
+}
+
+// IN-MEMORY ACADEMIC CACHE POOLS
+let CACHED_ASSESS_USERS_MATRIX = [];
+
+/**
+ * SUB-SESSION MODULE 1: ACADEMIC STUDENTS NODE MATRIX
+ */
+async function initializeModule_assess_users() {
+    const response = await executeSecureBridgeCall("assessment", "getStudentProfiles", { datasetScope: "verification_matrix" });
+    if (response && response.success && Array.isArray(response.records)) {
+        CACHED_ASSESS_USERS_MATRIX = response.records;
+        renderAssessUsersGrid(CACHED_ASSESS_USERS_MATRIX);
+    } else {
+        document.getElementById('assessUsersTableBody').innerHTML = `
+            <tr><td colspan="5" class="p-6 text-center text-rose-400 font-mono">Error reading student database tables: ${response.message || 'Mismatched handshake response.'}</td></tr>`;
+    }
+}
+
+function renderAssessUsersGrid(data) {
+    const tBody = document.getElementById('assessUsersTableBody');
+    if (!data || data.length === 0) {
+        tBody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-500 font-mono">No student profiles match query arrays.</td></tr>`;
+        return;
+    }
+
+    tBody.innerHTML = data.map(st => {
+        const currentStatus = st.status || "Verified";
+        let badgeStyle = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+        if (currentStatus === "Suspended") badgeStyle = "bg-rose-500/10 text-rose-400 border-rose-500/20";
+        if (currentStatus === "Pending") badgeStyle = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+
+        return `
+            <tr class="hover:bg-slate-900/40 transition font-medium text-slate-300">
+                <td class="p-3.5">
+                    <div class="font-bold text-white">${st.name || 'Anonymous Student'}</div>
+                    <div class="text-[11px] text-slate-400 font-mono mt-0.5">${st.email || 'No Email Registered'}</div>
+                </td>
+                <td class="p-3.5 font-mono text-slate-300 font-bold">${st.track || st.courseTrack || 'General Entry Track'}</td>
+                <td class="p-3.5 text-center font-mono text-white font-bold">${st.completedModules || st.progressCount || 0} Modules</td>
+                <td class="p-3.5 text-center">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] uppercase font-mono border ${badgeStyle}">${currentStatus}</span>
+                </td>
+                <td class="p-3.5 text-center">
+                    <button onclick="shortcutToAcademicMessaging('${st.email}')" class="bg-slate-900 hover:bg-emerald-600 text-slate-300 hover:text-white px-2 py-1 rounded border border-slate-700 text-[11px] transition cursor-pointer">
+                        <i class="fa-solid fa-envelope"></i> Message Ticket
+                    </button>
+                </td>
+            </tr>`;
+    }).join('');
+}
+
+function filterAssessUsersGrid() {
+    const query = document.getElementById('assessUserSearch').value.toLowerCase().trim();
+    const status = document.getElementById('assessUserStatusFilter').value;
+
+    const filtered = CACHED_ASSESS_USERS_MATRIX.filter(s => {
+        const matchesQuery = !query || 
+            (s.name && s.name.toLowerCase().includes(query)) ||
+            (s.email && s.email.toLowerCase().includes(query)) ||
+            (s.track && s.track.toLowerCase().includes(query));
+        const matchesStatus = !status || ((s.status || "Verified") === status);
+        return matchesQuery && matchesStatus;
+    });
+    renderAssessUsersGrid(filtered);
+}
+
+/**
+ * SUB-SESSION MODULE 2: EXAMINATION INTAKE EVALUATIONS ENGINE
+ */
+async function initializeModule_assess_intake() {
+    const res = await executeSecureBridgeCall("assessment", "getExamSubmissions", { targetPool: "intake_deck" });
+    const tBody = document.getElementById('assessIntakeTableBody');
+    if (res && res.success && Array.isArray(res.records)) {
+        if (res.records.length === 0) {
+            tBody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-500 font-mono">The examination intake sub-buffer sheet is empty.</td></tr>`;
+            return;
+        }
+        tBody.innerHTML = res.records.map(ex => {
+            const gradeScore = parseFloat(ex.score) || 0;
+            const status = ex.status || (gradeScore >= 70 ? "PASSED" : "FAILED");
+            const isPassed = (status.toUpperCase() === "PASSED");
+
+            return `
+                <tr class="hover:bg-slate-900/40 transition font-medium text-xs text-slate-300">
+                    <td class="p-3.5 font-mono text-slate-400 font-bold">${ex.studentEmail || ex.candidateID || 'Anonymous Student'}</td>
+                    <td class="p-3.5 text-white font-bold">${ex.examTitle || ex.moduleCode || 'General Knowledge Assessment'}</td>
+                    <td class="p-3.5 text-center font-mono font-bold text-white">${gradeScore}%</td>
+                    <td class="p-3.5 text-center font-mono font-bold ${isPassed ? 'text-emerald-400' : 'text-rose-400'}">${status}</td>
+                    <td class="p-3.5 text-center flex justify-center gap-1.5">
+                        <button onclick="executeOverrideExamGrade('${ex.referenceID || ex.id}', 'PASSED')" class="bg-slate-900 hover:bg-emerald-600 text-slate-300 hover:text-white border border-slate-700 font-bold text-[10px] px-2 py-0.5 rounded transition cursor-pointer">FORCE PASS</button>
+                        <button onclick="executeOverrideExamGrade('${ex.referenceID || ex.id}', 'FAILED')" class="bg-slate-900 hover:bg-rose-600 text-slate-300 hover:text-white border border-slate-700 font-bold text-[10px] px-2 py-0.5 rounded transition cursor-pointer">FORCE FAIL</button>
+                    </td>
+                </tr>`;
+        }).join('');
+    } else {
+        tBody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-rose-400 font-mono">Failed to map examination spreadsheet records: ${res.message || 'Error.'}</td></tr>`;
+    }
+}
+
+async function executeOverrideExamGrade(examId, forceStatus) {
+    if(!confirm(`Issue administrative verification override? Force status to: ${forceStatus}`)) return;
+    const res = await executeSecureBridgeCall("assessment", "overrideExamGrade", { reference: examId, targetStatus: forceStatus });
+    alert(res.message);
+    initializeModule_assess_intake();
+}
+
+/**
+ * SUB-SESSION MODULE 3: COURSE CATALOG INVENTORY MUTATIONS
+ */
+async function initializeModule_assess_curriculum() {
+    const res = await executeSecureBridgeCall("assessment", "getCourseCatalog", { inventoryKey: "active_modules" });
+    const tBody = document.getElementById('assessCurriculumTableBody');
+    if (res && res.success && Array.isArray(res.records)) {
+        if (res.records.length === 0) {
+            tBody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-slate-500 font-mono">No active courses registered in the curriculum sheets.</td></tr>`;
+            return;
+        }
+        tBody.innerHTML = res.records.map(c => `
+            <tr class="hover:bg-slate-900/30 transition text-slate-300">
+                <td class="p-2.5 font-mono text-purple-400 font-bold">${c.moduleCode || c.id || 'N/A'}</td>
+                <td class="p-2.5 text-white font-semibold">${c.title || 'Untitled Document'}</td>
+                <td class="p-2.5 text-slate-400 font-mono">${c.trackBranch || c.track || 'General Department'}</td>
+            </tr>`).join('');
+    } else {
+        tBody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-rose-400 font-mono">Inventory mapping broke down.</td></tr>`;
+    }
+}
+
+async function executeCurriculumMutationSubmit() {
+    const code = document.getElementById('curriculumModuleId').value.trim();
+    const title = document.getElementById('curriculumModuleTitle').value.trim();
+    const track = document.getElementById('curriculumModuleTrack').value;
+
+    if (!code || !title) {
+        alert("Validation Blocked: You must declare a custom Module Identification key signature and Title name.");
+        return;
+    }
+
+    const res = await executeSecureBridgeCall("assessment", "upsertCurriculumModule", { moduleCode: code, title: title, trackBranch: track });
+    alert(res.message);
+    if(res.success) {
+        document.getElementById('curriculumModuleId').value = "";
+        document.getElementById('curriculumModuleTitle').value = "";
+        initializeModule_assess_curriculum();
+    }
+}
+
+/**
+ * SUB-SESSION MODULE 4: DIGITAL CLOUD CERTIFICATE LEDGER
+ */
+async function initializeModule_assess_registry() {
+    const res = await executeSecureBridgeCall("assessment", "getConferredCertificates", { scope: "cloud_registry" });
+    const tBody = document.getElementById('assessRegistryTableBody');
+    if (res && res.success && Array.isArray(res.records)) {
+        if (res.records.length === 0) {
+            tBody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-500 font-mono">No cloud credential entries verified within this range.</td></tr>`;
+            return;
+        }
+        tBody.innerHTML = res.records.map(cert => `
+            <tr class="hover:bg-slate-900/40 transition font-medium text-xs text-slate-300">
+                <td class="p-3.5 font-mono text-amber-400 font-bold">${cert.hashId || cert.id || 'N/A'}</td>
+                <td class="p-3.5 text-white font-bold">${cert.studentName || 'N/A'}</td>
+                <td class="p-3.5 font-mono text-slate-300">${cert.specializationTrack || 'Master Certificate Matrix'}</td>
+                <td class="p-3.5 text-center font-mono text-slate-400">${cert.dateIssued || 'N/A'}</td>
+                <td class="p-3.5 text-center">
+                    <button onclick="executeRevokeCertificate('${cert.hashId || cert.id}')" class="bg-rose-950/40 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-900 hover:border-rose-500 font-bold text-[10px] px-2 py-1 rounded transition cursor-pointer">REVOKE CERTIFICATE</button>
+                </td>
+            </tr>`).join('');
+    } else {
+        tBody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-rose-400 font-mono">Error opening certificate range rows.</td></tr>`;
+    }
+}
+
+async function executeRevokeCertificate(hashId) {
+    if (!confirm(`Warning: You are about to invoke a systemic revocation sequence on certificate hash key "${hashId}". Continue?`)) return;
+    const res = await executeSecureBridgeCall("assessment", "revokeCertificateNode", { targetHash: hashId });
+    alert(res.message);
+    initializeModule_assess_registry();
+}
+
+/**
+ * ROUTER REDIRECT OVERRIDE HOOKS
+ */
+function shortcutToAcademicMessaging(studentEmail) {
+    switchSessionView('assessment-hub', 'assess-messages');
+    const msgInput = document.getElementById('academicTicketRecipient');
+    if (msgInput) {
+        msgInput.value = studentEmail;
+    }
+}
+
+// IN-MEMORY ACADEMIC MESSAGING REGISTRY STORAGE MATRIX CACHE
+let CACHED_ACADEMIC_TICKETS_ARRAY = [];
+
+/**
+ * SUB-SESSION MODULE 5: ASSESSMENT SUPPORT MATRIX DATA REFRESHER
+ */
+async function initializeModule_assess_messages() {
+    const response = await executeSecureBridgeCall("assessment", "getAcademicTickets", { targetRegistry: "support_matrix_queue" });
+    if (response && response.success && Array.isArray(response.tickets)) {
+        CACHED_ACADEMIC_TICKETS_ARRAY = response.tickets;
+        renderAcademicTicketGrid(CACHED_ACADEMIC_TICKETS_ARRAY);
+    } else {
+        document.getElementById('academicTicketsTableBody').innerHTML = `
+            <tr>
+                <td colspan="3" class="p-6 text-center text-rose-400 font-mono">
+                    System error downloading academic ticket logs: ${response.message || 'Identity link missing.'}
+                </td>
+            </tr>`;
+    }
+}
+
+/**
+ * RENDER INTERACTIVE TICKET LIST TO VIEWPORT MATRIX
+ */
+function renderAcademicTicketGrid(dataset) {
+    const tBody = document.getElementById('academicTicketsTableBody');
+    if (!dataset || dataset.length === 0) {
+        tBody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-slate-500 font-mono">No open or resolved ticket logs meet your current selection params.</td></tr>`;
+        return;
+    }
+
+    tBody.innerHTML = dataset.map(ticket => {
+        const priorityLevel = (ticket.priority || 'NORMAL').toUpperCase();
+        
+        // Compute structural color badges inside the ledger
+        let badgeClasses = "bg-slate-900 text-slate-400 border-slate-700";
+        if (priorityLevel === "CRITICAL") badgeClasses = "bg-rose-500/10 text-rose-400 border-rose-500/20 font-bold";
+        if (priorityLevel === "NOTICE") badgeClasses = "bg-sky-500/10 text-sky-400 border-sky-500/20";
+
+        const textBody = ticket.body || ticket.message || "";
+        const briefPreview = textBody.length > 95 ? textBody.substring(0, 95) + "..." : textBody;
+
+        return `
+            <tr class="hover:bg-slate-900/40 transition font-medium text-xs text-slate-300 group">
+                <td class="p-3.5 font-mono text-slate-400 font-bold group-hover:text-teal-400 transition">
+                    ${ticket.studentEmail || ticket.recipient || "Global Cohort Target"}
+                </td>
+                <td class="p-3.5">
+                    <div class="text-white font-bold text-xs flex items-center gap-2">
+                        <span class="px-1.5 py-0.5 rounded text-[9px] uppercase font-mono border ${badgeClasses}">${priorityLevel}</span>
+                        <span>${ticket.subject || 'Standard Administrative Document Notice'}</span>
+                    </div>
+                    <div class="text-[11px] text-slate-400 mt-1 leading-relaxed">${briefPreview}</div>
+                </td>
+                <td class="p-3.5 text-center font-mono text-slate-500 text-[11px]">${ticket.date || ticket.timestamp || 'Active Loop'}</td>
+            </tr>`;
+    }).join('');
+}
+
+/**
+ * TEXT SEARCH AND CLASS FILTERS LOGIC PIPELINE
+ */
+function filterAcademicTicketGrid() {
+    const query = document.getElementById('academicTicketSearch').value.toLowerCase().trim();
+    const classFilter = document.getElementById('academicTicketQueueFilter').value;
+
+    const filteredSubset = CACHED_ACADEMIC_TICKETS_ARRAY.filter(t => {
+        const targetEmail = (t.studentEmail || t.recipient || "").toLowerCase();
+        const targetSubject = (t.subject || "").toLowerCase();
+        const targetBody = (t.body || t.message || "").toLowerCase();
+        const priorityLevel = (t.priority || "NORMAL").toUpperCase();
+
+        const matchesQuery = !query || 
+            targetEmail.includes(query) || 
+            targetSubject.includes(query) || 
+            targetBody.includes(query);
+
+        const matchesClass = !classFilter || (priorityLevel === classFilter);
+
+        return matchesQuery && matchesClass;
+    });
+
+    renderAcademicTicketGrid(filteredSubset);
+}
+
+/**
+ * EXECUTE TRANSIT COMMAND FOR NEW TICKETS
+ */
+async function executeOutboundAcademicTicket() {
+    const recipient = document.getElementById('academicTicketRecipient').value.trim();
+    const priority = document.getElementById('academicTicketPriority').value;
+    const subject = document.getElementById('academicTicketSubject').value.trim();
+    const body = document.getElementById('academicTicketBody').value.trim();
+
+    if (!subject || !body) {
+        alert("Execution Denied: You must supply a valid subject line header and content instruction body.");
+        return;
+    }
+    if (!recipient && priority !== "NOTICE") {
+        alert("Target Missing: Direct support parameters require an active target student registration email.");
+        return;
+    }
+
+    const payloadPackage = {
+        studentEmail: recipient,
+        priorityLevel: priority,
+        ticketSubject: subject,
+        ticketBody: body,
+        moduleOrigin: "academic_desk_controller"
+    };
+
+    const response = await executeSecureBridgeCall("assessment", "sendAcademicTicket", payloadPackage);
+    alert(response.message);
+
+    if (response.success) {
+        // Clear variables dynamically out of fields
+        document.getElementById('academicTicketSubject').value = "";
+        document.getElementById('academicTicketBody').value = "";
+        initializeModule_assess_messages(); // Refresh workspace log structures
+    }
+}
+
+        // AUTO BOOT ON WINDOW LOAD IF VALID TOKENS EXIST
+        window.addEventListener('DOMContentLoaded', () => {
+            if (WEBAPP_URL && SESSION_MASTER_TOKEN) {
+                document.getElementById('webappUrl').value = WEBAPP_URL;
+                document.getElementById('welcomeTitle').innerText = `Terminal Access Desk: Locked On - ${CURRENT_ADMIN_IDENTITY}`;
+                document.getElementById('loginView').classList.add('hidden');
+                document.getElementById('mainDashboardView').classList.remove('hidden');
+                switchMasterHub('career-hub');
+            }
+        });
+    </script>
+</body>
+</html>
