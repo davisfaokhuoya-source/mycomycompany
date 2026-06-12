@@ -1014,8 +1014,7 @@
         </div>
       </form>
     </div>
-  </div>
-<script>
+  </div><script>
 let WEBAPP_URL = localStorage.getItem('VIC_WEBAPP_URL') || "";
 let SESSION_MASTER_TOKEN = localStorage.getItem('VIC_MASTER_TOKEN') || "";
 let CURRENT_ADMIN_IDENTITY = localStorage.getItem('VIC_ADMIN_EMAIL') || "Unauthenticated Session";
@@ -1026,6 +1025,15 @@ let currentSubSection = null;
 let CACHED_CAREER_USERS = [];
 let CACHED_ASSESSMENT_SUBMISSIONS = [];
 let CACHED_CRM_LEADS = [];
+
+const CAREER_FILTER_STATE = {
+  levelFilter: null,
+  statusFilter: null,
+  dateRangeStart: null,
+  dateRangeEnd: null
+};
+
+let currentCertViewMode = 'Approved';
 
 const EDIT_MODAL_FORM_SCHEMAS = {
   'career-users': [
@@ -1038,16 +1046,17 @@ const EDIT_MODAL_FORM_SCHEMAS = {
     { name: 'Status', key: 'Approved', type: 'select', required: false, options: [{ value: true, label: 'Approved' }, { value: false, label: 'Pending' }] }
   ],
   'career-earnings': [
-    { name: 'Partner Email', key: 'PartnerEmail', type: 'email', required: true },
+    { name: 'Partner ID', key: 'PartnerID', type: 'text', required: true },
     { name: 'Client Name', key: 'ClientName', type: 'text', required: true },
     { name: 'Service', key: 'Service', type: 'text', required: true },
-    { name: 'Earnings (₦)', key: 'EarningsNaira', type: 'number', required: true },
-    { name: 'Payout Status', key: 'PayoutStatus', type: 'select', required: true, options: [{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Paid', label: 'Paid' }] }
+    { name: 'Amount Charged', key: 'AmountToCharge', type: 'number', required: true },
+    { name: 'Payout Status', key: 'PayoutStatus', type: 'select', required: true, options: [{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Paid', label: 'Paid' }] },
+    { name: 'Status', key: 'Status', type: 'select', required: true, options: [{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }] }
   ],
   'career-settlements': [
     { name: 'Partner Email', key: 'Email', type: 'email', required: true },
     { name: 'Amount (₦)', key: 'AmountNaira', type: 'number', required: true },
-    { name: 'Status', key: 'Status', type: 'select', required: true, options: [{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Paid', label: 'Paid' }] },
+    { name: 'Status', key: 'Status', type: 'select', required: true, options: [{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Denied', label: 'Denied' }, { value: 'Investigating', label: 'Investigating' }] },
     { name: 'Admin Notes', key: 'AdminNotes', type: 'textarea', required: false }
   ],
   'assessment-students': [
@@ -1080,18 +1089,26 @@ const EDIT_MODAL_FORM_SCHEMAS = {
     { name: 'Certificate Code', key: 'CertCode', type: 'text', required: false },
     { name: 'Status', key: 'Status', type: 'select', required: true, options: [{ value: 'Verified', label: 'Verified' }, { value: 'Pending', label: 'Pending' }, { value: 'Revoked', label: 'Revoked' }] }
   ],
+  'assessment-applications': [
+    { name: 'Student Email', key: 'StudentEmail', type: 'email', required: true },
+    { name: 'Course Name', key: 'CourseName', type: 'text', required: true },
+    { name: 'Status', key: 'Status', type: 'select', required: true, options: [{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Rejected', label: 'Rejected' }] },
+    { name: 'Notes', key: 'Notes', type: 'textarea', required: false }
+  ],
   'client-submitted': [
     { name: 'Client Name', key: 'ClientName', type: 'text', required: true },
     { name: 'Service', key: 'Service', type: 'text', required: true },
-    { name: 'Partner Source', key: 'Partner', type: 'text', required: true },
-    { name: 'Amount (₦)', key: 'Amount', type: 'number', required: true },
+    { name: 'Partner ID', key: 'PartnerID', type: 'text', required: true },
+    { name: 'Amount', key: 'Amount', type: 'number', required: true },
     { name: 'Payment Status', key: 'Status', type: 'select', required: true, options: [{ value: 'Pending', label: 'Pending' }, { value: 'In Review', label: 'In Review' }, { value: 'Approved', label: 'Approved' }] }
   ],
   'client-onboarded': [
     { name: 'Client Name', key: 'ClientName', type: 'text', required: true },
+    { name: 'Client Email', key: 'ClientEmail', type: 'email', required: true },
     { name: 'Service Item', key: 'Service', type: 'text', required: true },
-    { name: 'Progress Notes', key: 'Status', type: 'textarea', required: false },
-    { name: 'Fulfillment Status', key: 'FulfillmentStatus', type: 'select', required: true, options: [{ value: 'In Progress', label: 'In Progress' }, { value: 'On Hold', label: 'On Hold' }, { value: 'Completed', label: 'Completed' }] }
+    { name: 'Amount', key: 'Amount', type: 'number', required: true },
+    { name: 'Fulfillment Status', key: 'Status', type: 'select', required: true, options: [{ value: 'In Progress', label: 'In Progress' }, { value: 'On Hold', label: 'On Hold' }, { value: 'Completed', label: 'Completed' }] },
+    { name: 'Progress Notes', key: 'ProgressNotes', type: 'textarea', required: false }
   ],
   'leads-matrix': [
     { name: 'Lead Name', key: 'Name', type: 'text', required: true },
@@ -1101,46 +1118,7 @@ const EDIT_MODAL_FORM_SCHEMAS = {
     { name: 'Assigned Agent', key: 'Agent', type: 'text', required: false },
     { name: 'Funnel Stage', key: 'Stage', type: 'select', required: true, options: [{ value: 'New Prospect', label: 'New Prospect' }, { value: 'Contacted', label: 'Contacted' }, { value: 'Negotiation', label: 'Negotiation' }, { value: 'Closed', label: 'Closed' }] }
   ]
-
-  'career-settlements': [
-  { name: 'Partner Email', key: 'Email', type: 'email', required: true },
-  { name: 'Amount (₦)', key: 'AmountNaira', type: 'number', required: true },
-  { name: 'Status', key: 'Status', type: 'select', required: true, options: [{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Denied', label: 'Denied' }, { value: 'Investigating', label: 'Investigating' }] },
-  { name: 'Admin Notes', key: 'AdminNotes', type: 'textarea', required: false }
-],
-
-'career-earnings': [
-  { name: 'Partner ID', key: 'PartnerID', type: 'text', required: true },
-  { name: 'Client Name', key: 'ClientName', type: 'text', required: true },
-  { name: 'Service', key: 'Service', type: 'text', required: true },
-  { name: 'Amount Charged', key: 'AmountToCharge', type: 'number', required: true },
-  { name: 'Status', key: 'Status', type: 'select', required: true, options: [{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }] }
-],
-
-'client-submitted': [
-  { name: 'Client Name', key: 'ClientName', type: 'text', required: true },
-  { name: 'Service', key: 'Service', type: 'text', required: true },
-  { name: 'Partner ID', key: 'PartnerID', type: 'text', required: true },
-  { name: 'Amount', key: 'Amount', type: 'number', required: true }
-]
 };
-
-// Add to EDIT_MODAL_FORM_SCHEMAS:
-'assessment-applications': [
-  { name: 'Student Email', key: 'StudentEmail', type: 'email', required: true },
-  { name: 'Course Name', key: 'CourseName', type: 'text', required: true },
-  { name: 'Status', key: 'Status', type: 'select', required: true, options: [{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Rejected', label: 'Rejected' }] },
-  { name: 'Notes', key: 'Notes', type: 'textarea', required: false }
-]
-// Add to EDIT_MODAL_FORM_SCHEMAS:
-'client-onboarded': [
-  { name: 'Client Name', key: 'ClientName', type: 'text', required: true },
-  { name: 'Client Email', key: 'ClientEmail', type: 'email', required: true },
-  { name: 'Service', key: 'Service', type: 'text', required: true },
-  { name: 'Amount', key: 'Amount', type: 'number', required: true },
-  { name: 'Status', key: 'Status', type: 'select', required: true, options: [{ value: 'In Progress', label: 'In Progress' }, { value: 'On Hold', label: 'On Hold' }, { value: 'Completed', label: 'Completed' }] },
-  { name: 'Progress Notes', key: 'ProgressNotes', type: 'textarea', required: false }
-]
 
 async function executeSecureBridgeCall(systemTarget, actionTarget, analyticalPayload = {}) {
     const url = "https://script.google.com/macros/s/AKfycbzaxpTeQzLZKIGvjbtcMSxu1VNXx0mkJZWn5Jt4hMdWQXbOjRyPmcJI8eIImcYRT67n/exec";
@@ -1188,379 +1166,431 @@ async function executeSecureBridgeCall(systemTarget, actionTarget, analyticalPay
     }
 }
 
+
 async function executeMultiFactorLogin(event) {
-    event.preventDefault();
-    const url = document.getElementById('webappUrl').value.trim();
-    const name = document.getElementById('loginName').value.trim();
-    const email = document.getElementById('loginEmail').value.trim();
-    const pass1 = document.getElementById('loginPass1').value.trim();
-    const pass2 = document.getElementById('loginPass2').value.trim();
-    const pass3 = document.getElementById('loginPass3').value.trim();
+  event.preventDefault();
+  const url = document.getElementById('webappUrl').value.trim();
+  const name = document.getElementById('loginName').value.trim();
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass1 = document.getElementById('loginPass1').value.trim();
+  const pass2 = document.getElementById('loginPass2').value.trim();
+  const pass3 = document.getElementById('loginPass3').value.trim();
 
-    if (!url || !email || !pass1 || !pass2 || !pass3) {
-        alert("All credential verification blocks alongside the backend Endpoint URL target must be filled.");
-        return;
-    }
+  if (!url || !email || !pass1 || !pass2 || !pass3) {
+    alert("All credential verification blocks alongside the backend Endpoint URL target must be filled.");
+    return;
+  }
 
-    try {
-        const response = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify({
-                system: "auth",
-                action: "actionTarget,",
-                name: name,
-                email: email,
-                pass1: pass1,
-                pass2: pass2,
-                pass3: pass3
-            }),
-            redirect: "follow"
-        });
-        
-        const text = await response.text();
-        const jsonStart = text.indexOf('{');
-        const result = JSON.parse(jsonStart !== -1 ? text.substring(jsonStart) : text || "{}");
-        
-        if (result.success && result.token) {
-            SESSION_MASTER_TOKEN = result.token;
-            CURRENT_ADMIN_IDENTITY = name;
-            localStorage.setItem('VIC_MASTER_TOKEN', result.token);
-            localStorage.setItem('VIC_ADMIN_EMAIL', name);
-            localStorage.setItem('VIC_WEBAPP_URL', url);
-            
-            document.getElementById('loginView').classList.add('hidden');
-            document.getElementById('mainDashboardView').classList.remove('hidden');
-            document.getElementById('welcomeTitle').innerText = `Gateway Terminal Desk: Active | Admin: ${name}`;
-            
-            switchMasterHub('career');
-        } else {
-            alert(`SECURITY RESPONSE: ${result.message || 'Verification Failed'}`);
-        }
-    } catch(e) {
-        alert("Gateway Connection Error: Check your Endpoint URL address or execution clearances configurations.");
-        console.error(e);
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        system: "auth",
+        action: "login",
+        name: name,
+        email: email,
+        pass1: pass1,
+        pass2: pass2,
+        pass3: pass3
+      }),
+      redirect: "follow"
+    });
+
+    const text = await response.text();
+    const jsonStart = text.indexOf('{');
+    const result = JSON.parse(jsonStart !== -1 ? text.substring(jsonStart) : text || "{}");
+
+    if (result.success && result.token) {
+      SESSION_MASTER_TOKEN = result.token;
+      CURRENT_ADMIN_IDENTITY = name;
+      WEBAPP_URL = url;
+      localStorage.setItem('VIC_MASTER_TOKEN', result.token);
+      localStorage.setItem('VIC_ADMIN_EMAIL', name);
+      localStorage.setItem('VIC_WEBAPP_URL', url);
+
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('mainDashboardView').classList.remove('hidden');
+      document.getElementById('welcomeTitle').innerText = `Gateway Terminal Desk: Active | Admin: ${name}`;
+
+      switchMasterHub('career');
+    } else {
+      alert(`SECURITY RESPONSE: ${result.message || 'Verification Failed'}`);
     }
+  } catch (e) {
+    alert("Gateway Connection Error: Check your Endpoint URL address or execution clearances configurations.");
+    console.error(e);
+  }
 }
 
 function terminateTerminalSession() {
-    SESSION_MASTER_TOKEN = "";
-    CURRENT_ADMIN_IDENTITY = "";
-    localStorage.removeItem('VIC_MASTER_TOKEN');
-    localStorage.removeItem('VIC_ADMIN_EMAIL');
-    
-    document.getElementById('mainDashboardView').classList.add('hidden');
-    document.getElementById('loginView').classList.remove('hidden');
-    alert("Session terminated. Access desk safely clamped down.");
+  SESSION_MASTER_TOKEN = "";
+  CURRENT_ADMIN_IDENTITY = "";
+  WEBAPP_URL = "";
+  localStorage.removeItem('VIC_MASTER_TOKEN');
+  localStorage.removeItem('VIC_ADMIN_EMAIL');
+  localStorage.removeItem('VIC_WEBAPP_URL');
+
+  document.getElementById('mainDashboardView').classList.add('hidden');
+  document.getElementById('loginView').classList.remove('hidden');
+  alert("Session terminated. Access desk safely clamped down.");
 }
 
 function toggleSystemLoader(show) {
-    const loader = document.getElementById("systemLoader");
-    if (!loader) {
-        const newLoader = document.createElement("div");
-        newLoader.id = "systemLoader";
-        newLoader.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px);";
-        newLoader.innerHTML = '<div style="border:3px solid #1e293b;border-top:3px solid #10b981;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;"></div>';
-        const style = document.createElement('style');
-        style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
-        document.head.appendChild(style);
-        document.body.appendChild(newLoader);
-    }
-    
-    const loader2 = document.getElementById("systemLoader");
-    if (loader2) {
-        loader2.style.display = show ? "flex" : "none";
-        loader2.style.opacity = show ? "1" : "0";
-    }
+  let loader = document.getElementById("systemLoader");
+  if (!loader) {
+    loader = document.createElement("div");
+    loader.id = "systemLoader";
+    loader.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px);";
+    loader.innerHTML = '<div style="border:3px solid #1e293b;border-top:3px solid #10b981;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;"></div>';
+    const style = document.createElement('style');
+    style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+    document.head.appendChild(style);
+    document.body.appendChild(loader);
+  }
+  loader.style.display = show ? "flex" : "none";
 }
 
 function showToast(message, type = "info") {
-    const existing = document.getElementById("vh-toast");
-    if (existing) existing.remove();
+  const existing = document.getElementById("vh-toast");
+  if (existing) existing.remove();
 
-    const toast = document.createElement("div");
-    toast.id = "vh-toast";
-    toast.textContent = message;
-    Object.assign(toast.style, {
-        position: "fixed", bottom: "24px", right: "24px", padding: "12px 20px",
-        borderRadius: "8px", fontFamily: "sans-serif", fontSize: "14px",
-        color: "#fff", zIndex: "9999",
-        background: type === "success" ? "#1d9e75" : type === "error" ? "#e24b4a" : "#534ab7",
-        boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
-        transition: "opacity 0.4s"
-    });
-    document.body.appendChild(toast);
-    setTimeout(() => { toast.style.opacity = "0"; }, 3200);
-    setTimeout(() => toast.remove(), 3700);
+  const toast = document.createElement("div");
+  toast.id = "vh-toast";
+  toast.textContent = message;
+  Object.assign(toast.style, {
+    position: "fixed", bottom: "24px", right: "24px", padding: "12px 20px",
+    borderRadius: "8px", fontFamily: "sans-serif", fontSize: "14px",
+    color: "#fff", zIndex: "9999",
+    background: type === "success" ? "#1d9e75" : type === "error" ? "#e24b4a" : "#534ab7",
+    boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+    transition: "opacity 0.4s"
+  });
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = "0"; }, 3200);
+  setTimeout(() => toast.remove(), 3700);
 }
 
 function showTableSkeleton(tbodyId, cols = 5) {
-    const tbody = document.getElementById(tbodyId);
-    if (!tbody) return;
-    let html = "";
-    for (let i = 0; i < 5; i++) {
-        html += "<tr>";
-        for (let c = 0; c < cols; c++) {
-            html += `<td style="padding: 12px;"><div style="height:14px;background:#e0dfd8;border-radius:4px;animation:pulse 1.4s ease-in-out infinite alternate;"></div></td>`;
-        }
-        html += "</tr>";
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  let html = "";
+  for (let i = 0; i < 5; i++) {
+    html += "<tr>";
+    for (let c = 0; c < cols; c++) {
+      html += `<td style="padding:12px;"><div style="height:14px;background:#1e293b;border-radius:4px;animation:pulse 1.4s ease-in-out infinite alternate;"></div></td>`;
     }
-    tbody.innerHTML = html;
+    html += "</tr>";
+  }
+  tbody.innerHTML = html;
 }
 
 function emptyRow(message, cols) {
-    return `<tr><td colspan="${cols}" style="text-align:center;padding:32px;color:#888;">${message}</td></tr>`;
+  return `<tr><td colspan="${cols}" style="text-align:center;padding:32px;color:#64748b;">${message}</td></tr>`;
 }
 
 function fmtDate(val) {
-    if (!val) return "—";
-    const d = new Date(val);
-    return isNaN(d) ? String(val) : d.toLocaleDateString("en-NG", { day: "2-digit", month: "short", year: "numeric" });
+  if (!val) return "—";
+  const d = new Date(val);
+  return isNaN(d) ? String(val) : d.toLocaleDateString("en-NG", { day: "2-digit", month: "short", year: "numeric" });
 }
 
 function fmtNaira(val) {
-    const n = parseFloat(val) || 0;
-    return "₦" + n.toLocaleString("en-NG");
+  const n = parseFloat(val) || 0;
+  return "₦" + n.toLocaleString("en-NG");
 }
 
 function badge(status) {
-    const s = String(status || "").toLowerCase();
-    const map = {
-        pending: ["#faeeda","#ba7517"], approved: ["#eaf3de","#3b6d11"],
-        processed: ["#e1f5ee","#0f6e56"], rejected: ["#fcebeb","#a32d2d"],
-        active: ["#e6f1fb","#185fa5"], verified: ["#eaf3de","#3b6d11"],
-        "new prospect": ["#fef3c7", "#92400e"], contacted: ["#dbeafe", "#1e40af"],
-        negotiation: ["#fce7f3", "#be185d"], closed: ["#dcfce7", "#166534"],
-        "in progress": ["#fef3c7", "#92400e"], "on hold": ["#fee2e2", "#991b1b"],
-        completed: ["#dcfce7", "#166534"], read: ["#eaf3de", "#3b6d11"], 
-        delivered: ["#e1f5fe", "#01579b"], unread: ["#f3e5f5", "#4a148c"]
-    };
-    const [bg, color] = map[s] || ["#f1efe8","#5f5e5a"];
-    return `<span style="background:${bg};color:${color};padding:2px 10px;border-radius:99px;font-size:12px;font-weight:500;">${status || "—"}</span>`;
+  const s = String(status || "").toLowerCase();
+  const map = {
+    pending: ["#faeeda", "#ba7517"],
+    approved: ["#eaf3de", "#3b6d11"],
+    processed: ["#e1f5ee", "#0f6e56"],
+    rejected: ["#fcebeb", "#a32d2d"],
+    active: ["#e6f1fb", "#185fa5"],
+    verified: ["#eaf3de", "#3b6d11"],
+    "new prospect": ["#fef3c7", "#92400e"],
+    contacted: ["#dbeafe", "#1e40af"],
+    negotiation: ["#fce7f3", "#be185d"],
+    closed: ["#dcfce7", "#166534"],
+    "in progress": ["#fef3c7", "#92400e"],
+    "on hold": ["#fee2e2", "#991b1b"],
+    completed: ["#dcfce7", "#166534"],
+    read: ["#eaf3de", "#3b6d11"],
+    delivered: ["#e1f5fe", "#01579b"],
+    unread: ["#f3e5f5", "#4a148c"],
+    scheduled: ["#e0e7ff", "#3730a3"],
+    denied: ["#fcebeb", "#a32d2d"],
+    investigating: ["#fef9c3", "#854d0e"],
+    standard: ["#f1f5f9", "#475569"],
+    confirmed: ["#eaf3de", "#3b6d11"],
+    "critical grade alert": ["#fcebeb", "#a32d2d"],
+    notice: ["#e0e7ff", "#3730a3"]
+  };
+  const [bg, color] = map[s] || ["#1e293b", "#94a3b8"];
+  return `<span style="background:${bg};color:${color};padding:2px 10px;border-radius:99px;font-size:11px;font-weight:500;">${status || "—"}</span>`;
 }
 
 function escapeHtml(text) {
-    if (text === null || text === undefined) return "";
-    return String(text)
-        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  if (text === null || text === undefined) return "";
+  return String(text)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
 function switchMasterHub(hubId) {
-    currentHub = hubId;
+  currentHub = hubId;
 
-    document.querySelectorAll('section[id^="hub-"]').forEach(section => {
-        section.classList.add('hidden');
-    });
+  document.querySelectorAll('section[id^="hub-"]').forEach(s => s.classList.add('hidden'));
 
-    const targetHub = document.getElementById(`hub-${hubId}`);
-    if (targetHub) targetHub.classList.remove('hidden');
+  const targetHub = document.getElementById(`hub-${hubId}`);
+  if (targetHub) targetHub.classList.remove('hidden');
 
-    document.querySelectorAll('[id^="nav-"]').forEach(btn => {
-        if (btn.id === `nav-${hubId}`) {
-            btn.classList.add('bg-slate-900', 'text-white', 'border-l-emerald-500');
-            btn.classList.remove('text-slate-400', 'border-transparent');
-        } else {
-            btn.classList.remove('bg-slate-900', 'text-white', 'border-l-emerald-500');
-            btn.classList.add('text-slate-400', 'border-transparent');
-        }
-    });
+  document.querySelectorAll('[id^="nav-"]').forEach(btn => {
+    const isActive = btn.id === `nav-${hubId}`;
+    btn.classList.toggle('bg-slate-900', isActive);
+    btn.classList.toggle('text-white', isActive);
+    btn.classList.toggle('text-slate-400', !isActive);
+    btn.classList.toggle('border-l-emerald-500', isActive);
+    btn.classList.toggle('border-transparent', !isActive);
+    if (isActive) btn.classList.add('active');
+    else btn.classList.remove('active');
+  });
 
-    const firstSubBtn = targetHub?.querySelector('[data-target-view]');
-    if (firstSubBtn) firstSubBtn.click();
+  if (hubId === 'career') {
+    setTimeout(() => initCareerHubUniversalFilter(), 100);
+  }
+
+  const firstSubBtn = targetHub?.querySelector('[data-target-view]');
+  if (firstSubBtn) firstSubBtn.click();
 }
 
 function switchSubSection(system, action) {
-    console.log(`🎛️ Processing router switch module for System: "${system}" | Action: "${action}"`);
- 
-    document.querySelectorAll('[id^="view-"], .section-view').forEach(view => {
-        view.classList.add('hidden');
-    });
- 
-    const targetViewEl = document.getElementById(`view-${action}`);
-    if (targetViewEl) {
-        targetViewEl.classList.remove('hidden');
-    } else {
-        console.error(`🛑 Structural Error: DOM container "#view-${action}" does not exist!`);
-        return;
-    }
- 
-    const initMap = {
-        'career-users': () => initializeModule_career_users(),
-        'career-earnings': () => initializeModule_career_earnings(),
-        'career-settlements': () => initializeModule_career_settlements(),
-        'career-messages': () => initializeModule_career_messages(),
-        'career-elevation': () => initializeModule_career_elevation(),
- 
-        'assessment-students': () => initializeModule_assess_submissions(),
-        'assessment-courses': () => initializeModule_assessment_courses(),
-        'assessment-questions': () => initializeModule_assessment_questions(),
-        'assessment-certificates': () => loadCertificateData(),
-        'assessment-messages': () => loadAcademicSupportMessages(),
-        'assessment-applications': () => initializeModule_assessment_applications(),
- 
-        'client-submitted': () => loadClientSubmittedProjects(),
-        'client-onboarded': () => loadProductionFulfillment(),
- 
-        'leads-matrix': () => loadLeadsMatrix(),
-        'leads-broadcast': () => loadBroadcastQueue(),
-        'leads-drive': () => loadMailDriveReports()
-    };
- 
-    const initFn = initMap[action];
-    if (initFn) {
-        console.log(`🚀 Executing initialization module for ${system}: ${action}`);
-        initFn();
-    } else {
-        console.warn(`⚠️ No initialization mapped for action: ${action}`);
-    }
+  document.querySelectorAll('[id^="view-"]').forEach(view => view.classList.add('hidden'));
+
+  const targetViewEl = document.getElementById(`view-${action}`);
+  if (targetViewEl) {
+    targetViewEl.classList.remove('hidden');
+    targetViewEl.style.display = '';
+  } else {
+    console.error(`DOM container "#view-${action}" does not exist!`);
+    return;
+  }
+
+  const initMap = {
+    'career-users': initializeModule_career_users,
+    'career-earnings': initializeModule_career_earnings,
+    'career-settlements': initializeModule_career_settlements,
+    'career-messages': initializeModule_career_messages,
+    'career-elevation': initializeModule_career_elevation,
+    'assessment-students': initializeModule_assess_submissions,
+    'assessment-courses': initializeModule_assessment_courses,
+    'assessment-questions': initializeModule_assessment_questions,
+    'assessment-certificates': loadCertificateData,
+    'assessment-messages': loadAcademicSupportMessages,
+    'assessment-applications': initializeModule_assessment_applications,
+    'client-submitted': loadClientSubmittedProjects,
+    'client-onboarded': loadProductionFulfillment,
+    'leads-matrix': loadLeadsMatrix,
+    'leads-broadcast': loadBroadcastQueue,
+    'leads-drive': loadMailDriveReports
+  };
+
+  const initFn = initMap[action];
+  if (initFn) initFn();
 }
 
 function initializeNavigation() {
-    const masterMap = {
-        'nav-career': 'career',
-        'nav-assessment': 'assessment',
-        'nav-client': 'client',
-        'nav-leads': 'leads'
-    };
- 
-    Object.entries(masterMap).forEach(([id, hub]) => {
-        const btn = document.getElementById(id);
-        if (btn) btn.addEventListener('click', () => switchMasterHub(hub));
-    });
- 
-    const targetLinks = document.querySelectorAll(
+  document.querySelectorAll(
+    '.career-subview-link, .assessment-subview-link, .leads-subview-link, .client-subview-link, [data-target-view]'
+  ).forEach(link => {
+    link.addEventListener('click', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const subTabId = this.getAttribute('data-target-view');
+      if (!subTabId) return;
+
+      const systemName = subTabId.split('-')[0];
+
+      document.querySelectorAll(
         '.career-subview-link, .assessment-subview-link, .leads-subview-link, .client-subview-link, [data-target-view]'
-    );
-    
-    targetLinks.forEach(link => {
-        link.addEventListener('click', function(event) {
-            event.preventDefault();
-            event.stopPropagation();
-            
-            const subTabId = this.getAttribute('data-target-view');
-            if (!subTabId) return;
- 
-            const parts = subTabId.split('-');
-            const systemName = parts[0];
-            
-            console.log(`🔗 Sub-link clicked: ${subTabId} (system: ${systemName})`);
-            
-            document.querySelectorAll('.career-subview-link, .assessment-subview-link, .leads-subview-link, .client-subview-link, [data-target-view]').forEach(link => {
-                link.classList.remove('active');
-            });
-            this.classList.add('active');
-            
-            switchSubSection(systemName, subTabId);
-        });
+      ).forEach(l => l.classList.remove('active'));
+      this.classList.add('active');
+
+      switchSubSection(systemName, subTabId);
     });
+  });
 }
 
 function updateKPIs() {
-    executeSecureBridgeCall('career', 'career-earnings', {}).then(data => {
-        if (data.success && data.data) {
-            const gross = data.data
-                .filter(r => r.PayoutStatus === 'Paid')
-                .reduce((sum, r) => sum + parseFloat(r.EarningsNaira || 0), 0);
-            const elem = document.getElementById('kpi-gross');
-            if (elem) elem.textContent = fmtNaira(gross);
-        }
-    });
-    
-    executeSecureBridgeCall('career', 'career-earnings', {}).then(data => {
-        if (data.success && data.data) {
-            const active = data.data
-                .filter(r => r.PayoutStatus === 'Approved')
-                .reduce((sum, r) => sum + parseFloat(r.EarningsNaira || 0), 0);
-            const elem = document.getElementById('kpi-payout');
-            if (elem) elem.textContent = fmtNaira(active);
-        }
-    });
-    
-    executeSecureBridgeCall('client', 'client-onboarded', {}).then(data => {
-        if (data.success && data.data) {
-            const count = data.data.filter(r => r.Status === 'Completed').length;
-            const elem = document.getElementById('kpi-projects');
-            if (elem) elem.textContent = count + ' Units';
-        }
-    });
+  executeSecureBridgeCall('career', 'career-earnings', {}).then(data => {
+    if (data.success && data.data) {
+      const gross = data.data
+        .filter(r => r.PayoutStatus === 'Paid')
+        .reduce((sum, r) => sum + parseFloat(r.EarningsNaira || r.AmountToCharge || 0), 0);
+      const elem = document.getElementById('kpi-gross');
+      if (elem) elem.textContent = fmtNaira(gross);
+
+      const active = data.data
+        .filter(r => r.PayoutStatus === 'Approved')
+        .reduce((sum, r) => sum + parseFloat(r.EarningsNaira || r.AmountToCharge || 0), 0);
+      const payoutElem = document.getElementById('kpi-payout');
+      if (payoutElem) payoutElem.textContent = fmtNaira(active);
+    }
+  });
+
+  executeSecureBridgeCall('client', 'client-onboarded', {}).then(data => {
+    if (data.success && data.data) {
+      const count = data.data.filter(r => r.Status === 'Completed').length;
+      const elem = document.getElementById('kpi-projects');
+      if (elem) elem.textContent = count + ' Units';
+    }
+  });
+}
+
+function filterTableByState(data, filterState) {
+  if (!filterState.levelFilter && !filterState.statusFilter && !filterState.dateRangeStart && !filterState.dateRangeEnd) {
+    return data;
+  }
+  return data.filter(row => {
+    if (filterState.levelFilter && row.Level != filterState.levelFilter) return false;
+    if (filterState.statusFilter) {
+      const statusVal = filterState.statusFilter === 'Approved';
+      if (row.Approved !== statusVal && row.Approved !== String(statusVal)) return false;
+    }
+    if (filterState.dateRangeStart) {
+      const rowDate = new Date(row.Timestamp || row.Date || '');
+      if (rowDate < new Date(filterState.dateRangeStart)) return false;
+    }
+    if (filterState.dateRangeEnd) {
+      const rowDate = new Date(row.Timestamp || row.Date || '');
+      if (rowDate > new Date(filterState.dateRangeEnd)) return false;
+    }
+    return true;
+  });
+}
+
+function initCareerHubUniversalFilter() {
+  const careerUsersView = document.getElementById('view-career-users');
+  if (!careerUsersView || careerUsersView.querySelector('#careerFilterLevel')) return;
+
+  const filterHtml = `
+    <div id="careerHubFilter" class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 grid grid-cols-4 gap-3">
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">User Level</label>
+        <select id="careerFilterLevel" onchange="applyCareerFilter()" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+          <option value="">All Levels</option>
+          <option value="1">Level 1</option>
+          <option value="2">Level 2</option>
+          <option value="3">Level 3</option>
+          <option value="4">Level 4</option>
+          <option value="5">Level 5</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Status</label>
+        <select id="careerFilterStatus" onchange="applyCareerFilter()" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+          <option value="">All Status</option>
+          <option value="Approved">Approved</option>
+          <option value="Pending">Pending</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">From Date</label>
+        <input type="date" id="careerFilterDateStart" onchange="applyCareerFilter()" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">To Date</label>
+        <input type="date" id="careerFilterDateEnd" onchange="applyCareerFilter()" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+      </div>
+    </div>
+  `;
+
+  const firstChild = careerUsersView.querySelector('div:first-child');
+  if (firstChild) firstChild.insertAdjacentHTML('afterend', filterHtml);
+}
+
+function applyCareerFilter() {
+  CAREER_FILTER_STATE.levelFilter = document.getElementById('careerFilterLevel')?.value || null;
+  CAREER_FILTER_STATE.statusFilter = document.getElementById('careerFilterStatus')?.value || null;
+  CAREER_FILTER_STATE.dateRangeStart = document.getElementById('careerFilterDateStart')?.value || null;
+  CAREER_FILTER_STATE.dateRangeEnd = document.getElementById('careerFilterDateEnd')?.value || null;
+
+  initializeModule_career_users();
 }
 
 async function initializeModule_career_users() {
-    const tbodyId = "careerUsersTableBody";
-    showTableSkeleton(tbodyId, 6);
- 
-    const res = await executeSecureBridgeCall("career", "career-users", {});
- 
-    const tbody = document.getElementById(tbodyId);
-    if (!tbody) {
-        console.error("DOM element #careerUsersTableBody not found");
-        return;
-    }
- 
-    if (!res.success || !res.data || res.data.length === 0) {
-        tbody.innerHTML = emptyRow("No users found.", 6);
-        if (!res.success) showToast(res.error || "Failed to load users.", "error");
-        return;
-    }
- 
-    tbody.innerHTML = res.data.map(u => `
-        <tr>
-            <td class="p-3 text-slate-400">${escapeHtml(u["UniqueID"] || u["uniqueID"] || "—")}</td>
-            <td class="p-3 font-sans font-medium text-slate-300">
-                <div>${escapeHtml(u["Name"] || u["name"] || "—")}</div>
-                <div class="text-[10px] text-slate-500 font-mono">${escapeHtml(u["Email"] || u["email"] || "—")}</div>
-            </td>
-            <td class="p-3 text-slate-400 font-sans text-xs">
-                <div>${escapeHtml(u["AccountName"] || u["accountName"] || "—")}</div>
-                <div>${escapeHtml(u["AccountNumber"] || u["accountNumber"] || "—")}</div>
-                <div class="italic text-slate-500">${escapeHtml(u["BankName"] || u["bankName"] || "—")}</div>
-            </td>
-            <td class="p-3 text-center text-slate-300 font-bold">Level ${escapeHtml(u["Level"] || u["level"] || 1)}</td>
-            <td class="p-3 text-center">${badge(u["Approved"] === true || u["Approved"] === "TRUE" ? "Approved" : "Pending")}</td>
-            <td class="p-3 text-center">
-                <button onclick="openEditModal('${escapeHtml(u["UniqueID"] || u["uniqueID"])}', ${JSON.stringify(u).replace(/"/g, '&quot;')}, 'career-users')"
-                    style="font-size:11px;padding:4px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
-                    Edit
-                </button>
-            </td>
-        </tr>
-    `).join("");
- 
-    showToast(`Loaded ${res.data.length} users`, "success");
-    updateKPIs();
-}
+  const tbodyId = "careerUsersTableBody";
+  showTableSkeleton(tbodyId, 6);
 
-// UPDATE EARNINGS REGISTRY TABLE
-// Replace initializeModule_career_earnings
+  const res = await executeSecureBridgeCall("career", "career-users", {});
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+
+  if (!res.success || !res.data || res.data.length === 0) {
+    tbody.innerHTML = emptyRow(res.success ? "No users found." : (res.error || "Failed to load users."), 6);
+    if (!res.success) showToast(res.error || "Failed to load users.", "error");
+    return;
+  }
+
+  let data = filterTableByState(res.data, CAREER_FILTER_STATE);
+  CACHED_CAREER_USERS = res.data;
+
+  tbody.innerHTML = data.map(u => `
+    <tr>
+      <td class="p-3 text-slate-400 font-mono text-xs">${escapeHtml(u.UniqueID || u.uniqueID || "—")}</td>
+      <td class="p-3">
+        <div class="font-medium text-slate-300">${escapeHtml(u.Name || u.name || "—")}</div>
+        <div class="text-[10px] text-slate-500 font-mono">${escapeHtml(u.Email || u.email || "—")}</div>
+      </td>
+      <td class="p-3 text-xs">
+        <div class="text-slate-300">${escapeHtml(u.AccountName || u.accountName || "—")}</div>
+        <div class="text-slate-400">${escapeHtml(u.AccountNumber || u.accountNumber || "—")}</div>
+        <div class="text-slate-500 italic">${escapeHtml(u.BankName || u.bankName || "—")}</div>
+      </td>
+      <td class="p-3 text-center text-slate-300 font-bold">Level ${escapeHtml(String(u.Level || u.level || 1))}</td>
+      <td class="p-3 text-center">${badge((u.Approved === true || u.Approved === "TRUE") ? "Approved" : "Pending")}</td>
+      <td class="p-3 text-center">
+        <button onclick="openEditModal('${escapeHtml(u.UniqueID || u.uniqueID)}', ${JSON.stringify(u).replace(/"/g, '&quot;')}, 'career-users')"
+          style="font-size:11px;padding:4px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
+          Edit
+        </button>
+      </td>
+    </tr>
+  `).join("");
+
+  showToast(`Loaded ${data.length} users`, "success");
+  updateKPIs();
+}
 
 async function initializeModule_career_earnings() {
   const tbodyId = "careerEarningsTableBody";
-  showTableSkeleton(tbodyId, 8);
- 
+  showTableSkeleton(tbodyId, 6);
+
   const res = await executeSecureBridgeCall("career", "career-earnings", {});
-  let data = res.data || [];
-  data = filterTableByState(data, CAREER_FILTER_STATE);
-  
   const tbody = document.getElementById(tbodyId);
   if (!tbody) return;
- 
-  if (!data.length) {
-    tbody.innerHTML = emptyRow("No earnings found.", 8);
+
+  if (!res.success || !res.data || res.data.length === 0) {
+    tbody.innerHTML = emptyRow("No earnings found.", 6);
     return;
   }
- 
+
+  const data = res.data;
+
   tbody.innerHTML = data.map(r => `
     <tr>
       <td class="p-3 text-slate-500">${fmtDate(r.Date || r.date)}</td>
       <td class="p-3 text-slate-400 font-mono">${escapeHtml(r.PartnerID || r["Partner ID"] || r.partnerId || "—")}</td>
       <td class="p-3 text-slate-300">${escapeHtml(r.ClientName || r["Client Name"] || r.clientName || "—")}</td>
       <td class="p-3 text-slate-400">${escapeHtml(r.Service || r.service || "—")}</td>
-      <td class="p-3 text-right font-bold text-emerald-400">${fmtNaira(r.AmountToCharge || r["Amount Charged"] || 0)}</td>
+      <td class="p-3 text-right font-bold text-emerald-400">${fmtNaira(r.AmountToCharge || r["Amount Charged"] || r.EarningsNaira || 0)}</td>
       <td class="p-3 text-center">${badge(r.PayoutStatus || r["Payout Status"] || "Pending")}</td>
       <td class="p-3 text-center">${badge(r.Status || r.status || "Pending")}</td>
       <td class="p-3 text-center">
-        <button onclick="openEditModal('${escapeHtml(r.Date)}', ${JSON.stringify(r).replace(/"/g, '&quot;')}, 'career-earnings')" style="font-size:11px;padding:3px 6px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
+        <button onclick="openEditModal('${escapeHtml(r.PartnerID || r.Date)}', ${JSON.stringify(r).replace(/"/g, '&quot;')}, 'career-earnings')"
+          style="font-size:11px;padding:3px 6px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
           Edit
         </button>
       </td>
@@ -1568,40 +1598,40 @@ async function initializeModule_career_earnings() {
   `).join("");
 }
 
-// UPDATE SETTLEMENTS TABLE
-// Replace initializeModule_career_settlements
-
 async function initializeModule_career_settlements() {
   const tbodyId = "careerSettlementsTableBody";
   showTableSkeleton(tbodyId, 6);
- 
+
   const res = await executeSecureBridgeCall("career", "career-settlements", {});
-  let data = res.data || [];
-  
   const tbody = document.getElementById(tbodyId);
   if (!tbody) return;
- 
-  if (!data.length) {
+
+  if (!res.success || !res.data || res.data.length === 0) {
     tbody.innerHTML = emptyRow("No settlements found.", 6);
     return;
   }
- 
-  tbody.innerHTML = data.map(r => `
+
+  tbody.innerHTML = res.data.map(r => `
     <tr>
-      <td class="p-3 text-slate-500 font-mono text-xs">${escapeHtml(r.Email || r.email || "—")}</td>
-      <td class="p-3 font-bold text-slate-200">${fmtNaira(r.AmountNaira || r.amountNaira || 0)}</td>
+      <td class="p-3 text-slate-500 font-mono text-xs">${escapeHtml(r.QueueID || r.queueID || "—")}</td>
+      <td class="p-3 text-slate-300">${escapeHtml(r.Email || r.email || "—")}</td>
+      <td class="p-3 text-xs">
+        <div class="text-slate-300">${escapeHtml(r.AccountName || "—")}</div>
+        <div class="text-slate-500 font-mono">${escapeHtml(r.AccountNumber || "—")} · ${escapeHtml(r.BankName || "—")}</div>
+      </td>
+      <td class="p-3 text-right font-bold text-emerald-400">${fmtNaira(r.AmountNaira || r.amountNaira || 0)}</td>
       <td class="p-3 text-center">
-        <select onchange="updateSettlementStatus('${escapeHtml(r.Email || r.email)}', this.value)" class="text-xs bg-slate-900 border border-slate-800 rounded p-1 text-white focus:outline-none">
+        <select onchange="updateSettlementStatus('${escapeHtml(r.Email || r.email)}', this.value)"
+          class="text-xs bg-slate-900 border border-slate-800 rounded p-1 text-white focus:outline-none">
           <option value="Pending" ${(r.Status || r.status) === 'Pending' ? 'selected' : ''}>Pending</option>
           <option value="Approved" ${(r.Status || r.status) === 'Approved' ? 'selected' : ''}>Approved</option>
           <option value="Denied" ${(r.Status || r.status) === 'Denied' ? 'selected' : ''}>Denied</option>
           <option value="Investigating" ${(r.Status || r.status) === 'Investigating' ? 'selected' : ''}>Investigating</option>
         </select>
       </td>
-      <td class="p-3 text-xs text-slate-500">${escapeHtml((r.AdminNotes || r.adminNotes || "—").substring(0, 50))}</td>
-      <td class="p-3 text-right font-mono text-emerald-400">${fmtNaira(r.AmountNaira || r.amountNaira || 0)}</td>
       <td class="p-3 text-center">
-        <button onclick="openEditModal('${escapeHtml(r.Email || r.email)}', ${JSON.stringify(r).replace(/"/g, '&quot;')}, 'career-settlements')" style="font-size:11px;padding:3px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
+        <button onclick="openEditModal('${escapeHtml(r.Email || r.email)}', ${JSON.stringify(r).replace(/"/g, '&quot;')}, 'career-settlements')"
+          style="font-size:11px;padding:3px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
           Edit
         </button>
       </td>
@@ -1610,57 +1640,67 @@ async function initializeModule_career_settlements() {
 }
 
 function updateSettlementStatus(email, newStatus) {
-  executeSecureBridgeCall("career", "update-settlement-status", {
-    email: email,
-    status: newStatus
-  }).then(res => {
-    if (res.success) {
-      showToast("Settlement status updated.", "success");
-      initializeModule_career_settlements();
-    } else {
-      showToast(res.error || "Update failed.", "error");
-    }
+  executeSecureBridgeCall("career", "update-settlement-status", { email, status: newStatus }).then(res => {
+    showToast(res.success ? "Settlement status updated." : (res.error || "Update failed."), res.success ? "success" : "error");
+    if (res.success) initializeModule_career_settlements();
   });
 }
 
-// ELEVATION MATRIX WITH TABLE
-// Replace initializeModule_career_elevation
+async function initializeModule_career_messages() {
+  const tbodyId = "careerMessagesLogsTableBody";
+  showTableSkeleton(tbodyId, 4);
+
+  const res = await executeSecureBridgeCall("career", "career-messages", {});
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+
+  if (!res.success || !res.data || res.data.length === 0) {
+    tbody.innerHTML = emptyRow("No messages found.", 4);
+    return;
+  }
+
+  tbody.innerHTML = res.data.map(m => `
+    <tr>
+      <td class="p-3 text-slate-500">${fmtDate(m.Timestamp || m.timestamp)}</td>
+      <td class="p-3 text-slate-300">${escapeHtml(m["Recipient Email"] || m.recipientEmail || m.RecipientEmail || "—")}</td>
+      <td class="p-3 text-slate-200">${escapeHtml((m.Subject || m.subject || "No subject").substring(0, 40))}</td>
+      <td class="p-3 text-center">${badge((m.isRead === true || m.isRead === "TRUE") ? "Read" : "Delivered")}</td>
+    </tr>
+  `).join("");
+}
 
 async function initializeModule_career_elevation() {
   const res = await executeSecureBridgeCall("career", "elevation-requests", {});
-  
+
   const container = document.getElementById('view-career-elevation');
   if (!container) return;
-  
-  const existingTable = container.querySelector('.elevation-requests-table');
-  if (existingTable) existingTable.remove();
-  
-  const tableHtml = `
-    <div class="elevation-requests-table flex-1 flex flex-col overflow-hidden space-y-4 mb-6">
-      <div>
-        <h4 class="text-sm font-bold text-white mb-2">Pending Elevation Requests</h4>
-      </div>
-      <div class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
-        <table class="w-full text-left border-collapse text-xs">
-          <thead class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
-            <tr>
-              <th class="p-3">Request Date</th>
-              <th class="p-3">User Email</th>
-              <th class="p-3">Request Type</th>
-              <th class="p-3">Current Level</th>
-              <th class="p-3">Message</th>
-              <th class="p-3 text-center">Status</th>
-              <th class="p-3 text-center">Action</th>
-            </tr>
-          </thead>
-          <tbody id="elevationRequestsBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
-        </table>
-      </div>
+
+  const existing = container.querySelector('.elevation-requests-table');
+  if (existing) existing.remove();
+
+  const tableDiv = document.createElement('div');
+  tableDiv.className = 'elevation-requests-table flex-1 flex flex-col overflow-hidden space-y-2 mt-4';
+  tableDiv.innerHTML = `
+    <h4 class="text-sm font-bold text-white shrink-0">Pending Elevation Requests</h4>
+    <div class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+          <tr>
+            <th class="p-3">Request Date</th>
+            <th class="p-3">User Email</th>
+            <th class="p-3">Request Type</th>
+            <th class="p-3">Current Level</th>
+            <th class="p-3">Message</th>
+            <th class="p-3 text-center">Status</th>
+            <th class="p-3 text-center">Action</th>
+          </tr>
+        </thead>
+        <tbody id="elevationRequestsBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+      </table>
     </div>
   `;
-  
-  container.insertAdjacentHTML('beforeend', tableHtml);
-  
+  container.appendChild(tableDiv);
+
   const tbody = document.getElementById('elevationRequestsBody');
   if (res.success && res.data && res.data.length > 0) {
     tbody.innerHTML = res.data.map(r => `
@@ -1672,1046 +1712,478 @@ async function initializeModule_career_elevation() {
         <td class="p-3 text-slate-400">${escapeHtml((r.Message || r.message || "").substring(0, 40))}</td>
         <td class="p-3 text-center">${badge(r.Status || r.status || "Pending")}</td>
         <td class="p-3 text-center">
-          <button onclick="approveElevation('${escapeHtml(r.Email || r.email)}')" class="text-emerald-400 text-xs px-2 py-1 border border-emerald-500/30 rounded hover:bg-emerald-950">
+          <button onclick="approveElevation('${escapeHtml(r.Email || r.email)}')"
+            class="text-emerald-400 text-xs px-2 py-1 border border-emerald-500/30 rounded hover:bg-emerald-950 transition-colors">
             Approve
           </button>
         </td>
       </tr>
     `).join("");
   } else {
-    tbody.innerHTML = emptyRow("No requests found.", 7);
+    tbody.innerHTML = emptyRow("No elevation requests found.", 7);
   }
 }
 
 function approveElevation(email) {
-  executeSecureBridgeCall("career", "approve-elevation", {
-    email: email
-  }).then(res => {
+  executeSecureBridgeCall("career", "approve-elevation", { email }).then(res => {
+    showToast(res.success ? "Elevation approved." : (res.error || "Approval failed."), res.success ? "success" : "error");
     if (res.success) {
-      showToast("Elevation approved.", "success");
       initializeModule_career_elevation();
       initializeModule_career_users();
-    } else {
-      showToast(res.error || "Approval failed.", "error");
     }
   });
 }
 
-// ASSESSMENT APPLICATIONS SUBSECTION
-// Add to assessment sub-nav before "Academic Support"
-const applicationsViewHtml = `
-  <div id="view-assessment-applications" class="assessment-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
-    <div class="flex justify-between items-center shrink-0">
-      <div>
-        <h3 class="text-lg font-bold text-white">Course Applications Management</h3>
-        <p class="text-xs text-slate-400">Track and manage all student course applications.</p>
-      </div>
-    </div>
-    <div class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
-      <table class="w-full text-left border-collapse text-xs">
-        <thead class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
-          <tr>
-            <th class="p-3">Application ID</th>
-            <th class="p-3">Student Email</th>
-            <th class="p-3">Course Name</th>
-            <th class="p-3">Applied Date</th>
-            <th class="p-3 text-center">Status</th>
-            <th class="p-3 text-center">Action</th>
-          </tr>
-        </thead>
-        <tbody id="applicationsTableBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
-      </table>
-    </div>
-  </div>
-`;
+async function submitManualTierChange(event) {
+  event.preventDefault();
+  const email = document.getElementById("tierTargetEmail")?.value?.trim();
+  const level = document.getElementById("tierAssignmentLevel")?.value;
 
-// After assessment-courses view, insert applicationsViewHtml
+  if (!email || !level) { showToast("Email and tier level are required.", "error"); return; }
+
+  const btn = event.target.querySelector("button[type=submit]");
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+
+  const res = await executeSecureBridgeCall("career", "career-elevation-save", { email, level });
+
+  if (btn) { btn.disabled = false; btn.textContent = "Commit Structural Override"; }
+
+  showToast(
+    res.success ? `Tier updated to ${level} for ${email}.` : (res.error || "Update failed."),
+    res.success ? "success" : "error"
+  );
+  if (res.success) { event.target.reset(); initializeModule_career_users(); }
+}
+
+function executeAutomatedBatchElevation() {
+  showToast("Batch elevation calculation initiated. Processing all tier candidates...", "info");
+  executeSecureBridgeCall("career", "batch-elevation-calculate", {}).then(res => {
+    showToast(
+      res.success ? `Batch processing completed. ${res.processedCount || 0} records updated.` : (res.error || "Batch processing failed."),
+      res.success ? "success" : "error"
+    );
+    if (res.success) initializeModule_career_elevation();
+  });
+}
+
+async function submitCareerHubMessage(event) {
+  event.preventDefault();
+  const recipientEmail = document.getElementById("msgRecipientEmail")?.value?.trim();
+  const subject = document.getElementById("msgSubject")?.value?.trim();
+  const body = document.getElementById("msgBody")?.value?.trim();
+
+  if (!recipientEmail || !subject || !body) { showToast("Recipient, subject, and message body are all required.", "error"); return; }
+
+  const btn = event.target.querySelector("button[type=submit]");
+  if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
+
+  const res = await executeSecureBridgeCall("career", "career-messages-send", {
+    recipientEmail, subject, body, fromEmail: CURRENT_ADMIN_IDENTITY || "admin@thevictorias.com.ng"
+  });
+
+  if (btn) { btn.disabled = false; btn.textContent = "Deploy System Dispatch"; }
+
+  showToast(res.success ? `Message sent to ${recipientEmail}.` : (res.error || "Send failed."), res.success ? "success" : "error");
+  if (res.success) { event.target.reset(); initializeModule_career_messages(); }
+}
+
+async function initializeModule_assess_submissions() {
+  const tbodyId = "assessmentSubmissionsTableBody";
+  showTableSkeleton(tbodyId, 7);
+
+  const res = await executeSecureBridgeCall("assessment", "assessment-students", {});
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+
+  if (!res.success || !res.data || res.data.length === 0) {
+    tbody.innerHTML = emptyRow("No submissions found.", 7);
+    return;
+  }
+
+  tbody.innerHTML = res.data.map(s => `
+    <tr>
+      <td class="p-3 text-slate-500 font-mono">${escapeHtml(s.submissionId || s.SubmissionID || "—")}</td>
+      <td class="p-3 text-slate-400 font-mono">${escapeHtml(s.userEmail || s.StudentEmail || "—")}</td>
+      <td class="p-3 text-slate-300">${escapeHtml(s.assessmentId || s.AssessmentID || s.trackId || "—")}</td>
+      <td class="p-3 font-mono text-right font-bold text-slate-200">${parseFloat(s.rawScore || s["Raw Score"] || 0).toFixed(1)}</td>
+      <td class="p-3 font-mono text-right font-bold text-slate-200">${parseFloat(s.percentageGrade || s.Percentage || 0).toFixed(1)}%</td>
+      <td class="p-3 text-center">${badge(s.status || s.Status || "Completed")}</td>
+      <td class="p-3 text-center">
+        <button onclick="openEditModal('${escapeHtml(s.submissionId || s.SubmissionID)}', ${JSON.stringify(s).replace(/"/g, '&quot;')}, 'assessment-students')"
+          style="font-size:11px;padding:3px 6px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
+          Edit
+        </button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+async function loadCertificateData() {
+  loadCertificateTableData(currentCertViewMode);
+}
+
+async function loadCertificateTableData(mode) {
+  currentCertViewMode = mode;
+  const tbodyId = "certificateRegistryTableBody";
+  showTableSkeleton(tbodyId, 5);
+
+  const btnApproved = document.getElementById("btnCertFilterApproved");
+  const btnPending = document.getElementById("btnCertFilterPending");
+
+  if (btnApproved) {
+    btnApproved.className = mode === 'approved'
+      ? "px-3 py-1 bg-emerald-950 text-emerald-400 text-xs rounded border border-emerald-800 font-medium"
+      : "px-3 py-1 bg-slate-950 text-slate-400 text-xs rounded border border-slate-800 font-medium hover:text-white";
+  }
+  if (btnPending) {
+    btnPending.className = mode === 'pending'
+      ? "px-3 py-1 bg-orange-950 text-orange-400 text-xs rounded border border-orange-800 font-medium"
+      : "px-3 py-1 bg-slate-950 text-slate-400 text-xs rounded border border-slate-800 font-medium hover:text-white";
+  }
+
+  const res = await executeSecureBridgeCall("assessment", "assessment-certificates", {});
+  let data = res.data || [];
+
+  if (mode === 'pending') {
+    data = data.filter(c => (c.Status || c.status || "").toLowerCase() === 'pending');
+  }
+
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+
+  if (!data.length) { tbody.innerHTML = emptyRow("No certificates found.", 5); return; }
+
+  tbody.innerHTML = data.map(c => `
+    <tr>
+      <td class="p-3 font-mono text-slate-500">${escapeHtml(c.CertCode || c["Certificate Code"] || "—")}</td>
+      <td class="p-3 text-slate-300">${escapeHtml(c.StudentEmail || c.Email || "—")}</td>
+      <td class="p-3 text-slate-200">${escapeHtml(c.CourseName || c.Course || "—")}</td>
+      <td class="p-3 text-slate-500">${fmtDate(c.Timestamp || c.Date)}</td>
+      <td class="p-3 text-right">
+        <div class="flex items-center justify-end gap-2">
+          ${badge(c.Status || "Pending")}
+          <button onclick="openEditModal('${escapeHtml(c.CertCode || c["Certificate Code"])}', ${JSON.stringify(c).replace(/"/g, '&quot;')}, 'assessment-certificates')"
+            style="font-size:11px;padding:4px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
+            Edit
+          </button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function toggleCertificateViewFilter(filterType) {
+  loadCertificateTableData(filterType);
+}
+
+async function initializeModule_assessment_courses() {
+  const tbodyId = "assessmentTracksTableBody";
+  showTableSkeleton(tbodyId, 5);
+
+  const res = await executeSecureBridgeCall("assessment", "assessment-courses", {});
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+
+  if (!res.success || !res.data || res.data.length === 0) {
+    tbody.innerHTML = emptyRow("No courses found.", 5);
+    return;
+  }
+
+  tbody.innerHTML = res.data.map(c => `
+    <tr>
+      <td class="p-3 text-blue-400 font-bold font-mono">${escapeHtml(c.CourseID || c["Track Schema ID"] || "—")}</td>
+      <td class="p-3 text-slate-200">${escapeHtml(c.CourseName || c.Title || "—")}</td>
+      <td class="p-3 text-center text-slate-400">${c.Duration || 0} min</td>
+      <td class="p-3 text-center font-bold text-amber-400">${c["PassMark%"] || c.PassMark || 70}%</td>
+      <td class="p-3 text-center">
+        <button onclick="openEditModal('${escapeHtml(c.CourseID || c["Track Schema ID"])}', ${JSON.stringify(c).replace(/"/g, '&quot;')}, 'assessment-courses')"
+          style="font-size:11px;padding:4px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
+          Edit
+        </button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+async function initializeModule_assessment_questions() {
+  const tbodyId = "questionsGridTableBody";
+  showTableSkeleton(tbodyId, 6);
+
+  const res = await executeSecureBridgeCall("assessment", "assessment-questions", {});
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+
+  if (!res.success || !res.data || res.data.length === 0) {
+    tbody.innerHTML = emptyRow("No questions found.", 6);
+    return;
+  }
+
+  tbody.innerHTML = res.data.map(q => `
+    <tr>
+      <td class="p-3 text-slate-500 font-mono">${escapeHtml(q.QuestionID || q["Question ID"] || "—")}</td>
+      <td class="p-3 text-blue-400 font-bold">${escapeHtml(q.CourseID || q["Track ID"] || "—")}</td>
+      <td class="p-3 text-slate-300" title="${escapeHtml(q.QuestionText || q.Question || "")}">${escapeHtml((q.QuestionText || q.Question || "").substring(0, 60))}</td>
+      <td class="p-3 text-slate-400 font-mono text-xs">${escapeHtml(q.OptionA || "A")} | ${escapeHtml(q.OptionB || "B")} | ${escapeHtml(q.OptionC || "C")} | ${escapeHtml(q.OptionD || "D")}</td>
+      <td class="p-3 text-center font-bold text-emerald-400">${escapeHtml(q.CorrectAnswer || q.Correct || "—")}</td>
+      <td class="p-3 text-center">
+        <button onclick="openEditModal('${escapeHtml(q.QuestionID || q["Question ID"])}', ${JSON.stringify(q).replace(/"/g, '&quot;')}, 'assessment-questions')"
+          style="font-size:11px;padding:4px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
+          Edit
+        </button>
+      </td>
+    </tr>
+  `).join("");
+}
 
 async function initializeModule_assessment_applications() {
   const tbodyId = "applicationsTableBody";
+  if (!document.getElementById(tbodyId)) return;
   showTableSkeleton(tbodyId, 6);
- 
+
   const res = await executeSecureBridgeCall("assessment", "assessment-applications", {});
   const tbody = document.getElementById(tbodyId);
   if (!tbody) return;
- 
+
   if (!res.success || !res.data || res.data.length === 0) {
     tbody.innerHTML = emptyRow("No applications found.", 6);
     return;
   }
- 
+
   tbody.innerHTML = res.data.map(a => `
     <tr>
       <td class="p-3 font-mono text-slate-500">${escapeHtml(a.ApplicationID || a["Application ID"] || "—")}</td>
-      <td class="p-3 text-slate-300">${escapeHtml(a.StudentEmail || a["Email"] || "—")}</td>
+      <td class="p-3 text-slate-300">${escapeHtml(a.StudentEmail || a.Email || "—")}</td>
       <td class="p-3 text-slate-200">${escapeHtml(a.CourseName || a["Course Name"] || "—")}</td>
       <td class="p-3 text-slate-500">${fmtDate(a.AppliedAt || a["Applied Date"])}</td>
       <td class="p-3 text-center">${badge(a.Status || "Pending")}</td>
       <td class="p-3 text-center">
-        <button onclick="openEditModal('${escapeHtml(a.ApplicationID || a["Application ID"])}', ${JSON.stringify(a).replace(/"/g, '&quot;')}, 'assessment-applications')" style="font-size:11px;padding:3px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
+        <button onclick="openEditModal('${escapeHtml(a.ApplicationID || a["Application ID"])}', ${JSON.stringify(a).replace(/"/g, '&quot;')}, 'assessment-applications')"
+          style="font-size:11px;padding:3px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
           Edit
         </button>
       </td>
     </tr>
   `).join("");
 }
-
-async function loadLeadsMatrix() {
-    const tbodyId = "crmLeadsGridTableBody";
-    showTableSkeleton(tbodyId, 7);
- 
-    const res = await executeSecureBridgeCall("leads", "leads-matrix", {});
-    const tbody = document.getElementById(tbodyId);
-    if (!tbody) return;
- 
-    if (!res.success || !res.data || res.data.length === 0) {
-        tbody.innerHTML = emptyRow("No leads found.", 7);
-        return;
-    }
- 
-    tbody.innerHTML = res.data.map(l => `
-        <tr>
-            <td class="p-3 font-mono text-slate-500">${escapeHtml(l["LeadID"] || l["ID"] || "—")}</td>
-            <td class="p-3 text-slate-300">${escapeHtml(l["Name"] || "—")}</td>
-            <td class="p-3 font-mono text-slate-400">${escapeHtml(l["Email"] || "—")}</td>
-            <td class="p-3 text-slate-400">${escapeHtml(l["Source"] || "—")}</td>
-            <td class="p-3 text-slate-300">${escapeHtml(l["Agent"] || "Unassigned")}</td>
-            <td class="p-3 text-center">${badge(l["Stage"] || "New Prospect")}</td>
-            <td class="p-3 text-center">
-                <button onclick="openEditModal('${escapeHtml(l["LeadID"] || l["ID"])}', ${JSON.stringify(l).replace(/"/g, '&quot;')}, 'leads-matrix')"
-                    style="font-size:11px;padding:3px 8px;background:#534ab7;color:#fff;border:none;border-radius:4px;cursor:pointer;">
-                    Edit
-                </button>
-            </td>
-        </tr>
-    `).join("");
-}
-
-async function loadBroadcastQueue() {
-    const tbodyId = "timedBroadcastCronTableBody";
-    showTableSkeleton(tbodyId, 5);
- 
-    const res = await executeSecureBridgeCall("leads", "leads-broadcast", {});
-    const tbody = document.getElementById(tbodyId);
-    if (!tbody) return;
- 
-    if (!res.success || !res.data || res.data.length === 0) {
-        tbody.innerHTML = emptyRow("No broadcasts scheduled.", 5);
-        return;
-    }
- 
-    tbody.innerHTML = res.data.map(b => `
-        <tr>
-            <td class="p-3 font-mono text-slate-500">${escapeHtml(b["CronID"] || b["ID"] || "—")}</td>
-            <td class="p-3 text-slate-300">${escapeHtml(b["Segment"] || "All Prospects")}</td>
-            <td class="p-3 text-slate-400">${fmtDate(b["ScheduledTime"] || b["Date"])}</td>
-            <td class="p-3 text-slate-200">${escapeHtml((b["Subject"] || "").substring(0, 40))}</td>
-            <td class="p-3 text-center">${badge(b["Status"] || "Scheduled")}</td>
-        </tr>
-    `).join("");
-}
-
-async function loadMailDriveReports() {
-    const tbodyId = "crmMailDriveReportsTableBody";
-    showTableSkeleton(tbodyId, 6);
- 
-    const res = await executeSecureBridgeCall("leads", "leads-drive", {});
-    const tbody = document.getElementById(tbodyId);
-    if (!tbody) return;
- 
-    if (!res.success || !res.data || res.data.length === 0) {
-        tbody.innerHTML = emptyRow("No mail records found.", 6);
-        return;
-    }
- 
-    tbody.innerHTML = res.data.map(m => `
-        <tr>
-            <td class="p-3 font-mono text-slate-500">${escapeHtml(m["DispatchID"] || m["ID"] || "—")}</td>
-            <td class="p-3 text-slate-300">${escapeHtml(m["Email"] || "—")}</td>
-            <td class="p-3 text-slate-200">${escapeHtml((m["Subject"] || "No subject").substring(0, 50))}</td>
-            <td class="p-3 text-center font-mono text-xs">${badge(m["TransmissionState"] || "Sent")}</td>
-            <td class="p-3 text-center">${badge(m["SentReport"] === true ? "Confirmed" : "Pending")}</td>
-            <td class="p-3 text-center">${badge(m["ReadReport"] === true ? "Read" : "Unread")}</td>
-        </tr>
-    `).join("");
-}
-
-function openEditModal(recordId, recordData, recordType) {
-    const modal = document.getElementById('edit-modal');
-    const form = document.getElementById('edit-form');
-    const fieldsContainer = document.getElementById('edit-form-fields');
-    
-    if (!modal || !form || !fieldsContainer) {
-        console.error('Edit modal elements not found');
-        return;
-    }
-    
-    document.getElementById('edit-record-id').value = recordId;
-    form.dataset.recordType = recordType;
-    
-    fieldsContainer.innerHTML = '';
-    
-    const schema = EDIT_MODAL_FORM_SCHEMAS[recordType] || [];
-    
-    schema.forEach(field => {
-        const wrapper = document.createElement('div');
-        wrapper.style.cssText = 'margin-bottom: 12px;';
-        
-        const label = document.createElement('label');
-        label.textContent = field.name;
-        label.style.cssText = 'display: block; font-size: 12px; color: #94a3b8; margin-bottom: 4px;';
-        
-        wrapper.appendChild(label);
-        
-        if (field.type === 'select') {
-            const select = document.createElement('select');
-            select.name = field.key;
-            select.style.cssText = 'width: 100%; padding: 8px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f1f5f9; font-size: 12px;';
-            
-            field.options.forEach(opt => {
-                const option = document.createElement('option');
-                option.value = typeof opt === 'string' ? opt : opt.value;
-                option.textContent = typeof opt === 'string' ? opt : opt.label;
-                
-                if (recordData[field.key] == option.value) {
-                    option.selected = true;
-                }
-                
-                select.appendChild(option);
-            });
-            
-            wrapper.appendChild(select);
-        } else if (field.type === 'textarea') {
-            const textarea = document.createElement('textarea');
-            textarea.name = field.key;
-            textarea.value = recordData[field.key] || '';
-            textarea.style.cssText = 'width: 100%; padding: 8px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f1f5f9; font-size: 12px; resize: vertical; min-height: 80px;';
-            wrapper.appendChild(textarea);
-        } else {
-            const input = document.createElement('input');
-            input.type = field.type;
-            input.name = field.key;
-            input.value = recordData[field.key] || '';
-            input.required = field.required || false;
-            input.min = field.min || undefined;
-            input.max = field.max || undefined;
-            input.style.cssText = 'width: 100%; padding: 8px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f1f5f9; font-size: 12px; box-sizing: border-box;';
-            
-            wrapper.appendChild(input);
-        }
-        
-        fieldsContainer.appendChild(wrapper);
-    });
-    
-    modal.classList.remove('hidden');
-}
-
-function closeEditModal() {
-    const modal = document.getElementById('edit-modal');
-    if (modal) {
-        modal.classList.add('hidden');
-    }
-    const form = document.getElementById('edit-form');
-    if (form) {
-        form.reset();
-    }
-}
-
-document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const recordId = document.getElementById('edit-record-id').value;
-    const recordType = e.target.dataset.recordType;
-    
-    const formData = new FormData(e.target);
-    const updates = Object.fromEntries(formData);
-    
-    const res = await executeSecureBridgeCall('admin', 'update-record', {
-        recordId: recordId,
-        recordType: recordType,
-        updates: updates
-    });
-    
-    if (res.success) {
-        showToast('Record updated successfully', 'success');
-        closeEditModal();
-        
-        const reloadMap = {
-            'career-users': () => initializeModule_career_users(),
-            'career-earnings': () => initializeModule_career_earnings(),
-            'career-settlements': () => initializeModule_career_settlements(),
-            'assessment-students': () => initializeModule_assess_submissions(),
-            'assessment-courses': () => initializeModule_assessment_courses(),
-            'assessment-questions': () => initializeModule_assessment_questions(),
-            'assessment-certificates': () => loadCertificateData(),
-            'client-submitted': () => loadClientSubmittedProjects(),
-            'client-onboarded': () => loadProductionFulfillment(),
-            'leads-matrix': () => loadLeadsMatrix()
-        };
-        
-        const reloadFn = reloadMap[recordType];
-        if (reloadFn) {
-            reloadFn();
-        }
-    } else {
-        showToast(res.error || 'Update failed', 'error');
-    }
-});
-
-async function submitManualTierChange(event) {
-    event.preventDefault();
-    
-    const email = document.getElementById("tierTargetEmail")?.value?.trim();
-    const level = document.getElementById("tierAssignmentLevel")?.value;
-    
-    if (!email || !level) {
-        showToast("Email and tier level are required.", "error");
-        return;
-    }
-    
-    const btn = event.target.querySelector("button[type=submit]");
-    if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
-    
-    const res = await executeSecureBridgeCall("career", "career-elevation-save", {
-        email: email,
-        level: level
-    });
-    
-    if (btn) { btn.disabled = false; btn.textContent = "Commit Structural Override"; }
-    
-    showToast(
-        res.success ? `Tier updated to Level ${level} for ${email}.` : (res.error || "Update failed."),
-        res.success ? "success" : "error"
-    );
-    
-    if (res.success) {
-        event.target.reset();
-        initializeModule_career_users();
-    }
-}
-
-async function submitCareerHubMessage(event) {
-    event.preventDefault();
-    
-    const recipientEmail = document.getElementById("msgRecipientEmail")?.value?.trim();
-    const subject = document.getElementById("msgSubject")?.value?.trim();
-    const body = document.getElementById("msgBody")?.value?.trim();
-    
-    if (!recipientEmail || !subject || !body) {
-        showToast("Recipient, subject, and message body are all required.", "error");
-        return;
-    }
-    
-    const btn = event.target.querySelector("button[type=submit]");
-    if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
-    
-    const res = await executeSecureBridgeCall("career", "career-messages-send", {
-        recipientEmail: recipientEmail,
-        subject: subject,
-        body: body,
-        fromEmail: CURRENT_ADMIN_IDENTITY || "admin@thevictorias.com.ng"
-    });
-    
-    if (btn) { btn.disabled = false; btn.textContent = "Deploy System Dispatch"; }
-    
-    showToast(
-        res.success ? `Message sent to ${recipientEmail}.` : (res.error || "Send failed."),
-        res.success ? "success" : "error"
-    );
-    
-    if (res.success) {
-        event.target.reset();
-        initializeModule_career_messages();
-    }
-}
-
-async function submitClientOnboardingPortalData(event) {
-    event.preventDefault();
-    
-    const clientName = document.getElementById("onboardClientName")?.value?.trim();
-    const clientEmail = document.getElementById("onboardClientEmail")?.value?.trim();
-    const serviceType = document.getElementById("onboardServiceType")?.value;
-    const chargeAmount = document.getElementById("onboardChargeAmount")?.value;
-    
-    if (!clientName || !clientEmail || !serviceType || !chargeAmount) {
-        showToast("All fields are required.", "error");
-        return;
-    }
-    
-    const btn = event.target.querySelector("button[type=submit]");
-    if (btn) { btn.disabled = true; btn.textContent = "Processing…"; }
-    
-    const res = await executeSecureBridgeCall("client", "client-onboarding-submit", {
-        clientName: clientName,
-        clientEmail: clientEmail,
-        serviceType: serviceType,
-        chargeAmount: chargeAmount
-    });
-    
-    if (btn) { btn.disabled = false; btn.textContent = "INITIALIZE PRODUCTION PROTOCOL & GENERATE WORKPLACE TRACKING KEY"; }
-    
-    showToast(
-        res.success ? "Client onboarded successfully." : (res.error || "Onboarding failed."),
-        res.success ? "success" : "error"
-    );
-    
-    if (res.success) {
-        closeClientOnboardingPortalModal();
-        loadClientSubmittedProjects();
-    }
-}
-
-function closeClientOnboardingPortalModal() {
-    const modal = document.getElementById("modalClientOnboardingPortal");
-    if (modal) {
-        modal.classList.add("hidden");
-    }
-    const form = document.getElementById("clientOnboardingModalForm");
-    if (form) {
-        form.reset();
-    }
-}
-
-function openClientOnboardingPortalModal(projectId, serviceName) {
-    const modal = document.getElementById("modalClientOnboardingPortal");
-    if (modal) {
-        modal.classList.remove("hidden");
-        document.getElementById("onboardContextIntakeId").value = projectId;
-        document.getElementById("onboardServiceType").value = serviceName;
-    }
-}
-
-async function submitBulkQuestionsBankPackage(event) {
-    event.preventDefault();
-    
-    const trackId = document.getElementById("bulkQuestionsTargetTrackId")?.value;
-    if (!trackId) {
-        showToast("Please select a target course track.", "error");
-        return;
-    }
-    
-    const questions = [];
-    const container = document.getElementById("bulkQuestionsInputsRowsContainer");
-    if (container) {
-        const rows = container.querySelectorAll("div[style*='bg-slate-950']");
-        rows.forEach((row, index) => {
-            const inputs = row.querySelectorAll("input, select");
-            if (inputs.length >= 7) {
-                questions.push({
-                    CourseID: trackId,
-                    QuestionText: inputs[0].value,
-                    OptionA: inputs[1].value,
-                    OptionB: inputs[2].value,
-                    OptionC: inputs[3].value,
-                    OptionD: inputs[4].value,
-                    CorrectAnswer: inputs[5].value,
-                    Points: inputs[6].value
-                });
-            }
-        });
-    }
-    
-    if (questions.length === 0) {
-        showToast("Please add at least one question.", "error");
-        return;
-    }
-    
-    const btn = event.target.querySelector("button[type=submit]");
-    if (btn) { btn.disabled = true; btn.textContent = "Deploying…"; }
-    
-    const res = await executeSecureBridgeCall("assessment", "bulk-questions-insert", {
-        questions: questions
-    });
-    
-    if (btn) { btn.disabled = false; btn.textContent = "Deploy Question Bank Core Matrix Package"; }
-    
-    showToast(
-        res.success ? `${questions.length} questions deployed.` : (res.error || "Deployment failed."),
-        res.success ? "success" : "error"
-    );
-    
-    if (res.success) {
-        closeMultiQuestionInsertionModalPopup();
-        initializeModule_assessment_questions();
-    }
-}
-
-function closeMultiQuestionInsertionModalPopup() {
-    const modal = document.getElementById("modalMultiQuestionGridEntryPortal");
-    if (modal) {
-        modal.classList.add("hidden");
-    }
-    const form = document.getElementById("multiQuestionBulkInsertionForm");
-    if (form) {
-        form.reset();
-    }
-}
-
-function openMultiQuestionInsertionModalPopup() {
-    const modal = document.getElementById("modalMultiQuestionGridEntryPortal");
-    if (modal) {
-        modal.classList.remove("hidden");
-        const select = document.getElementById("bulkQuestionsTargetTrackId");
-        if (select) {
-            select.innerHTML = '';
-            executeSecureBridgeCall("assessment", "assessment-courses", {}).then(res => {
-                if (res.success && res.data) {
-                    res.data.forEach(course => {
-                        const option = document.createElement("option");
-                        option.value = course.CourseID || course["Track Schema ID"] || '';
-                        option.textContent = course.CourseName || course.Title || '';
-                        select.appendChild(option);
-                    });
-                }
-            });
-        }
-    }
-}
-
-function appendDynamicQuestionInputRowItemNode() {
-    const container = document.getElementById("bulkQuestionsInputsRowsContainer");
-    if (!container) return;
-    
-    const rowCount = container.querySelectorAll("div[style*='bg-slate-950']").length + 1;
-    
-    const newRow = document.createElement("div");
-    newRow.style.cssText = "padding: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; space-y: 12px; position: relative;";
-    
-    newRow.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #64748b;">Query Package Sequence Item #${rowCount}</span>
-            <button type="button" onclick="this.parentElement.parentElement.remove()" style="background: #dc2626; color: #fff; border: none; padding: 2px 6px; border-radius: 3px; font-size: 11px; cursor: pointer;">Remove</button>
-        </div>
-        <div style="margin-bottom: 8px;">
-            <label style="display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #64748b; margin-bottom: 4px;">Question Text String</label>
-            <input type="text" name="bulkQText" required placeholder="What configuration parameter isolates cross-origin payloads requests?" style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 6px; font-size: 12px; color: #f1f5f9;" />
-        </div>
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px;">
-            <div>
-                <label style="display: block; font-size: 9px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #64748b; margin-bottom: 2px;">Choice Option A</label>
-                <input type="text" name="bulkQA" required style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 4px; font-size: 11px; color: #f1f5f9;" />
-            </div>
-            <div>
-                <label style="display: block; font-size: 9px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #64748b; margin-bottom: 2px;">Choice Option B</label>
-                <input type="text" name="bulkQB" required style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 4px; font-size: 11px; color: #f1f5f9;" />
-            </div>
-            <div>
-                <label style="display: block; font-size: 9px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #64748b; margin-bottom: 2px;">Choice Option C</label>
-                <input type="text" name="bulkQC" required style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 4px; font-size: 11px; color: #f1f5f9;" />
-            </div>
-            <div>
-                <label style="display: block; font-size: 9px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #64748b; margin-bottom: 2px;">Choice Option D</label>
-                <input type="text" name="bulkQD" required style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 4px; font-size: 11px; color: #f1f5f9;" />
-            </div>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-            <div>
-                <label style="display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #64748b; margin-bottom: 4px;">Target Correct Key Option Answer Match</label>
-                <select name="bulkQCorrect" required style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 6px; font-size: 11px; color: #f1f5f9;">
-                    <option value="A">OPTION A MATCH KEY</option>
-                    <option value="B">OPTION B MATCH KEY</option>
-                    <option value="C">OPTION C MATCH KEY</option>
-                    <option value="D">OPTION D MATCH KEY</option>
-                </select>
-            </div>
-            <div>
-                <label style="display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #64748b; margin-bottom: 4px;">Matrix Evaluation Points Weighting</label>
-                <input type="number" name="bulkQPoints" required min="1" value="1" style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 6px; font-size: 11px; font-family: monospace; color: #f1f5f9;" />
-            </div>
-        </div>
-    `;
-    
-    container.appendChild(newRow);
-}
-
-async function submitManualCertificateGeneration(event) {
-    event.preventDefault();
-    
-    const email = document.getElementById("certManualEmail")?.value?.trim();
-    const title = document.getElementById("certManualTitle")?.value?.trim();
-    const score = document.getElementById("certManualScore")?.value;
-    
-    if (!email || !title || !score) {
-        showToast("All fields are required.", "error");
-        return;
-    }
-    
-    const btn = event.target.querySelector("button[type=submit]");
-    if (btn) { btn.disabled = true; btn.textContent = "Minting…"; }
-    
-    const res = await executeSecureBridgeCall("assessment", "manual-certificate-mint", {
-        studentEmail: email,
-        courseName: title,
-        score: score
-    });
-    
-    if (btn) { btn.disabled = false; btn.textContent = "Force Mint Certificate Security Block"; }
-    
-    showToast(
-        res.success ? `Certificate minted for ${email}.` : (res.error || "Minting failed."),
-        res.success ? "success" : "error"
-    );
-    
-    if (res.success) {
-        event.target.reset();
-        loadCertificateData();
-    }
-}
-
-async function submitNewAssessmentTrack(event) {
-    event.preventDefault();
-    
-    const title = document.getElementById("trackFormTitle")?.value?.trim();
-    const desc = document.getElementById("trackFormDesc")?.value?.trim();
-    const duration = document.getElementById("trackFormDuration")?.value;
-    const passMark = document.getElementById("trackFormPassMark")?.value;
-    
-    if (!title || !duration || !passMark) {
-        showToast("Title, duration, and pass mark are required.", "error");
-        return;
-    }
-    
-    const btn = event.target.querySelector("button[type=submit]");
-    if (btn) { btn.disabled = true; btn.textContent = "Deploying…"; }
-    
-    const res = await executeSecureBridgeCall("assessment", "create-course", {
-        CourseName: title,
-        Description: desc,
-        Duration: duration,
-        PassMark: passMark
-    });
-    
-    if (btn) { btn.disabled = false; btn.textContent = "Deploy Track Schema Framework"; }
-    
-    showToast(
-        res.success ? "Course track created successfully." : (res.error || "Creation failed."),
-        res.success ? "success" : "error"
-    );
-    
-    if (res.success) {
-        event.target.reset();
-        initializeModule_assessment_courses();
-    }
-}
-
-async function submitAcademicSupportTicket(event) {
-    event.preventDefault();
-    
-    const recipient = document.getElementById("academicTicketRecipient")?.value?.trim();
-    const priority = document.getElementById("academicTicketPriority")?.value;
-    const subject = document.getElementById("academicTicketSubject")?.value?.trim();
-    const body = document.getElementById("academicTicketBody")?.value?.trim();
-    
-    if (!recipient || !subject || !body) {
-        showToast("Recipient, subject, and body are required.", "error");
-        return;
-    }
-    
-    const btn = event.target.querySelector("button[type=submit]");
-    if (btn) { btn.disabled = true; btn.textContent = "Deploying…"; }
-    
-    const res = await executeSecureBridgeCall("assessment", "academic-support-send", {
-        studentEmail: recipient,
-        priority: priority,
-        subject: subject,
-        body: body
-    });
-    
-    if (btn) { btn.disabled = false; btn.textContent = "Deploy Academic Dispatch Ticket"; }
-    
-    showToast(
-        res.success ? `Support ticket sent to ${recipient}.` : (res.error || "Send failed."),
-        res.success ? "success" : "error"
-    );
-    
-    if (res.success) {
-        event.target.reset();
-        loadAcademicSupportMessages();
-    }
-}
-
-function openLeadCreationModalFormPanel() {
-    const modal = document.getElementById("modalCrmLeadCreationFormPortal");
-    if (modal) {
-        modal.classList.remove("hidden");
-    }
-}
-
-function closeLeadCreationModalFormPanel() {
-    const modal = document.getElementById("modalCrmLeadCreationFormPortal");
-    if (modal) {
-        modal.classList.add("hidden");
-    }
-    const form = document.getElementById("crmManualLeadGenerationForm");
-    if (form) {
-        form.reset();
-    }
-}
-
-async function submitCrmManualLeadEntry(event) {
-    event.preventDefault();
-    
-    const name = document.getElementById("leadFormFullName")?.value?.trim();
-    const email = document.getElementById("leadFormEmail")?.value?.trim();
-    const phone = document.getElementById("leadFormPhone")?.value?.trim();
-    const source = document.getElementById("leadFormSource")?.value?.trim();
-    const stage = document.getElementById("leadFormStage")?.value;
-    const notes = document.getElementById("leadFormNotes")?.value?.trim();
-    
-    if (!name || !email) {
-        showToast("Name and email are required.", "error");
-        return;
-    }
-    
-    const btn = event.target.querySelector("button[type=submit]");
-    if (btn) { btn.disabled = true; btn.textContent = "Committing…"; }
-    
-    const res = await executeSecureBridgeCall("leads", "manual-lead-create", {
-        Name: name,
-        Email: email,
-        Phone: phone,
-        Source: source,
-        Stage: stage,
-        Notes: notes
-    });
-    
-    if (btn) { btn.disabled = false; btn.textContent = "Commit Lead Profile Record Into CRM Ledger Matrix"; }
-    
-    showToast(
-        res.success ? `Lead ${name} created successfully.` : (res.error || "Creation failed."),
-        res.success ? "success" : "error"
-    );
-    
-    if (res.success) {
-        closeLeadCreationModalFormPanel();
-        loadLeadsMatrix();
-    }
-}
-
-async function submitTimedQueueBatchRelease(event) {
-    event.preventDefault();
-    
-    const targetStage = document.getElementById("broadcastTargetStage")?.value;
-    const releaseTime = document.getElementById("broadcastTargetReleaseTime")?.value;
-    const subject = document.getElementById("broadcastSubject")?.value?.trim();
-    const content = document.getElementById("broadcastContentTextBody")?.value?.trim();
-    
-    if (!targetStage || !releaseTime || !subject || !content) {
-        showToast("All fields are required.", "error");
-        return;
-    }
-    
-    const btn = event.target.querySelector("button[type=submit]");
-    if (btn) { btn.disabled = true; btn.textContent = "Queuing…"; }
-    
-    const res = await executeSecureBridgeCall("leads", "queue-broadcast", {
-        targetSegment: targetStage,
-        scheduledTime: releaseTime,
-        subject: subject,
-        body: content
-    });
-    
-    if (btn) { btn.disabled = false; btn.textContent = "Queue Automated Batch Delivery"; }
-    
-    showToast(
-        res.success ? "Broadcast queued successfully." : (res.error || "Queueing failed."),
-        res.success ? "success" : "error"
-    );
-    
-    if (res.success) {
-        event.target.reset();
-        loadBroadcastQueue();
-    }
-}
-
-function toggleCertificateViewFilter(filterType) {
-    const btnApproved = document.getElementById("btnCertFilterApproved");
-    const btnPending = document.getElementById("btnCertFilterPending");
-    
-    if (filterType === 'approved') {
-        if (btnApproved) {
-            btnApproved.style.background = "#065f46";
-            btnApproved.style.color = "#10b981";
-        }
-        if (btnPending) {
-            btnPending.style.background = "#1e293b";
-            btnPending.style.color = "#64748b";
-        }
-    } else if (filterType === 'pending') {
-        if (btnApproved) {
-            btnApproved.style.background = "#1e293b";
-            btnApproved.style.color = "#64748b";
-        }
-        if (btnPending) {
-            btnPending.style.background = "#7c2d12";
-            btnPending.style.color = "#fb923c";
-        }
-    }
-}
-
-async function initializeModule_career_messages() {
-    const tbodyId = "careerMessagesLogsTableBody";
-    showTableSkeleton(tbodyId, 4);
- 
-    const res = await executeSecureBridgeCall("career", "career-messages", {});
-    const tbody = document.getElementById(tbodyId);
-    if (!tbody) return;
- 
-    if (!res.success || !res.data || res.data.length === 0) {
-        tbody.innerHTML = emptyRow("No messages found.", 4);
-        return;
-    }
- 
-    tbody.innerHTML = res.data.map(m => `
-        <tr>
-            <td class="p-3 text-slate-500">${fmtDate(m["Timestamp"] || m["timestamp"])}</td>
-            <td class="p-3 text-slate-300">${escapeHtml(m["Recipient Email"] || m["recipientEmail"] || m["RecipientEmail"] || "—")}</td>
-            <td class="p-3 font-sans text-slate-200">${escapeHtml((m["Subject"] || m["subject"] || "No subject").substring(0, 40))}</td>
-            <td class="p-3 text-center">${badge(m["isRead"] === true || m["isRead"] === "TRUE" ? "Read" : "Delivered")}</td>
-        </tr>
-    `).join("");
-}
-
-async function initializeModule_assess_submissions() {
-    const tbodyId = "assessmentSubmissionsTableBody";
-    showTableSkeleton(tbodyId, 7);
- 
-    const res = await executeSecureBridgeCall("assessment", "assessment-students", {});
-    const tbody = document.getElementById(tbodyId);
-    if (!tbody) return;
- 
-    if (!res.success || !res.data || res.data.length === 0) {
-        tbody.innerHTML = emptyRow("No submissions found.", 7);
-        return;
-    }
- 
-    tbody.innerHTML = res.data.map(s => `
-        <tr>
-            <td class="p-3 text-slate-500 font-mono">${escapeHtml(s["submissionId"] || s["SubmissionID"] || "—")}</td>
-            <td class="p-3 text-slate-400 font-mono">${escapeHtml(s["assessmentId"] || s["AssessmentID"] || "—")}</td>
-            <td class="p-3 text-slate-300">${escapeHtml(s["userEmail"] || s["StudentEmail"] || "—")}</td>
-            <td class="p-3 font-mono text-right font-bold text-slate-200">${parseFloat(s["rawScore"] || s["Raw Score"] || 0).toFixed(1)}</td>
-            <td class="p-3 font-mono text-right font-bold text-slate-200">${parseFloat(s["percentageGrade"] || s["Percentage"] || 0).toFixed(1)}%</td>
-            <td class="p-3 text-center">${badge(s["status"] || s["Status"] || "Completed")}</td>
-            <td class="p-3 text-center">
-                <button onclick="openEditModal('${escapeHtml(s["submissionId"] || s["SubmissionID"])}', ${JSON.stringify(s).replace(/"/g, '&quot;')}, 'assessment-students')"
-                    style="font-size:11px;padding:3px 6px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
-                    Edit
-                </button>
-            </td>
-        </tr>
-    `).join("");
-}
-
-async function initializeModule_assessment_courses() {
-    const tbodyId = "assessmentTracksTableBody";
-    showTableSkeleton(tbodyId, 5);
- 
-    const res = await executeSecureBridgeCall("assessment", "assessment-courses", {});
-    const tbody = document.getElementById(tbodyId);
-    if (!tbody) return;
- 
-    if (!res.success || !res.data || res.data.length === 0) {
-        tbody.innerHTML = emptyRow("No courses found.", 5);
-        return;
-    }
- 
-    tbody.innerHTML = res.data.map(c => `
-        <tr>
-            <td class="p-3 text-blue-400 font-bold">${escapeHtml(c["CourseID"] || c["Track Schema ID"] || "—")}</td>
-            <td class="p-3 font-sans text-slate-200">${escapeHtml(c["CourseName"] || c["Title"] || "—")}</td>
-            <td class="p-3 text-center text-slate-400">${c["Duration"] || 0} min</td>
-            <td class="p-3 text-center font-bold text-amber-400">${c["PassMark%"] || c["PassMark"] || 70}%</td>
-            <td class="p-3 text-center">
-                <button onclick="openEditModal('${escapeHtml(c["CourseID"] || c["Track Schema ID"])}', ${JSON.stringify(c).replace(/"/g, '&quot;')}, 'assessment-courses')"
-                    style="font-size:11px;padding:4px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
-                    Edit
-                </button>
-            </td>
-        </tr>
-    `).join("");
-}
-
-async function initializeModule_assessment_questions() {
-    const tbodyId = "questionsGridTableBody";
-    showTableSkeleton(tbodyId, 6);
- 
-    const res = await executeSecureBridgeCall("assessment", "assessment-questions", {});
-    const tbody = document.getElementById(tbodyId);
-    if (!tbody) return;
- 
-    if (!res.success || !res.data || res.data.length === 0) {
-        tbody.innerHTML = emptyRow("No questions found.", 6);
-        return;
-    }
- 
-    tbody.innerHTML = res.data.map(q => `
-        <tr>
-            <td class="p-3 text-slate-500 font-mono">${escapeHtml(q["QuestionID"] || q["Question ID"] || "—")}</td>
-            <td class="p-3 text-blue-400 font-bold">${escapeHtml(q["CourseID"] || q["Track ID"] || "—")}</td>
-            <td class="p-3 text-slate-300 font-sans" title="${escapeHtml(q["QuestionText"] || q["Question"] || "")}">${escapeHtml((q["QuestionText"] || q["Question"] || "").substring(0, 60))}</td>
-            <td class="p-3 text-slate-400 font-mono">${escapeHtml(q["OptionA"] || "A")} | ${escapeHtml(q["OptionB"] || "B")} | ${escapeHtml(q["OptionC"] || "C")} | ${escapeHtml(q["OptionD"] || "D")}</td>
-            <td class="p-3 text-center font-bold text-emerald-400">${escapeHtml(q["CorrectAnswer"] || q["Correct"] || "—")}</td>
-            <td class="p-3 text-center">
-                <button onclick="openEditModal('${escapeHtml(q["QuestionID"] || q["Question ID"])}', ${JSON.stringify(q).replace(/"/g, '&quot;')}, 'assessment-questions')"
-                    style="font-size:11px;padding:4px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
-                    Edit
-                </button>
-            </td>
-        </tr>
-    `).join("");
-}
-
-// CERTIFICATES PENDING SWITCH
-// Replace loadCertificateData
-
-async function loadCertificateData() {
-  const switchHtml = `
-    <div class="flex gap-2 shrink-0">
-      <button onclick="toggleCertificateViewMode('approved')" id="certViewApproved" class="px-3 py-1 bg-emerald-950 text-emerald-400 text-xs rounded border border-emerald-800 font-medium">
-        View All
-      </button>
-      <button onclick="toggleCertificateViewMode('pending')" id="certViewPending" class="px-3 py-1 bg-slate-950 text-slate-400 text-xs rounded border border-slate-800 font-medium hover:text-white">
-        Pending Only
-      </button>
-    </div>
-  `;
-  
-  const viewContainer = document.getElementById('view-assessment-certificates');
-  const existingSwitch = viewContainer?.querySelector('[id*="certView"]')?.parentElement;
-  
-  if (existingSwitch) {
-    existingSwitch.innerHTML = switchHtml;
-  }
-  
-  loadCertificateTableData('approved');
-}
-
-let currentCertViewMode = 'approved';
-
-function toggleCertificateViewMode(mode) {
-  currentCertViewMode = mode;
-  
-  document.getElementById('certViewApproved').classList.toggle('bg-emerald-950', mode === 'approved');
-  document.getElementById('certViewApproved').classList.toggle('text-emerald-400', mode === 'approved');
-  document.getElementById('certViewApproved').classList.toggle('bg-slate-950', mode !== 'approved');
-  document.getElementById('certViewApproved').classList.toggle('text-slate-400', mode !== 'approved');
-  
-  document.getElementById('certViewPending').classList.toggle('bg-slate-950', mode === 'approved');
-  document.getElementById('certViewPending').classList.toggle('text-slate-400', mode === 'approved');
-  document.getElementById('certViewPending').classList.toggle('bg-orange-950', mode !== 'approved');
-  document.getElementById('certViewPending').classList.toggle('text-orange-400', mode !== 'approved');
-  
-  loadCertificateTableData(mode);
-}
-
-async function loadCertificateTableData(mode) {
-  const tbodyId = "certificateRegistryTableBody";
-  showTableSkeleton(tbodyId, 6);
- 
-  const res = await executeSecureBridgeCall("assessment", "assessment-certificates", {});
-  let data = res.data || [];
-  
-  if (mode === 'pending') {
-    data = data.filter(c => (c.Status || c.status || "").toLowerCase() === 'pending');
-  }
-  
-  const tbody = document.getElementById(tbodyId);
-  if (!tbody) return;
- 
-  if (!data.length) {
-    tbody.innerHTML = emptyRow("No certificates found.", 6);
-    return;
-  }
- 
-  tbody.innerHTML = data.map(c => `
-    <tr>
-      <td class="p-3 font-mono text-slate-500">${escapeHtml(c.CertCode || c["Certificate Code"] || "—")}</td>
-      <td class="p-3 text-slate-300">${escapeHtml(c.StudentEmail || c["Email"] || "—")}</td>
-      <td class="p-3 text-slate-200">${escapeHtml(c.CourseName || c["Course"] || "—")}</td>
-      <td class="p-3 text-slate-500">${fmtDate(c.Timestamp || c["Date"])}</td>
-      <td class="p-3 text-center">
-        <select onchange="updateCertificateStatus('${escapeHtml(c.CertCode || c["Certificate Code"])}', this.value)" class="text-xs bg-slate-900 border border-slate-800 rounded p-1 text-white focus:outline-none">
-          <option value="Pending" ${(c.Status || "").toLowerCase() === 'pending' ? 'selected' : ''}>Pending</option>
-          <option value="Approved" ${(c.Status || "").toLowerCase() === 'approved' ? 'selected' : ''}>Approved</option>
-        </select>
-      </td>
-      <td class="p-3 text-center">
-        <button onclick="openEditModal('${escapeHtml(c.CertCode || c["Certificate Code"])}', ${JSON.stringify(c).replace(/"/g, '&quot;')}, 'assessment-certificates')" style="font-size:11px;padding:4px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
-          Edit
-        </button>
-      </td>
-    </tr>
-  `).join("");
-}
-
-function updateCertificateStatus(certCode, newStatus) {
-  executeSecureBridgeCall("assessment", "update-certificate-status", {
-    certificateCode: certCode,
-    status: newStatus
-  }).then(res => {
-    if (res.success) {
-      showToast("Certificate status updated.", "success");
-      loadCertificateTableData(currentCertViewMode);
-    } else {
-      showToast(res.error || "Update failed.", "error");
-    }
-  });
-}
-
-// ACADEMIC SUPPORT DESK EMAILS
-// Replace loadAcademicSupportMessages
 
 async function loadAcademicSupportMessages() {
   const tbodyId = "academicSupportLogsTableBody";
   showTableSkeleton(tbodyId, 4);
- 
+
   const res = await executeSecureBridgeCall("assessment", "assessment-messages", {});
   const tbody = document.getElementById(tbodyId);
   if (!tbody) return;
- 
+
   if (!res.success || !res.data || res.data.length === 0) {
     tbody.innerHTML = emptyRow("No messages found.", 4);
     return;
   }
- 
+
   tbody.innerHTML = res.data.map(m => `
     <tr>
-      <td class="p-3 text-slate-500">${fmtDate(m.Timestamp || m["Date"])}</td>
-      <td class="p-3 text-slate-300">${escapeHtml(m.RecipientEmail || m["Recipient Email"] || m.FromEmail || m["From Email"] || "—")}</td>
+      <td class="p-3 text-slate-500">${fmtDate(m.Timestamp || m.Date)}</td>
+      <td class="p-3 text-slate-300">${escapeHtml(m.RecipientEmail || m["Recipient Email"] || m.FromEmail || "—")}</td>
       <td class="p-3 text-slate-200">${escapeHtml((m.Subject || "No subject").substring(0, 50))}</td>
       <td class="p-3 text-center">${badge(m.Priority || m.MessageType || "Standard")}</td>
     </tr>
   `).join("");
 }
 
-// CLIENT INBOUND SERVICE PROJECT
-// Replace loadClientSubmittedProjects
+async function submitAcademicSupportTicket(event) {
+  event.preventDefault();
+  const recipient = document.getElementById("academicTicketRecipient")?.value?.trim();
+  const priority = document.getElementById("academicTicketPriority")?.value;
+  const subject = document.getElementById("academicTicketSubject")?.value?.trim();
+  const body = document.getElementById("academicTicketBody")?.value?.trim();
+
+  if (!recipient || !subject || !body) { showToast("Recipient, subject, and body are required.", "error"); return; }
+
+  const btn = event.target.querySelector("button[type=submit]");
+  if (btn) { btn.disabled = true; btn.textContent = "Deploying…"; }
+
+  const res = await executeSecureBridgeCall("assessment", "academic-support-send", { studentEmail: recipient, priority, subject, body });
+
+  if (btn) { btn.disabled = false; btn.textContent = "Deploy Academic Dispatch Ticket"; }
+
+  showToast(res.success ? `Support ticket sent to ${recipient}.` : (res.error || "Send failed."), res.success ? "success" : "error");
+  if (res.success) { event.target.reset(); loadAcademicSupportMessages(); }
+}
+
+async function submitManualCertificateGeneration(event) {
+  event.preventDefault();
+  const email = document.getElementById("certManualEmail")?.value?.trim();
+  const title = document.getElementById("certManualTitle")?.value?.trim();
+  const score = document.getElementById("certManualScore")?.value;
+
+  if (!email || !title || !score) { showToast("All fields are required.", "error"); return; }
+
+  const btn = event.target.querySelector("button[type=submit]");
+  if (btn) { btn.disabled = true; btn.textContent = "Minting…"; }
+
+  const res = await executeSecureBridgeCall("assessment", "manual-certificate-mint", { studentEmail: email, courseName: title, score });
+
+  if (btn) { btn.disabled = false; btn.textContent = "Force Mint Certificate Security Block"; }
+
+  showToast(res.success ? `Certificate minted for ${email}.` : (res.error || "Minting failed."), res.success ? "success" : "error");
+  if (res.success) { event.target.reset(); loadCertificateData(); }
+}
+
+async function submitNewAssessmentTrack(event) {
+  event.preventDefault();
+  const title = document.getElementById("trackFormTitle")?.value?.trim();
+  const desc = document.getElementById("trackFormDesc")?.value?.trim();
+  const duration = document.getElementById("trackFormDuration")?.value;
+  const passMark = document.getElementById("trackFormPassMark")?.value;
+
+  if (!title || !duration || !passMark) { showToast("Title, duration, and pass mark are required.", "error"); return; }
+
+  const btn = event.target.querySelector("button[type=submit]");
+  if (btn) { btn.disabled = true; btn.textContent = "Deploying…"; }
+
+  const res = await executeSecureBridgeCall("assessment", "create-course", { CourseName: title, Description: desc, Duration: duration, PassMark: passMark });
+
+  if (btn) { btn.disabled = false; btn.textContent = "Deploy Track Schema Framework"; }
+
+  showToast(res.success ? "Course track created successfully." : (res.error || "Creation failed."), res.success ? "success" : "error");
+  if (res.success) { event.target.reset(); initializeModule_assessment_courses(); }
+}
+
+function openMultiQuestionInsertionModalPopup() {
+  const modal = document.getElementById("modalMultiQuestionGridEntryPortal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+
+  const select = document.getElementById("bulkQuestionsTargetTrackId");
+  if (select) {
+    select.innerHTML = '<option value="">Loading tracks…</option>';
+    executeSecureBridgeCall("assessment", "assessment-courses", {}).then(res => {
+      if (res.success && res.data) {
+        select.innerHTML = res.data.map(c =>
+          `<option value="${escapeHtml(c.CourseID || c["Track Schema ID"] || '')}">${escapeHtml(c.CourseName || c.Title || '')}</option>`
+        ).join("");
+      } else {
+        select.innerHTML = '<option value="">No tracks available</option>';
+      }
+    });
+  }
+}
+
+function closeMultiQuestionInsertionModalPopup() {
+  const modal = document.getElementById("modalMultiQuestionGridEntryPortal");
+  if (modal) modal.classList.add("hidden");
+  const form = document.getElementById("multiQuestionBulkInsertionForm");
+  if (form) form.reset();
+}
+
+function appendDynamicQuestionInputRowItemNode() {
+  const container = document.getElementById("bulkQuestionsInputsRowsContainer");
+  if (!container) return;
+
+  const rowCount = container.querySelectorAll('.bulk-question-row').length + 1;
+
+  const newRow = document.createElement("div");
+  newRow.className = "bulk-question-row p-3 bg-slate-950 border border-slate-800 rounded-lg space-y-3 relative";
+  newRow.innerHTML = `
+    <div class="flex justify-between items-center">
+      <span class="text-[10px] font-mono uppercase text-slate-500">Query Package Sequence Item #${rowCount}</span>
+      <button type="button" onclick="this.closest('.bulk-question-row').remove()"
+        style="background:#dc2626;color:#fff;border:none;padding:2px 8px;border-radius:3px;font-size:11px;cursor:pointer;">Remove</button>
+    </div>
+    <div>
+      <label class="block text-[10px] font-mono text-slate-400 mb-0.5">Question Text String</label>
+      <input type="text" name="bulkQText" required placeholder="Enter question text..."
+        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500" />
+    </div>
+    <div class="grid grid-cols-4 gap-2">
+      ${['A','B','C','D'].map(opt => `
+        <div>
+          <label class="block text-[9px] font-mono text-slate-400 mb-0.5">Choice Option ${opt}</label>
+          <input type="text" name="bulkQ${opt}" required
+            class="w-full bg-slate-900 border border-slate-800 rounded p-1 text-xs text-white focus:outline-none focus:border-emerald-500" />
+        </div>
+      `).join("")}
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-[10px] font-mono text-slate-400 mb-0.5">Target Correct Key Option Answer Match</label>
+        <select name="bulkQCorrect" required class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+          <option value="A">OPTION A MATCH KEY</option>
+          <option value="B">OPTION B MATCH KEY</option>
+          <option value="C">OPTION C MATCH KEY</option>
+          <option value="D">OPTION D MATCH KEY</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] font-mono text-slate-400 mb-0.5">Matrix Evaluation Points Weighting</label>
+        <input type="number" name="bulkQPoints" required min="1" value="1"
+          class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white font-mono focus:outline-none focus:border-emerald-500" />
+      </div>
+    </div>
+  `;
+  container.appendChild(newRow);
+}
+
+async function submitBulkQuestionsBankPackage(event) {
+  event.preventDefault();
+  const trackId = document.getElementById("bulkQuestionsTargetTrackId")?.value;
+  if (!trackId) { showToast("Please select a target course track.", "error"); return; }
+
+  const questions = [];
+  const container = document.getElementById("bulkQuestionsInputsRowsContainer");
+  if (container) {
+    container.querySelectorAll('.bulk-question-row, div[class*="bg-slate-950"]').forEach(row => {
+      const qText = row.querySelector('[name="bulkQText"]')?.value;
+      const optA = row.querySelector('[name="bulkQA"]')?.value;
+      const optB = row.querySelector('[name="bulkQB"]')?.value;
+      const optC = row.querySelector('[name="bulkQC"]')?.value;
+      const optD = row.querySelector('[name="bulkQD"]')?.value;
+      const correct = row.querySelector('[name="bulkQCorrect"]')?.value;
+      const points = row.querySelector('[name="bulkQPoints"]')?.value;
+
+      if (qText && optA && optB && optC && optD && correct) {
+        questions.push({ CourseID: trackId, QuestionText: qText, OptionA: optA, OptionB: optB, OptionC: optC, OptionD: optD, CorrectAnswer: correct, Points: points || 1 });
+      }
+    });
+  }
+
+  if (questions.length === 0) { showToast("Please add at least one question.", "error"); return; }
+
+  const btn = event.target.querySelector("button[type=submit]");
+  if (btn) { btn.disabled = true; btn.textContent = "Deploying…"; }
+
+  const res = await executeSecureBridgeCall("assessment", "bulk-questions-insert", { questions });
+
+  if (btn) { btn.disabled = false; btn.textContent = "Deploy Question Bank Core Matrix Package"; }
+
+  showToast(res.success ? `${questions.length} questions deployed.` : (res.error || "Deployment failed."), res.success ? "success" : "error");
+  if (res.success) { closeMultiQuestionInsertionModalPopup(); initializeModule_assessment_questions(); }
+}
 
 async function loadClientSubmittedProjects() {
   const tbodyId = "sourcedIntakeTableBody";
   showTableSkeleton(tbodyId, 6);
- 
+
   const res = await executeSecureBridgeCall("client", "client-submitted", {});
   const tbody = document.getElementById(tbodyId);
   if (!tbody) return;
- 
+
   if (!res.success || !res.data || res.data.length === 0) {
     tbody.innerHTML = emptyRow("No projects found.", 6);
     return;
   }
- 
+
   tbody.innerHTML = res.data.map(p => `
     <tr>
-      <td class="p-3 font-mono text-slate-500">${escapeHtml(p.PartnerID || p["Partner ID"] || p.DataID || "—")}</td>
+      <td class="p-3 font-mono text-slate-500">${escapeHtml(p.DataID || p.PartnerID || p["Partner ID"] || "—")}</td>
       <td class="p-3 text-slate-300">${escapeHtml(p.ClientName || p["Client Name"] || "—")}</td>
       <td class="p-3 text-slate-400">${escapeHtml(p.PartnerID || p["Partner ID"] || "—")}</td>
       <td class="p-3 text-slate-200">${escapeHtml(p.Service || "—")}</td>
-      <td class="p-3 font-bold text-emerald-400">${fmtNaira(p.PaymentLink ? 0 : p.Amount || 0)}</td>
-      <td class="p-3 text-center">
-        <select onchange="handleClientProjectAction(this.value, '${escapeHtml(p.PartnerID || p["Partner ID"] || p.DataID)}')" class="text-xs bg-slate-900 border border-slate-800 rounded p-1 text-white focus:outline-none">
+      <td class="p-3 font-bold text-emerald-400">${fmtNaira(p.Amount || 0)}</td>
+      <td class="p-3 text-right">
+        <select onchange="handleClientProjectAction(this.value, '${escapeHtml(p.DataID || p.PartnerID || p["Partner ID"])}', ${JSON.stringify(p).replace(/"/g, '&quot;')})"
+          class="text-xs bg-slate-900 border border-slate-800 rounded p-1.5 text-white focus:outline-none">
           <option value="">Select Action</option>
-          <option value="edit">Edit</option>
+          <option value="edit">Edit Record</option>
           <option value="onboard">Onboarding</option>
         </select>
       </td>
@@ -2719,46 +2191,37 @@ async function loadClientSubmittedProjects() {
   `).join("");
 }
 
-function handleClientProjectAction(action, projectId) {
+function handleClientProjectAction(action, projectId, projectData) {
   if (action === 'edit') {
-    executeSecureBridgeCall("client", "get-project-data", {
-      projectId: projectId
-    }).then(res => {
-      if (res.success && res.data) {
-        openEditModal(projectId, res.data, 'client-submitted');
-      }
-    });
+    openEditModal(projectId, projectData || {}, 'client-submitted');
   } else if (action === 'onboard') {
-    openClientOnboardingPortalModal(projectId, '');
+    openClientOnboardingPortalModal(projectId, (projectData && projectData.Service) || '');
   }
 }
 
-// ACTIVE JOB STATUS LEDGER
-// Replace loadProductionFulfillment
-
 async function loadProductionFulfillment() {
   const tbodyId = "productionFulfillmentTableBody";
-  showTableSkeleton(tbodyId, 7);
- 
+  showTableSkeleton(tbodyId, 6);
+
   const res = await executeSecureBridgeCall("client", "client-onboarded", {});
   const tbody = document.getElementById(tbodyId);
   if (!tbody) return;
- 
+
   if (!res.success || !res.data || res.data.length === 0) {
-    tbody.innerHTML = emptyRow("No fulfillment records.", 7);
+    tbody.innerHTML = emptyRow("No fulfillment records.", 6);
     return;
   }
- 
+
   tbody.innerHTML = res.data.map(f => `
     <tr>
       <td class="p-3 font-mono text-slate-500">${escapeHtml(f.TrackingCode || f["Tracking Code"] || "—")}</td>
       <td class="p-3 text-slate-300">${escapeHtml(f.ClientName || f["Client Name"] || "—")}</td>
-      <td class="p-3 text-slate-300">${escapeHtml(f.ClientEmail || f["Email"] || "—")}</td>
       <td class="p-3 text-slate-200">${escapeHtml(f.Service || f["Service Item"] || "—")}</td>
-      <td class="p-3 font-mono text-right">${fmtNaira(f.Amount || 0)}</td>
-      <td class="p-3 text-center">${badge(f.Status || "In Progress")}</td>
-      <td class="p-3 text-center">
-        <button onclick="openEditModal('${escapeHtml(f.TrackingCode || f["Tracking Code"])}', ${JSON.stringify(f).replace(/"/g, '&quot;')}, 'client-onboarded')" style="font-size:11px;padding:3px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
+      <td class="p-3 text-slate-400 text-xs">${escapeHtml((f.ProgressNotes || f.Status || "").substring(0, 80))}</td>
+      <td class="p-3 text-center">${badge(f.FulfillmentStatus || f.Status || "In Progress")}</td>
+      <td class="p-3 text-right">
+        <button onclick="openEditModal('${escapeHtml(f.TrackingCode || f["Tracking Code"])}', ${JSON.stringify(f).replace(/"/g, '&quot;')}, 'client-onboarded')"
+          style="font-size:11px;padding:3px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">
           Edit
         </button>
       </td>
@@ -2766,183 +2229,317 @@ async function loadProductionFulfillment() {
   `).join("");
 }
 
-// UNIVERSAL FILTER CAREER HUB
-// After welcomeTitle div
+function openClientOnboardingPortalModal(projectId, serviceName) {
+  const modal = document.getElementById("modalClientOnboardingPortal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  const ctxId = document.getElementById("onboardContextIntakeId");
+  const svcType = document.getElementById("onboardServiceType");
+  if (ctxId) ctxId.value = projectId;
+  if (svcType) svcType.value = serviceName;
+}
 
-const CAREER_FILTER_STATE = {
-  levelFilter: null,
-  statusFilter: null,
-  dateRangeStart: null,
-  dateRangeEnd: null
-};
+function closeClientOnboardingPortalModal() {
+  const modal = document.getElementById("modalClientOnboardingPortal");
+  if (modal) modal.classList.add("hidden");
+  const form = document.getElementById("clientOnboardingModalForm");
+  if (form) form.reset();
+}
 
-function initCareerHubUniversalFilter() {
-  const filterHtml = `
-    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 mb-4 grid grid-cols-4 gap-3">
-      <div>
-        <label class="block text-xs text-slate-400 mb-1">User Level</label>
-        <select id="careerFilterLevel" onchange="applyCareerFilter()" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none">
-          <option value="">All Levels</option>
-          <option value="1">Level 1</option>
-          <option value="2">Level 2</option>
-          <option value="3">Level 3</option>
-          <option value="4">Level 4</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-xs text-slate-400 mb-1">Status</label>
-        <select id="careerFilterStatus" onchange="applyCareerFilter()" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none">
-          <option value="">All Status</option>
-          <option value="Approved">Approved</option>
-          <option value="Pending">Pending</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-xs text-slate-400 mb-1">From Date</label>
-        <input type="date" id="careerFilterDateStart" onchange="applyCareerFilter()" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none">
-      </div>
-      <div>
-        <label class="block text-xs text-slate-400 mb-1">To Date</label>
-        <input type="date" id="careerFilterDateEnd" onchange="applyCareerFilter()" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none">
-      </div>
-    </div>
-  `;
-  
-  const careerUsersView = document.getElementById('view-career-users');
-  if (careerUsersView) {
-    const firstDiv = careerUsersView.querySelector('div:first-child');
-    if (firstDiv) {
-      firstDiv.insertAdjacentHTML('afterend', filterHtml);
+async function submitClientOnboardingPortalData(event) {
+  event.preventDefault();
+  const clientName = document.getElementById("onboardClientName")?.value?.trim();
+  const clientEmail = document.getElementById("onboardClientEmail")?.value?.trim();
+  const serviceType = document.getElementById("onboardServiceType")?.value;
+  const chargeAmount = document.getElementById("onboardChargeAmount")?.value;
+
+  if (!clientName || !clientEmail || !serviceType || !chargeAmount) { showToast("All fields are required.", "error"); return; }
+
+  const btn = event.target.querySelector("button[type=submit]");
+  if (btn) { btn.disabled = true; btn.textContent = "Processing…"; }
+
+  const res = await executeSecureBridgeCall("client", "client-onboarding-submit", { clientName, clientEmail, serviceType, chargeAmount });
+
+  if (btn) { btn.disabled = false; btn.textContent = "INITIALIZE PRODUCTION PROTOCOL & GENERATE WORKPLACE TRACKING KEY"; }
+
+  showToast(res.success ? "Client onboarded successfully." : (res.error || "Onboarding failed."), res.success ? "success" : "error");
+  if (res.success) { closeClientOnboardingPortalModal(); loadClientSubmittedProjects(); }
+}
+
+async function loadLeadsMatrix() {
+  const tbodyId = "crmLeadsGridTableBody";
+  showTableSkeleton(tbodyId, 7);
+
+  const res = await executeSecureBridgeCall("leads", "leads-matrix", {});
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+
+  if (!res.success || !res.data || res.data.length === 0) {
+    tbody.innerHTML = emptyRow("No leads found.", 7);
+    return;
+  }
+
+  tbody.innerHTML = res.data.map(l => `
+    <tr>
+      <td class="p-3 font-mono text-slate-500">${escapeHtml(l.LeadID || l.ID || "—")}</td>
+      <td class="p-3 text-slate-300">${escapeHtml(l.Name || "—")}</td>
+      <td class="p-3 font-mono text-slate-400">${escapeHtml(l.Email || "—")}</td>
+      <td class="p-3 text-slate-400">${escapeHtml(l.Source || "—")}</td>
+      <td class="p-3 text-slate-300">${escapeHtml(l.Agent || "Unassigned")}</td>
+      <td class="p-3 text-center">${badge(l.Stage || "New Prospect")}</td>
+      <td class="p-3 text-center">
+        <button onclick="openEditModal('${escapeHtml(l.LeadID || l.ID)}', ${JSON.stringify(l).replace(/"/g, '&quot;')}, 'leads-matrix')"
+          style="font-size:11px;padding:3px 8px;background:#534ab7;color:#fff;border:none;border-radius:4px;cursor:pointer;">
+          Edit
+        </button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function openLeadCreationModalFormPanel() {
+  const modal = document.getElementById("modalCrmLeadCreationFormPortal");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeLeadCreationModalFormPanel() {
+  const modal = document.getElementById("modalCrmLeadCreationFormPortal");
+  if (modal) modal.classList.add("hidden");
+  const form = document.getElementById("crmManualLeadGenerationForm");
+  if (form) form.reset();
+}
+
+async function submitCrmManualLeadEntry(event) {
+  event.preventDefault();
+  const name = document.getElementById("leadFormFullName")?.value?.trim();
+  const email = document.getElementById("leadFormEmail")?.value?.trim();
+  const phone = document.getElementById("leadFormPhone")?.value?.trim();
+  const source = document.getElementById("leadFormSource")?.value?.trim();
+  const stage = document.getElementById("leadFormStage")?.value;
+  const notes = document.getElementById("leadFormNotes")?.value?.trim();
+
+  if (!name || !email) { showToast("Name and email are required.", "error"); return; }
+
+  const btn = event.target.querySelector("button[type=submit]");
+  if (btn) { btn.disabled = true; btn.textContent = "Committing…"; }
+
+  const res = await executeSecureBridgeCall("leads", "manual-lead-create", { Name: name, Email: email, Phone: phone, Source: source, Stage: stage, Notes: notes });
+
+  if (btn) { btn.disabled = false; btn.textContent = "Commit Lead Profile Record Into CRM Ledger Matrix"; }
+
+  showToast(res.success ? `Lead ${name} created successfully.` : (res.error || "Creation failed."), res.success ? "success" : "error");
+  if (res.success) { closeLeadCreationModalFormPanel(); loadLeadsMatrix(); }
+}
+
+async function loadBroadcastQueue() {
+  const tbodyId = "timedBroadcastCronTableBody";
+  showTableSkeleton(tbodyId, 5);
+
+  const res = await executeSecureBridgeCall("leads", "leads-broadcast", {});
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+
+  if (!res.success || !res.data || res.data.length === 0) {
+    tbody.innerHTML = emptyRow("No broadcasts scheduled.", 5);
+    return;
+  }
+
+  tbody.innerHTML = res.data.map(b => `
+    <tr>
+      <td class="p-3 font-mono text-slate-500">${escapeHtml(b.CronID || b.ID || "—")}</td>
+      <td class="p-3 text-slate-300">${escapeHtml(b.Segment || "All Prospects")}</td>
+      <td class="p-3 text-slate-400">${fmtDate(b.ScheduledTime || b.Date)}</td>
+      <td class="p-3 text-slate-200">${escapeHtml((b.Subject || "").substring(0, 40))}</td>
+      <td class="p-3 text-center">${badge(b.Status || "Scheduled")}</td>
+    </tr>
+  `).join("");
+}
+
+async function submitTimedQueueBatchRelease(event) {
+  event.preventDefault();
+  const targetStage = document.getElementById("broadcastTargetStage")?.value;
+  const releaseTime = document.getElementById("broadcastTargetReleaseTime")?.value;
+  const subject = document.getElementById("broadcastSubject")?.value?.trim();
+  const content = document.getElementById("broadcastContentTextBody")?.value?.trim();
+
+  if (!targetStage || !releaseTime || !subject || !content) { showToast("All fields are required.", "error"); return; }
+
+  const btn = event.target.querySelector("button[type=submit]");
+  if (btn) { btn.disabled = true; btn.textContent = "Queuing…"; }
+
+  const res = await executeSecureBridgeCall("leads", "queue-broadcast", { targetSegment: targetStage, scheduledTime: releaseTime, subject, body: content });
+
+  if (btn) { btn.disabled = false; btn.textContent = "Queue Automated Batch Delivery"; }
+
+  showToast(res.success ? "Broadcast queued successfully." : (res.error || "Queueing failed."), res.success ? "success" : "error");
+  if (res.success) { event.target.reset(); loadBroadcastQueue(); }
+}
+
+async function loadMailDriveReports() {
+  const tbodyId = "crmMailDriveReportsTableBody";
+  showTableSkeleton(tbodyId, 6);
+
+  const res = await executeSecureBridgeCall("leads", "leads-drive", {});
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+
+  if (!res.success || !res.data || res.data.length === 0) {
+    tbody.innerHTML = emptyRow("No mail records found.", 6);
+    return;
+  }
+
+  tbody.innerHTML = res.data.map(m => `
+    <tr>
+      <td class="p-3 font-mono text-slate-500">${escapeHtml(m.DispatchID || m.ID || "—")}</td>
+      <td class="p-3 text-slate-300">${escapeHtml(m.Email || "—")}</td>
+      <td class="p-3 text-slate-200">${escapeHtml((m.Subject || "No subject").substring(0, 50))}</td>
+      <td class="p-3 text-center">${badge(m.TransmissionState || "Sent")}</td>
+      <td class="p-3 text-center">${badge(m.SentReport === true ? "Confirmed" : "Pending")}</td>
+      <td class="p-3 text-center">${badge(m.ReadReport === true ? "Read" : "Unread")}</td>
+    </tr>
+  `).join("");
+}
+
+function openEditModal(recordId, recordData, recordType) {
+  const modal = document.getElementById('edit-modal');
+  const form = document.getElementById('edit-form');
+  const fieldsContainer = document.getElementById('edit-form-fields');
+
+  if (!modal || !form || !fieldsContainer) return;
+
+  document.getElementById('edit-record-id').value = recordId;
+  form.dataset.recordType = recordType;
+  fieldsContainer.innerHTML = '';
+
+  const schema = EDIT_MODAL_FORM_SCHEMAS[recordType] || [];
+
+  schema.forEach(field => {
+    const wrapper = document.createElement('div');
+
+    const label = document.createElement('label');
+    label.textContent = field.name;
+    label.style.cssText = 'display:block;font-size:12px;color:#94a3b8;margin-bottom:4px;';
+    wrapper.appendChild(label);
+
+    const inputStyle = 'width:100%;padding:8px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#f1f5f9;font-size:12px;box-sizing:border-box;outline:none;';
+
+    if (field.type === 'select') {
+      const select = document.createElement('select');
+      select.name = field.key;
+      select.style.cssText = inputStyle;
+      field.options.forEach(opt => {
+        const option = document.createElement('option');
+        const optVal = typeof opt === 'string' ? opt : opt.value;
+        const optLabel = typeof opt === 'string' ? opt : opt.label;
+        option.value = optVal;
+        option.textContent = optLabel;
+        if (String(recordData[field.key]) === String(optVal)) option.selected = true;
+        select.appendChild(option);
+      });
+      wrapper.appendChild(select);
+    } else if (field.type === 'textarea') {
+      const textarea = document.createElement('textarea');
+      textarea.name = field.key;
+      textarea.value = recordData[field.key] || '';
+      textarea.style.cssText = inputStyle + 'resize:vertical;min-height:80px;';
+      wrapper.appendChild(textarea);
+    } else {
+      const input = document.createElement('input');
+      input.type = field.type;
+      input.name = field.key;
+      input.value = recordData[field.key] || '';
+      input.required = field.required || false;
+      if (field.min !== undefined) input.min = field.min;
+      if (field.max !== undefined) input.max = field.max;
+      input.style.cssText = inputStyle;
+      wrapper.appendChild(input);
     }
-  }
-}
 
-function applyCareerFilter() {
-  CAREER_FILTER_STATE.levelFilter = document.getElementById('careerFilterLevel')?.value;
-  CAREER_FILTER_STATE.statusFilter = document.getElementById('careerFilterStatus')?.value;
-  CAREER_FILTER_STATE.dateRangeStart = document.getElementById('careerFilterDateStart')?.value;
-  CAREER_FILTER_STATE.dateRangeEnd = document.getElementById('careerFilterDateEnd')?.value;
-  
-  initializeModule_career_users();
-  initializeModule_career_earnings();
-  initializeModule_career_settlements();
-  updateFilteredKPIs();
-}
-
-function updateFilteredKPIs() {
-  const grossElem = document.getElementById('kpi-gross');
-  const payoutElem = document.getElementById('kpi-payout');
-  const projectElem = document.getElementById('kpi-projects');
-  
-  if (!CACHED_CAREER_USERS.length) return;
-  
-  let filteredUsers = CACHED_CAREER_USERS;
-  
-  if (CAREER_FILTER_STATE.levelFilter) {
-    filteredUsers = filteredUsers.filter(u => u.Level == CAREER_FILTER_STATE.levelFilter);
-  }
-  if (CAREER_FILTER_STATE.statusFilter) {
-    const statusVal = CAREER_FILTER_STATE.statusFilter === 'Approved';
-    filteredUsers = filteredUsers.filter(u => u.Approved === statusVal);
-  }
-  
-  let totalGross = 0;
-  let totalPayout = 0;
-  let totalProjects = 0;
-  
-  filteredUsers.forEach(user => {
-    totalGross += parseFloat(user.TotalEarned || 0);
-    totalPayout += parseFloat(user.CurrentBalance || 0);
+    fieldsContainer.appendChild(wrapper);
   });
-  
-  if (grossElem) grossElem.textContent = fmtNaira(totalGross);
-  if (payoutElem) payoutElem.textContent = fmtNaira(totalPayout);
-  if (projectElem) projectElem.textContent = totalProjects + ' Units';
+
+  modal.classList.remove('hidden');
 }
 
-function filterTableByState(data, filterState) {
-  if (!filterState.levelFilter && !filterState.statusFilter && !filterState.dateRangeStart && !filterState.dateRangeEnd) {
-    return data;
-  }
-  
-  return data.filter(row => {
-    if (filterState.levelFilter && row.Level != filterState.levelFilter) return false;
-    if (filterState.statusFilter) {
-      const statusVal = filterState.statusFilter === 'Approved';
-      if (row.Approved !== statusVal) return false;
-    }
-    if (filterState.dateRangeStart) {
-      const rowDate = new Date(row.Timestamp || row.Date || '');
-      const startDate = new Date(filterState.dateRangeStart);
-      if (rowDate < startDate) return false;
-    }
-    if (filterState.dateRangeEnd) {
-      const rowDate = new Date(row.Timestamp || row.Date || '');
-      const endDate = new Date(filterState.dateRangeEnd);
-      if (rowDate > endDate) return false;
-    }
-    return true;
-  });
+function closeEditModal() {
+  const modal = document.getElementById('edit-modal');
+  if (modal) modal.classList.add('hidden');
+  const form = document.getElementById('edit-form');
+  if (form) { form.reset(); delete form.dataset.recordType; }
 }
 
-// CALL AFTER switchMasterHub
-// In switchMasterHub('career')
-// Add: initCareerHubUniversalFilter();
+document.addEventListener('DOMContentLoaded', () => {
+  const editForm = document.getElementById('edit-form');
+  if (editForm) {
+    editForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const recordId = document.getElementById('edit-record-id').value;
+      const recordType = e.target.dataset.recordType;
+      const formData = new FormData(e.target);
+      const updates = Object.fromEntries(formData);
 
-function executeAutomatedBatchElevation() {
-    showToast("Batch elevation calculation initiated. Processing all tier candidates...", "info");
-    executeSecureBridgeCall("career", "batch-elevation-calculate", {}).then(res => {
-        if (res.success) {
-            showToast(`Batch processing completed. ${res.processedCount || 0} records updated.`, "success");
-            initializeModule_career_elevation();
-        } else {
-            showToast(res.error || "Batch processing failed.", "error");
-        }
+      const res = await executeSecureBridgeCall('admin', 'update-record', { recordId, recordType, updates });
+
+      if (res.success) {
+        showToast('Record updated successfully', 'success');
+        closeEditModal();
+        const reloadMap = {
+          'career-users': initializeModule_career_users,
+          'career-earnings': initializeModule_career_earnings,
+          'career-settlements': initializeModule_career_settlements,
+          'assessment-students': initializeModule_assess_submissions,
+          'assessment-courses': initializeModule_assessment_courses,
+          'assessment-questions': initializeModule_assessment_questions,
+          'assessment-certificates': loadCertificateData,
+          'assessment-applications': initializeModule_assessment_applications,
+          'client-submitted': loadClientSubmittedProjects,
+          'client-onboarded': loadProductionFulfillment,
+          'leads-matrix': loadLeadsMatrix
+        };
+        const fn = reloadMap[recordType];
+        if (fn) fn();
+      } else {
+        showToast(res.error || 'Update failed', 'error');
+      }
     });
-}
+  }
+});
 
 function initializeModule() {
-    if (typeof initializeNavigation === 'function') {
-        initializeNavigation();
-    }
+  if (!document.getElementById("vh-pulse-style")) {
+    const style = document.createElement("style");
+    style.id = "vh-pulse-style";
+    style.textContent = "@keyframes pulse{from{opacity:1}to{opacity:0.4}}";
+    document.head.appendChild(style);
+  }
 
-    const currentToken = SESSION_MASTER_TOKEN || localStorage.getItem("VIC_MASTER_TOKEN");
-    const currentIdentity = CURRENT_ADMIN_IDENTITY || localStorage.getItem("VIC_ADMIN_EMAIL");
+  initializeNavigation();
 
-    setTimeout(() => {
-        toggleSystemLoader(false);
+  const currentToken = SESSION_MASTER_TOKEN || localStorage.getItem("VIC_MASTER_TOKEN");
+  const currentIdentity = CURRENT_ADMIN_IDENTITY || localStorage.getItem("VIC_ADMIN_EMAIL");
 
-        if (currentToken && currentIdentity && currentIdentity !== "Unauthenticated Session") {
-            const loginEl = document.getElementById('loginView');
-            const dashboardEl = document.getElementById('mainDashboardView');
-            const welcomeTitleEl = document.getElementById('welcomeTitle');
+  toggleSystemLoader(true);
 
-            if (loginEl) loginEl.classList.add('hidden');
-            if (dashboardEl) dashboardEl.classList.remove('hidden');
-            if (welcomeTitleEl) welcomeTitleEl.innerText = `Terminal Access Desk: Locked On - ${currentIdentity}`;
-            
-            if (typeof switchMasterHub === 'function') {
-                switchMasterHub('career');
-            }
-        }
-    }, 800);
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-    if (!document.getElementById("vh-pulse-style")) {
-        const style = document.createElement("style");
-        style.id = "vh-pulse-style";
-        style.textContent = "@keyframes pulse{from{opacity:1}to{opacity:0.4}}";
-        document.head.appendChild(style);
-    }
-
-    initializeModule();
-    if (SESSION_MASTER_TOKEN) {
   setTimeout(() => {
-    initCareerHubUniversalFilter();
-  }, 1200);
+    toggleSystemLoader(false);
+
+    if (currentToken && currentIdentity && currentIdentity !== "Unauthenticated Session") {
+      SESSION_MASTER_TOKEN = currentToken;
+      CURRENT_ADMIN_IDENTITY = currentIdentity;
+      WEBAPP_URL = localStorage.getItem('VIC_WEBAPP_URL') || "";
+
+      document.getElementById('loginView')?.classList.add('hidden');
+      document.getElementById('mainDashboardView')?.classList.remove('hidden');
+
+      const welcomeEl = document.getElementById('welcomeTitle');
+      if (welcomeEl) welcomeEl.innerText = `Terminal Access Desk: Locked On - ${currentIdentity}`;
+
+      switchMasterHub('career');
+    }
+  }, 800);
 }
-});
+
+document.addEventListener("DOMContentLoaded", initializeModule);
 </script>
 </body>
 </html>
