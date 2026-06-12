@@ -44,6 +44,29 @@
             cursor: pointer;
         }
 
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e2937;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        /* Make modal body scroll nicely */
+        #edit-modal-body {
+            max-height: 65vh;
+        }
+
         .career-subview-link:hover,
         .assessment-subview-link:hover,
         .client-subview-link:hover,
@@ -92,9 +115,10 @@
             <form id="adminAuthenticationForm" onsubmit="executeMultiFactorLogin(event)" class="space-y-4">
                 <div>
                     <label for="webappUrl"
-                        class="block text-xs font-mono tracking-wide uppercase text-slate-400 mb-1">Secure Gateway
+                        class="block text-xs font-mono tracking-wide uppercase text-slate-400 mb-1">Secure
+                        Gateway
                         Access URL</label>
-                    <input type="url" id="webappUrl" required placeholder="https://script.google.com/macros/s/.../exec"
+                    <input type="url" id="webappUrl" placeholder="url"
                         class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm font-mono text-emerald-400 focus:outline-none focus:border-emerald-500" />
                 </div>
                 <div class="grid grid-cols-2 gap-4">
@@ -222,6 +246,9 @@
                     <a href="#" data-target-view="career-messages" class="career-subview-link">Corporate Messaging</a>
                     <a href="#" data-target-view="career-elevation" class="career-subview-link">Career Elevation
                         Matrix</a>
+                    <a href="#" data-target-view="career-complaints" class="career-subview-link">
+                        Complaint Tickets
+                    </a>
                     <div class="mt-4 border-t border-slate-800 pt-3 px-1">
                         <span
                             class="text-[10px] font-mono tracking-wider text-slate-500 uppercase px-2 mb-2 block">Universal
@@ -232,15 +259,10 @@
                                 <select id="uniFilterLevel" onchange="applyUniversalFilter()"
                                     class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-[10px] text-white focus:outline-none focus:border-emerald-500">
                                     <option value="">All Levels</option>
-                                    <option value="1">Level 1</option>
-                                    <option value="2">Level 2</option>
-                                    <option value="3">Level 3</option>
-                                    <option value="4">Level 4</option>
-                                    <option value="5">Level 5</option>
-                                    <option value="MARKETER">MARKETER</option>
-                                    <option value="SENIOR_CONSULTANT">SENIOR_CONSULTANT</option>
-                                    <option value="REGIONAL_DIRECTOR">REGIONAL_DIRECTOR</option>
-                                    <option value="ADMIN">ADMIN</option>
+                                    <option value="1">Marketer</option>
+                                    <option value="2">Consultant</option>
+                                    <option value="3">Senior Consultant</option>
+                                    <option value="4">Area Manager</option>
                                 </select>
                             </div>
                             <div>
@@ -326,7 +348,8 @@
 
                             <div class="text-xs text-slate-400">
                                 Showing <span id="recordsShowing-career-users">0</span> of <span
-                                    id="totalRecords-career-users">0</span> records
+                                    id="totalRecords-career-users">0</span>
+                                records
                             </div>
                         </div>
                     </div>
@@ -370,10 +393,11 @@
                                     <tr>
                                         <th class="p-3">Timestamp Node</th>
                                         <th class="p-3">Partner UniqueID Ref</th>
-                                        <th class="p-3">Amount Charged (Col T)</th>
-                                        <th class="p-3">Assigned Service Block</th>
-                                        <th class="p-3">Payout Step (Col O)</th>
-                                        <th class="p-3">Status</th>
+                                        <th class="p-3">Amount Charged</th>
+                                        <th class="p-3">Assigned Service</th>
+                                        <th class="p-3">Payout Status</th>
+                                        <th class="p-3">Paid</th>
+                                        <th class="p-3">Earned</th>
                                         <th class="p-3 text-center">Action</th>
                                     </tr>
                                 </thead>
@@ -514,6 +538,59 @@
                             </form>
                         </div>
                     </div>
+                    <div id="view-career-complaints"
+                        class="career-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Partner Complaint Tickets</h3>
+                                <p class="text-xs text-slate-400">Review and manage partner-submitted complaints.</p>
+                            </div>
+                            <button onclick="initializeModule_career_complaints()"
+                                class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700 transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-arrows-rotate"></i> Sync Complaints
+                            </button>
+                        </div>
+                        <div
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead
+                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                    <tr>
+                                        <th class="p-3">Timestamp</th>
+                                        <th class="p-3">Email</th>
+                                        <th class="p-3">Subject</th>
+                                        <th class="p-3">Message</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3">Admin Reply</th>
+                                        <th class="p-3 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="careerComplaintsTableBody"
+                                    class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                            </table>
+                        </div>
+                        <div id="paginationControls-career-complaints"
+                            class="pagination-controls shrink-0 mt-4 flex items-center justify-between border-t border-slate-800 pt-4">
+                            <div class="flex items-center gap-2">
+                                <button onclick="previousPage('career-complaints')" id="btnPrev-career-complaints"
+                                    class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded border border-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <i class="fa-solid fa-chevron-left"></i> Previous
+                                </button>
+                                <span id="pageInfo-career-complaints" class="text-xs text-slate-400 font-mono">
+                                    Page <span id="currentPage-career-complaints">1</span> of
+                                    <span id="totalPages-career-complaints">1</span>
+                                </span>
+                                <button onclick="nextPage('career-complaints')" id="btnNext-career-complaints"
+                                    class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded border border-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Next <i class="fa-solid fa-chevron-right"></i>
+                                </button>
+                            </div>
+                            <div class="text-xs text-slate-400">
+                                Showing <span id="recordsShowing-career-complaints">0</span> of
+                                <span id="totalRecords-career-complaints">0</span> records
+                            </div>
+                        </div>
+                    </div>
 
                 </div>
             </section>
@@ -614,7 +691,8 @@
                                             <th class="p-3">Recipient Email Mapping</th>
                                             <th class="p-3">Course/Track Certified</th>
                                             <th class="p-3">Mint Date</th>
-                                            <th class="p-3 font-mono text-right">Verification Gate Status</th>
+                                            <th class="p-3 font-mono text-right">Verify Status</th>
+                                            <th class="p-3 font-mono text-right">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody id="certificateRegistryTableBody"
@@ -878,8 +956,6 @@
            HUB: CLIENT SERVICE CENTER
       ================================================================= -->
             <section id="hub-client" class="hidden flex-1 flex overflow-hidden">
-
-                <!-- Client Sub-Nav -->
                 <div
                     class="w-56 bg-slate-950/40 border-r border-slate-800/60 flex flex-col shrink-0 px-2 py-4 space-y-1">
                     <span
@@ -890,18 +966,22 @@
                     <button class="client-subview-link" data-target-view="client-onboarded">Active Job Status
                         Ledger</button>
                 </div>
-
-                <!-- Client Views Container -->
                 <div class="flex-1 flex flex-col overflow-hidden p-6">
-
-                    <!-- VIEW: Sourced Project Intake -->
+                    <!-- VIEW: Inbound Sourced Projects -->
                     <div id="view-client-submitted" class="client-view flex-1 flex flex-col overflow-hidden space-y-4">
                         <div class="flex justify-between items-center shrink-0">
                             <div>
-                                <h3 class="text-lg font-bold text-white">Sub 1: Sourced Project Intake Pipeline Matrix
-                                    Table</h3>
-                                <p class="text-xs text-slate-400">Review newly routed project applications generated
-                                    from the affiliate ecosystem grid.</p>
+                                <h3 class="text-lg font-bold text-white">Sourced Project Intake Pipeline</h3>
+                                <p class="text-xs text-slate-400">Review and manage inbound project applications from
+                                    the affiliate ecosystem.</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="loadClientSubmittedProjects()"
+                                    class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700 transition-colors flex items-center gap-1"><i
+                                        class="fa-solid fa-arrows-rotate"></i> Sync</button>
+                                <button onclick="openAddProjectRowModal()"
+                                    class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded transition-colors shadow flex items-center gap-1"><i
+                                        class="fa-solid fa-plus"></i> Add New Row</button>
                             </div>
                         </div>
                         <div
@@ -910,11 +990,12 @@
                                 <thead
                                     class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
                                     <tr>
-                                        <th class="p-3">Sourced Data ID (Col B)</th>
-                                        <th class="p-3">Client Information Profile (Col C)</th>
-                                        <th class="p-3">Affiliate Partner Source (Col A)</th>
-                                        <th class="p-3">Engaged Service (Col I)</th>
-                                        <th class="p-3">Payment Matrix Link (Col U)</th>
+                                        <th class="p-3">Timestamp</th>
+                                        <th class="p-3">Client Info</th>
+                                        <th class="p-3">Partner ID</th>
+                                        <th class="p-3">Engaged Service</th>
+                                        <th class="p-3">Payment Matrix Link</th>
+                                        <th class="p-3 font-mono">Amount Charged</th>
                                         <th class="p-3 text-right">Action</th>
                                     </tr>
                                 </thead>
@@ -922,16 +1003,36 @@
                                 </tbody>
                             </table>
                         </div>
+                        <div
+                            class="pagination-controls shrink-0 flex items-center justify-between border-t border-slate-800 pt-4">
+                            <div class="flex items-center gap-2">
+                                <button onclick="previousPage('client-submitted')" id="btnPrev-client-submitted"
+                                    class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded border border-slate-700 disabled:opacity-50"><i
+                                        class="fa-solid fa-chevron-left"></i> Previous</button>
+                                <span class="text-xs text-slate-400 font-mono">Page <span
+                                        id="currentPage-client-submitted">1</span> of
+                                    <span id="totalPages-client-submitted">1</span></span>
+                                <button onclick="nextPage('client-submitted')" id="btnNext-client-submitted"
+                                    class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded border border-slate-700 disabled:opacity-50">Next
+                                    <i class="fa-solid fa-chevron-right"></i></button>
+                            </div>
+                            <div class="text-xs text-slate-400">Showing <span
+                                    id="recordsShowing-client-submitted">0</span> of <span
+                                    id="totalRecords-client-submitted">0</span> records</div>
+                        </div>
                     </div>
-
-                    <!-- VIEW: Production Fulfillment Tracker -->
+                    <!-- VIEW: Active Job Status Ledger -->
                     <div id="view-client-onboarded"
                         class="client-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
-                        <div>
-                            <h3 class="text-lg font-bold text-white">Sub 2: Production Fulfillment Milestone Tracker
-                                &amp; Progress Notes</h3>
-                            <p class="text-xs text-slate-400">Audit execution milestones progress notes, monitor
-                                delivery status codes, and issue updates.</p>
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Active Job Status Ledger</h3>
+                                <p class="text-xs text-slate-400">Track production milestones, delivery status codes,
+                                    and issue updates.</p>
+                            </div>
+                            <button onclick="loadProductionFulfillment()"
+                                class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700 transition-colors flex items-center gap-1"><i
+                                    class="fa-solid fa-arrows-rotate"></i> Sync</button>
                         </div>
                         <div
                             class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
@@ -946,13 +1047,14 @@
                                         <th class="p-3">Client Email</th>
                                         <th class="p-3">Client Phone</th>
                                         <th class="p-3">Service</th>
-                                        <th class="p-3">Amount</th>
+                                        <th class="p-3 font-mono">Amount Charged</th>
+                                        <th class="p-3 font-mono">Amount Paid</th>
+                                        <th class="p-3">Payment Type</th>
+                                        <th class="p-3">Payment Date</th>
                                         <th class="p-3">Partner ID</th>
                                         <th class="p-3">Partner Email</th>
                                         <th class="p-3">Status</th>
                                         <th class="p-3">Progress Notes</th>
-                                        <th class="p-3">Last Updated</th>
-                                        <th class="p-3">Admin Messages</th>
                                         <th class="p-3 text-right">Action</th>
                                     </tr>
                                 </thead>
@@ -961,7 +1063,6 @@
                             </table>
                         </div>
                     </div>
-
                 </div>
             </section>
 
@@ -979,11 +1080,13 @@
                     <button class="leads-subview-link" data-target-view="leads-broadcast">Broadcast
                         Configuration</button>
                     <button class="leads-subview-link" data-target-view="leads-drive">Mail Drive Reports</button>
+                    <button class="leads-subview-link" data-target-view="leads-calendar">Event Calendar</button>
                 </div>
 
                 <!-- Leads Views Container -->
                 <div class="flex-1 flex flex-col overflow-hidden p-6">
 
+                    <!-- VIEW: Lead Table Matrix -->
                     <!-- VIEW: Lead Table Matrix -->
                     <div id="view-leads-matrix" class="leads-view flex-1 flex flex-col overflow-hidden space-y-4">
                         <div class="flex justify-between items-center shrink-0">
@@ -994,27 +1097,107 @@
                             </div>
                             <button onclick="openLeadCreationModalFormPanel()"
                                 class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded transition-colors shadow flex items-center gap-1">
-                                <i class="fa-solid fa-user-plus"></i> Inject Manual Lead Profile Input Modal
+                                <i class="fa-solid fa-user-plus"></i> Inject Manual Lead Profile
                             </button>
                         </div>
+
                         <div
                             class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
                             <table class="w-full text-left border-collapse text-xs">
                                 <thead
                                     class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
                                     <tr>
-                                        <th class="p-3">Lead Track Unique ID</th>
-                                        <th class="p-3">Prospect FullName Profile</th>
+                                        <th class="p-3 w-28">Lead Track Unique ID</th>
+                                        <th class="p-3">Prospect FullName + Company</th>
                                         <th class="p-3">Corporate Contact Email</th>
                                         <th class="p-3">Source Channel</th>
-                                        <th class="p-3">Assigned Agent Representative</th>
-                                        <th class="p-3 font-mono">Funnel Stage Progression Metric</th>
-                                        <th class="p-3 text-center">Update Action Option Block</th>
+                                        <th class="p-3">State</th>
+                                        <th class="p-3">Funnel Stage</th>
+                                        <th class="p-3">Priority</th>
+                                        <th class="p-3 text-center w-32">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="crmLeadsGridTableBody" class="divide-y divide-slate-800/50 text-slate-300">
+                                    <!-- Populated by JavaScript -->
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                    <div id="view-leads-calendar"
+                        class="leads-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Event Calendar</h3>
+                                <p class="text-xs text-slate-400">Schedule and manage corporate events, follow-ups, and
+                                    campaign dates.</p>
+                            </div>
+                            <button onclick="openEventCreationModal()"
+                                class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded transition-colors shadow flex items-center gap-1">
+                                <i class="fa-solid fa-calendar-plus"></i> Add New Event
+                            </button>
+                        </div>
+                        <!-- Calendar grid header -->
+                        <div class="shrink-0 bg-slate-950 border border-slate-800 rounded-xl p-4">
+                            <div class="flex items-center justify-between mb-4">
+                                <button onclick="calendarPrevMonth()"
+                                    class="text-slate-400 hover:text-white px-2 py-1 rounded hover:bg-slate-800 transition-colors">
+                                    <i class="fa-solid fa-chevron-left"></i>
+                                </button>
+                                <h4 id="calendarMonthLabel" class="text-sm font-bold text-white font-mono"></h4>
+                                <button onclick="calendarNextMonth()"
+                                    class="text-slate-400 hover:text-white px-2 py-1 rounded hover:bg-slate-800 transition-colors">
+                                    <i class="fa-solid fa-chevron-right"></i>
+                                </button>
+                            </div>
+                            <div
+                                class="grid grid-cols-7 gap-1 text-center text-[10px] font-mono text-slate-500 uppercase mb-2">
+                                <div>Sun</div>
+                                <div>Mon</div>
+                                <div>Tue</div>
+                                <div>Wed</div>
+                                <div>Thu</div>
+                                <div>Fri</div>
+                                <div>Sat</div>
+                            </div>
+                            <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
+                        </div>
+                        <!-- Events list table -->
+                        <div
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead
+                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                    <tr>
+                                        <th class="p-3">Event ID</th>
+                                        <th class="p-3">Title</th>
+                                        <th class="p-3">Date & Time</th>
+                                        <th class="p-3">Type</th>
+                                        <th class="p-3">Assigned To</th>
+                                        <th class="p-3">Notes</th>
+                                        <th class="p-3 text-center">Status</th>
+                                        <th class="p-3 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="calendarEventsTableBody" class="divide-y divide-slate-800/50 text-slate-300">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div
+                            class="pagination-controls shrink-0 flex items-center justify-between border-t border-slate-800 pt-4">
+                            <div class="flex items-center gap-2">
+                                <button onclick="calendarEventsPagePrev()"
+                                    class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded border border-slate-700 transition-colors">
+                                    <i class="fa-solid fa-chevron-left"></i> Previous
+                                </button>
+                                <span id="calEventPageInfo" class="text-xs text-slate-400 font-mono">Page 1 of 1</span>
+                                <button onclick="calendarEventsPageNext()"
+                                    class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded border border-slate-700 transition-colors">
+                                    Next <i class="fa-solid fa-chevron-right"></i>
+                                </button>
+                            </div>
+                            <div class="text-xs text-slate-400">
+                                <span id="calEventCount">0</span> events total
+                            </div>
                         </div>
                     </div>
 
@@ -1169,6 +1352,238 @@
                     class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded transition-colors shadow font-mono">
                     INITIALIZE PRODUCTION PROTOCOL &amp; GENERATE WORKPLACE TRACKING KEY
                 </button>
+            </form>
+        </div>
+    </div>
+    <!-- =====================================================================
+   MODAL: Add New Project Row
+====================================================================== -->
+    <div id="modalAddProjectRow"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-2xl w-full flex flex-col space-y-4 max-h-[90vh] overflow-auto custom-scrollbar">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5"><i
+                        class="fa-solid fa-plus text-emerald-400"></i> Add New Project Row to DataSheet</h3>
+                <button onclick="closeAddProjectRowModal()"
+                    class="text-slate-400 hover:text-white transition-colors text-sm font-bold">&times;</button>
+            </div>
+            <form id="addProjectRowForm" onsubmit="submitNewProjectRow(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs text-slate-400 mb-1">Partner ID</label><input type="text"
+                            id="newRowPartnerID" required placeholder="UI12345678"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div><label class="block text-xs text-slate-400 mb-1">Client Name</label><input type="text"
+                            id="newRowClientName" required placeholder="John Doe"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs text-slate-400 mb-1">Client Phone</label><input type="text"
+                            id="newRowPhone" placeholder="+234 803 000 0000"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div><label class="block text-xs text-slate-400 mb-1">Client Email</label><input type="email"
+                            id="newRowEmail" placeholder="client@domain.com"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs text-slate-400 mb-1">Location</label><input type="text"
+                            id="newRowLocation" placeholder="Lagos"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div><label class="block text-xs text-slate-400 mb-1">Service</label><input type="text"
+                            id="newRowService" required placeholder="CV Writing"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs text-slate-400 mb-1">Amount to Charge (₦)</label><input
+                            type="number" id="newRowAmountCharge" required placeholder="50000"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div><label class="block text-xs text-slate-400 mb-1">Urgency</label>
+                        <select id="newRowUrgency"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                            <option value="Normal">Normal</option>
+                            <option value="Urgent">Urgent</option>
+                            <option value="ASAP">ASAP</option>
+                        </select>
+                    </div>
+                </div>
+                <div><label class="block text-xs text-slate-400 mb-1">Comments / Notes</label><textarea
+                        id="newRowComments" rows="2" placeholder="Additional context..."
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500 resize-none"></textarea>
+                </div>
+                <button type="submit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded transition-colors shadow font-mono uppercase tracking-wide">Add
+                    Row to DataSheet</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+   MODAL: Send Email to Client
+====================================================================== -->
+    <div id="modalSendClientEmail"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full flex flex-col space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5"><i
+                        class="fa-regular fa-envelope text-emerald-400"></i> Send Email to Client</h3>
+                <button onclick="closeSendClientEmailModal()"
+                    class="text-slate-400 hover:text-white transition-colors text-sm font-bold">&times;</button>
+            </div>
+            <form id="sendClientEmailForm" onsubmit="submitSendClientEmail(event)" class="space-y-3">
+                <input type="hidden" id="emailClientToAddress" />
+                <div><label class="block text-xs text-slate-400 mb-1">To (Client Email)</label><input type="text"
+                        id="emailClientToDisplay" readonly
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-400 focus:outline-none" />
+                </div>
+                <div><label class="block text-xs text-slate-400 mb-1">Subject</label><input type="text"
+                        id="emailClientSubject" required placeholder="Regarding your service order..."
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div><label class="block text-xs text-slate-400 mb-1">Message (HTML allowed)</label><textarea
+                        id="emailClientBody" required rows="5" placeholder="Dear Client,..."
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500 resize-none"></textarea>
+                </div>
+                <button type="submit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded transition-colors shadow">Send
+                    Email</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+   MODAL: Generate Payment Link
+====================================================================== -->
+    <div id="modalGeneratePaymentLink"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full flex flex-col space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5"><i
+                        class="fa-solid fa-link text-emerald-400"></i> Generate Payment Link</h3>
+                <button onclick="closeGeneratePaymentLinkModal()"
+                    class="text-slate-400 hover:text-white transition-colors text-sm font-bold">&times;</button>
+            </div>
+            <form id="generatePaymentLinkForm" onsubmit="submitGeneratePaymentLink(event)" class="space-y-3">
+                <input type="hidden" id="genPayPartnerEmail" />
+                <input type="hidden" id="genPayPartnerID" />
+                <input type="hidden" id="genPayRowRef" />
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs text-slate-400 mb-1">Client Name</label><input type="text"
+                            id="genPayClientName" required
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div><label class="block text-xs text-slate-400 mb-1">Client Email</label><input type="email"
+                            id="genPayClientEmail" required
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs text-slate-400 mb-1">Service</label><input type="text"
+                            id="genPayService" required
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div><label class="block text-xs text-slate-400 mb-1">Amount (₦)</label><input type="number"
+                            id="genPayAmount" required
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                </div>
+                <div><label class="block text-xs text-slate-400 mb-1">Custom Message (optional)</label><textarea
+                        id="genPayMessage" rows="3" placeholder="Additional notes to partner..."
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500 resize-none"></textarea>
+                </div>
+                <button type="submit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded transition-colors shadow flex items-center justify-center gap-1"><i
+                        class="fa-solid fa-link"></i> Generate &amp; Send Payment Link</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+   MODAL: Onboard to Active Job Ledger
+====================================================================== -->
+    <div id="modalOnboardToLedger"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-2xl w-full flex flex-col space-y-4 max-h-[90vh] overflow-auto custom-scrollbar">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5"><i
+                        class="fa-solid fa-network-wired text-emerald-400"></i> Onboard to Active Job Ledger</h3>
+                <button onclick="closeOnboardToLedgerModal()"
+                    class="text-slate-400 hover:text-white transition-colors text-sm font-bold">&times;</button>
+            </div>
+            <form id="onboardToLedgerForm" onsubmit="submitOnboardToLedger(event)" class="space-y-4">
+                <input type="hidden" id="onboardSourceRowId" />
+                <div
+                    class="bg-slate-950/50 border border-slate-800 rounded-lg p-3 text-[10px] text-slate-400 font-mono">
+                    Auto-populated fields are pre-filled from the selected project row.</div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs text-slate-400 mb-1">Client Name</label><input type="text"
+                            id="onboardLedgerClientName" required
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div><label class="block text-xs text-slate-400 mb-1">Client Email</label><input type="email"
+                            id="onboardLedgerClientEmail" required
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs text-slate-400 mb-1">Client Phone</label><input type="text"
+                            id="onboardLedgerClientPhone"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div><label class="block text-xs text-slate-400 mb-1">Service</label><input type="text"
+                            id="onboardLedgerService" required
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs text-slate-400 mb-1">Partner ID</label><input type="text"
+                            id="onboardLedgerPartnerID" required
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div><label class="block text-xs text-slate-400 mb-1">Partner Email</label><input type="email"
+                            id="onboardLedgerPartnerEmail" placeholder="noreply@thevictorias.com.ng"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs text-slate-400 mb-1">Amount Paid (₦)</label><input type="number"
+                            id="onboardLedgerAmountPaid" required placeholder="0"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div><label class="block text-xs text-slate-400 mb-1">Payment Type</label>
+                        <select id="onboardLedgerPaymentType"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                            <option value="Digital Platform">Digital Platform</option>
+                            <option value="Direct Payment">Direct Payment</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs text-slate-400 mb-1">Payment Date</label><input type="date"
+                            id="onboardLedgerPaymentDate" required
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div><label class="block text-xs text-slate-400 mb-1">Tracking Code (auto)</label><input type="text"
+                            id="onboardLedgerTrackingCode" readonly
+                            class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-400 focus:outline-none font-mono" />
+                    </div>
+                </div>
+                <div><label class="block text-xs text-slate-400 mb-1">TxRef (auto)</label><input type="text"
+                        id="onboardLedgerTxRef" readonly
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-400 focus:outline-none font-mono" />
+                </div>
+                <button type="submit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded transition-colors shadow font-mono uppercase tracking-wide">Initialize
+                    Production Protocol &amp; Add to Ledger</button>
             </form>
         </div>
     </div>
@@ -1331,18 +1746,92 @@
     <!-- =====================================================================
        EDIT RECORD MODAL (from doc 1)
   ====================================================================== -->
-    <div id="edit-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div class="bg-slate-800 rounded-lg p-6 w-96 border border-slate-700">
-            <h3 class="text-lg font-bold mb-4 text-white">Edit Record</h3>
-            <form id="edit-form">
-                <input type="hidden" id="edit-record-id" />
-                <div id="edit-form-fields" class="space-y-3"></div>
-                <div class="flex gap-3 mt-6">
-                    <button type="submit"
-                        class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 text-white text-sm">Save Changes</button>
-                    <button type="button" onclick="closeEditModal()"
-                        class="px-4 py-2 bg-slate-700 rounded hover:bg-slate-600 text-white text-sm">Cancel</button>
+    <!-- EDIT RECORD MODAL -->
+    <div id="edit-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div
+            class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+
+            <!-- Header -->
+            <div class="flex justify-between items-center border-b border-slate-700 px-6 py-4 shrink-0">
+                <h3 class="text-lg font-bold text-white">Edit Record</h3>
+                <button onclick="closeEditModal()"
+                    class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+
+            <!-- Scrollable Form Body -->
+            <div id="edit-modal-body" class="flex-1 overflow-auto p-6 custom-scrollbar">
+                <form id="edit-form" class="space-y-5">
+                    <input type="hidden" id="edit-record-id" />
+                    <div id="edit-form-fields" class="space-y-4">
+                        <!-- Fields populated dynamically -->
+                    </div>
+                </form>
+            </div>
+
+            <!-- Footer with buttons -->
+            <div class="border-t border-slate-700 p-6 flex gap-3 shrink-0">
+                <button type="button" onclick="closeEditModal()"
+                    class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" form="edit-form"
+                    class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors">
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="modalEventCreation"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full flex flex-col space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+                    <i class="fa-solid fa-calendar-plus text-emerald-400"></i> New Calendar Event
+                </h3>
+                <button onclick="closeEventCreationModal()"
+                    class="text-slate-400 hover:text-white transition-colors text-sm font-bold">&times;</button>
+            </div>
+            <form id="eventCreationForm" onsubmit="submitNewCalendarEvent(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Event Title</label>
+                        <input type="text" id="evtTitle" required placeholder="Follow-up Call"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Event Type</label>
+                        <select id="evtType"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                            <option value="Follow-up">Follow-up</option>
+                            <option value="Campaign">Campaign</option>
+                            <option value="Meeting">Meeting</option>
+                            <option value="Deadline">Deadline</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
                 </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Date & Time</label>
+                        <input type="datetime-local" id="evtDateTime" required
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Assigned To (Email)</label>
+                        <input type="text" id="evtAssignedTo" placeholder="agent@thevictorias.com.ng"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Notes</label>
+                    <textarea id="evtNotes" rows="3" placeholder="Event details..."
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500 resize-none"></textarea>
+                </div>
+                <button type="submit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded transition-colors shadow font-mono">
+                    SAVE EVENT TO CALENDAR
+                </button>
             </form>
         </div>
     </div>
@@ -1360,7 +1849,14 @@
 
         let currentCertViewMode = 'Approved';
 
+        let CAL_YEAR = new Date().getFullYear();
+        let CAL_MONTH = new Date().getMonth();
+        let CAL_EVENTS_ALL = [];
+        let CAL_EVENTS_PAGE = 1;
+        const CAL_EVENTS_PER_PAGE = 20;
+
         const EDIT_MODAL_FORM_SCHEMAS = {
+
             'career-users': [
                 { name: 'Full Name', key: 'Name', type: 'text', required: true },
                 { name: 'Email Address', key: 'Email', type: 'email', required: true },
@@ -1383,6 +1879,24 @@
                 { name: 'Amount (₦)', key: 'AmountNaira', type: 'number', required: true },
                 { name: 'Status', key: 'Status', type: 'select', required: true, options: [{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Denied', label: 'Denied' }, { value: 'Investigating', label: 'Investigating' }] },
                 { name: 'Admin Notes', key: 'AdminNotes', type: 'textarea', required: false }
+            ],
+            'career-complaints': [
+                { name: 'Email', key: 'Email', type: 'email', required: true },
+                { name: 'Subject', key: 'Subject', type: 'text', required: true },
+                { name: 'Message', key: 'Message', type: 'textarea', required: true },
+                {
+                    name: 'Status',
+                    key: 'Status',
+                    type: 'select',
+                    required: true,
+                    options: [
+                        { value: 'Open', label: 'Open' },
+                        { value: 'In Review', label: 'In Review' },
+                        { value: 'Resolved', label: 'Resolved' }
+                    ]
+                },
+                { name: 'Admin Reply', key: 'AdminReply', type: 'textarea', required: false },
+                { name: 'Timestamp', key: 'Timestamp', type: 'text', required: false }
             ],
             'assessment-students': [
                 { name: 'Student Email', key: 'userEmail', type: 'email', required: true },
@@ -1436,12 +1950,27 @@
                 { name: 'Progress Notes', key: 'ProgressNotes', type: 'textarea', required: false }
             ],
             'leads-matrix': [
-                { name: 'Lead Name', key: 'Name', type: 'text', required: true },
+                { name: 'Full Name', key: 'Name', type: 'text', required: true },
                 { name: 'Email', key: 'Email', type: 'email', required: true },
                 { name: 'Phone', key: 'Phone', type: 'tel', required: false },
                 { name: 'Source', key: 'Source', type: 'text', required: false },
                 { name: 'Assigned Agent', key: 'Agent', type: 'text', required: false },
                 { name: 'Funnel Stage', key: 'Stage', type: 'select', required: true, options: [{ value: 'New Prospect', label: 'New Prospect' }, { value: 'Contacted', label: 'Contacted' }, { value: 'Negotiation', label: 'Negotiation' }, { value: 'Closed', label: 'Closed' }] }
+            ],
+            // ADD inside EDIT_MODAL_FORM_SCHEMAS object, after the last entry:
+            'leads-calendar': [
+                { name: 'Title', key: 'Title', type: 'text', required: true },
+                { name: 'Date & Time', key: 'DateTime', type: 'datetime-local', required: true },
+                {
+                    name: 'Event Type', key: 'Type', type: 'select', required: false,
+                    options: ['Follow-up', 'Campaign', 'Meeting', 'Deadline', 'Other'].map(v => ({ value: v, label: v }))
+                },
+                { name: 'Assigned To', key: 'AssignedTo', type: 'email', required: false },
+                { name: 'Notes', key: 'Notes', type: 'textarea', required: false },
+                {
+                    name: 'Status', key: 'Status', type: 'select', required: false,
+                    options: ['Upcoming', 'Confirmed', 'Completed', 'Cancelled'].map(v => ({ value: v, label: v }))
+                }
             ],
             'career-elevation': [
                 { name: 'Email', key: 'Email', type: 'email', required: true },
@@ -1748,7 +2277,9 @@
                 'client-onboarded': loadProductionFulfillment,
                 'leads-matrix': loadLeadsMatrix,
                 'leads-broadcast': loadBroadcastQueue,
-                'leads-drive': loadMailDriveReports
+                'leads-drive': loadMailDriveReports,
+                'career-complaints': initializeModule_career_complaints,
+                'leads-calendar': loadCalendarEvents,
             };
 
             const initFn = initMap[action];
@@ -1781,43 +2312,40 @@
         function updateKPIs() {
             executeSecureBridgeCall('career', 'career-earnings', {}).then(data => {
                 if (!data.success || !data.data) return;
+
                 let filtered = filterTableByState(data.data, UNI_FILTER_STATE);
 
-                const gross = filtered
-                    .filter(r => (r.PayoutStatus || r['Payout Status'] || '') === 'Paid')
-                    .reduce((s, r) => s + parseFloat(r.AmountToCharge || r.EarningsNaira || 0), 0);
-                const el = document.getElementById('kpi-gross');
-                if (el) el.textContent = fmtNaira(gross);
+                // Gross Distributed Commissions = All EarningsNaira
+                const gross = filtered.reduce((sum, r) => {
+                    return sum + parseFloat(r.EarningsNaira || r.AmountToCharge || r.amount || 0);
+                }, 0);
 
-                const active = filtered
-                    .filter(r => (r.PayoutStatus || r['Payout Status'] || '') === 'Approved')
-                    .reduce((s, r) => s + parseFloat(r.AmountToCharge || r.EarningsNaira || 0), 0);
-                const payoutEl = document.getElementById('kpi-payout');
-                if (payoutEl) payoutEl.textContent = fmtNaira(active);
-            });
+                // Active Payout Pipeline = Approved but not yet Paid
+                const activePayout = filtered
+                    .filter(r => String(r.PayoutStatus || r['Payout Status'] || '').toLowerCase() === 'approved')
+                    .reduce((sum, r) => sum + parseFloat(r.EarningsNaira || r.AmountToCharge || 0), 0);
 
-            executeSecureBridgeCall('client', 'client-onboarded', {}).then(data => {
-                if (!data.success || !data.data) return;
-                const filtered = filterTableByState(data.data, UNI_FILTER_STATE);
-                const count = filtered.filter(r => r.Status === 'Completed').length;
-                const el = document.getElementById('kpi-projects');
-                if (el) el.textContent = count + ' Units';
+                // Total Sourced Projects
+                const totalProjects = filtered.length;
+
+                // Update KPI cards
+                document.getElementById('kpi-gross').textContent = fmtNaira(gross);
+                document.getElementById('kpi-payout').textContent = fmtNaira(activePayout);
+                document.getElementById('kpi-projects').textContent = `${totalProjects} Units`;
             });
         }
 
         const paginationState = {
-            'career-users': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
-            'career-earnings': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
-            'career-settlements': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
-            'career-messages': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
-            'assessment-students': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
-            'assessment-certificates': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
-            'assessment-courses': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
-            'assessment-questions': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
-            'leads-matrix': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
-            'client-submitted': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
-            'client-onboarded': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false }
+            'career-users': { page: 1, totalPages: 1, total: 0 },
+            'career-earnings': { page: 1, totalPages: 1, total: 0 },
+            'career-settlements': { page: 1, totalPages: 1, total: 0 },
+            'career-complaints': { page: 1, totalPages: 1, total: 0 },
+            'assessment-students': { page: 1, totalPages: 1, total: 0 },
+            'client-submitted': { page: 1, totalPages: 1, total: 0 },
+            'client-onboarded': { page: 1, totalPages: 1, total: 0 },
+            'leads-matrix': { page: 1, totalPages: 1, total: 0 }
         };
+
 
         function updatePaginationState(viewName, response) {
             if (!response || !response.success) return;
@@ -1833,107 +2361,171 @@
 
         function updatePaginationUI(viewName) {
             const state = paginationState[viewName];
-            const batchSize = 50;
-            const recordsEnd = Math.min(state.page * batchSize, state.total);
+            if (!state) return;
 
-            const currentPageEl = document.getElementById('currentPage-' + viewName);
-            const totalPagesEl = document.getElementById('totalPages-' + viewName);
-            const recordsShowingEl = document.getElementById('recordsShowing-' + viewName);
-            const totalRecordsEl = document.getElementById('totalRecords-' + viewName);
+            const currentPageEl = document.getElementById(`currentPage-${viewName}`);
+            const totalPagesEl = document.getElementById(`totalPages-${viewName}`);
+            const recordsShowingEl = document.getElementById(`recordsShowing-${viewName}`);
+            const totalRecordsEl = document.getElementById(`totalRecords-${viewName}`);
 
             if (currentPageEl) currentPageEl.textContent = state.page;
-            if (totalPagesEl) totalPagesEl.textContent = state.totalPages;
-            if (recordsShowingEl) recordsShowingEl.textContent = recordsEnd;
-            if (totalRecordsEl) totalRecordsEl.textContent = state.total;
+            if (totalPagesEl) totalPagesEl.textContent = state.totalPages || 1;
+            if (recordsShowingEl) recordsShowingEl.textContent = Math.min(state.page * 50, state.total || 0);
+            if (totalRecordsEl) totalRecordsEl.textContent = state.total || 0;
 
-            const btnPrev = document.getElementById('btnPrev-' + viewName);
-            const btnNext = document.getElementById('btnNext-' + viewName);
+            const btnPrev = document.getElementById(`btnPrev-${viewName}`);
+            const btnNext = document.getElementById(`btnNext-${viewName}`);
 
-            if (btnPrev) btnPrev.disabled = !state.hasPrev;
-            if (btnNext) btnNext.disabled = !state.hasNext;
+            if (btnPrev) btnPrev.disabled = state.page <= 1;
+            if (btnNext) btnNext.disabled = state.page >= (state.totalPages || 1);
         }
+
 
         function previousPage(viewName) {
             const state = paginationState[viewName];
-            if (state.page <= 1) return;
+            if (!state || state.page <= 1) return;
             state.page--;
             loadTableData(viewName, state.page);
         }
 
         function nextPage(viewName) {
             const state = paginationState[viewName];
-            if (state.page >= state.totalPages) return;
+            if (!state || state.page >= (state.totalPages || 1)) return;
             state.page++;
             loadTableData(viewName, state.page);
         }
 
-        function loadTableData(viewName, page) {
-            toggleSystemLoader(true);
+        // =======================================================
+        // UNIVERSAL TABLE LOADER WITH PAGINATION
+        // =======================================================
+
+        async function loadTableData(viewName, page = 1) {
+            console.log(`Loading ${viewName} - Page ${page}`);
 
             const actionMap = {
                 'career-users': 'career-users',
                 'career-earnings': 'career-earnings',
                 'career-settlements': 'career-settlements',
-                'career-messages': 'career-messages',
+                'career-complaints': 'career-complaints',
                 'assessment-students': 'assessment-students',
-                'assessment-certificates': 'assessment-certificates',
-                'assessment-courses': 'assessment-courses',
-                'assessment-questions': 'assessment-questions',
-                'leads-matrix': 'leads-matrix',
                 'client-submitted': 'client-submitted',
-                'client-onboarded': 'client-onboarded'
+                'client-onboarded': 'client-onboarded',
+                'leads-matrix': 'leads-matrix'
             };
 
             const systemMap = {
                 'career-users': 'career',
                 'career-earnings': 'career',
                 'career-settlements': 'career',
-                'career-messages': 'career',
+                'career-complaints': 'career',
                 'assessment-students': 'assessment',
-                'assessment-certificates': 'assessment',
-                'assessment-courses': 'assessment',
-                'assessment-questions': 'assessment',
-                'leads-matrix': 'leads',
                 'client-submitted': 'client',
-                'client-onboarded': 'client'
+                'client-onboarded': 'client',
+                'leads-matrix': 'leads'
             };
 
             const action = actionMap[viewName];
             const system = systemMap[viewName];
 
             if (!action || !system) {
-                toggleSystemLoader(false);
+                console.warn(`No mapping found for view: ${viewName}`);
                 return;
             }
 
-            fetch(WEBAPP_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({
-                    system: system,
-                    action: action,
-                    token: SESSION_MASTER_TOKEN,
-                    page: page
-                }),
-                redirect: "follow"
-            })
-                .then(response => response.json())
-                .then(result => {
-                    toggleSystemLoader(false);
+            // Show loading skeleton
+            const tbodyId = getTbodyId(viewName);
+            if (tbodyId) showTableSkeleton(tbodyId, 7);
 
-                    if (!result.success) {
-                        showToast("Failed to load data", "error");
-                        return;
-                    }
+            const res = await executeSecureBridgeCall(system, action, { page: page });
 
-                    updatePaginationState(viewName, result);
-                    populateTable(viewName, result.data);
-                })
-                .catch(error => {
-                    toggleSystemLoader(false);
-                    console.error("Error:", error);
-                    showToast("Error loading data", "error");
-                });
+            if (res.success) {
+                // Update pagination state
+                paginationState[viewName] = {
+                    page: res.page || page,
+                    totalPages: res.totalPages || 1,
+                    total: res.total || (res.data ? res.data.length : 0)
+                };
+
+                updatePaginationUI(viewName);
+
+                // Render the correct table
+                renderTable(viewName, res.data || []);
+            } else {
+                console.error(`Failed to load ${viewName}:`, res);
+                const tbody = document.getElementById(getTbodyId(viewName));
+                if (tbody) tbody.innerHTML = emptyRow('Failed to load data.', 7);
+            }
+        }
+
+        // Helper to get tbody ID
+        function getTbodyId(viewName) {
+            const map = {
+                'career-users': 'careerUsersTableBody',
+                'career-earnings': 'careerEarningsTableBody',
+                'career-settlements': 'careerSettlementsTableBody',
+                'career-complaints': 'careerComplaintsTableBody',
+                'assessment-students': 'assessmentSubmissionsTableBody',
+                'client-submitted': 'sourcedIntakeTableBody',
+                'client-onboarded': 'productionFulfillmentTableBody',
+                'leads-matrix': 'crmLeadsGridTableBody'
+            };
+            return map[viewName];
+        }
+
+        // Generic Table Renderer
+        function renderTable(viewName, data) {
+            const tbodyId = getTbodyId(viewName);
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = emptyRow('No records found.', 7);
+                return;
+            }
+
+            switch (viewName) {
+                case 'career-complaints':
+                    tbody.innerHTML = data.map(c => `
+                <tr>
+                    <td class="p-3 text-slate-500">${fmtDate(c.Timestamp)}</td>
+                    <td class="p-3 text-slate-300 font-mono">${escapeHtml(c.Email || '—')}</td>
+                    <td class="p-3 text-slate-200">${escapeHtml((c.Subject || '').substring(0, 50))}</td>
+                    <td class="p-3 text-slate-400">${escapeHtml((c.Message || '').substring(0, 60))}</td>
+                    <td class="p-3 text-center">${badge(c.Status || 'Open')}</td>
+                    <td class="p-3 text-slate-400">${escapeHtml((c.AdminReply || '—').substring(0, 40))}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="openEditModal('${escapeHtml(c.Email || '')}', ${JSON.stringify(c).replace(/"/g, '&quot;')}, 'career-complaints')"
+                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
+                    </td>
+                </tr>
+            `).join('');
+                    break;
+
+                case 'career-users':
+                    tbody.innerHTML = data.map(u => `
+                <tr>
+                    <td class="p-3 text-slate-400 font-mono text-xs">${escapeHtml(u.UniqueID || '—')}</td>
+                    <td class="p-3">
+                        <div class="font-medium text-slate-300">${escapeHtml(u.Name || '—')}</div>
+                        <div class="text-[10px] text-slate-500 font-mono">${escapeHtml(u.Email || '—')}</div>
+                    </td>
+                    <td class="p-3 text-xs">
+                        <div class="text-slate-300">${escapeHtml(u.AccountName || '—')}</div>
+                        <div class="text-slate-400">${escapeHtml(u.AccountNumber || '—')}</div>
+                    </td>
+                    <td class="p-3 text-center">Level ${escapeHtml(u.Level || 1)}</td>
+                    <td class="p-3 text-center">${badge((u.Approved === true || u.Approved === 'TRUE') ? 'Approved' : 'Pending')}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="openEditModal('${escapeHtml(u.UniqueID || '')}', ${JSON.stringify(u).replace(/"/g, '&quot;')}, 'career-users')"
+                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
+                    </td>
+                </tr>
+            `).join('');
+                    break;
+
+                default:
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-400">Renderer not implemented for ${viewName}</td></tr>`;
+            }
         }
 
         function filterTableByState(data, _legacyState) {
@@ -2005,39 +2597,104 @@
             if (!careerUsersView || careerUsersView.querySelector('#careerFilterLevel')) return;
 
             const filterHtml = `
-    <div id="careerHubFilter" class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 grid grid-cols-4 gap-3">
-      <div>
-        <label class="block text-xs text-slate-400 mb-1">User Level</label>
-        <select id="careerFilterLevel" onchange="applyCareerFilter()" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
-          <option value="">All Levels</option>
-          <option value="1">Level 1</option>
-          <option value="2">Level 2</option>
-          <option value="3">Level 3</option>
-          <option value="4">Level 4</option>
-          <option value="5">Level 5</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-xs text-slate-400 mb-1">Status</label>
-        <select id="careerFilterStatus" onchange="applyCareerFilter()" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
-          <option value="">All Status</option>
-          <option value="Approved">Approved</option>
-          <option value="Pending">Pending</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-xs text-slate-400 mb-1">From Date</label>
-        <input type="date" id="careerFilterDateStart" onchange="applyCareerFilter()" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
-      </div>
-      <div>
-        <label class="block text-xs text-slate-400 mb-1">To Date</label>
-        <input type="date" id="careerFilterDateEnd" onchange="applyCareerFilter()" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
-      </div>
+    <div id="careerHubFilter" class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 grid grid-cols-4 gap-3"><center>A parnter you can trust...</center>
     </div>
   `;
 
             const firstChild = careerUsersView.querySelector('div:first-child');
             if (firstChild) firstChild.insertAdjacentHTML('afterend', filterHtml);
+        }
+
+        async function initializeModule_career_settlements() {
+            const tbodyId = 'careerSettlementsTableBody';
+            showTableSkeleton(tbodyId, 6);
+
+            const [settRes, usersRes] = await Promise.all([
+                executeSecureBridgeCall('career', 'career-settlements', {}),
+                executeSecureBridgeCall('career', 'career-users', {})
+            ]);
+
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+
+            if (!settRes.success || !settRes.data || !settRes.data.length) {
+                tbody.innerHTML = emptyRow('No settlement requests found.', 6);
+                return;
+            }
+
+            // Build lookup map by EMAIL (PaymentRequests uses email as key)
+            const userMapByEmail = {};
+            if (usersRes.success && usersRes.data) {
+                usersRes.data.forEach(u => {
+                    const email = String(u.Email || u.email || '').toLowerCase().trim();
+                    if (email) {
+                        userMapByEmail[email] = {
+                            name: u.Name || u.name || '',
+                            accountName: u.AccountName || u.accountName || '',
+                            accountNumber: u.AccountNumber || u.accountNumber || '',
+                            bankName: u.BankName || u.bankName || '',
+                            uniqueID: u.UniqueID || u.uniqueID || ''
+                        };
+                    }
+                });
+            }
+
+            const data = filterTableByState(settRes.data, UNI_FILTER_STATE);
+
+            tbody.innerHTML = data.map(r => {
+                // PaymentRequests sheet: col A=Timestamp, B=PartnerID, C=Email, D=AmountNaira, E=Status
+                const email = String(r.Email || r.email || r['User Email'] || '').toLowerCase().trim();
+                const partnerID = String(r.PartnerID || r.partnerID || r['Partner ID'] || '').trim();
+                const userInfo = userMapByEmail[email] || {};
+
+                const amount = parseFloat(r.AmountNaira || r.Amount || r.amount || r['Amount Naira'] || 0);
+                const status = r.Status || r.status || 'Pending';
+                const queueID = r.QueueID || r.Timestamp || partnerID || '—';
+
+                return `
+        <tr class="hover:bg-slate-800/50 transition-colors">
+            <td class="p-3 text-slate-400 font-mono text-xs">
+                ${escapeHtml(String(queueID))}
+            </td>
+
+            <td class="p-3">
+                <div class="font-medium text-slate-200">${escapeHtml(userInfo.name || '—')}</div>
+                <div class="text-xs text-slate-500 font-mono">${escapeHtml(email || partnerID || '—')}</div>
+                <div class="text-xs text-slate-600 font-mono">${escapeHtml(partnerID || userInfo.uniqueID || '')}</div>
+            </td>
+
+            <td class="p-3 text-xs text-slate-400">
+                <div>${escapeHtml(userInfo.accountName || r.AccountName || '—')}</div>
+                <div class="font-mono">${escapeHtml(userInfo.accountNumber || r.AccountNumber || '—')}</div>
+                <div class="text-slate-500">${escapeHtml(userInfo.bankName || r.BankName || '—')}</div>
+            </td>
+
+            <td class="p-3 font-bold text-emerald-400 text-right font-mono">
+                ${fmtNaira(amount)}
+            </td>
+
+            <td class="p-3 text-center">
+                <select onchange="updateSettlementStatus('${escapeHtml(email)}', this.value)"
+                    class="text-xs bg-slate-900 border border-slate-800 rounded p-1 text-white focus:outline-none focus:border-emerald-500">
+                    <option value="Pending"       ${status === 'Pending' ? 'selected' : ''}>Pending</option>
+                    <option value="Approved"      ${status === 'Approved' ? 'selected' : ''}>Approved</option>
+                    <option value="Denied"        ${status === 'Denied' ? 'selected' : ''}>Denied</option>
+                    <option value="Investigating" ${status === 'Investigating' ? 'selected' : ''}>Investigating</option>
+                </select>
+            </td>
+
+            <td class="p-3 text-center">
+                <button onclick="openEditModal(
+                    '${escapeHtml(email)}',
+                    ${JSON.stringify(r).replace(/"/g, '&quot;')},
+                    'career-settlements')"
+                    class="text-xs px-4 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-white transition-colors">
+                    Edit
+                </button>
+            </td>
+        </tr>`;
+            }).join('');
+            initViewWithPagination('career-settlements');
         }
 
         async function initializeModule_career_users() {
@@ -2075,86 +2732,57 @@
   `).join('');
             showToast(`Loaded ${data.length} users`, 'success');
             updateKPIs();
+            initViewWithPagination('career-users');
         }
 
         async function initializeModule_career_earnings() {
             const tbodyId = 'careerEarningsTableBody';
             showTableSkeleton(tbodyId, 7);
+
             const res = await executeSecureBridgeCall('career', 'career-earnings', {});
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
+
             if (!res.success || !res.data || !res.data.length) {
-                tbody.innerHTML = emptyRow('No earnings found.', 7);
+                tbody.innerHTML = emptyRow('No earnings records found.', 7);
+                updateKPIs(); // still try to update cards
                 return;
             }
+
             const data = filterTableByState(res.data, UNI_FILTER_STATE);
+
+            // Build table with EarningsNaira moved to Status position (more prominent)
             tbody.innerHTML = data.map(r => `
-    <tr>
-      <td class="p-3 text-slate-500">${fmtDate(r.Date || r.date)}</td>
-      <td class="p-3 text-slate-400 font-mono">${escapeHtml(r.PartnerID || r['Partner ID'] || r.partnerID || '—')}</td>
-      <td class="p-3 font-bold text-emerald-400">${fmtNaira(r.AmountToCharge || r['Amount To Charge'] || 0)}</td>
-      <td class="p-3 text-slate-400">${escapeHtml(r.Service || r.service || '—')}</td>
-      <td class="p-3 text-center">${badge(r.PayoutStatus || r['Payout Status'] || 'Pending')}</td>
-      <td class="p-3 text-center">${badge(r.Status || r.status || '—')}</td>
-      <td class="p-3 text-center">
-        <button onclick="openEditModal('${escapeHtml(r.PartnerID || r.Date || '')}', ${JSON.stringify(r).replace(/"/g, '&quot;')}, 'career-earnings')"
-          style="font-size:11px;padding:3px 6px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">Edit</button>
-      </td>
-    </tr>
-  `).join('');
+        <tr>
+            <td class="p-3 text-slate-500">${fmtDate(r.Timestamp || r.Date || r.date)}</td>
+            <td class="p-3 text-slate-400 font-mono">${escapeHtml(r.PartnerID || r['Partner ID'] || r.partnerID || '—')}</td>
+            <td class="p-3">${escapeHtml(r.ClientName || r['Client Name'] || r.clientName || '—')}</td>
+            <td class="p-3 text-slate-200">${escapeHtml(r.Service || r.service || '—')}</td>
+            <!-- EarningsNaira moved here (was Status) -->
+            <td class="p-3 font-bold text-emerald-400 text-right">
+                ${fmtNaira(r.Paid || r.paid || r["Paid"] || 0)}
+            </td>
+            <!-- EarningsNaira moved here (was Status) -->
+            <td class="p-3 font-bold text-emerald-400 text-right">
+                ${fmtNaira(r.EarningsNaira || r.AmountToCharge || r.amount || 0)}
+            </td>
+            
+            <td class="p-3 text-center">${badge(r.Status || r.status || 'Pending')}</td>
+            
+            <td class="p-3 text-center">
+                <button onclick="openEditModal('${escapeHtml(r.PartnerID || r.Date || '')}', 
+                    ${JSON.stringify(r).replace(/"/g, '&quot;')}, 'career-earnings')"
+                    class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">
+                    Edit
+                </button>
+            </td>
+        </tr>
+    `).join('');
+
             updateKPIs();
+            initViewWithPagination('career-earnings');
         }
 
-        async function initializeModule_career_settlements() {
-            const tbodyId = 'careerSettlementsTableBody';
-            showTableSkeleton(tbodyId, 6);
-            const [settRes, usersRes] = await Promise.all([
-                executeSecureBridgeCall('career', 'career-settlements', {}),
-                executeSecureBridgeCall('career', 'career-users', {})
-            ]);
-            const tbody = document.getElementById(tbodyId);
-            if (!tbody) return;
-
-            const userBalanceMap = {};
-            if (usersRes.success && usersRes.data) {
-                usersRes.data.forEach(u => {
-                    userBalanceMap[String(u.Email || u.email || '').toLowerCase()] = parseFloat(u.CurrentBalance || u.currentBalance || 0);
-                });
-            }
-
-            if (!settRes.success || !settRes.data || !settRes.data.length) {
-                tbody.innerHTML = emptyRow('No settlements found.', 6);
-                return;
-            }
-            const data = filterTableByState(settRes.data, UNI_FILTER_STATE);
-            tbody.innerHTML = data.map(r => {
-                const email = String(r.Email || r.email || '').toLowerCase();
-                const balance = userBalanceMap[email] || parseFloat(r.AmountNaira || r.amountNaira || 0);
-                return `
-    <tr>
-      <td class="p-3 text-slate-500 font-mono text-xs">${escapeHtml(r.QueueID || r.queueID || '—')}</td>
-      <td class="p-3 text-slate-300">${escapeHtml(r.Email || r.email || '—')}</td>
-      <td class="p-3 text-xs">
-        <div class="text-slate-300">${escapeHtml(r.AccountName || '—')}</div>
-        <div class="text-slate-500 font-mono">${escapeHtml(r.AccountNumber || '—')} · ${escapeHtml(r.BankName || '—')}</div>
-      </td>
-      <td class="p-3 text-right font-bold text-emerald-400">${fmtNaira(balance)}</td>
-      <td class="p-3 text-center">
-        <select onchange="updateSettlementStatus('${escapeHtml(r.Email || r.email || '')}', this.value)"
-          class="text-xs bg-slate-900 border border-slate-800 rounded p-1 text-white focus:outline-none">
-          <option value="Pending" ${(r.Status || r.status) === 'Pending' ? 'selected' : ''}>Pending</option>
-          <option value="Approved" ${(r.Status || r.status) === 'Approved' ? 'selected' : ''}>Approved</option>
-          <option value="Denied" ${(r.Status || r.status) === 'Denied' ? 'selected' : ''}>Denied</option>
-          <option value="Investigating" ${(r.Status || r.status) === 'Investigating' ? 'selected' : ''}>Investigating</option>
-        </select>
-      </td>
-      <td class="p-3 text-right">
-        <button onclick="openEditModal('${escapeHtml(r.Email || r.email || '')}', ${JSON.stringify(r).replace(/"/g, '&quot;')}, 'career-settlements')"
-          style="font-size:11px;padding:3px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">Edit</button>
-      </td>
-    </tr>`;
-            }).join('');
-        }
 
         function updateSettlementStatus(email, newStatus) {
             executeSecureBridgeCall("career", "update-settlement-status", { email, status: newStatus }).then(res => {
@@ -2198,17 +2826,16 @@
     <div class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
       <table class="w-full text-left border-collapse text-xs">
         <thead class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
-          <tr>
-            <th class="p-3">Timestamp</th>
-            <th class="p-3">UniqueID</th>
-            <th class="p-3">Email</th>
-            <th class="p-3">Request Type</th>
-            <th class="p-3">Message</th>
-            <th class="p-3 text-center">Status</th>
-            <th class="p-3">Admin Notes</th>
-            <th class="p-3 text-center">Action</th>
-          </tr>
-        </thead>
+  <tr>
+    <th class="p-3">Date</th>
+    <th class="p-3">Partner ID</th>
+    <th class="p-3">Email</th>
+    <th class="p-3">Request Type</th>
+    <th class="p-3">Parters Message</th>
+    <th class="p-3">Approval Status</th>
+    <th class="p-3">Action</th>
+  </tr>
+</thead>
         <tbody id="elevationRequestsBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
       </table>
     </div>
@@ -2241,11 +2868,15 @@
         }
 
         function approveElevation(email) {
-            executeSecureBridgeCall("career", "approve-elevation", { email }).then(res => {
-                showToast(res.success ? "Elevation approved." : (res.error || "Approval failed."), res.success ? "success" : "error");
+            if (!confirm(`Approve elevation for ${email}?`)) return;
+
+            executeSecureBridgeCall("career", "approve-elevation", {
+                email: email
+            }).then(res => {
+                showToast(res.success ? "User approved successfully" : res.message,
+                    res.success ? "success" : "error");
                 if (res.success) {
-                    initializeModule_career_elevation();
-                    initializeModule_career_users();
+                    initializeModule_career_elevation();   // refresh table
                 }
             });
         }
@@ -2332,6 +2963,7 @@
       </td>
     </tr>
   `).join("");
+            initViewWithPagination('assessment-students');
         }
 
         async function loadCertificateData() {
@@ -2369,25 +3001,22 @@
 
             if (mode === 'pending') {
                 tbody.innerHTML = data.map(c => `
-      <tr>
-        <td class="p-3 font-mono text-slate-500">${escapeHtml(c.CertCode || c['Certificate Code'] || '—')}</td>
+    <tr>
+        <td class="p-3 font-mono text-slate-500">${escapeHtml(c.CertCode || c['CertCode'] || '—')}</td>
         <td class="p-3 text-slate-300">${escapeHtml(c.StudentEmail || c.Email || '—')}</td>
-        <td class="p-3 text-slate-400">${escapeHtml(c.CourseID || '—')}</td>
+        <td class="p-3 text-blue-400 font-mono">${escapeHtml(c.CourseID || '—')}</td>
         <td class="p-3 text-slate-200">${escapeHtml(c.CourseName || c.Course || '—')}</td>
         <td class="p-3 font-mono text-amber-400">${parseFloat(c.ScorePercent || c.Score || 0).toFixed(1)}%</td>
+        <td class="p-3 text-slate-500">${fmtDate(c.IssueDate || c.Timestamp || c.Date)}</td>
+        <td class="p-3 text-slate-300">${escapeHtml(c.StudentName || '—')}</td>
+        <td class="p-3 text-slate-500">${fmtDate(c['Expiry Date'] || c.ExpiryDate || null) || 'Lifetime'}</td>
         <td class="p-3 text-right">
-          <div class="flex items-center justify-end gap-2">
-            <select onchange="updateCertificateStatus('${escapeHtml(c.CertCode || c['Certificate Code'] || '')}', this.value)"
-              class="text-xs bg-slate-900 border border-slate-800 rounded p-1 text-white focus:outline-none">
-              <option value="Pending" ${(c.Status || '') === 'Pending' ? 'selected' : ''}>Pending</option>
-              <option value="Approved" ${(c.Status || '') === 'Approved' ? 'selected' : ''}>Approved</option>
-            </select>
-            <button onclick="openEditModal('${escapeHtml(c.CertCode || c['Certificate Code'] || '')}', ${JSON.stringify(c).replace(/"/g, '&quot;')}, 'assessment-certificates')"
-              style="font-size:11px;padding:4px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">Edit</button>
-          </div>
+        <div class="flex items-center justify-end gap-2">
+        ${badge(c.Status || 'Pending')}
+        <button onclick="openEditModal(...)" ...>Edit</button>
+        </div>
         </td>
-      </tr>
-    `).join('');
+        </tr>`).join('');
             } else {
                 tbody.innerHTML = data.map(c => `
       <tr>
@@ -2402,16 +3031,170 @@
               style="font-size:11px;padding:4px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">Edit</button>
           </div>
         </td>
-        <td class="p-3 text-center">
-          <select onchange="updateCertificateStatus('${escapeHtml(c.CertCode || c['Certificate Code'] || '')}', this.value)"
-            class="text-xs bg-slate-900 border border-slate-800 rounded p-1 text-white focus:outline-none">
-            <option value="Pending" ${(c.Status || '') === 'Pending' ? 'selected' : ''}>Pending</option>
-            <option value="Approved" ${(c.Status || '') === 'Approved' ? 'selected' : ''}>Approved</option>
-          </select>
-        </td>
       </tr>
     `).join('');
             }
+        }
+
+        function openSendClientEmailModal(clientEmail, clientName) {
+            const modal = document.getElementById('modalSendClientEmail');
+            if (!modal) return;
+            document.getElementById('emailClientToAddress').value = clientEmail || '';
+            document.getElementById('emailClientToDisplay').value = clientEmail || '';
+            document.getElementById('emailClientSubject').value = '';
+            document.getElementById('emailClientBody').value = '';
+            modal.classList.remove('hidden');
+        }
+
+        function closeSendClientEmailModal() {
+            const modal = document.getElementById('modalSendClientEmail');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        async function submitSendClientEmail(event) {
+            event.preventDefault();
+            const clientEmail = document.getElementById('emailClientToAddress').value;
+            const subject = document.getElementById('emailClientSubject').value.trim();
+            const body = document.getElementById('emailClientBody').value.trim();
+            if (!clientEmail || !subject || !body) { showToast('All fields required.', 'error'); return; }
+            const btn = event.target.querySelector('button[type=submit]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+            const res = await executeSecureBridgeCall('career', 'send-client-email', { clientEmail, subject, body });
+            if (btn) { btn.disabled = false; btn.textContent = 'Send Email'; }
+            showToast(res.success ? 'Email sent to client.' : (res.message || 'Send failed.'), res.success ? 'success' : 'error');
+            if (res.success) closeSendClientEmailModal();
+        }
+
+        function openGeneratePaymentLinkModal_Row(projectData) {
+            const modal = document.getElementById('modalGeneratePaymentLink');
+            if (!modal) return;
+            document.getElementById('genPayClientName').value = projectData.ClientName || projectData.clientName || '';
+            document.getElementById('genPayClientEmail').value = projectData.ClientEmail || projectData.clientEmail || '';
+            document.getElementById('genPayService').value = projectData.Service || projectData.service || '';
+            document.getElementById('genPayAmount').value = projectData.AmountToCharge || projectData.amountToCharge || projectData.Amount || '';
+            document.getElementById('genPayPartnerEmail').value = projectData.PartnerEmail || projectData.partnerEmail || '';
+            document.getElementById('genPayPartnerID').value = projectData.PartnerID || projectData.partnerID || '';
+            document.getElementById('genPayRowRef').value = projectData.Date || '';
+            document.getElementById('genPayMessage').value = '';
+            modal.classList.remove('hidden');
+        }
+
+        function closeGeneratePaymentLinkModal() {
+            const modal = document.getElementById('modalGeneratePaymentLink');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        async function submitGeneratePaymentLink(event) {
+            event.preventDefault();
+            const clientName = document.getElementById('genPayClientName').value.trim();
+            const clientEmail = document.getElementById('genPayClientEmail').value.trim();
+            const service = document.getElementById('genPayService').value.trim();
+            const amount = document.getElementById('genPayAmount').value;
+            const partnerEmail = document.getElementById('genPayPartnerEmail').value.trim();
+            const partnerID = document.getElementById('genPayPartnerID').value.trim();
+            const customMessage = document.getElementById('genPayMessage').value.trim();
+            if (!clientName || !service || !amount) { showToast('Client name, service, and amount required.', 'error'); return; }
+            const btn = event.target.querySelector('button[type=submit]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+            const res = await executeSecureBridgeCall('career', 'generate-payment-link-row', {
+                clientName, clientEmail, service, amount, partnerEmail, partnerID, customMessage
+            });
+            if (btn) { btn.disabled = false; btn.textContent = 'Generate & Send Payment Link'; }
+            showToast(res.success ? 'Payment link generated and sent!' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+            if (res.success) { closeGeneratePaymentLinkModal(); loadClientSubmittedProjects(); }
+        }
+
+        async function submitOnboardToLedger(event) {
+            event.preventDefault();
+            const clientName = document.getElementById('onboardLedgerClientName')?.value?.trim();
+            const clientEmail = document.getElementById('onboardLedgerClientEmail')?.value?.trim();
+            const clientPhone = document.getElementById('onboardLedgerClientPhone')?.value?.trim();
+            const service = document.getElementById('onboardLedgerService')?.value?.trim();
+            const partnerID = document.getElementById('onboardLedgerPartnerID')?.value?.trim();
+            const partnerEmail = document.getElementById('onboardLedgerPartnerEmail')?.value?.trim();
+            const amountPaid = document.getElementById('onboardLedgerAmountPaid')?.value;
+            const paymentType = document.getElementById('onboardLedgerPaymentType')?.value;
+            const paymentDate = document.getElementById('onboardLedgerPaymentDate')?.value;
+
+            if (!clientName || !service || !partnerID) {
+                showToast('Client name, service, and partner ID are required.', 'error'); return;
+            }
+            const btn = event.target.querySelector('button[type=submit]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Processing…'; }
+
+            const res = await executeSecureBridgeCall('career', 'onboard-to-ledger', {
+                clientName, clientEmail, clientPhone, service, partnerID, partnerEmail,
+                amountPaid, paymentType, paymentDate
+            });
+
+            if (btn) { btn.disabled = false; btn.textContent = 'Initialize Production Protocol & Add to Ledger'; }
+
+            if (res.success) {
+                // Populate the auto-generated fields in the modal for display
+                const tcEl = document.getElementById('onboardLedgerTrackingCode');
+                const txEl = document.getElementById('onboardLedgerTxRef');
+                if (tcEl) tcEl.value = res.trackingCode || '';
+                if (txEl) txEl.value = res.txRef || '';
+                showToast('Client onboarded! Tracking code: ' + (res.trackingCode || ''), 'success');
+                setTimeout(() => { closeOnboardToLedgerModal(); loadProductionFulfillment(); }, 1500);
+            } else {
+                showToast(res.message || 'Onboarding failed.', 'error');
+            }
+        }
+
+        function closeOnboardToLedgerModal() {
+            const modal = document.getElementById('modalOnboardToLedger');
+            if (modal) modal.classList.add('hidden');
+            const form = document.getElementById('onboardToLedgerForm');
+            if (form) form.reset();
+        }
+
+        function openOnboardToLedgerModal(projectData) {
+            const modal = document.getElementById('modalOnboardToLedger');
+            if (!modal) return;
+
+            const p = typeof projectData === 'string' ? JSON.parse(projectData) : projectData;
+
+            // Client Information
+            document.getElementById('onboardLedgerClientName').value =
+                p.ClientName || p.clientName || p['Client Name'] || p.Name || '';
+
+            document.getElementById('onboardLedgerClientEmail').value =
+                p.ClientEmail || p.clientEmail || p['Client Email'] || p.Email || p.email || '';
+
+            document.getElementById('onboardLedgerClientPhone').value =
+                p.ClientPhone || p.clientPhone || p['Client Phone'] || p.Phone || p.phone || '';
+
+            // Service & Partner Details
+            document.getElementById('onboardLedgerService').value =
+                p.Service || p.service || p['Engaged Service'] || p.EngagedService || '';
+
+            document.getElementById('onboardLedgerPartnerID').value =
+                p.PartnerID || p.partnerID || p['Partner ID'] || p.PartnerId || '';
+
+            document.getElementById('onboardLedgerPartnerEmail').value =
+                p.PartnerEmail || p.partnerEmail || p['Partner Email'] || '';
+
+            // Amount
+            document.getElementById('onboardLedgerAmountPaid').value =
+                p.AmountToCharge || p.AmountPaid || p.Amount || p.amount || '';
+
+            // Payment Type (default fallback)
+            const paymentTypeEl = document.getElementById('onboardLedgerPaymentType');
+            if (paymentTypeEl) {
+                paymentTypeEl.value = p.PaymentType || p.paymentType || 'Digital Platform';
+            }
+
+            // Payment Date (default to today)
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('onboardLedgerPaymentDate').value =
+                p.PaymentDate || p.paymentDate || p.Date || p.Timestamp || today;
+
+            // Auto-generated fields (cleared)
+            document.getElementById('onboardLedgerTrackingCode').value = '';
+            document.getElementById('onboardLedgerTxRef').value = '';
+
+            modal.classList.remove('hidden');
         }
 
         function updateCertificateStatus(certCode, newStatus) {
@@ -2515,6 +3298,7 @@
       </td>
     </tr>
   `).join('');
+            initViewWithPagination('assessment-applications');
         }
 
         async function loadAcademicSupportMessages() {
@@ -2710,35 +3494,116 @@
 
         async function loadClientSubmittedProjects() {
             const tbodyId = 'sourcedIntakeTableBody';
-            showTableSkeleton(tbodyId, 6);
-            const res = await executeSecureBridgeCall('career', 'career-earnings', {});
+            showTableSkeleton(tbodyId, 7);
+
+            let res = await executeSecureBridgeCall('career', 'client-submitted', {});
+
+            // Fallback
+            if (!res.success || !res.data || res.data.length === 0) {
+                res = await executeSecureBridgeCall('career', 'career-earnings', {});
+            }
+
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
+
             if (!res.success || !res.data || !res.data.length) {
-                tbody.innerHTML = emptyRow('No projects found.', 6);
+                tbody.innerHTML = emptyRow('No projects found.', 7);
                 return;
             }
-            tbody.innerHTML = res.data.map(p => `
-    <tr>
-      <td class="p-3 font-mono text-slate-500">${escapeHtml(p.Date || p.date || '—')}</td>
-      <td class="p-3 text-slate-300">${escapeHtml(p.ClientName || p['Client Name'] || p.clientName || '—')}</td>
-      <td class="p-3 text-slate-400 font-mono">${escapeHtml(p.PartnerID || p['Partner ID'] || p.partnerID || '—')}</td>
-      <td class="p-3 text-slate-200">${escapeHtml(p.Service || p.service || '—')}</td>
-      <td class="p-3">
-        ${p.PaymentLink || p['Payment Link'] || p.paymentLink
-                    ? `<a href="${escapeHtml(p.PaymentLink || p['Payment Link'] || p.paymentLink)}" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs underline">View Link</a>`
-                    : '<span class="text-slate-600">—</span>'}
-      </td>
-      <td class="p-3 text-right">
-        <select onchange="handleClientProjectAction(this.value, '${escapeHtml(String(p.PartnerID || p['Partner ID'] || p.Date || ''))}', ${JSON.stringify(p).replace(/"/g, '&quot;')})"
-          class="text-xs bg-slate-900 border border-slate-800 rounded p-1.5 text-white focus:outline-none">
-          <option value="">Select Action</option>
-          <option value="edit">Edit Record</option>
-          <option value="onboard">Onboarding</option>
-        </select>
-      </td>
-    </tr>
-  `).join('');
+
+            tbody.innerHTML = res.data.map((p, index) => {
+                const rowDataStr = JSON.stringify(p).replace(/"/g, '&quot;');
+                const trackingCode = p.TrackingCode || p.trackingCode || p['Tracking Code'] ||
+                    p.Status === 'Approved' || p.status === 'Approved' ||
+                    (p.TrackingCode && p.TrackingCode.includes('VCH-'));
+
+                const isOnboarded = !!trackingCode;
+
+                // Extract Client Name & Email with multiple possible keys
+                const clientName = p.ClientName || p.clientName || p['Client Name'] || p.Name || '—';
+                const clientEmail = p.ClientEmail || p.email || p['Client Email'] || p.Email || p['Email Address'] || '—';
+                const phone = p.Phone || p['Phone'] || '';
+                const partnerID = p.PartnerID || p.partnerID || p['Partner ID'] || '—';
+                const service = p.Service || p.service || p['Engaged Service'] || p.EngagedService || '—';
+                const amount = parseFloat(p.AmountToCharge || p.Amount || p.amount || 0);
+                const paymentLink = p.PaymentLink || p.paymentLink || p['Payment Matrix Link'] || '';
+
+                return `
+        <tr class="hover:bg-slate-800/60 transition-colors">
+            <td class="p-3 text-slate-500 font-mono text-xs">${fmtDate(p.Timestamp || p.Date || p.date)}</td>
+            
+            <!-- CLIENT INFO: Name + Email -->
+            <td class="p-3">
+                <div class="font-medium text-slate-200">${escapeHtml(clientName)}</div>
+                <div class="text-[10px] text-slate-400 font-mono break-all">${escapeHtml(clientEmail)}</div>
+                <div class="text-[10px] text-slate-400 font-mono break-all">${escapeHtml(phone)}</div>
+            </td>
+            
+            <td class="p-3 text-slate-400 font-mono text-xs">${escapeHtml(partnerID)}</td>
+            <td class="p-3 text-slate-200">${escapeHtml(service)}</td>
+            
+            <td class="p-3">
+                ${paymentLink
+                        ? `<a href="${escapeHtml(paymentLink)}" target="_blank" class="text-blue-400 underline text-xs">View Link</a>`
+                        : '<span class="text-slate-500 text-xs">—</span>'}
+            </td>
+            
+            <td class="p-3 font-bold text-emerald-400 text-right">${fmtNaira(amount)}</td>
+            
+            <td class="p-3 text-center">
+    <div class="flex flex-wrap gap-1 justify-center">
+        <button onclick="openSendClientEmailModal('${escapeHtml(clientEmail)}', '${escapeHtml(clientName)}')" 
+            class="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">
+            ✉ Email
+        </button>
+        
+        <button onclick="generatePaymentLinkFromRow(${index}, ${rowDataStr})" 
+            class="text-xs px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">
+            🔗 Generate Link
+        </button>
+
+        <!-- IMPROVED ONBOARD BUTTON -->
+        <button onclick="${isOnboarded ? '' : `openOnboardToLedgerModal(${rowDataStr})`}" 
+            class="text-xs px-3 py-1 rounded text-white transition-colors
+                ${isOnboarded
+                        ? 'bg-gray-700 cursor-not-allowed'
+                        : 'bg-indigo-600 hover:bg-indigo-500'}"
+            ${isOnboarded ? 'disabled' : ''}>
+            ${isOnboarded ? '✅ Onboarded' : 'Onboard'}
+        </button>
+    </div>
+</td>
+        </tr>`;
+            }).join('');
+            initViewWithPagination('client-submitted');
+        }
+
+        async function generatePaymentLinkFromRow(rowIndex, rowData) {
+            if (!rowData) { showToast("No row data available", "error"); return; }
+            const p = typeof rowData === 'string' ? JSON.parse(rowData) : rowData;
+            const getVal = (keys, fallback = '') => { for (let key of keys) { if (p[key] !== undefined && p[key] !== null && p[key] !== '') return p[key]; } return fallback; };
+            const clientName = getVal(['ClientName', 'clientName', 'Client Name', 'Name'], 'Client');
+            const clientEmail = getVal(['ClientEmail', 'clientEmail', 'Client Email', 'Email', 'email'], '');
+            const service = getVal(['Service', 'service', 'Engaged Service', 'EngagedService'], '');
+            const amount = parseFloat(getVal(['AmountToCharge', 'Amount', 'amount'], 0));
+            const partnerID = getVal(['PartnerID', 'partnerID', 'Partner ID'], '');
+            const partnerEmail = getVal(['PartnerEmail', 'partnerEmail', 'Partner Email'], '');
+            if (!service || amount <= 0) { showToast("Service name and Amount are required.", "error"); return; }
+            if (!confirm(`Generate payment link for "${clientName}" - ₦${amount.toLocaleString()}?`)) return;
+            showToast("Generating payment link...", "info");
+            const res = await executeSecureBridgeCall('career', 'generate-payment-link-row', {
+                clientName, clientEmail, service, amount, partnerID, partnerEmail,
+                customMessage: `Payment request for ${service} - ${clientName}`
+            });
+            if (res.success) {
+                showToast(`Payment link generated for ${clientName}!`, "success");
+                if (res.paymentLink) {
+                    setTimeout(() => { if (confirm("Copy Payment Link to clipboard?")) navigator.clipboard.writeText(res.paymentLink); }, 700);
+                }
+                loadClientSubmittedProjects();
+            } else {
+                showToast(res.message || "Failed to generate payment link", "error");
+            }
         }
 
         function handleClientProjectAction(action, projectId, projectData) {
@@ -2781,6 +3646,7 @@
       </td>
     </tr>
   `).join('');
+            initViewWithPagination('client-onboarded');
         }
 
         function openClientOnboardingPortalModal(projectId, serviceName) {
@@ -2798,6 +3664,74 @@
             if (modal) modal.classList.add("hidden");
             const form = document.getElementById("clientOnboardingModalForm");
             if (form) form.reset();
+        }
+
+        function openAddProjectRowModal() {
+            const modal = document.getElementById('modalAddProjectRow');
+            if (!modal) {
+                showToast("Add Project Modal not found in DOM", "error");
+                return;
+            }
+
+            // Clear previous values
+            document.getElementById('newRowPartnerID').value = '';
+            document.getElementById('newRowClientName').value = '';
+            document.getElementById('newRowPhone').value = '';
+            document.getElementById('newRowEmail').value = '';
+            document.getElementById('newRowLocation').value = '';
+            document.getElementById('newRowService').value = '';
+            document.getElementById('newRowAmountCharge').value = '';
+            document.getElementById('newRowUrgency').value = 'Normal';
+            document.getElementById('newRowComments').value = '';
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeAddProjectRowModal() {
+            const modal = document.getElementById('modalAddProjectRow');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        async function submitNewProjectRow(event) {
+            event.preventDefault();
+
+            const payload = {
+                partnerID: document.getElementById('newRowPartnerID').value.trim(),
+                clientName: document.getElementById('newRowClientName').value.trim(),
+                phone: document.getElementById('newRowPhone').value.trim(),
+                email: document.getElementById('newRowEmail').value.trim(),
+                location: document.getElementById('newRowLocation').value.trim(),
+                service: document.getElementById('newRowService').value.trim(),
+                amount: parseFloat(document.getElementById('newRowAmountCharge').value) || 0,
+                urgency: document.getElementById('newRowUrgency').value,
+                comments: document.getElementById('newRowComments').value.trim()
+            };
+
+            if (!payload.partnerID || !payload.clientName || !payload.service || payload.amount <= 0) {
+                showToast("Partner ID, Client Name, Service and Amount are required", "error");
+                return;
+            }
+
+            const btn = event.target.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = "Adding Row...";
+            }
+
+            const res = await executeSecureBridgeCall('career', 'add-datasheet-row', payload);
+
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = "Add Row to DataSheet";
+            }
+
+            if (res.success) {
+                showToast("✅ New project row added successfully!", "success");
+                closeAddProjectRowModal();
+                loadClientSubmittedProjects(); // Refresh table
+            } else {
+                showToast(res.message || "Failed to add row", "error");
+            }
         }
 
         async function submitClientOnboardingPortalData(event) {
@@ -2822,34 +3756,120 @@
 
         async function loadLeadsMatrix() {
             const tbodyId = "crmLeadsGridTableBody";
-            showTableSkeleton(tbodyId, 7);
+            showTableSkeleton(tbodyId, 8);
 
             const res = await executeSecureBridgeCall("leads", "leads-matrix", {});
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
 
             if (!res.success || !res.data || res.data.length === 0) {
-                tbody.innerHTML = emptyRow("No leads found.", 7);
+                tbody.innerHTML = emptyRow("No leads found.", 8);
                 return;
             }
 
-            tbody.innerHTML = res.data.map(l => `
-    <tr>
-      <td class="p-3 font-mono text-slate-500">${escapeHtml(l.LeadID || l.ID || "—")}</td>
-      <td class="p-3 text-slate-300">${escapeHtml(l.Name || "—")}</td>
-      <td class="p-3 font-mono text-slate-400">${escapeHtml(l.Email || "—")}</td>
-      <td class="p-3 text-slate-400">${escapeHtml(l.Source || "—")}</td>
-      <td class="p-3 text-slate-300">${escapeHtml(l.Agent || "Unassigned")}</td>
-      <td class="p-3 text-center">${badge(l.Stage || "New Prospect")}</td>
-      <td class="p-3 text-center">
-        <button onclick="openEditModal('${escapeHtml(l.LeadID || l.ID)}', ${JSON.stringify(l).replace(/"/g, '&quot;')}, 'leads-matrix')"
-          style="font-size:11px;padding:3px 8px;background:#534ab7;color:#fff;border:none;border-radius:4px;cursor:pointer;">
-          Edit
-        </button>
-      </td>
-    </tr>
-  `).join("");
+            tbody.innerHTML = res.data.map(l => {
+                const leadId = l.ID || l.LeadID || l['LEAD TRACK UNIQUE ID'] || '—';
+                const fullName = l['Full Name'] || l.FullName || l.Name || '—';
+                const company = l['Name Company'] || l.Company || '—';
+                const email = l.Email || l.email || '—';
+                const source = l['Source Channel'] || l.Source || 'Executive Outbound Search';
+                const state = l.State || l.state || '—';                    // ← Changed to State
+                const stage = l['Funnel Stage'] || l.Stage || l.Engagement || "New Prospect";
+                const priority = l.Priority || l.priority || "Medium";
+
+                return `
+        <tr class="hover:bg-slate-800/60 transition-colors">
+            <td class="p-3 font-mono text-slate-400 text-xs">${escapeHtml(leadId)}</td>
+            
+            <td class="p-3">
+                <div class="font-medium text-slate-200">${escapeHtml(fullName)}</div>
+                <div class="text-[10px] text-slate-500">${escapeHtml(company)}</div>
+            </td>
+            
+            <td class="p-3 font-mono text-slate-400 text-xs">${escapeHtml(email)}</td>
+            
+            <td class="p-3 text-slate-400 text-xs">${escapeHtml(source)}</td>
+            
+            <td class="p-3 text-slate-300">${escapeHtml(state)}</td>   <!-- Now shows State -->
+            
+            <td class="p-3 text-center">${badge(stage)}</td>
+            
+            <td class="p-3 text-center">
+                <span class="inline-block px-3 py-1 text-xs rounded-full font-medium
+                    ${priority.toLowerCase() === 'high' ? 'bg-red-900 text-red-300' :
+                        priority.toLowerCase() === 'medium' ? 'bg-amber-900 text-amber-300' :
+                            'bg-slate-700 text-slate-300'}">
+                    ${escapeHtml(priority)}
+                </span>
+            </td>
+            
+            <td class="p-3 text-center">
+                <div class="flex gap-2 justify-center">
+                    <button onclick="openEditModal('${escapeHtml(leadId)}', ${JSON.stringify(l).replace(/"/g, '&quot;')}, 'leads-matrix')"
+                        class="text-xs px-4 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-slate-200 transition-colors">
+                        Edit
+                    </button>
+                    <button onclick="openLeadEmailModal('${escapeHtml(email)}', '${escapeHtml(fullName)}')"
+                        class="text-xs px-4 py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-white transition-colors">
+                        ✉ Email
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+            }).join('');
+            initViewWithPagination('leads-matrix');
         }
+        function openLeadEmailModal(clientEmail, clientName) {
+            const modal = document.getElementById('modalSendClientEmail');
+            if (!modal) {
+                console.error("Email modal not found");
+                return;
+            }
+
+            // Prefill the form
+            document.getElementById('emailClientToAddress').value = clientEmail || '';
+            document.getElementById('emailClientToDisplay').value = clientEmail || '';
+
+            // Optional: Set default subject
+            const subjectEl = document.getElementById('emailClientSubject');
+            if (subjectEl) {
+                subjectEl.value = `Follow-up: ${clientName || 'Prospect'}`;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function openLeadEmailModal(clientEmail, clientName) {
+            const modal = document.getElementById('modalSendClientEmail');
+            if (!modal) {
+                console.error("Email modal not found");
+                return;
+            }
+
+            // Prefill the form
+            document.getElementById('emailClientToAddress').value = clientEmail || '';
+            document.getElementById('emailClientToDisplay').value = clientEmail || '';
+
+            // Optional: Set default subject
+            const subjectEl = document.getElementById('emailClientSubject');
+            if (subjectEl) {
+                subjectEl.value = `Follow-up: ${clientName || 'Prospect'}`;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function quickAssignAgent(leadId) {
+            const agent = prompt("Enter Agent Email or Name:");
+            if (!agent) return;
+
+            executeSecureBridgeCall("leads", "assign-agent", { leadId, agent }).then(res => {
+                showToast(res.success ? "Agent assigned successfully" : "Failed to assign",
+                    res.success ? "success" : "error");
+                if (res.success) loadLeadsMatrix();
+            });
+        }
+
 
         function openLeadCreationModalFormPanel() {
             const modal = document.getElementById("modalCrmLeadCreationFormPortal");
@@ -2909,6 +3929,34 @@
   `).join("");
         }
 
+        async function initializeModule_career_complaints() {
+            const tbodyId = 'careerComplaintsTableBody';
+            showTableSkeleton(tbodyId, 7);
+            const res = await executeSecureBridgeCall('career', 'career-complaints', {});
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            if (!res.success || !res.data || !res.data.length) {
+                tbody.innerHTML = emptyRow('No complaints found.', 7);
+                return;
+            }
+            updatePaginationState('career-complaints', res);
+            const data = res.data;
+            tbody.innerHTML = data.map(c => `
+    <tr>
+      <td class="p-3 text-slate-500">${fmtDate(c.Timestamp || c.timestamp)}</td>
+      <td class="p-3 text-slate-300 font-mono">${escapeHtml(c.Email || c.email || '—')}</td>
+      <td class="p-3 text-slate-200">${escapeHtml((c.Subject || c.subject || '').substring(0, 50))}</td>
+      <td class="p-3 text-slate-400">${escapeHtml((c.Message || c.message || '').substring(0, 60))}</td>
+      <td class="p-3 text-center">${badge(c.Status || c.status || 'Open')}</td>
+      <td class="p-3 text-slate-400">${escapeHtml((c.AdminReply || c.adminReply || '—').substring(0, 40))}</td>
+      <td class="p-3 text-center">
+        <button onclick="openEditModal('${escapeHtml(c.Email || c.email || '')}', ${JSON.stringify(c).replace(/"/g, '&quot;')}, 'career-complaints')"
+          style="font-size:11px;padding:3px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">Edit</button>
+      </td>
+    </tr>`).join('');
+            initViewWithPagination('career-complaints');
+        }
+
         async function submitTimedQueueBatchRelease(event) {
             event.preventDefault();
             const targetStage = document.getElementById("broadcastTargetStage")?.value;
@@ -2954,65 +4002,128 @@
   `).join("");
         }
 
+        // Unified View Initializer with Pagination
+        function initViewWithPagination(viewName, initializerFn) {
+            // Store the current view for pagination
+            window.currentView = viewName;
+
+            // Load first page
+            loadTableData(viewName, 1);
+
+            // Optional: If you have custom initializer logic, run it too
+            if (typeof initializerFn === 'function') {
+                initializerFn();
+            }
+        }
+
         function openEditModal(recordId, recordData, recordType) {
             const modal = document.getElementById('edit-modal');
             const form = document.getElementById('edit-form');
             const fieldsContainer = document.getElementById('edit-form-fields');
-
             if (!modal || !form || !fieldsContainer) return;
+
+            let rec = recordData;
+            if (typeof rec === 'string') {
+                try { rec = JSON.parse(rec); } catch (e) { rec = {}; }
+            }
 
             document.getElementById('edit-record-id').value = recordId;
             form.dataset.recordType = recordType;
+            form.dataset.recordId = recordId;
             fieldsContainer.innerHTML = '';
 
             const schema = EDIT_MODAL_FORM_SCHEMAS[recordType] || [];
+            const usedKeys = new Set();
 
-            schema.forEach(field => {
-                const wrapper = document.createElement('div');
+            // 1. First render fields from predefined schema (with better prefill)
+            if (schema.length > 0) {
+                schema.forEach(field => {
+                    usedKeys.add(field.key);
+                    createFormField(fieldsContainer, field, rec);
+                });
+            }
 
-                const label = document.createElement('label');
-                label.textContent = field.name;
-                label.style.cssText = 'display:block;font-size:12px;color:#94a3b8;margin-bottom:4px;';
-                wrapper.appendChild(label);
+            // 2. Then automatically add ALL other fields from the record (dynamic)
+            Object.keys(rec).forEach(key => {
+                if (usedKeys.has(key)) return; // Skip already added from schema
 
-                const inputStyle = 'width:100%;padding:8px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#f1f5f9;font-size:12px;box-sizing:border-box;outline:none;';
-
-                if (field.type === 'select') {
-                    const select = document.createElement('select');
-                    select.name = field.key;
-                    select.style.cssText = inputStyle;
-                    field.options.forEach(opt => {
-                        const option = document.createElement('option');
-                        const optVal = typeof opt === 'string' ? opt : opt.value;
-                        const optLabel = typeof opt === 'string' ? opt : opt.label;
-                        option.value = optVal;
-                        option.textContent = optLabel;
-                        if (String(recordData[field.key]) === String(optVal)) option.selected = true;
-                        select.appendChild(option);
-                    });
-                    wrapper.appendChild(select);
-                } else if (field.type === 'textarea') {
-                    const textarea = document.createElement('textarea');
-                    textarea.name = field.key;
-                    textarea.value = recordData[field.key] || '';
-                    textarea.style.cssText = inputStyle + 'resize:vertical;min-height:80px;';
-                    wrapper.appendChild(textarea);
-                } else {
-                    const input = document.createElement('input');
-                    input.type = field.type;
-                    input.name = field.key;
-                    input.value = recordData[field.key] || '';
-                    input.required = field.required || false;
-                    if (field.min !== undefined) input.min = field.min;
-                    if (field.max !== undefined) input.max = field.max;
-                    input.style.cssText = inputStyle;
-                    wrapper.appendChild(input);
-                }
-
-                fieldsContainer.appendChild(wrapper);
+                const fieldConfig = {
+                    name: key.replace(/([A-Z])/g, ' $1').trim(), // Make readable
+                    key: key,
+                    type: getFieldType(key, rec[key]),
+                    required: false
+                };
+                createFormField(fieldsContainer, fieldConfig, rec);
             });
 
             modal.classList.remove('hidden');
+        }
+
+        // Helper: Create individual form field
+        function createFormField(container, field, rec) {
+            const wrapper = document.createElement('div');
+            wrapper.className = "mb-4";
+
+            const label = document.createElement('label');
+            label.textContent = field.name || field.key;
+            label.className = "block text-xs text-slate-400 mb-1 font-mono";
+            wrapper.appendChild(label);
+
+            let currentVal = rec[field.key];
+            if (currentVal === undefined) {
+                // Try case variations
+                currentVal = rec[field.key.toLowerCase()] || rec[field.key.toUpperCase()] || '';
+            }
+
+            const inputStyle = "w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500";
+
+            if (field.type === 'select' && field.options) {
+                const select = document.createElement('select');
+                select.name = field.key;
+                select.className = inputStyle;
+                field.options.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt.value || opt;
+                    option.textContent = opt.label || opt;
+                    if (String(currentVal) === String(option.value)) option.selected = true;
+                    select.appendChild(option);
+                });
+                wrapper.appendChild(select);
+            }
+            else if (field.type === 'textarea' || String(currentVal).length > 100) {
+                const ta = document.createElement('textarea');
+                ta.name = field.key;
+                ta.value = currentVal || '';
+                ta.className = inputStyle + " min-h-[80px] resize-y";
+                wrapper.appendChild(ta);
+            }
+            else {
+                const input = document.createElement('input');
+                input.type = field.type || 'text';
+                input.name = field.key;
+                input.value = currentVal !== undefined ? currentVal : '';
+                input.className = inputStyle;
+                if (field.required) input.required = true;
+                wrapper.appendChild(input);
+            }
+
+            container.appendChild(wrapper);
+        }
+
+        // Helper: Guess input type
+        function getFieldType(key, value) {
+            const k = String(key).toLowerCase();
+
+            if (k.includes('email')) return 'email';
+            if (k.includes('phone') || k.includes('number')) return 'tel';
+
+            // CRITICAL FIX: Treat Timestamp as text to avoid browser validation errors
+            if (k.includes('timestamp') || k.includes('time') || k.includes('date')) {
+                return 'text';
+            }
+
+            if (typeof value === 'number') return 'number';
+            return 'text';
         }
 
         function closeEditModal() {
@@ -3022,29 +4133,203 @@
             if (form) { form.reset(); delete form.dataset.recordType; }
         }
 
+        function calendarPrevMonth() {
+            CAL_MONTH--;
+            if (CAL_MONTH < 0) { CAL_MONTH = 11; CAL_YEAR--; }
+            renderCalendarGrid();
+        }
+        function calendarNextMonth() {
+            CAL_MONTH++;
+            if (CAL_MONTH > 11) { CAL_MONTH = 0; CAL_YEAR++; }
+            renderCalendarGrid();
+        }
+
+        function renderCalendarGrid() {
+            const label = document.getElementById('calendarMonthLabel');
+            if (label) label.textContent = new Date(CAL_YEAR, CAL_MONTH, 1)
+                .toLocaleString('default', { month: 'long', year: 'numeric' });
+
+            const grid = document.getElementById('calendarGrid');
+            if (!grid) return;
+
+            const firstDay = new Date(CAL_YEAR, CAL_MONTH, 1).getDay();
+            const daysInMonth = new Date(CAL_YEAR, CAL_MONTH + 1, 0).getDate();
+            const today = new Date();
+
+            let cells = '';
+            for (let i = 0; i < firstDay; i++) {
+                cells += `<div class="h-10 rounded bg-slate-900/30"></div>`;
+            }
+            for (let d = 1; d <= daysInMonth; d++) {
+                const isToday = d === today.getDate() && CAL_MONTH === today.getMonth() && CAL_YEAR === today.getFullYear();
+                const dateStr = `${CAL_YEAR}-${String(CAL_MONTH + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const hasEvent = CAL_EVENTS_ALL.some(ev => {
+                    const evDate = new Date(ev.DateTime || ev.dateTime || '').toISOString().split('T')[0];
+                    return evDate === dateStr;
+                });
+                cells += `
+      <div onclick="filterCalendarByDate('${dateStr}')"
+        class="h-10 flex flex-col items-center justify-center rounded cursor-pointer text-xs transition-colors
+          ${isToday ? 'bg-emerald-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400'}
+          ${hasEvent && !isToday ? 'ring-1 ring-emerald-500/50 text-emerald-400' : ''}">
+        ${d}
+        ${hasEvent ? `<span class="h-1 w-1 rounded-full bg-emerald-400 mt-0.5"></span>` : ''}
+      </div>`;
+            }
+            grid.innerHTML = cells;
+        }
+
+        function filterCalendarByDate(dateStr) {
+            const filtered = CAL_EVENTS_ALL.filter(ev => {
+                const evDate = new Date(ev.DateTime || ev.dateTime || '').toISOString().split('T')[0];
+                return evDate === dateStr;
+            });
+            renderCalendarEventsTable(filtered);
+        }
+
+        function renderCalendarEventsTable(events) {
+            const tbody = document.getElementById('calendarEventsTableBody');
+            if (!tbody) return;
+            if (!events || !events.length) {
+                tbody.innerHTML = emptyRow('No events found.', 8);
+                document.getElementById('calEventCount').textContent = '0';
+                return;
+            }
+            document.getElementById('calEventCount').textContent = events.length;
+            const start = (CAL_EVENTS_PAGE - 1) * CAL_EVENTS_PER_PAGE;
+            const page = events.slice(start, start + CAL_EVENTS_PER_PAGE);
+            const totalPages = Math.ceil(events.length / CAL_EVENTS_PER_PAGE) || 1;
+            const infoEl = document.getElementById('calEventPageInfo');
+            if (infoEl) infoEl.textContent = `Page ${CAL_EVENTS_PAGE} of ${totalPages}`;
+
+            tbody.innerHTML = page.map(ev => `
+    <tr>
+      <td class="p-3 text-slate-500 font-mono">${escapeHtml(ev.EventID || ev.eventID || '—')}</td>
+      <td class="p-3 text-slate-200 font-medium">${escapeHtml(ev.Title || ev.title || '—')}</td>
+      <td class="p-3 text-slate-400">${fmtDate(ev.DateTime || ev.dateTime)}</td>
+      <td class="p-3 text-slate-300">${escapeHtml(ev.Type || ev.type || '—')}</td>
+      <td class="p-3 text-slate-400 font-mono">${escapeHtml(ev.AssignedTo || ev.assignedTo || 'Unassigned')}</td>
+      <td class="p-3 text-slate-400">${escapeHtml((ev.Notes || ev.notes || '').substring(0, 50))}</td>
+      <td class="p-3 text-center">${badge(ev.Status || ev.status || 'Upcoming')}</td>
+      <td class="p-3 text-center">
+        <button onclick="openEditModal('${escapeHtml(ev.EventID || ev.eventID || '')}', ${JSON.stringify(ev).replace(/"/g, '&quot;')}, 'leads-calendar')"
+          style="font-size:11px;padding:3px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">Edit</button>
+      </td>
+    </tr>`).join('');
+        }
+
+        function calendarEventsPagePrev() {
+            if (CAL_EVENTS_PAGE > 1) { CAL_EVENTS_PAGE--; renderCalendarEventsTable(CAL_EVENTS_ALL); }
+        }
+        function calendarEventsPageNext() {
+            const totalPages = Math.ceil(CAL_EVENTS_ALL.length / CAL_EVENTS_PER_PAGE) || 1;
+            if (CAL_EVENTS_PAGE < totalPages) { CAL_EVENTS_PAGE++; renderCalendarEventsTable(CAL_EVENTS_ALL); }
+        }
+
+        async function loadCalendarEvents() {
+            renderCalendarGrid();
+            const tbody = document.getElementById('calendarEventsTableBody');
+            if (tbody) showTableSkeleton('calendarEventsTableBody', 8);
+
+            const res = await executeSecureBridgeCall('leads', 'leads-calendar', {});
+            CAL_EVENTS_ALL = (res.success && res.data) ? res.data : [];
+            CAL_EVENTS_PAGE = 1;
+
+            // Re-render grid with event markers
+            renderCalendarGrid();
+            renderCalendarEventsTable(CAL_EVENTS_ALL);
+        }
+
+        function openEventCreationModal() {
+            const m = document.getElementById('modalEventCreation');
+            if (m) m.classList.remove('hidden');
+        }
+        function closeEventCreationModal() {
+            const m = document.getElementById('modalEventCreation');
+            if (m) m.classList.add('hidden');
+            const f = document.getElementById('eventCreationForm');
+            if (f) f.reset();
+        }
+
+        async function submitNewCalendarEvent(event) {
+            event.preventDefault();
+            const title = document.getElementById('evtTitle')?.value?.trim();
+            const type = document.getElementById('evtType')?.value;
+            const dateTime = document.getElementById('evtDateTime')?.value;
+            const assignedTo = document.getElementById('evtAssignedTo')?.value?.trim();
+            const notes = document.getElementById('evtNotes')?.value?.trim();
+
+            if (!title || !dateTime) { showToast('Title and date are required.', 'error'); return; }
+
+            const btn = event.target.querySelector('button[type=submit]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+            const res = await executeSecureBridgeCall('leads', 'create-calendar-event', {
+                title, type, dateTime, assignedTo, notes
+            });
+
+            if (btn) { btn.disabled = false; btn.textContent = 'SAVE EVENT TO CALENDAR'; }
+
+            showToast(res.success ? 'Event saved.' : (res.error || 'Save failed.'), res.success ? 'success' : 'error');
+            if (res.success) { closeEventCreationModal(); loadCalendarEvents(); }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             function mergeExtraSchemas() {
                 Object.assign(EDIT_MODAL_FORM_SCHEMAS, EDIT_MODAL_EXTRA_SCHEMAS);
             }
 
+            // Replace the entire edit form submit listener (around the DOMContentLoaded section)
             const editForm = document.getElementById('edit-form');
             if (editForm) {
                 editForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    const recordId = document.getElementById('edit-record-id').value;
+
+                    const recordId = document.getElementById('edit-record-id').value.trim();
                     const recordType = e.target.dataset.recordType;
                     const formData = new FormData(e.target);
                     const updates = Object.fromEntries(formData);
 
-                    const res = await executeSecureBridgeCall('admin', 'update-record', { recordId, recordType, updates });
+                    if (!recordId || !recordType) {
+                        showToast("Missing record ID or type", "error");
+                        return;
+                    }
+                    const btn = e.target.querySelector('button[type="submit"]');
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.textContent = "Saving...";
+                    }
+
+                    // Use correct system based on recordType
+                    const system = recordType.startsWith('assessment') ? 'assessment' :
+                        recordType.startsWith('leads') ? 'leads' : 'career';
+
+                    const payload = {
+                        recordType: recordType,
+                        recordId: recordId,
+                        updates: updates
+                    };
+
+                    console.log(`[Edit Submit] → ${system} | ${recordType} | ID: ${recordId}`, updates);
+
+                    const res = await executeSecureBridgeCall(system, 'update-record', payload);
+
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = "Save Changes";
+                    }
 
                     if (res.success) {
-                        showToast('Record updated successfully', 'success');
+                        showToast("✅ Record updated successfully", "success");
                         closeEditModal();
-                        const reloadMap = {
+
+                        // Refresh the relevant table
+                        const refreshMap = {
+                            'career-complaints': initializeModule_career_complaints,
                             'career-users': initializeModule_career_users,
                             'career-earnings': initializeModule_career_earnings,
                             'career-settlements': initializeModule_career_settlements,
+                            'career-elevation': initializeModule_career_elevation,   // ← ADD THIS
                             'assessment-students': initializeModule_assess_submissions,
                             'assessment-courses': initializeModule_assessment_courses,
                             'assessment-questions': initializeModule_assessment_questions,
@@ -3052,12 +4337,15 @@
                             'assessment-applications': initializeModule_assessment_applications,
                             'client-submitted': loadClientSubmittedProjects,
                             'client-onboarded': loadProductionFulfillment,
-                            'leads-matrix': loadLeadsMatrix
+                            'leads-matrix': loadLeadsMatrix,
+                            'leads-calendar': loadCalendarEvents,
                         };
-                        const fn = reloadMap[recordType];
-                        if (fn) fn();
+
+                        const refreshFn = refreshMap[recordType];
+                        if (refreshFn) setTimeout(refreshFn, 300);
                     } else {
-                        showToast(res.error || 'Update failed', 'error');
+                        showToast(res.message || res.error || "Update failed", "error");
+                        console.error("Update Error:", res);
                     }
                 });
             }
