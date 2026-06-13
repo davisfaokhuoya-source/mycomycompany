@@ -965,24 +965,44 @@
         }
 
         // =========== API ===========
-        async function apiCall(action, body = {}) {
+        // =========== API ===========
+        async function apiCall(action, body = {}, showLoading = true) {
             try {
-                showLoader();
-                const payload = JSON.stringify({ system: "career", action, ...body });
+                // Only show loader if requested
+                if (showLoading) {
+                    showLoader();
+                }
+
+                const payload = JSON.stringify({
+                    system: "career",
+                    action,
+                    ...body
+                });
+
                 const res = await fetch(WEBAPP_URL, {
                     method: "POST",
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
                     body: payload,
                     redirect: "follow"
                 });
+
                 const text = await res.text();
                 const start = text.indexOf("{");
                 const result = JSON.parse(start !== -1 ? text.substring(start) : text || "{}");
-                hideLoader();
+
                 return result;
+
             } catch (e) {
-                hideLoader();
-                return { success: false, message: "Connection failed. Check your internet." };
+                console.error("API Call Error:", e);
+                return {
+                    success: false,
+                    message: "Connection failed. Check your internet."
+                };
+            } finally {
+                // Always hide loader if it was shown
+                if (showLoading) {
+                    hideLoader();
+                }
             }
         }
 
@@ -1067,54 +1087,82 @@
 
         function logout() {
             if (unreadPollingInterval) clearInterval(unreadPollingInterval);
-            localStorage.clear();
+
+            // Only clear auth data, not everything
+            localStorage.removeItem("victoriasToken");
+            localStorage.removeItem("victoriasUser");
+            localStorage.removeItem("victoriasExpiry");
+
             location.reload();
         }
 
         // =========== DASHBOARD ===========
-        async function loadDashboard(assessmentNotif) {
-            if (!currentUser) return;
-            const refreshRes = await apiCall("getDashboard", { token: currentToken });
-            if (refreshRes.success && refreshRes.user) {
-                currentUser = refreshRes.user;
-                assessmentNotif = refreshRes.assessmentNotification || assessmentNotif;
+        async function loadDashboard(initialAssessmentNotif = null) {
+            if (!currentUser || !currentToken) return;
+
+            try {
+                const refreshRes = await apiCall("getDashboard", { token: currentToken }, false);
+
+                if (refreshRes.success && refreshRes.user) {
+                    currentUser = refreshRes.user;
+                }
+
+                // Populate basic info
+                document.getElementById("dashUsername").textContent =
+                    currentUser.name || currentUser.username || "Partner";
+
+                document.getElementById("dashUniqueID").textContent = currentUser.uniqueID || "";
+
+                const tierName = TIER_NAMES[currentUser.level] || "Applicant";
+                document.getElementById("dashTierName").textContent = tierName;
+
+                // Referral Link
+                const refLink = `https://thevictorias.com.ng/ssp?ref=${currentUser.uniqueID || ''}`;
+                const refInput = document.getElementById("referralLinkInput");
+                if (refInput) refInput.value = refLink;
+
+                // Assessment Banner
+                const assessmentNotif = refreshRes.assessmentNotification || initialAssessmentNotif;
+                if (assessmentNotif && assessmentNotif.eligible) {
+                    const banner = document.getElementById("assessmentBanner");
+                    if (banner) {
+                        document.getElementById("assessmentBannerMsg").textContent = assessmentNotif.message || "";
+                        banner.classList.add("show");
+                    }
+                }
+
+                // === ONBOARDING MESSAGE ===
+                const onboardingData = refreshRes.onboarding;
+                if (onboardingData && onboardingData.show) {
+                    showOnboardingMessage(onboardingData);
+                }
+
+                // Show main tab
+                showTab(0);
+
+                // Load content
+                populateAvailableTasks();
+                loadMyRecords();
+                loadMyUpgrades();
+                loadEarningsAndPayout();
+                loadTrainingAcademy();
+                loadMessages();
+
+                // Background
+                startUnreadPolling();
+                checkUploadFeatureStatus();
+
+            } catch (error) {
+                console.error("Load Dashboard Error:", error);
             }
-            // Populate Referral Link
-            const refLink = `https://thevictorias.com.ng/ssp?ref=${currentUser.uniqueID || currentUser.uniqueID || ''}`;
-            const refInput = document.getElementById("referralLinkInput");
-            if (refInput) refInput.value = refLink;
-
-            document.getElementById("dashUsername").textContent = currentUser.username || currentUser.name || "Partner";
-            document.getElementById("dashUniqueID").textContent = currentUser.uniqueID || "";
-            const tierName = TIER_NAMES[currentUser.level] || "Applicant";
-            document.getElementById("dashTierName").textContent = tierName;
-
-            // Assessment banner
-            if (assessmentNotif && assessmentNotif.eligible) {
-                const banner = document.getElementById("assessmentBanner");
-                document.getElementById("assessmentBannerMsg").textContent = assessmentNotif.message;
-                banner.classList.add("show");
-            }
-
-            showTab(0);
-            loadMyRecords();
-            loadMyUpgrades();
-            populateAvailableTasks();
-            loadEarningsAndPayout();
-            loadTrainingAcademy();
-            loadMessages();
-            startUnreadPolling();
-            checkUploadFeatureStatus();
         }
-
         // =========== UNREAD POLLING ===========
         function startUnreadPolling() {
             if (unreadPollingInterval) clearInterval(unreadPollingInterval);
             unreadPollingInterval = setInterval(async () => {
-                const res = await apiCall("getUnreadCount", { token: currentToken });
+                const res = await apiCall("getUnreadCount", { token: currentToken }, false);
                 if (!res.success) return;
                 updateUnreadBadge(res.unreadCount);
-                // NO location.reload() — only badge update + toast
                 if (res.unreadCount > 0) {
                     const msgTab = document.getElementById("tabContent7");
                     if (!msgTab || msgTab.classList.contains("d-none")) {
@@ -1184,7 +1232,7 @@
             const tbody = document.querySelector("#recordsTable tbody");
             if (!tbody) return;
             tbody.innerHTML = "<tr><td colspan='6' class='text-center text-muted'>Loading...</td></tr>";
-            const res = await apiCall("getMyRecords", { token: currentToken });
+            const res = await apiCall("getMyRecords", { token: currentToken }, false);
             if (!res.success || !res.records || !res.records.length) {
                 tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No records yet.</td></tr>`;
                 return;
@@ -1242,7 +1290,7 @@
             if (formData.comments.length < 50) {
                 return showToast("Comments must be at least 50 characters", "error");
             }
-            const res = await apiCall("submitClient", { token: currentToken, formData });
+            const res = await apiCall("submitClient", { token: currentToken, formData }, false);
             if (res.success) {
                 showToast("Client submitted successfully!", "success");
                 clearForm("tabContent0");
@@ -1257,7 +1305,7 @@
             const select = document.getElementById("cService");
             if (!select) return;
             select.innerHTML = '<option value="">Select a service...</option>';
-            const res = await apiCall("getMyAvailableTasks", { token: currentToken });
+            const res = await apiCall("getMyAvailableTasks", { token: currentToken }, false);
             if (res.success && res.tasks && res.tasks.length) {
                 res.tasks.forEach(t => {
                     const opt = document.createElement("option");
@@ -1329,7 +1377,7 @@
             const requestType = document.getElementById("upgradeType").value;
             const message = document.getElementById("upgradeMessage").value.trim();
             if (!message) return showToast("Please describe your request", "error");
-            const res = await apiCall("requestUpgrade", { token: currentToken, requestType, message });
+            const res = await apiCall("requestUpgrade", { token: currentToken, requestType, message }, false);
             if (res.success) {
                 showToast("Request submitted!", "success");
                 clearForm("tabContent2");
@@ -1342,7 +1390,7 @@
 
         // =========== EARNINGS ===========
         async function loadEarningsAndPayout() {
-            const res = await apiCall("getMyEarnings", { token: currentToken });
+            const res = await apiCall("getMyEarnings", { token: currentToken }, false);
             if (!res.success) return;
             document.getElementById("totalEarned").innerHTML = `₦${(res.TotalEarned || res.totalEarned || 0).toLocaleString()}`;
             document.getElementById("balanceAmount").textContent = `₦${(res.currentBalance || 0).toLocaleString()}`;
@@ -1397,7 +1445,7 @@
             const balText = document.getElementById("balanceAmount").textContent;
             const amount = parseFloat(balText.replace(/[₦,]/g, "")) || 0;
             if (amount < 15000) return showToast("Minimum payout is ₦15,000", "error");
-            const res = await apiCall("requestPayment", { token: currentToken, amount });
+            const res = await apiCall("requestPayment", { token: currentToken, amount }, false);
             if (res.success) {
                 showToast(res.message || "Payout request submitted!", "success");
                 await loadEarningsAndPayout();
@@ -1431,7 +1479,7 @@
             };
             if (newEmail) data.newEmail = newEmail;
             if (emailVerifyCode) data.emailVerifyCode = emailVerifyCode;
-            const res = await apiCall("updateProfile", { token: currentToken, ...data });
+            const res = await apiCall("updateProfile", { token: currentToken, ...data }, false);
             if (res.success) {
                 if (res.requiresEmailVerification) {
                     document.getElementById("emailVerifyCodeRow").style.display = "block";
@@ -1482,7 +1530,7 @@
         async function loadMessages() {
             const container = document.getElementById("messagesContainer");
             container.innerHTML = `<p class="text-center text-muted py-4">Loading messages...</p>`;
-            const res = await apiCall("getMyMessages", { token: currentToken, page: msgCurrentPage });
+            const res = await apiCall("getMyMessages", { token: currentToken, page: msgCurrentPage }, false);
             if (!res.success) {
                 container.innerHTML = `<div class="alert alert-danger">${res.message}</div>`;
                 return;
@@ -1564,7 +1612,7 @@
         }
 
         async function markMessageAsRead(rowIndex) {
-            const res = await apiCall("markMessageAsRead", { token: currentToken, rowIndex });
+            const res = await apiCall("markMessageAsRead", { token: currentToken, rowIndex }, false);
             if (res.success) loadMessages();
         }
 
@@ -1583,7 +1631,7 @@
             if (!replyText) { showToast("Type your reply", "error"); btn.disabled = false; btn.innerHTML = orig; return; }
             const res = await apiCall("replyToMessage", {
                 token: currentToken, originalRowIndex: currentReplyRowIndex, replyMessage: replyText
-            });
+            }, false);
             const modal = bootstrap.Modal.getInstance(document.getElementById("replyModal"));
             if (modal) modal.hide();
             if (res.success) { showToast("Reply sent!", "success"); loadMessages(); }
@@ -1617,7 +1665,7 @@
 
         // =========== UPLOAD ===========
         async function checkUploadFeatureStatus() {
-            const res = await apiCall("getUploadFeatureStatus", { token: currentToken });
+            const res = await apiCall("getUploadFeatureStatus", { token: currentToken }, false);
             uploadFeatureEnabled = res.success && res.enabled;
             const alertEl = document.getElementById("uploadStatusAlert");
             alertEl.className = uploadFeatureEnabled ? "alert alert-success" : "alert alert-warning";
@@ -1642,7 +1690,7 @@
                 const res = await apiCall("uploadDocument", {
                     token: currentToken, fileName: file.name, fileType: file.type,
                     base64, size: Math.round(file.size / 1024)
-                });
+                }, false);
                 if (res.success) { showToast(res.message, "success"); fileInput.value = ""; }
                 else showToast(res.message || "Upload failed", "error");
             };
@@ -1703,7 +1751,7 @@
         async function loadMyPaymentLinks() {
             const container = document.getElementById("paymentLinksContainer");
             container.innerHTML = `<p class="text-muted text-center py-4">Loading...</p>`;
-            const res = await apiCall("getMyPaymentLinks", { token: currentToken });
+            const res = await apiCall("getMyPaymentLinks", { token: currentToken }, false);
             if (!res.success || !res.links || !res.links.length) {
                 container.innerHTML = `<div class="alert alert-info">No payment links yet. Links appear here when admin generates them for your clients.</div>`;
                 return;
@@ -1761,7 +1809,7 @@
         async function loadAssessmentTab() {
             const container = document.getElementById("assessmentContainer");
             container.innerHTML = `<div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-3"></i><p>Checking eligibility...</p></div>`;
-            const res = await apiCall("getAssessmentEligibility", { token: currentToken });
+            const res = await apiCall("getAssessmentEligibility", { token: currentToken }, false);
             if (!res.success) {
                 container.innerHTML = `<div class="alert alert-danger">${res.message}</div>`;
                 return;
@@ -1889,7 +1937,7 @@
             disableBtn("submitTestBtn", 8000);
             const res = await apiCall("submitAssessmentResult", {
                 token: currentToken, score, totalQuestions: questions.length
-            });
+            }, false);
             const resultEl = document.getElementById("assessmentResult");
             resultEl.classList.remove("d-none");
             const pct = Math.round((score / questions.length) * 100);
@@ -1920,7 +1968,7 @@
             const subject = document.getElementById("complaintSubject").value.trim();
             const message = document.getElementById("complaintMessage").value.trim();
             if (!subject || !message) return showToast("Subject and message required", "error");
-            const res = await apiCall("submitComplaint", { token: currentToken, subject, message });
+            const res = await apiCall("submitComplaint", { token: currentToken, subject, message }, false);
             if (res.success) {
                 showToast("Complaint submitted! We will respond soon.", "success");
                 document.getElementById("complaintSubject").value = "";
@@ -1934,7 +1982,7 @@
         async function loadComplaints() {
             const container = document.getElementById("complaintsContainer");
             container.innerHTML = `<p class="text-muted text-center py-3">Loading...</p>`;
-            const res = await apiCall("getMyComplaints", { token: currentToken });
+            const res = await apiCall("getMyComplaints", { token: currentToken }, false);
             if (!res.success || !res.complaints || !res.complaints.length) {
                 container.innerHTML = `<p class="text-muted text-center py-3">No complaints submitted yet.</p>`;
                 return;
@@ -1967,32 +2015,111 @@
             });
         }
 
+        function showOnboardingMessage(onboarding) {
+            if (!onboarding || !onboarding.show) return;
+
+            const dashboardContainer = document.getElementById('dashboardSection');
+            if (!dashboardContainer) return;
+
+            // Remove any existing onboarding message first
+            const existing = document.getElementById('onboarding-guide');
+            if (existing) existing.remove();
+
+            const onboardingHTML = `
+    <div id="onboarding-guide" class="alert alert-warning border-0 shadow-sm p-4 mb-4" style="background: linear-gradient(135deg, #fafafa, #d3d3d3); color: #000000; border-radius: 12px;">
+        <div class="d-flex align-items-start gap-3">
+            <div style="font-size: 2.5rem;">👋</div>
+            <div class="flex-grow-1">
+                <h4 class="mb-2">${onboarding.title || "Welcome to The Victorias Career Hub!"}</h4>
+                <p class="mb-3">${onboarding.message || "Let's get you started on the right path."}</p>
+                
+                <div class="mb-3">
+                    ${Array.isArray(onboarding.steps) ? onboarding.steps.map(step => `
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge bg-dark text-white">→</span>
+                            <span>${step}</span>
+                        </div>
+                    `).join('') : ''}
+                </div>
+                <div class="mt-8 flex gap-4">
+            
+            <button onclick="this.closest('.fixed').remove(); startAssessment(${e.nextLevel})" 
+                  class="flex-1 bg-orange-500 hover:bg-orange-600 py-4 rounded-2xl font-semibold" id="startTestBtn">
+            Start Assessment Now
+          </button>
+          <button onclick="this.closest('.fixed').remove()" 
+                  class="flex-1 bg-slate-700 hover:bg-slate-600 py-4 rounded-2xl font-semibold">
+            Close
+          </button>
+        </div>
+            </div>
+        </div>
+    </div>`;
+
+            // Insert at the top of the dashboard
+            dashboardContainer.insertAdjacentHTML('afterbegin', onboardingHTML);
+        }
+
+        function showGettingStartedGuide() {
+            const guide = `
+    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+      <div class="bg-slate-900 text-white max-w-2xl mx-4 rounded-3xl p-8">
+        <h2 class="text-3xl font-bold mb-6 text-orange-400">🚀 Getting Started Guide</h2>
+        
+        <div class="space-y-6">
+          <div><strong>Step 1:</strong> Take the Assessment Test</div>
+          <div><strong>Step 2:</strong> Submit your first client jobs</div>
+          <div><strong>Step 3:</strong> Get approved and earn commissions</div>
+          <div><strong>Step 4:</strong> Request payout once you reach ₦15,000</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+            document.body.insertAdjacentHTML('beforeend', guide);
+        }
+
         // =========== PAGE LOAD ===========
         window.onload = () => {
+            hideLoader(); // Ensure loader is hidden first
 
+            // Handle email verification from link
             const params = new URLSearchParams(window.location.search);
             const emailParam = params.get("email");
             const codeParam = params.get("code");
+
             if (emailParam && codeParam) {
                 currentRegEmail = emailParam;
                 document.getElementById("verifyCode").value = codeParam;
-                setTimeout(handleVerify, 600);
+                setTimeout(handleVerify, 800);
                 window.history.replaceState({}, document.title, window.location.pathname);
-                hideLoader();
                 return;
             }
+
+            // Auto-login
             currentToken = localStorage.getItem("victoriasToken");
             const savedUser = localStorage.getItem("victoriasUser");
-            const expiry = localStorage.getItem("victoriasExpiry");
-            if (currentToken && savedUser && expiry && Date.now() < parseInt(expiry)) {
-                currentUser = JSON.parse(savedUser);
-                document.getElementById("authSection").classList.add("d-none");
-                document.getElementById("dashboardSection").classList.remove("d-none");
-                loadDashboard();
-                setTimeout(hideLoader, 500);
+            const expiryStr = localStorage.getItem("victoriasExpiry");
+
+            if (currentToken && savedUser && expiryStr && Date.now() < parseInt(expiryStr)) {
+                try {
+                    currentUser = JSON.parse(savedUser);
+
+                    // Show dashboard
+                    document.getElementById("authSection").classList.add("d-none");
+                    document.getElementById("dashboardSection").classList.remove("d-none");
+
+                    loadDashboard();
+                } catch (e) {
+                    console.error("Login restore failed", e);
+                    localStorage.removeItem("victoriasToken");
+                    localStorage.removeItem("victoriasUser");
+                    localStorage.removeItem("victoriasExpiry");
+                }
             } else {
-                localStorage.clear();
-                hideLoader();
+                // Not logged in → show login page
+                document.getElementById("authSection").classList.remove("d-none");
+                document.getElementById("dashboardSection").classList.add("d-none");
             }
         };
 
