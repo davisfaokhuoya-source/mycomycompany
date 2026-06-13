@@ -400,7 +400,7 @@
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-3">
-                    <button onclick="location.reload()" class="btn btn-outline-secondary btn-sm" title="Refresh"><i
+                    <button onclick="softRefresh()" class="btn btn-outline-secondary btn-sm" title="Refresh"><i
                             class="fas fa-sync-alt"></i></button>
                     <div onclick="showTab(7); closeDropdown();" style="cursor:pointer;position:relative;">
                         <i class="fas fa-bell fa-2x text-primary"></i>
@@ -613,6 +613,23 @@
                         </thead>
                         <tbody></tbody>
                     </table>
+                </div>
+                <!-- Add these two cards inside the row in TAB 4 -->
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm earnings-card">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted">Successful Jobs</h6>
+                            <h3 class="fw-bold text-success" id="successfulJobsCount">0</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm earnings-card">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted">Total Submitted</h6>
+                            <h3 class="fw-bold" id="totalJobsCount">0</h3>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -976,6 +993,17 @@
         let msgTotalPages = 1;
         let pendingEmailChange = false;
 
+
+        function clearSession() {
+            currentToken = null;
+            currentUser = null;
+            localStorage.removeItem("victoriasToken");
+            localStorage.removeItem("victoriasUser");
+            localStorage.removeItem("victoriasExpiry");
+            document.getElementById("authSection").classList.remove("d-none");
+            document.getElementById("dashboardSection").classList.add("d-none");
+        }
+
         // =========== LEVEL HELPERS ===========
         function getUserLevel() { return parseInt(currentUser?.level) || 0; }
         function isLevel0() { return getUserLevel() === 0; }
@@ -989,7 +1017,6 @@
             const notice = document.getElementById("level0GuideNotice");
             if (notice) notice.classList.remove("show");
         }
-
         // =========== DROPDOWN BUILDER ===========
         function buildDropdownMenu() {
             const menu = document.getElementById("mainDropdownMenu");
@@ -1040,10 +1067,25 @@
             try {
                 if (showLoading) showLoader();
                 const payload = JSON.stringify({ system: "career", action, ...body });
-                const res = await fetch(WEBAPP_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: payload, redirect: "follow" });
+                const res = await fetch(WEBAPP_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: payload,
+                    redirect: "follow"
+                });
                 const text = await res.text();
                 const start = text.indexOf("{");
-                return JSON.parse(start !== -1 ? text.substring(start) : text || "{}");
+                const data = JSON.parse(start !== -1 ? text.substring(start) : text || "{}");
+                if (
+                    data.success === false &&
+                    typeof data.message === "string" &&
+                    data.message.toLowerCase().includes("session expired") &&
+                    currentToken
+                ) {
+                    showToast("Your session expired. Please log in again.", "warning", 4000);
+                    setTimeout(() => clearSession(), 1500);
+                }
+                return data;
             } catch (e) {
                 console.error("API Call Error:", e);
                 return { success: false, message: "Connection failed. Check your internet." };
@@ -1051,7 +1093,6 @@
                 if (showLoading) hideLoader();
             }
         }
-
         // =========== AUTH ===========
         async function handleRegister() {
             disableBtn("regBtn", 6000);
@@ -1084,12 +1125,23 @@
             const res = await apiCall("verify", { email: currentRegEmail, code });
             if (res.success) {
                 showVerifyStatus("Email verified successfully!", "success");
-                setTimeout(() => { closeVerifyModal(); showToast("Verified! Account pending approval within 1hr to 2hrs.", "success"); }, 1500);
+                setTimeout(() => {
+                    closeVerifyModal();
+                    showToast("Verified! Account pending approval within 1–2 hours.", "success");
+                }, 1500);
+            } else if (res.expired) {
+                // Code expired — clear field, show message, new code was auto-sent
+                document.getElementById("verifyCode").value = "";
+                showVerifyStatus(
+                    "Code expired. A fresh code has been sent to your email — check your inbox.",
+                    "warning"
+                );
             } else {
                 showVerifyStatus(res.message || "Invalid code", "danger");
                 document.getElementById("verifyCode").value = "";
             }
         }
+
         function showVerifyStatus(msg, type) {
             const el = document.getElementById("verifyStatus");
             el.textContent = msg;
@@ -1110,11 +1162,11 @@
             if (res.success) {
                 currentToken = res.token;
                 currentUser = res.user;
-                const expiry = new Date();
-                expiry.setHours(expiry.getHours() + 3);
+                const expiry = Date.now() + (7 * 24 * 60 * 60 * 1000);
                 localStorage.setItem("victoriasToken", currentToken);
                 localStorage.setItem("victoriasUser", JSON.stringify(currentUser));
-                localStorage.setItem("victoriasExpiry", expiry.getTime());
+                localStorage.setItem("victoriasExpiry", expiry.toString());
+
                 document.getElementById("authSection").classList.add("d-none");
                 document.getElementById("dashboardSection").classList.remove("d-none");
                 loadDashboard(res.assessmentNotification);
@@ -1129,53 +1181,64 @@
 
         function logout() {
             if (unreadPollingInterval) clearInterval(unreadPollingInterval);
-            localStorage.removeItem("victoriasToken");
-            localStorage.removeItem("victoriasUser");
-            localStorage.removeItem("victoriasExpiry");
-            location.reload();
+            clearSession();
+            // Soft reset — no reload needed
+            document.getElementById("loginEmail").value = "";
+            document.getElementById("loginPassword").value = "";
         }
-
         // =========== DASHBOARD ===========
+        // REPLACE loadDashboard():
         async function loadDashboard(initialAssessmentNotif = null) {
             if (!currentUser || !currentToken) return;
             try {
-                const refreshRes = await apiCall("getDashboard", { token: currentToken }, false);
-                if (refreshRes.success && refreshRes.user) currentUser = refreshRes.user;
+                // Try to refresh user data from server, but NEVER fail hard
+                try {
+                    const refreshRes = await apiCall("getDashboard", { token: currentToken }, false);
+                    if (refreshRes.success && refreshRes.user) {
+                        currentUser = refreshRes.user;
+                        // Keep localStorage in sync with latest server data
+                        localStorage.setItem("victoriasUser", JSON.stringify(currentUser));
+                    }
+                    // If server call failed, currentUser still holds the localStorage copy — that's fine
+                } catch (serverErr) {
+                    console.warn("Server refresh failed, using cached user:", serverErr);
+                }
 
-                document.getElementById("dashUsername").textContent = currentUser.name || currentUser.username || "Partner";
-                document.getElementById("dashUniqueID").textContent = currentUser.uniqueID || "";
-                document.getElementById("dashTierName").textContent = TIER_NAMES[currentUser.level] || "Applicant";
+                document.getElementById("dashUsername").textContent =
+                    currentUser.name || currentUser.username || "Partner";
+                document.getElementById("dashUniqueID").textContent =
+                    currentUser.uniqueID || "";
+                document.getElementById("dashTierName").textContent =
+                    TIER_NAMES[currentUser.level] || "Applicant";
 
-                // Build dropdown filtered by level
                 buildDropdownMenu();
 
                 if (isLevel0()) {
-                    // Hide referral link
                     const refSection = document.getElementById("referralLinkSection");
                     if (refSection) refSection.style.display = "none";
-                    // Show guide notice
                     showLevel0Guide();
                 } else {
-                    // Referral link for level 1+
-                    const refLink = `https://thevictorias.com.ng/ssp?ref=${currentUser.uniqueID || ''}`;
+                    const refLink = `https://thevictorias.com.ng/ssp?ref=${currentUser.uniqueID || ""}`;
                     const refInput = document.getElementById("referralLinkInput");
                     if (refInput) refInput.value = refLink;
 
-                    // Assessment banner only for level 1+
-                    const assessmentNotif = refreshRes.assessmentNotification || initialAssessmentNotif;
+                    const assessmentNotif = (
+                        typeof refreshRes !== "undefined" &&
+                        refreshRes?.assessmentNotification
+                    ) || initialAssessmentNotif;
+
                     if (assessmentNotif && assessmentNotif.eligible) {
                         const banner = document.getElementById("assessmentBanner");
                         if (banner) {
-                            document.getElementById("assessmentBannerMsg").textContent = assessmentNotif.message || "";
+                            document.getElementById("assessmentBannerMsg").textContent =
+                                assessmentNotif.message || "";
                             banner.classList.add("show");
                         }
                     }
                 }
 
-                // Land on Training for level 0, Submit Client for everyone else
                 showTab(isLevel0() ? 6 : 0);
 
-                // Load relevant data
                 if (!isLevel0()) {
                     populateAvailableTasks();
                     loadMyRecords();
@@ -1189,9 +1252,10 @@
 
             } catch (error) {
                 console.error("Load Dashboard Error:", error);
+                // Don't log out — just show a toast so the user knows something went wrong
+                showToast("Could not refresh dashboard. Your session is still active.", "warning");
             }
         }
-
         // =========== UNREAD POLLING ===========
         function startUnreadPolling() {
             if (unreadPollingInterval) clearInterval(unreadPollingInterval);
@@ -1413,6 +1477,11 @@
             document.getElementById("totalEarned").innerHTML = `₦${(res.TotalEarned || res.totalEarned || 0).toLocaleString()}`;
             document.getElementById("balanceAmount").textContent = `₦${(res.currentBalance || 0).toLocaleString()}`;
             document.getElementById("successRate").textContent = `${res.successRate || 0}%`;
+            if (document.getElementById("successfulJobsCount"))
+                document.getElementById("successfulJobsCount").textContent = res.successfulJobs || 0;
+            if (document.getElementById("totalJobsCount"))
+                document.getElementById("totalJobsCount").textContent = res.totalJobs || 0;
+
             const level = res.currentLevel || 0;
             document.getElementById("currentLevel").textContent = level;
             document.getElementById("currentTierName").textContent = TIER_NAMES[level] || "Applicant";
@@ -1771,61 +1840,88 @@
     </div>`;
         }
 
-        const ASSESSMENT_QUESTIONS = {
-            1: [
-                { q: "What does CAC stand for?", a: ["Corporate Affairs Committee", "Corporate Affairs Commission", "Company Affairs Council", "Commerce Affairs Commission"], correct: 1 },
-                { q: "Minimum share capital for a Private Limited Company in Nigeria?", a: ["₦10,000", "₦100,000", "No minimum", "₦1,000,000"], correct: 2 },
-                { q: "Which document is required for CAC Business Name registration?", a: ["Passport", "Utility bill", "Valid ID", "All of the above"], correct: 3 },
-                { q: "How long does standard CAC registration take?", a: ["Same day", "1-3 working days", "2 weeks", "1 month"], correct: 1 },
-                { q: "What is the primary benefit of incorporating a Limited Liability Company?", a: ["Lower taxes", "Separate legal personality", "Free banking", "No compliance"], correct: 1 }
-            ],
-            2: [
-                { q: "What does SCUML stand for?", a: ["Special Control Unit for Money Laundering", "State Control Unit for Market Levels", "Statutory Committee for Micro Lending", "Special Commission for Unified Market"], correct: 0 },
-                { q: "Annual returns to CAC are filed every how many years?", a: ["5", "3", "2", "1"], correct: 3 },
-                { q: "Which business type must mandatorily register with SCUML?", a: ["Schools", "Restaurants", "Jewelry dealers", "All designated non-financial businesses"], correct: 3 },
-                { q: "What is a key benefit of social media management for businesses?", a: ["Reduced staff", "Brand awareness and customer engagement", "Cheaper products", "Government contracts"], correct: 1 },
-                { q: "Compliance ensures a business avoids what?", a: ["Competition", "Partnerships", "Penalties and legal issues", "Marketing costs"], correct: 2 }
-            ],
-            3: [
-                { q: "Trademark registration in Nigeria is handled by?", a: ["CAC", "NAFDAC", "Trademarks Registry (FIPO)", "SCUML"], correct: 2 },
-                { q: "How long is a trademark valid in Nigeria?", a: ["5 years", "7 years", "10 years", "15 years"], correct: 2 },
-                { q: "A professional proposal should include?", a: ["Only pricing", "Company profile and solution", "Just a cover letter", "Contact details only"], correct: 1 },
-                { q: "What is domain hosting?", a: ["Printing business cards", "Storing website files on a server", "Social media marketing", "Registering with CAC"], correct: 1 },
-                { q: "Why is a company profile important?", a: ["For internal use only", "Attracts investors and clients professionally", "Replaces CAC documents", "Required by NAFDAC"], correct: 1 }
-            ],
-            4: [
-                { q: "BPP stands for?", a: ["Bureau of Public Procurement", "Board of Private Purchasing", "Bureau of Product Pricing", "Business Procurement Platform"], correct: 0 },
-                { q: "A pre-qualification document for government contracts typically requires?", a: ["Only your CAC certificate", "TCC, PENCOM, NSITF, ITF and BPP certificates", "Just company profile", "Bank statement only"], correct: 1 },
-                { q: "TCC stands for?", a: ["Tax Clearance Certificate", "Trade Clearance Compliance", "Transaction Control Certificate", "Tender Compliance Check"], correct: 0 },
-                { q: "What is the purpose of PENCOM compliance?", a: ["Company registration", "Pension fund compliance", "Patent registration", "Product compliance"], correct: 1 },
-                { q: "Which body regulates government procurement in Nigeria?", a: ["CAC", "FIRS", "BPP", "EFCC"], correct: 2 }
-            ]
-        };
 
         let currentTestLevel = 0;
         let userAnswers = {};
         let testStarted = false;
+        let serverQuestions = [];
 
-        function startAssessment(level) {
-            currentTestLevel = level;
+        async function startAssessment(level) {
             userAnswers = {};
             testStarted = true;
-            const questions = ASSESSMENT_QUESTIONS[level];
-            if (!questions || !questions.length) {
-                document.getElementById("assessmentQuestions").innerHTML = `<div class="alert alert-warning">No questions available for this level. Contact admin.</div>`;
+            document.getElementById("startTestBtn").style.display = "none";
+
+            const res = await apiCall("getAssessmentQuestions", { token: currentToken }, false);
+            if (!res.success || !res.questions || !res.questions.length) {
+                document.getElementById("assessmentQuestions").innerHTML =
+                    `<div class="alert alert-warning">${res.message || "No questions available. Contact admin."}</div>`;
+                testStarted = false;
                 return;
             }
-            document.getElementById("startTestBtn").style.display = "none";
-            let html = `<div class="border rounded p-3 mb-3 bg-light"><p class="text-muted small mb-2">Answer all questions. You need 70% to pass.</p>`;
-            questions.forEach((q, idx) => {
-                html += `<div class="mb-4"><p class="fw-bold">${idx + 1}. ${q.q}</p><div class="d-flex flex-column gap-2">`;
+
+            serverQuestions = res.questions;
+            currentTestLevel = level;
+
+            let html = `<div class="border rounded p-3 mb-3 bg-light">
+    <p class="text-muted small mb-3">Answer all ${serverQuestions.length} questions. You need 70% to pass.</p>`;
+
+            serverQuestions.forEach((q, idx) => {
+                html += `<div class="mb-4">
+      <p class="fw-bold">${idx + 1}. ${q.q}</p>
+      <div class="d-flex flex-column gap-2">`;
                 q.a.forEach((opt, oidx) => {
-                    html += `<div class="form-check"><input class="form-check-input" type="radio" name="q${idx}" id="q${idx}o${oidx}" value="${oidx}" onchange="userAnswers[${idx}]=${oidx}"><label class="form-check-label" for="q${idx}o${oidx}">${opt}</label></div>`;
+                    html += `<div class="form-check">
+        <input class="form-check-input" type="radio" name="q${idx}"
+               id="q${idx}o${oidx}" value="${oidx}"
+               onchange="userAnswers[${idx}]=${oidx}">
+        <label class="form-check-label" for="q${idx}o${oidx}">${opt}</label>
+      </div>`;
                 });
                 html += `</div></div>`;
             });
-            html += `</div><button onclick="submitAssessment()" class="btn btn-success w-100 py-2" id="submitTestBtn"><i class="fas fa-check me-2"></i>Submit Test</button>`;
+
+            html += `</div>
+    <button onclick="submitAssessment()" class="btn btn-success w-100 py-2" id="submitTestBtn">
+      <i class="fas fa-check me-2"></i>Submit Test
+    </button>`;
             document.getElementById("assessmentQuestions").innerHTML = html;
+        }
+
+        // REPLACE submitAssessment() to send answers to server for scoring:
+        async function submitAssessment() {
+            if (!testStarted) return;
+            if (Object.keys(userAnswers).length < serverQuestions.length) {
+                return showToast(`Please answer all ${serverQuestions.length} questions.`, "error");
+            }
+
+            disableBtn("submitTestBtn", 8000);
+
+            // Send answers to server — server scores them
+            const res = await apiCall("submitAssessmentWithAnswers", {
+                token: currentToken,
+                userAnswers  // { "0": 2, "1": 0, ... }
+            }, false);
+
+            const resultEl = document.getElementById("assessmentResult");
+            resultEl.classList.remove("d-none");
+
+            if (res.success && res.passed) {
+                resultEl.innerHTML = `<div class="alert alert-success">
+      <h5><i class="fas fa-trophy me-2"></i>Congratulations! You Passed!</h5>
+      <p>Score: <strong>${res.score}%</strong></p>
+      <p>${res.message}</p>
+    </div>`;
+            } else {
+                resultEl.innerHTML = `<div class="alert alert-danger">
+      <h5><i class="fas fa-times-circle me-2"></i>Test Not Passed</h5>
+      <p>Score: <strong>${res.score}%</strong></p>
+      <p>${res.message || "You need at least 70% to pass."}</p>
+      <p class="mb-0 small text-muted">You can retake after 7 days.</p>
+    </div>`;
+            }
+            document.getElementById("assessmentQuestions").innerHTML = "";
+            document.getElementById("startTestBtn").style.display = "none";
+            testStarted = false;
         }
 
         async function submitAssessment() {
@@ -1897,9 +1993,25 @@
             });
         }
 
+        function forceHideLoader() {
+            const loader = document.getElementById("loaderOverlay");
+            if (loader) {
+                loader.style.display = "none";
+                loader.classList.remove("active");
+            }
+        }
+
+        // === Soft REfresh ===
+        async function softRefresh() {
+            if (!currentToken || !currentUser) return;
+            showToast("Refreshing...", "info", 1500);
+            await loadDashboard();
+            showToast("Dashboard refreshed", "success", 2000);
+        }
         // =========== PAGE LOAD ===========
+        // REPLACE the entire window.onload with this:
         window.onload = () => {
-            forceHideLoader();        // Ensure loader is completely hidden at start
+            forceHideLoader();
 
             const params = new URLSearchParams(window.location.search);
             const emailParam = params.get("email");
@@ -1913,24 +2025,38 @@
                 return;
             }
 
-            currentToken = localStorage.getItem("victoriasToken");
+            const savedToken = localStorage.getItem("victoriasToken");
             const savedUser = localStorage.getItem("victoriasUser");
             const expiryStr = localStorage.getItem("victoriasExpiry");
 
-            if (currentToken && savedUser && expiryStr && Date.now() < parseInt(expiryStr)) {
+            // Extend session on every valid page load (keeps active users logged in)
+            const isValid =
+                savedToken && savedUser && expiryStr &&
+                Date.now() < parseInt(expiryStr);
+
+            if (isValid) {
                 try {
+                    currentToken = savedToken;
                     currentUser = JSON.parse(savedUser);
+
+                    // Extend expiry by 3 more hours on every load so active users
+                    // never get logged out mid-session
+                    const newExpiry = new Date();
+                    newExpiry.setHours(newExpiry.getHours() + 3);
+                    localStorage.setItem("victoriasExpiry", newExpiry.getTime());
+
+                    // Show dashboard immediately from localStorage — no server round-trip needed
                     document.getElementById("authSection").classList.add("d-none");
                     document.getElementById("dashboardSection").classList.remove("d-none");
+
+                    // Load dashboard — if server refresh fails, cached user still shows
                     loadDashboard();
                 } catch (e) {
-                    console.error("Login restore failed", e);
-                    localStorage.clear(); // safer cleanup
-                    document.getElementById("authSection").classList.remove("d-none");
+                    console.error("Session restore failed:", e);
+                    clearSession();
                 }
             } else {
-                document.getElementById("authSection").classList.remove("d-none");
-                document.getElementById("dashboardSection").classList.add("d-none");
+                clearSession();
             }
         };
     </script>
