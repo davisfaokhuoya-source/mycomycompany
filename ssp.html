@@ -61,7 +61,6 @@
             top: -2px;
         }
 
-        /* New message flash dot */
         .msg-new-dot {
             display: inline-block;
             width: 8px;
@@ -136,15 +135,18 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, .9);
+            background: rgba(255, 255, 255, 0.92);
             display: none;
             justify-content: center;
             align-items: center;
             z-index: 99999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
         .loader-overlay.active {
             display: flex;
+            opacity: 1;
         }
 
         .spinner {
@@ -158,11 +160,11 @@
 
         @keyframes spin {
             0% {
-                transform: rotate(0deg)
+                transform: rotate(0deg);
             }
 
             100% {
-                transform: rotate(360deg)
+                transform: rotate(360deg);
             }
         }
 
@@ -205,6 +207,89 @@
             padding: 2px 7px;
             border-radius: 12px;
         }
+
+        /* ===== LEVEL 0 GUIDE NOTICE ===== */
+        #level0GuideNotice {
+            display: none;
+            position: relative;
+            z-index: 10;
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+            color: #fff;
+            border-radius: 12px;
+            padding: 24px 24px 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        #level0GuideNotice.show {
+            display: block;
+        }
+
+        #level0GuideNotice .guide-close {
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            color: #fff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            transition: background .2s;
+        }
+
+        #level0GuideNotice .guide-close:hover {
+            background: rgba(255, 255, 255, 0.28);
+        }
+
+        #level0GuideNotice h5 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        #level0GuideNotice .guide-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 9px;
+            font-size: 0.92rem;
+            color: rgba(255, 255, 255, 0.92);
+        }
+
+        #level0GuideNotice .guide-step-num {
+            background: #E07410;
+            color: #fff;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            min-width: 22px;
+            font-size: 12px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 1px;
+        }
+
+        #level0GuideNotice .guide-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        #level0GuideNotice .guide-actions .btn {
+            font-size: 0.88rem;
+            padding: 7px 18px;
+        }
     </style>
 </head>
 
@@ -213,8 +298,6 @@
     <div id="loaderOverlay" class="loader-overlay">
         <div class="spinner"></div>
     </div>
-
-    <!-- Toast container -->
     <div class="toast-container" id="toastContainer"></div>
 
     <!-- Navbar -->
@@ -253,7 +336,6 @@
                                     href="#registerTab">Register</a></li>
                         </ul>
                         <div class="tab-content">
-                            <!-- LOGIN -->
                             <div class="tab-pane fade show active" id="loginTab">
                                 <h4 class="text-center mb-4 text-dark">Login</h4>
                                 <div class="mb-3"><input type="email" id="loginEmail" class="form-control"
@@ -262,12 +344,9 @@
                                         placeholder="Password"></div>
                                 <button onclick="handleLogin()" class="btn btn-primary w-100 py-2"
                                     id="loginBtn">Login</button>
-                                <div class="text-center mt-3">
-                                    <a href="#" data-bs-toggle="modal" data-bs-target="#forgotModal">Forgot
-                                        Password?</a>
-                                </div>
+                                <div class="text-center mt-3"><a href="#" data-bs-toggle="modal"
+                                        data-bs-target="#forgotModal">Forgot Password?</a></div>
                             </div>
-                            <!-- REGISTER -->
                             <div class="tab-pane fade" id="registerTab">
                                 <h4 class="text-center mb-4 text-dark">Register</h4>
                                 <div class="row g-2">
@@ -308,30 +387,62 @@
                         <span class="badge bg-secondary" id="dashUniqueID"></span>
                         <span class="tier-badge" id="dashTierName"></span>
                     </div>
-
-                    <!-- REFERRAL LINK -->
-                    <div class="mt-2">
+                    <!-- Referral Link (hidden for level 0) -->
+                    <div class="mt-2" id="referralLinkSection">
                         <small class="text-muted">Your Referral Link:</small>
                         <div class="input-group input-group-sm" style="max-width: 420px;">
                             <input type="text" id="referralLinkInput" class="form-control font-monospace small"
                                 readonly>
-                            <button onclick="copyReferralLink()" class="btn btn-outline-primary" type="button">
-                                <i class="fas fa-copy"></i>
-                            </button>
+                            <button onclick="copyReferralLink()" class="btn btn-outline-primary" type="button"><i
+                                    class="fas fa-copy"></i></button>
                         </div>
-                        <small class="text-success">Earn ₦300 per successful referral (max 10)</small>
+                        <small class="text-success">Earn ₦500 per successful referral (max 6)</small>
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-3">
-                    <button onclick="location.reload()" class="btn btn-outline-secondary btn-sm" title="Refresh">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
+                    <button onclick="location.reload()" class="btn btn-outline-secondary btn-sm" title="Refresh"><i
+                            class="fas fa-sync-alt"></i></button>
                     <div onclick="showTab(7); closeDropdown();" style="cursor:pointer;position:relative;">
                         <i class="fas fa-bell fa-2x text-primary"></i>
                         <span id="unreadBadge" class="message-badge d-none">0</span>
                         <span id="newMsgDot" class="msg-new-dot d-none"></span>
                     </div>
                     <button onclick="logout()" class="btn btn-outline-danger btn-sm">Logout</button>
+                </div>
+            </div>
+
+            <!-- ===== LEVEL 0 GUIDE NOTICE ===== -->
+            <div id="level0GuideNotice">
+                <button class="guide-close" onclick="dismissLevel0Guide()" title="Close">&times;</button>
+                <h5><i class="fas fa-rocket me-2"></i>Welcome — here's how to get started</h5>
+                <div class="guide-step">
+                    <div class="guide-step-num">1</div>
+                    <div><strong>Watch the training videos</strong> — learn how The Victorias system works and what
+                        services you'll be marketing.</div>
+                </div>
+                <div class="guide-step">
+                    <div class="guide-step-num">2</div>
+                    <div><strong>Study the Level 1 Marketer module</strong> — understand the key services and daily
+                        targets before your test.</div>
+                </div>
+                <div class="guide-step">
+                    <div class="guide-step-num">3</div>
+                    <div><strong>Take the Upgrade Assessment</strong> — score 70% or above to be promoted to Level 1
+                        Marketer and unlock client submission.</div>
+                </div>
+                <div class="guide-step">
+                    <div class="guide-step-num">4</div>
+                    <div><strong>Once promoted</strong>, you can submit clients, earn commissions, and access all
+                        platform features.</div>
+                </div>
+                <div class="guide-actions">
+                    <button onclick="showTab(6); dismissLevel0Guide();" class="btn btn-warning fw-bold">
+                        <i class="fas fa-graduation-cap me-1"></i> Go to Training
+                    </button>
+                    <button onclick="showTab(11); dismissLevel0Guide();" class="btn btn-light">
+                        <i class="fas fa-star me-1"></i> Take Assessment
+                    </button>
+                    <button onclick="dismissLevel0Guide();" class="btn btn-outline-light btn-sm">Dismiss</button>
                 </div>
             </div>
 
@@ -342,9 +453,8 @@
                         <h5 class="mb-1"><i class="fas fa-graduation-cap me-2"></i>Upgrade Test Available!</h5>
                         <p class="mb-0 small" id="assessmentBannerMsg"></p>
                     </div>
-                    <button onclick="showTab(11); closeDropdown();" class="btn btn-light btn-sm fw-bold">
-                        Take Test Now
-                    </button>
+                    <button onclick="showTab(11); closeDropdown();" class="btn btn-light btn-sm fw-bold">Take Test
+                        Now</button>
                 </div>
             </div>
 
@@ -353,38 +463,9 @@
                 <div class="dropdown">
                     <button class="btn btn-primary btn-lg dropdown-toggle w-100 text-start" type="button"
                         id="tabDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fas fa-upload me-2"></i>Submit Client
+                        <i class="fas fa-graduation-cap me-2"></i>Training Academy
                     </button>
-                    <ul class="dropdown-menu w-100" aria-labelledby="tabDropdown">
-                        <li><a class="dropdown-item" href="#" onclick="showTab(0);closeDropdown();"><i
-                                    class="fas fa-upload me-2"></i>Submit Client</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="showTab(1);closeDropdown();"><i
-                                    class="fas fa-clipboard-list me-2"></i>My Records</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="showTab(2);closeDropdown();"><i
-                                    class="fas fa-paper-plane me-2"></i>Submit Request</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="showTab(3);closeDropdown();"><i
-                                    class="fas fa-arrow-up me-2"></i>My Upgrades</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="showTab(4);closeDropdown();"><i
-                                    class="fas fa-coins me-2"></i>Earnings & Payout</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="showTab(5);closeDropdown();"><i
-                                    class="fas fa-user me-2"></i>My Profile</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="showTab(6);closeDropdown();"><i
-                                    class="fas fa-graduation-cap me-2"></i>Training Academy</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="showTab(7);closeDropdown();">
-                                <i class="fas fa-envelope me-2"></i>Messages
-                                <span id="msgMenuDot" class="msg-new-dot d-none"></span>
-                            </a></li>
-                        <li><a class="dropdown-item" href="#" onclick="showTab(8);closeDropdown();"><i
-                                    class="fas fa-paperclip me-2"></i>My Documents</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="showTab(9);closeDropdown();"><i
-                                    class="fas fa-image me-2"></i>Media Resources</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="showTab(10);closeDropdown();"><i
-                                    class="fas fa-credit-card me-2"></i>Payment Links</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="showTab(11);closeDropdown();"><i
-                                    class="fas fa-star me-2"></i>Upgrade Assessment</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="showTab(12);closeDropdown();"><i
-                                    class="fas fa-ticket-alt me-2"></i>Complaint Tickets</a></li>
-                    </ul>
+                    <ul class="dropdown-menu w-100" aria-labelledby="tabDropdown" id="mainDropdownMenu"></ul>
                 </div>
             </div>
 
@@ -419,11 +500,9 @@
                             <option>Client prefers Email</option>
                         </select>
                     </div>
-                    <div class="col-12">
-                        <textarea id="cComments" class="form-control" rows="3"
+                    <div class="col-12"><textarea id="cComments" class="form-control" rows="3"
                             placeholder="Tell us in detail what the client wants. 50 character minimum."
-                            required></textarea>
-                    </div>
+                            required></textarea></div>
                 </div>
                 <button onclick="submitClientForm()" class="btn btn-primary w-100 mt-4 py-2" id="submitClientBtn">Submit
                     Client</button>
@@ -505,22 +584,19 @@
                         <div class="card border-0 shadow-sm earnings-card">
                             <div class="card-body text-center">
                                 <h6 class="text-muted">Current Level</h6>
-                                <h3 class="fw-bold text-primary" id="currentLevel">0</h3>
-                                <small id="currentTierName" class="text-muted"></small>
+                                <h3 class="fw-bold text-primary" id="currentLevel">0</h3><small id="currentTierName"
+                                    class="text-muted"></small>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="card mb-4">
-                    <div class="card-header bg-light d-flex justify-content-between">
-                        <strong>Request Payout</strong>
-                        <span class="text-muted small">Minimum: ₦15,000</span>
-                    </div>
+                    <div class="card-header bg-light d-flex justify-content-between"><strong>Request
+                            Payout</strong><span class="text-muted small">Minimum: ₦15,000</span></div>
                     <div class="card-body">
                         <div class="alert alert-info">Balance: <strong id="balanceAmount">₦0</strong></div>
-                        <button onclick="requestPayout()" id="payoutBtn" class="btn btn-success btn-lg w-100" disabled>
-                            Request Payment
-                        </button>
+                        <button onclick="requestPayout()" id="payoutBtn" class="btn btn-success btn-lg w-100"
+                            disabled>Request Payment</button>
                     </div>
                 </div>
                 <h6 class="mt-4 mb-3">Payment History</h6>
@@ -548,35 +624,21 @@
                     </div>
                     <div class="card-body">
                         <div class="row g-2">
-                            <div class="col-md-6">
-                                <label class="form-label">Full Name</label>
-                                <input type="text" id="editName" class="form-control">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">State</label>
-                                <input type="text" id="editState" class="form-control">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Phone</label>
-                                <input type="tel" id="editPhone" class="form-control">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Account Number</label>
-                                <input type="text" id="editAccountNumber" class="form-control" maxlength="10">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Account Name</label>
-                                <input type="text" id="editAccountName" class="form-control">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Bank Name</label>
-                                <input type="text" id="editBankName" class="form-control">
-                            </div>
+                            <div class="col-md-6"><label class="form-label">Full Name</label><input type="text"
+                                    id="editName" class="form-control"></div>
+                            <div class="col-md-6"><label class="form-label">State</label><input type="text"
+                                    id="editState" class="form-control"></div>
+                            <div class="col-md-6"><label class="form-label">Phone</label><input type="tel"
+                                    id="editPhone" class="form-control"></div>
+                            <div class="col-md-6"><label class="form-label">Account Number</label><input type="text"
+                                    id="editAccountNumber" class="form-control" maxlength="10"></div>
+                            <div class="col-md-6"><label class="form-label">Account Name</label><input type="text"
+                                    id="editAccountName" class="form-control"></div>
+                            <div class="col-md-6"><label class="form-label">Bank Name</label><input type="text"
+                                    id="editBankName" class="form-control"></div>
                             <div class="col-12">
-                                <label class="form-label">
-                                    Change Email
-                                    <small class="text-muted">(requires verification of current email)</small>
-                                </label>
+                                <label class="form-label">Change Email <small class="text-muted">(requires verification
+                                        of current email)</small></label>
                                 <input type="email" id="editNewEmail" class="form-control"
                                     placeholder="New email address (optional)">
                             </div>
@@ -623,15 +685,10 @@
                         <button onclick="goToVideo1()" class="btn btn-outline-secondary btn-sm">← Previous
                             Video</button>
                     </div>
-
-                    <!-- Level 0 - Applicant -->
                     <div class="accordion-item">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#level0acc">
-                                <strong>Level 0: Applicant</strong>
-                            </button>
-                        </h2>
+                        <h2 class="accordion-header"><button class="accordion-button" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#level0acc"><strong>Level 0:
+                                    Applicant</strong></button></h2>
                         <div id="level0acc" class="accordion-collapse collapse show"
                             data-bs-parent="#levelTrainingAccordion">
                             <div class="accordion-body">
@@ -640,15 +697,10 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Level 1 - Marketer -->
                     <div class="accordion-item">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#level1acc">
-                                <strong>Level 1: Marketer</strong> — Up to 7% Commission
-                            </button>
-                        </h2>
+                        <h2 class="accordion-header"><button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#level1acc"><strong>Level 1: Marketer</strong>
+                                — Up to 7% Commission</button></h2>
                         <div id="level1acc" class="accordion-collapse collapse"
                             data-bs-parent="#levelTrainingAccordion">
                             <div class="accordion-body">
@@ -662,15 +714,10 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Level 2 - Consultant -->
                     <div class="accordion-item">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#level2acc">
-                                <strong>Level 2: Consultant</strong> — Up to 10% Commission
-                            </button>
-                        </h2>
+                        <h2 class="accordion-header"><button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#level2acc"><strong>Level 2:
+                                    Consultant</strong> — Up to 10% Commission</button></h2>
                         <div id="level2acc" class="accordion-collapse collapse"
                             data-bs-parent="#levelTrainingAccordion">
                             <div class="accordion-body">
@@ -682,15 +729,10 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Level 3 - Senior Consultant -->
                     <div class="accordion-item">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#level3acc">
-                                <strong>Level 3: Senior Consultant</strong> — Up to 15% Commission
-                            </button>
-                        </h2>
+                        <h2 class="accordion-header"><button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#level3acc"><strong>Level 3: Senior
+                                    Consultant</strong> — Up to 15% Commission</button></h2>
                         <div id="level3acc" class="accordion-collapse collapse"
                             data-bs-parent="#levelTrainingAccordion">
                             <div class="accordion-body">
@@ -702,15 +744,10 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Level 4 - Area Manager -->
                     <div class="accordion-item">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#level4acc">
-                                <strong>Level 4: Area Manager (Elite)</strong> — Up to 20% Commission
-                            </button>
-                        </h2>
+                        <h2 class="accordion-header"><button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#level4acc"><strong>Level 4: Area Manager
+                                    (Elite)</strong> — Up to 20% Commission</button></h2>
                         <div id="level4acc" class="accordion-collapse collapse"
                             data-bs-parent="#levelTrainingAccordion">
                             <div class="accordion-body">
@@ -731,23 +768,17 @@
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <button onclick="loadMessages()" class="btn btn-primary btn-sm">
-                                <i class="fas fa-sync"></i> Refresh
-                            </button>
+                            <button onclick="loadMessages()" class="btn btn-primary btn-sm"><i class="fas fa-sync"></i>
+                                Refresh</button>
                             <span id="messagesCount" class="text-muted small"></span>
                         </div>
                         <div id="messagesContainer"></div>
-                        <!-- Pagination -->
                         <div id="msgPagination" class="d-flex justify-content-between align-items-center mt-3 d-none">
                             <button onclick="prevMsgPage()" id="btnMsgPrev" class="btn btn-outline-secondary btn-sm"
-                                disabled>
-                                <i class="fas fa-chevron-left"></i> Prev
-                            </button>
+                                disabled><i class="fas fa-chevron-left"></i> Prev</button>
                             <span id="msgPageInfo" class="text-muted small">Page 1 of 1</span>
                             <button onclick="nextMsgPage()" id="btnMsgNext" class="btn btn-outline-secondary btn-sm"
-                                disabled>
-                                Next <i class="fas fa-chevron-right"></i>
-                            </button>
+                                disabled>Next <i class="fas fa-chevron-right"></i></button>
                         </div>
                     </div>
                 </div>
@@ -759,13 +790,11 @@
                 <div class="card portal-card">
                     <div class="card-body">
                         <div id="uploadStatusAlert" class="alert alert-info d-none"></div>
-                        <div class="mb-4">
-                            <label class="form-label">Upload Document (JPG, JPEG, PNG, PDF — max 1MB)</label>
-                            <input type="file" id="documentFile" class="form-control" accept=".jpg,.jpeg,.png,.pdf">
-                        </div>
-                        <button onclick="uploadUserDocument()" id="uploadBtn" class="btn btn-success w-100 py-2">
-                            <i class="fas fa-cloud-upload-alt"></i> Upload Document
-                        </button>
+                        <div class="mb-4"><label class="form-label">Upload Document (JPG, JPEG, PNG, PDF — max
+                                1MB)</label><input type="file" id="documentFile" class="form-control"
+                                accept=".jpg,.jpeg,.png,.pdf"></div>
+                        <button onclick="uploadUserDocument()" id="uploadBtn" class="btn btn-success w-100 py-2"><i
+                                class="fas fa-cloud-upload-alt"></i> Upload Document</button>
                         <div class="mt-5">
                             <h6>Uploaded Documents</h6>
                             <div class="table-responsive">
@@ -790,8 +819,7 @@
             <!-- TAB 9: Media Resources -->
             <div id="tabContent9" class="d-none" style="margin-bottom:20px;">
                 <h5><i class="fas fa-photo-video"></i> Media Resources</h5>
-                <div class="mb-4">
-                    <label class="form-label fw-bold">Select Level:</label>
+                <div class="mb-4"><label class="form-label fw-bold">Select Level:</label>
                     <div id="levelButtons" class="btn-group flex-wrap" role="group"></div>
                 </div>
                 <div id="mediaLevelMessage" class="alert alert-info d-none"></div>
@@ -804,13 +832,11 @@
                 <div id="paymentLinksContainer" class="mt-3"></div>
             </div>
 
-
             <!-- TAB 11: Upgrade Assessment -->
             <div id="tabContent11" class="d-none">
                 <h5><i class="fas fa-star"></i> Upgrade Assessment</h5>
                 <div id="assessmentContainer">
-                    <div class="text-center py-4 text-muted">
-                        <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                    <div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
                         <p>Checking eligibility...</p>
                     </div>
                 </div>
@@ -822,19 +848,14 @@
                 <div class="card portal-card mb-4">
                     <div class="card-header bg-light"><strong>Submit New Complaint</strong></div>
                     <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label">Subject</label>
-                            <input type="text" id="complaintSubject" class="form-control"
-                                placeholder="Brief subject of your complaint">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Message</label>
-                            <textarea id="complaintMessage" class="form-control" rows="4"
-                                placeholder="Describe your complaint in detail..."></textarea>
-                        </div>
-                        <button onclick="submitComplaint()" class="btn btn-warning w-100 py-2" id="complaintBtn">
-                            <i class="fas fa-paper-plane"></i> Submit Complaint
-                        </button>
+                        <div class="mb-3"><label class="form-label">Subject</label><input type="text"
+                                id="complaintSubject" class="form-control"
+                                placeholder="Brief subject of your complaint"></div>
+                        <div class="mb-3"><label class="form-label">Message</label><textarea id="complaintMessage"
+                                class="form-control" rows="4"
+                                placeholder="Describe your complaint in detail..."></textarea></div>
+                        <button onclick="submitComplaint()" class="btn btn-warning w-100 py-2" id="complaintBtn"><i
+                                class="fas fa-paper-plane"></i> Submit Complaint</button>
                     </div>
                 </div>
                 <h6>My Previous Complaints</h6>
@@ -851,8 +872,8 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Reply to Admin</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title">Reply to Admin</h5><button type="button" class="btn-close"
+                        data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div id="replyOriginalSubject" class="fw-bold mb-3 border-bottom pb-2"></div>
@@ -872,13 +893,13 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Forgot Password</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title">Forgot Password</h5><button type="button" class="btn-close"
+                        data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div id="forgotStep1">
-                        <p>Enter your registered email address</p>
-                        <input type="email" id="forgotEmail" class="form-control" placeholder="your@email.com">
+                        <p>Enter your registered email address</p><input type="email" id="forgotEmail"
+                            class="form-control" placeholder="your@email.com">
                     </div>
                     <div id="forgotStep2" class="d-none">
                         <p>Enter the 6-digit code sent to your email</p>
@@ -909,8 +930,7 @@
                         maxlength="6" style="font-size:1.4rem;text-align:center;">
                     <button onclick="handleVerify()" class="btn btn-primary w-100">Submit Code</button>
                 </div>
-                <div class="modal-footer">
-                    <button onclick="closeVerifyModal()" class="btn btn-secondary">Close</button>
+                <div class="modal-footer"><button onclick="closeVerifyModal()" class="btn btn-secondary">Close</button>
                 </div>
             </div>
         </div>
@@ -924,10 +944,27 @@
 
         const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbx4Ftqr-C_OOMQxqvVi5r_WEHBEhXDx21m8cDada3B9wdU7G5lnr316qtLy9dPYINMg/exec";
 
-        const TIER_NAMES = {
-            0: "Applicant", 1: "Marketer", 2: "Consultant",
-            3: "Senior Consultant", 4: "Area Manager"
-        };
+        const TIER_NAMES = { 0: "Applicant", 1: "Marketer", 2: "Consultant", 3: "Senior Consultant", 4: "Area Manager" };
+
+        // All tab definitions
+        const ALL_TABS = [
+            { idx: 0, icon: "fas fa-upload", label: "Submit Client" },
+            { idx: 1, icon: "fas fa-clipboard-list", label: "My Records" },
+            { idx: 2, icon: "fas fa-paper-plane", label: "Submit Request" },
+            { idx: 3, icon: "fas fa-arrow-up", label: "My Upgrades" },
+            { idx: 4, icon: "fas fa-coins", label: "Earnings & Payout" },
+            { idx: 5, icon: "fas fa-user", label: "My Profile" },
+            { idx: 6, icon: "fas fa-graduation-cap", label: "Training Academy" },
+            { idx: 7, icon: "fas fa-envelope", label: "Messages", dotId: "msgMenuDot" },
+            { idx: 8, icon: "fas fa-paperclip", label: "My Documents" },
+            { idx: 9, icon: "fas fa-image", label: "Media Resources" },
+            { idx: 10, icon: "fas fa-credit-card", label: "Payment Links" },
+            { idx: 11, icon: "fas fa-star", label: "Upgrade Assessment" },
+            { idx: 12, icon: "fas fa-ticket-alt", label: "Complaint Tickets" }
+        ];
+
+        // Only these tabs are accessible to level 0 users
+        const LEVEL0_ALLOWED_TABS = new Set([6, 7, 11]);
 
         let currentToken = null;
         let currentUser = null;
@@ -939,10 +976,44 @@
         let msgTotalPages = 1;
         let pendingEmailChange = false;
 
-        // =========== LOADER ===========
-        function showLoader() { document.getElementById("loaderOverlay").classList.add("active"); }
-        function hideLoader() { document.getElementById("loaderOverlay").classList.remove("active"); }
+        // =========== LEVEL HELPERS ===========
+        function getUserLevel() { return parseInt(currentUser?.level) || 0; }
+        function isLevel0() { return getUserLevel() === 0; }
 
+        // =========== LEVEL 0 GUIDE ===========
+        function showLevel0Guide() {
+            const notice = document.getElementById("level0GuideNotice");
+            if (notice) notice.classList.add("show");
+        }
+        function dismissLevel0Guide() {
+            const notice = document.getElementById("level0GuideNotice");
+            if (notice) notice.classList.remove("show");
+        }
+
+        // =========== DROPDOWN BUILDER ===========
+        function buildDropdownMenu() {
+            const menu = document.getElementById("mainDropdownMenu");
+            if (!menu) return;
+            menu.innerHTML = "";
+            const tabs = isLevel0() ? ALL_TABS.filter(t => LEVEL0_ALLOWED_TABS.has(t.idx)) : ALL_TABS;
+            tabs.forEach(t => {
+                const dot = t.dotId ? `<span id="${t.dotId}" class="msg-new-dot d-none"></span>` : "";
+                const li = document.createElement("li");
+                li.innerHTML = `<a class="dropdown-item" href="#" onclick="showTab(${t.idx});closeDropdown();"><i class="${t.icon} me-2"></i>${t.label}${dot}</a>`;
+                menu.appendChild(li);
+            });
+        }
+
+        // =========== LOADER ===========
+        function showLoader() {
+            const loader = document.getElementById("loaderOverlay");
+            if (loader) loader.classList.add("active");
+        }
+
+        function hideLoader() {
+            const loader = document.getElementById("loaderOverlay");
+            if (loader) loader.classList.remove("active");
+        }
         // =========== TOAST ===========
         function showToast(msg, type = "info", duration = 5000) {
             const container = document.getElementById("toastContainer");
@@ -965,44 +1036,19 @@
         }
 
         // =========== API ===========
-        // =========== API ===========
         async function apiCall(action, body = {}, showLoading = true) {
             try {
-                // Only show loader if requested
-                if (showLoading) {
-                    showLoader();
-                }
-
-                const payload = JSON.stringify({
-                    system: "career",
-                    action,
-                    ...body
-                });
-
-                const res = await fetch(WEBAPP_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: payload,
-                    redirect: "follow"
-                });
-
+                if (showLoading) showLoader();
+                const payload = JSON.stringify({ system: "career", action, ...body });
+                const res = await fetch(WEBAPP_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: payload, redirect: "follow" });
                 const text = await res.text();
                 const start = text.indexOf("{");
-                const result = JSON.parse(start !== -1 ? text.substring(start) : text || "{}");
-
-                return result;
-
+                return JSON.parse(start !== -1 ? text.substring(start) : text || "{}");
             } catch (e) {
                 console.error("API Call Error:", e);
-                return {
-                    success: false,
-                    message: "Connection failed. Check your internet."
-                };
+                return { success: false, message: "Connection failed. Check your internet." };
             } finally {
-                // Always hide loader if it was shown
-                if (showLoading) {
-                    hideLoader();
-                }
+                if (showLoading) hideLoader();
             }
         }
 
@@ -1019,14 +1065,11 @@
                 bankName: document.getElementById("regBank").value.trim(),
                 password: document.getElementById("regPassword").value
             };
-            if (!data.name || !data.email || !data.password) {
-                return showToast("Name, email and password are required", "error");
-            }
+            if (!data.name || !data.email || !data.password) return showToast("Name, email and password are required", "error");
             const res = await apiCall("register", data);
             if (res.success) {
                 currentRegEmail = data.email;
-                document.getElementById("verifyEmailDisplay").innerHTML =
-                    `Code sent to <strong>${res.email}</strong>`;
+                document.getElementById("verifyEmailDisplay").innerHTML = `Code sent to <strong>${res.email}</strong>`;
                 new bootstrap.Modal(document.getElementById("verifyModal")).show();
                 clearForm("registerTab");
                 setTimeout(() => showToast("Application Initiated Successfully", "success"), 900);
@@ -1077,8 +1120,7 @@
                 loadDashboard(res.assessmentNotification);
             } else if (res.message && res.message.toLowerCase().includes("verify")) {
                 currentRegEmail = email;
-                document.getElementById("verifyEmailDisplay").innerHTML =
-                    `Please verify first. Code sent to <strong>${email}</strong>`;
+                document.getElementById("verifyEmailDisplay").innerHTML = `Please verify first. Code sent to <strong>${email}</strong>`;
                 new bootstrap.Modal(document.getElementById("verifyModal")).show();
             } else {
                 showToast(res.message || "Login failed", "error");
@@ -1087,75 +1129,69 @@
 
         function logout() {
             if (unreadPollingInterval) clearInterval(unreadPollingInterval);
-
-            // Only clear auth data, not everything
             localStorage.removeItem("victoriasToken");
             localStorage.removeItem("victoriasUser");
             localStorage.removeItem("victoriasExpiry");
-
             location.reload();
         }
 
         // =========== DASHBOARD ===========
         async function loadDashboard(initialAssessmentNotif = null) {
             if (!currentUser || !currentToken) return;
-
             try {
                 const refreshRes = await apiCall("getDashboard", { token: currentToken }, false);
+                if (refreshRes.success && refreshRes.user) currentUser = refreshRes.user;
 
-                if (refreshRes.success && refreshRes.user) {
-                    currentUser = refreshRes.user;
-                }
-
-                // Populate basic info
-                document.getElementById("dashUsername").textContent =
-                    currentUser.name || currentUser.username || "Partner";
-
+                document.getElementById("dashUsername").textContent = currentUser.name || currentUser.username || "Partner";
                 document.getElementById("dashUniqueID").textContent = currentUser.uniqueID || "";
+                document.getElementById("dashTierName").textContent = TIER_NAMES[currentUser.level] || "Applicant";
 
-                const tierName = TIER_NAMES[currentUser.level] || "Applicant";
-                document.getElementById("dashTierName").textContent = tierName;
+                // Build dropdown filtered by level
+                buildDropdownMenu();
 
-                // Referral Link
-                const refLink = `https://thevictorias.com.ng/ssp?ref=${currentUser.uniqueID || ''}`;
-                const refInput = document.getElementById("referralLinkInput");
-                if (refInput) refInput.value = refLink;
+                if (isLevel0()) {
+                    // Hide referral link
+                    const refSection = document.getElementById("referralLinkSection");
+                    if (refSection) refSection.style.display = "none";
+                    // Show guide notice
+                    showLevel0Guide();
+                } else {
+                    // Referral link for level 1+
+                    const refLink = `https://thevictorias.com.ng/ssp?ref=${currentUser.uniqueID || ''}`;
+                    const refInput = document.getElementById("referralLinkInput");
+                    if (refInput) refInput.value = refLink;
 
-                // Assessment Banner
-                const assessmentNotif = refreshRes.assessmentNotification || initialAssessmentNotif;
-                if (assessmentNotif && assessmentNotif.eligible) {
-                    const banner = document.getElementById("assessmentBanner");
-                    if (banner) {
-                        document.getElementById("assessmentBannerMsg").textContent = assessmentNotif.message || "";
-                        banner.classList.add("show");
+                    // Assessment banner only for level 1+
+                    const assessmentNotif = refreshRes.assessmentNotification || initialAssessmentNotif;
+                    if (assessmentNotif && assessmentNotif.eligible) {
+                        const banner = document.getElementById("assessmentBanner");
+                        if (banner) {
+                            document.getElementById("assessmentBannerMsg").textContent = assessmentNotif.message || "";
+                            banner.classList.add("show");
+                        }
                     }
                 }
 
-                // === ONBOARDING MESSAGE ===
-                const onboardingData = refreshRes.onboarding;
-                if (onboardingData && onboardingData.show) {
-                    showOnboardingMessage(onboardingData);
+                // Land on Training for level 0, Submit Client for everyone else
+                showTab(isLevel0() ? 6 : 0);
+
+                // Load relevant data
+                if (!isLevel0()) {
+                    populateAvailableTasks();
+                    loadMyRecords();
+                    loadMyUpgrades();
+                    loadEarningsAndPayout();
+                    checkUploadFeatureStatus();
                 }
-
-                // Show main tab
-                showTab(0);
-
-                // Load content
-                populateAvailableTasks();
-                loadMyRecords();
-                loadMyUpgrades();
-                loadEarningsAndPayout();
                 loadTrainingAcademy();
                 loadMessages();
-
-                // Background
                 startUnreadPolling();
-                checkUploadFeatureStatus();
 
             } catch (error) {
                 console.error("Load Dashboard Error:", error);
             }
         }
+
         // =========== UNREAD POLLING ===========
         function startUnreadPolling() {
             if (unreadPollingInterval) clearInterval(unreadPollingInterval);
@@ -1167,7 +1203,8 @@
                     const msgTab = document.getElementById("tabContent7");
                     if (!msgTab || msgTab.classList.contains("d-none")) {
                         document.getElementById("newMsgDot").classList.remove("d-none");
-                        document.getElementById("msgMenuDot").classList.remove("d-none");
+                        const dot = document.getElementById("msgMenuDot");
+                        if (dot) dot.classList.remove("d-none");
                     }
                 }
             }, 60000);
@@ -1175,16 +1212,17 @@
 
         function updateUnreadBadge(count) {
             const badge = document.getElementById("unreadBadge");
-            if (count > 0) {
-                badge.textContent = count;
-                badge.classList.remove("d-none");
-            } else {
-                badge.classList.add("d-none");
-            }
+            if (count > 0) { badge.textContent = count; badge.classList.remove("d-none"); }
+            else { badge.classList.add("d-none"); }
         }
 
         // =========== TABS ===========
         function showTab(idx) {
+            // Level 0 guard: redirect disallowed tabs to training
+            if (isLevel0() && !LEVEL0_ALLOWED_TABS.has(idx)) {
+                showToast("Complete your training and assessment to unlock this section.", "warning");
+                idx = 6;
+            }
             for (let i = 0; i <= 12; i++) {
                 const el = document.getElementById(`tabContent${i}`);
                 if (el) el.classList.add("d-none");
@@ -1200,9 +1238,9 @@
             if (idx === 6) loadTrainingAcademy();
             if (idx === 7) {
                 loadMessages();
-                // Hide flash dots when user opens messages
                 document.getElementById("newMsgDot").classList.add("d-none");
-                document.getElementById("msgMenuDot").classList.add("d-none");
+                const dot = document.getElementById("msgMenuDot");
+                if (dot) dot.classList.add("d-none");
             }
             if (idx === 8) loadUserDocuments();
             if (idx === 9) loadMediaResources();
@@ -1214,12 +1252,8 @@
         function updateDropdownButton(idx) {
             const btn = document.getElementById("tabDropdown");
             if (!btn) return;
-            document.querySelectorAll(".dropdown-item").forEach(item => {
-                const m = item.getAttribute("onclick")?.match(/showTab\((\d+)\)/);
-                if (m && parseInt(m[1]) === idx) {
-                    btn.innerHTML = item.innerHTML;
-                }
-            });
+            const tab = ALL_TABS.find(t => t.idx === idx);
+            if (tab) btn.innerHTML = `<i class="${tab.icon} me-2"></i>${tab.label}`;
         }
 
         function closeDropdown() {
@@ -1241,7 +1275,6 @@
             const perPage = 15;
             let recPage = 1;
             const totalPages = Math.ceil(allRec.length / perPage);
-
             function renderRecPage(p) {
                 recPage = p;
                 const slice = allRec.slice((p - 1) * perPage, p * perPage);
@@ -1253,11 +1286,9 @@
             <td class="text-end fw-bold">₦${(r.earningsNaira || 0).toLocaleString()}</td>
             <td>${r.payoutStatus || "—"}</td>
           </tr>`).join('');
-                // Pagination row
                 if (totalPages > 1) {
                     const paginRow = document.createElement('tr');
-                    paginRow.innerHTML = `<td colspan="6">
-              <div class="d-flex justify-content-between align-items-center py-1">
+                    paginRow.innerHTML = `<td colspan="6"><div class="d-flex justify-content-between align-items-center py-1">
                 <button class="btn btn-outline-secondary btn-sm" onclick="recPrev()" ${p <= 1 ? 'disabled' : ''}>Prev</button>
                 <small>Page ${p} of ${totalPages} | ${allRec.length} records</small>
                 <button class="btn btn-outline-secondary btn-sm" onclick="recNext()" ${p >= totalPages ? 'disabled' : ''}>Next</button>
@@ -1284,12 +1315,8 @@
                 prefComm: document.getElementById("cComm").value,
                 comments: document.getElementById("cComments").value.trim()
             };
-            if (!formData.clientName || !formData.phone || !formData.service) {
-                return showToast("Client name, phone and service are required", "error");
-            }
-            if (formData.comments.length < 50) {
-                return showToast("Comments must be at least 50 characters", "error");
-            }
+            if (!formData.clientName || !formData.phone || !formData.service) return showToast("Client name, phone and service are required", "error");
+            if (formData.comments.length < 50) return showToast("Comments must be at least 50 characters", "error");
             const res = await apiCall("submitClient", { token: currentToken, formData }, false);
             if (res.success) {
                 showToast("Client submitted successfully!", "success");
@@ -1352,11 +1379,7 @@
                 const slice = all.slice((p - 1) * perPage, p * perPage);
                 tbody.innerHTML = slice.map(u => {
                     const bg = u.status === "Approved" ? "success" : u.status === "Rejected" ? "danger" : "warning";
-                    return `<tr>
-              <td>${new Date(u.date).toLocaleDateString("en-GB")}</td>
-              <td>${u.type}</td>
-              <td><span class="badge bg-${bg}">${u.status}</span></td>
-              <td>${u.notes || "—"}</td></tr>`;
+                    return `<tr><td>${new Date(u.date).toLocaleDateString("en-GB")}</td><td>${u.type}</td><td><span class="badge bg-${bg}">${u.status}</span></td><td>${u.notes || "—"}</td></tr>`;
                 }).join('');
                 if (totalPages > 1) {
                     const pr = document.createElement('tr');
@@ -1372,20 +1395,15 @@
             window.upNext = () => { if (upPage < totalPages) renderUpPage(upPage + 1); };
             renderUpPage(1);
         }
+
         async function sendUpgradeRequest() {
             disableBtn("upgradeBtn", 5000);
             const requestType = document.getElementById("upgradeType").value;
             const message = document.getElementById("upgradeMessage").value.trim();
             if (!message) return showToast("Please describe your request", "error");
             const res = await apiCall("requestUpgrade", { token: currentToken, requestType, message }, false);
-            if (res.success) {
-                showToast("Request submitted!", "success");
-                clearForm("tabContent2");
-                loadMyUpgrades();
-                showTab(3);
-            } else {
-                showToast(res.message || "Failed", "error");
-            }
+            if (res.success) { showToast("Request submitted!", "success"); clearForm("tabContent2"); loadMyUpgrades(); showTab(3); }
+            else showToast(res.message || "Failed", "error");
         }
 
         // =========== EARNINGS ===========
@@ -1398,8 +1416,7 @@
             const level = res.currentLevel || 0;
             document.getElementById("currentLevel").textContent = level;
             document.getElementById("currentTierName").textContent = TIER_NAMES[level] || "Applicant";
-            const payoutBtn = document.getElementById("payoutBtn");
-            payoutBtn.disabled = (res.currentBalance || 0) < 15000;
+            document.getElementById("payoutBtn").disabled = (res.currentBalance || 0) < 15000;
             const histRes = await apiCall("getPaymentHistory", { token: currentToken });
             const tbody = document.querySelector("#paymentHistoryTable tbody");
             tbody.innerHTML = "";
@@ -1412,19 +1429,15 @@
                     slice.forEach(h => {
                         const paidDate = h.paidDate ? new Date(h.paidDate).toLocaleDateString("en-GB") : "—";
                         const tr = document.createElement("tr");
-                        tr.innerHTML = `
-          <td>${new Date(h.dateRequested).toLocaleDateString("en-GB")}</td>
+                        tr.innerHTML = `<td>${new Date(h.dateRequested).toLocaleDateString("en-GB")}</td>
           <td class="fw-bold">₦${h.amount.toLocaleString()}</td>
           <td><span class="badge bg-${h.status === "Approved" || h.status === "Paid" ? "success" : "warning"}">${h.status}</span></td>
-          <td>${h.progress || "—"}</td>
-          <td>${paidDate}</td>`;
+          <td>${h.progress || "—"}</td><td>${paidDate}</td>`;
                         tbody.appendChild(tr);
                     });
                     if (totalPages > 1) {
-                        let ph = 1;
                         const pr = document.createElement('tr');
-                        pr.innerHTML = `<td colspan="5">
-          <div class="d-flex justify-content-between align-items-center py-1">
+                        pr.innerHTML = `<td colspan="5"><div class="d-flex justify-content-between align-items-center py-1">
             <button class="btn btn-outline-secondary btn-sm" id="phPrev" ${p <= 1 ? 'disabled' : ''}>Prev</button>
             <small>Page ${p} of ${totalPages}</small>
             <button class="btn btn-outline-secondary btn-sm" id="phNext" ${p >= totalPages ? 'disabled' : ''}>Next</button>
@@ -1434,6 +1447,7 @@
                         document.getElementById('phNext')?.addEventListener('click', () => renderPayHistPage(history, p + 1, tbody));
                     }
                 }
+                renderPayHistPage(histRes.history, 1, tbody);
             } else {
                 tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No payouts yet.</td></tr>`;
             }
@@ -1446,12 +1460,8 @@
             const amount = parseFloat(balText.replace(/[₦,]/g, "")) || 0;
             if (amount < 15000) return showToast("Minimum payout is ₦15,000", "error");
             const res = await apiCall("requestPayment", { token: currentToken, amount }, false);
-            if (res.success) {
-                showToast(res.message || "Payout request submitted!", "success");
-                await loadEarningsAndPayout();
-            } else {
-                showToast(res.message || "Failed", "error");
-            }
+            if (res.success) { showToast(res.message || "Payout request submitted!", "success"); await loadEarningsAndPayout(); }
+            else showToast(res.message || "Failed", "error");
         }
 
         // =========== PROFILE ===========
@@ -1493,9 +1503,7 @@
                     document.getElementById("emailVerifyCodeRow").style.display = "none";
                     loadDashboard();
                 }
-            } else {
-                showToast(res.message || "Update failed", "error");
-            }
+            } else showToast(res.message || "Update failed", "error");
         }
 
         // =========== PASSWORD RESET ===========
@@ -1507,10 +1515,8 @@
                 const newPass = document.getElementById("newPassword").value;
                 if (!code || !newPass) return showToast("Code and new password required", "error");
                 const res = await apiCall("resetPassword", { email: currentResetEmail, code, newPassword: newPass });
-                if (res.success) {
-                    showToast(res.message, "success");
-                    bootstrap.Modal.getInstance(document.getElementById("forgotModal")).hide();
-                } else { showToast(res.message || "Reset failed", "error"); }
+                if (res.success) { showToast(res.message, "success"); bootstrap.Modal.getInstance(document.getElementById("forgotModal")).hide(); }
+                else showToast(res.message || "Reset failed", "error");
             } else {
                 const email = document.getElementById("forgotEmail").value.trim();
                 if (!email) return showToast("Enter your email", "error");
@@ -1522,94 +1528,61 @@
                     document.getElementById("forgotStep1").classList.add("d-none");
                     step2.classList.remove("d-none");
                     btn.textContent = "Reset Password";
-                } else { showToast(res.message || "Failed", "error"); }
+                } else showToast(res.message || "Failed", "error");
             }
         }
 
-        // =========== MESSAGES (PAGINATED) ===========
+        // =========== MESSAGES ===========
         async function loadMessages() {
             const container = document.getElementById("messagesContainer");
             container.innerHTML = `<p class="text-center text-muted py-4">Loading messages...</p>`;
             const res = await apiCall("getMyMessages", { token: currentToken, page: msgCurrentPage }, false);
-            if (!res.success) {
-                container.innerHTML = `<div class="alert alert-danger">${res.message}</div>`;
-                return;
-            }
+            if (!res.success) { container.innerHTML = `<div class="alert alert-danger">${res.message}</div>`; return; }
             msgTotalPages = res.totalPages || 1;
             const total = res.total || 0;
-            document.getElementById("messagesCount").textContent =
-                `${total} total message(s) | Page ${msgCurrentPage} of ${msgTotalPages}`;
-
+            document.getElementById("messagesCount").textContent = `${total} total message(s) | Page ${msgCurrentPage} of ${msgTotalPages}`;
             const messages = res.messages || [];
             const pagination = document.getElementById("msgPagination");
             if (total > 6) {
                 pagination.classList.remove("d-none");
                 document.getElementById("btnMsgPrev").disabled = msgCurrentPage <= 1;
                 document.getElementById("btnMsgNext").disabled = msgCurrentPage >= msgTotalPages;
-                document.getElementById("msgPageInfo").textContent =
-                    `Page ${msgCurrentPage} of ${msgTotalPages}`;
-            } else { pagination.classList.add("d-none"); }
-
+                document.getElementById("msgPageInfo").textContent = `Page ${msgCurrentPage} of ${msgTotalPages}`;
+            } else pagination.classList.add("d-none");
             if (!messages.length) {
-                container.innerHTML = `
-            <div class="text-center text-muted py-5">
-                <i class="fas fa-envelope fa-3x mb-3 opacity-50"></i>
-                <p>No messages yet.</p>
-            </div>`;
+                container.innerHTML = `<div class="text-center text-muted py-5"><i class="fas fa-envelope fa-3x mb-3 opacity-50"></i><p>No messages yet.</p></div>`;
                 updateUnreadBadge(0);
                 return;
             }
-
             let html = "";
             let unread = 0;
             messages.forEach(msg => {
                 if (!msg.isFromUser && !msg.isRead) unread++;
-                const isPayment = msg.message.includes("https://checkout.flutterwave.com") ||
-                    msg.subject.toLowerCase().includes("payment");
+                const isPayment = msg.message.includes("https://checkout.flutterwave.com") || msg.subject.toLowerCase().includes("payment");
                 let msgContent = msg.message.replace(/\n/g, "<br>");
                 if (isPayment) {
-                    msgContent = msgContent.replace(
-                        /(https:\/\/checkout\.flutterwave\.com\/v3\/hosted\/pay\/[a-zA-Z0-9\-_%]+)/g,
-                        (m) => `${m}<br><a href="${m}" target="_blank" class="btn btn-success btn-sm mt-2">💰 Pay Now</a>`
-                    );
+                    msgContent = msgContent.replace(/(https:\/\/checkout\.flutterwave\.com\/v3\/hosted\/pay\/[a-zA-Z0-9\-_%]+)/g,
+                        (m) => `${m}<br><a href="${m}" target="_blank" class="btn btn-success btn-sm mt-2">💰 Pay Now</a>`);
                 }
                 const bgClass = msg.isRead || msg.isFromUser ? "msg-read" : "msg-unread";
-                const badge = msg.isFromUser
-                    ? `<span class="badge bg-secondary">You replied</span>`
-                    : msg.isRead
-                        ? `<span class="badge bg-secondary">Read</span>`
-                        : `<span class="badge bg-warning text-dark">New</span>`;
-                const markBtn = (!msg.isFromUser && !msg.isRead)
-                    ? `<button onclick="markMessageAsRead(${msg.rowIndex})" class="btn btn-sm btn-outline-primary">Mark as Read</button>`
-                    : "";
-                const replyBtn = !msg.isFromUser
-                    ? `<button onclick="openReplyModal(${msg.rowIndex},'${(msg.subject || "").replace(/'/g, "\\'")}');" class="btn btn-sm btn-outline-success ms-1">Reply</button>`
-                    : "";
-                html += `
-            <div class="border rounded p-3 mb-3 ${bgClass}">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <strong>${msg.isFromUser ? "You:" : "Admin:"} ${msg.subject || ""}</strong>
-                    <small class="text-muted">
-                        ${new Date(msg.timestamp).toLocaleDateString("en-GB", { hour: "numeric", minute: "2-digit" })}
-                    </small>
-                </div>
-                <div class="mb-3">${msgContent}</div>
-                <div class="d-flex justify-content-between align-items-center">
-                    ${badge}
-                    <div>${replyBtn}${markBtn}</div>
-                </div>
-            </div>`;
+                const badge = msg.isFromUser ? `<span class="badge bg-secondary">You replied</span>` : msg.isRead ? `<span class="badge bg-secondary">Read</span>` : `<span class="badge bg-warning text-dark">New</span>`;
+                const markBtn = (!msg.isFromUser && !msg.isRead) ? `<button onclick="markMessageAsRead(${msg.rowIndex})" class="btn btn-sm btn-outline-primary">Mark as Read</button>` : "";
+                const replyBtn = !msg.isFromUser ? `<button onclick="openReplyModal(${msg.rowIndex},'${(msg.subject || "").replace(/'/g, "\\'")}');" class="btn btn-sm btn-outline-success ms-1">Reply</button>` : "";
+                html += `<div class="border rounded p-3 mb-3 ${bgClass}">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <strong>${msg.isFromUser ? "You:" : "Admin:"} ${msg.subject || ""}</strong>
+                <small class="text-muted">${new Date(msg.timestamp).toLocaleDateString("en-GB", { hour: "numeric", minute: "2-digit" })}</small>
+            </div>
+            <div class="mb-3">${msgContent}</div>
+            <div class="d-flex justify-content-between align-items-center">${badge}<div>${replyBtn}${markBtn}</div></div>
+        </div>`;
             });
             container.innerHTML = html;
             updateUnreadBadge(unread);
         }
 
-        function nextMsgPage() {
-            if (msgCurrentPage < msgTotalPages) { msgCurrentPage++; loadMessages(); }
-        }
-        function prevMsgPage() {
-            if (msgCurrentPage > 1) { msgCurrentPage--; loadMessages(); }
-        }
+        function nextMsgPage() { if (msgCurrentPage < msgTotalPages) { msgCurrentPage++; loadMessages(); } }
+        function prevMsgPage() { if (msgCurrentPage > 1) { msgCurrentPage--; loadMessages(); } }
 
         async function markMessageAsRead(rowIndex) {
             const res = await apiCall("markMessageAsRead", { token: currentToken, rowIndex }, false);
@@ -1629,9 +1602,7 @@
             btn.disabled = true; btn.innerHTML = 'Sending...';
             const replyText = document.getElementById("replyText").value.trim();
             if (!replyText) { showToast("Type your reply", "error"); btn.disabled = false; btn.innerHTML = orig; return; }
-            const res = await apiCall("replyToMessage", {
-                token: currentToken, originalRowIndex: currentReplyRowIndex, replyMessage: replyText
-            }, false);
+            const res = await apiCall("replyToMessage", { token: currentToken, originalRowIndex: currentReplyRowIndex, replyMessage: replyText }, false);
             const modal = bootstrap.Modal.getInstance(document.getElementById("replyModal"));
             if (modal) modal.hide();
             if (res.success) { showToast("Reply sent!", "success"); loadMessages(); }
@@ -1644,12 +1615,10 @@
             if (!currentUser) return;
             let level = parseInt(currentUser.level) || 0;
             try {
-                const r = await apiCall("getDashboard", { token: currentToken });
+                const r = await apiCall("getDashboard", { token: currentToken }, false);
                 if (r.success && r.user) level = parseInt(r.user.level) || 0;
             } catch (e) { }
-            const tierName = TIER_NAMES[level] || "Applicant";
-            document.getElementById("currentLevelBadge").innerHTML =
-                `Current Level: <strong>Level ${level} — ${tierName}</strong>`;
+            document.getElementById("currentLevelBadge").innerHTML = `Current Level: <strong>Level ${level} — ${TIER_NAMES[level] || "Applicant"}</strong>`;
         }
 
         function goToVideo2() {
@@ -1669,9 +1638,7 @@
             uploadFeatureEnabled = res.success && res.enabled;
             const alertEl = document.getElementById("uploadStatusAlert");
             alertEl.className = uploadFeatureEnabled ? "alert alert-success" : "alert alert-warning";
-            alertEl.innerHTML = uploadFeatureEnabled
-                ? "Document upload is enabled. Max 1MB. JPG, JPEG, PNG, PDF only."
-                : "Document upload is currently disabled by admin.";
+            alertEl.innerHTML = uploadFeatureEnabled ? "Document upload is enabled. Max 1MB. JPG, JPEG, PNG, PDF only." : "Document upload is currently disabled by admin.";
             alertEl.classList.remove("d-none");
         }
 
@@ -1687,10 +1654,7 @@
             const reader = new FileReader();
             reader.onload = async (e) => {
                 const base64 = e.target.result.split(",")[1];
-                const res = await apiCall("uploadDocument", {
-                    token: currentToken, fileName: file.name, fileType: file.type,
-                    base64, size: Math.round(file.size / 1024)
-                }, false);
+                const res = await apiCall("uploadDocument", { token: currentToken, fileName: file.name, fileType: file.type, base64, size: Math.round(file.size / 1024) }, false);
                 if (res.success) { showToast(res.message, "success"); fileInput.value = ""; }
                 else showToast(res.message || "Upload failed", "error");
             };
@@ -1709,21 +1673,14 @@
             const btns = document.getElementById("levelButtons");
             const iframe = document.getElementById("mediaIframe");
             btns.innerHTML = "";
-            const folderMap = {
-                1: "1xPQxsVAKaMTLYFueLyu3i_JYwta5ke01",
-                2: "1VB_h8dhOqbOmor3i0VFMgEWaMobZ9Oj1",
-                3: "1K7Nh5vB3VVY9NXkh8c08tiMKF89S5gT5",
-                4: "1sOlpjv_kXshh9wBxW3mQ_eFXd2lhyLSh"
-            };
+            const folderMap = { 1: "1xPQxsVAKaMTLYFueLyu3i_JYwta5ke01", 2: "1VB_h8dhOqbOmor3i0VFMgEWaMobZ9Oj1", 3: "1K7Nh5vB3VVY9NXkh8c08tiMKF89S5gT5", 4: "1sOlpjv_kXshh9wBxW3mQ_eFXd2lhyLSh" };
             for (let lvl = 1; lvl <= userLevel; lvl++) {
                 const btn = document.createElement("button");
                 btn.type = "button";
                 btn.className = `btn ${lvl === 1 ? "btn-primary" : "btn-outline-primary"} me-2 mb-2`;
                 btn.textContent = `Level ${lvl}`;
                 btn.onclick = () => {
-                    document.querySelectorAll("#levelButtons button").forEach(b => {
-                        b.classList.remove("btn-primary"); b.classList.add("btn-outline-primary");
-                    });
+                    document.querySelectorAll("#levelButtons button").forEach(b => { b.classList.remove("btn-primary"); b.classList.add("btn-outline-primary"); });
                     btn.classList.add("btn-primary"); btn.classList.remove("btn-outline-primary");
                     const id = folderMap[lvl];
                     if (id) iframe.src = `https://drive.google.com/embeddedfolderview?id=${id}#grid`;
@@ -1731,19 +1688,14 @@
                 };
                 btns.appendChild(btn);
             }
-            if (userLevel >= 1) {
-                const id = folderMap[1];
-                if (id) iframe.src = `https://drive.google.com/embeddedfolderview?id=${id}#grid`;
-            }
+            if (userLevel >= 1) { const id = folderMap[1]; if (id) iframe.src = `https://drive.google.com/embeddedfolderview?id=${id}#grid`; }
         }
 
         function copyReferralLink() {
             const linkInput = document.getElementById("referralLinkInput");
             if (!linkInput) return;
-
             linkInput.select();
             document.execCommand("copy");
-
             showToast("✅ Referral link copied to clipboard!", "success");
         }
 
@@ -1759,37 +1711,13 @@
             const perPage = 10;
             let plPage = 1;
             const totalPages = Math.ceil(res.links.length / perPage);
-
             function renderPLPage(p) {
                 plPage = p;
                 const start = (p - 1) * perPage;
                 const slice = res.links.slice(start, start + perPage);
-                let html = `<div class="table-responsive">
-          <table class="table table-hover table-sm">
-            <thead class="table-light">
-              <tr>
-                <th>Date</th>
-                <th>Client Name</th>
-                <th>Service</th>
-                <th>Amount (₦)</th>
-                <th>Tx Ref</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>`;
+                let html = `<div class="table-responsive"><table class="table table-hover table-sm"><thead class="table-light"><tr><th>Date</th><th>Client Name</th><th>Service</th><th>Amount (₦)</th><th>Tx Ref</th><th>Status</th><th>Action</th></tr></thead><tbody>`;
                 slice.forEach(l => {
-                    html += `<tr>
-              <td>${new Date(l.date).toLocaleDateString("en-GB")}</td>
-              <td>${l.clientName || "—"}</td>
-              <td>${l.service || "—"}</td>
-              <td>₦${parseFloat(l.amount || 0).toLocaleString()}</td>
-              <td class="font-monospace small">${l.tx_ref || "—"}</td>
-              <td><span class="badge bg-${l.status === 'Paid' ? 'success' : 'secondary'}">${l.status || "Sent"}</span></td>
-              <td>${l.paymentLink
-                            ? `<a href="${l.paymentLink}" target="_blank" class="btn btn-success btn-sm">Pay Now</a>`
-                            : '<span class="text-muted small">No link</span>'}</td>
-            </tr>`;
+                    html += `<tr><td>${new Date(l.date).toLocaleDateString("en-GB")}</td><td>${l.clientName || "—"}</td><td>${l.service || "—"}</td><td>₦${parseFloat(l.amount || 0).toLocaleString()}</td><td class="font-monospace small">${l.tx_ref || "—"}</td><td><span class="badge bg-${l.status === 'Paid' ? 'success' : 'secondary'}">${l.status || "Sent"}</span></td><td>${l.paymentLink ? `<a href="${l.paymentLink}" target="_blank" class="btn btn-success btn-sm">Pay Now</a>` : '<span class="text-muted small">No link</span>'}</td></tr>`;
                 });
                 html += `</tbody></table></div>`;
                 if (totalPages > 1) {
@@ -1805,52 +1733,42 @@
             window.plNext = () => { if (plPage < totalPages) renderPLPage(plPage + 1); };
             renderPLPage(1);
         }
+
         // =========== ASSESSMENT TAB ===========
         async function loadAssessmentTab() {
             const container = document.getElementById("assessmentContainer");
             container.innerHTML = `<div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-3"></i><p>Checking eligibility...</p></div>`;
             const res = await apiCall("getAssessmentEligibility", { token: currentToken }, false);
-            if (!res.success) {
-                container.innerHTML = `<div class="alert alert-danger">${res.message}</div>`;
-                return;
-            }
+            if (!res.success) { container.innerHTML = `<div class="alert alert-danger">${res.message}</div>`; return; }
             const e = res.eligibility;
             if (!e) {
-                container.innerHTML = `
-            <div class="alert alert-info">
-                <h5><i class="fas fa-info-circle me-2"></i>Not Yet Eligible</h5>
-                <p class="mb-0">Keep submitting approved jobs to unlock your upgrade test.</p>
-            </div>`;
+                container.innerHTML = `<div class="alert alert-info"><h5><i class="fas fa-info-circle me-2"></i>Not Yet Eligible</h5><p class="mb-0">Keep submitting approved jobs to unlock your upgrade test.</p></div>`;
                 return;
             }
             if (!e.eligible) {
-                container.innerHTML = `
-            <div class="alert alert-warning">
-                <h5><i class="fas fa-clock me-2"></i>Test Not Available Yet</h5>
-                <p class="mb-0">${e.message}</p>
-            </div>`;
+                const isApplicant = getUserLevel() === 0;
+                container.innerHTML = `<div class="alert alert-warning">
+            <h5><i class="fas fa-clock me-2"></i>${isApplicant ? 'Almost Ready!' : 'Test Not Available Yet'}</h5>
+            <p class="mb-0">${e.message}</p>
+            ${isApplicant ? `<hr><p class="mb-0 small">Make sure you watch the training videos and study the Level 1 module before attempting the test.</p>` : ''}
+        </div>`;
                 return;
             }
-            container.innerHTML = `
-        <div class="card portal-card">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="fas fa-star me-2"></i>Upgrade Test Available!</h5>
+            container.innerHTML = `<div class="card portal-card">
+        <div class="card-header bg-success text-white"><h5 class="mb-0"><i class="fas fa-star me-2"></i>Upgrade Test Available!</h5></div>
+        <div class="card-body">
+            <p>You are eligible to take the <strong>Level ${e.nextLevel} — ${e.nextTier}</strong> upgrade test.</p>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Rules:</strong> Score 70% or above to pass. If you fail, you can retake after 7 days. Upon passing, you will be automatically upgraded within 48 hours.
             </div>
-            <div class="card-body">
-                <p>You are eligible to take the <strong>Level ${e.nextLevel} — ${e.nextTier}</strong> upgrade test.</p>
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Rules:</strong> Score 70% or above to pass. 
-                    If you fail, you can retake after 7 days. 
-                    Upon passing, you will be automatically upgraded within 48 hours.
-                </div>
-                <div id="assessmentQuestions"></div>
-                <div id="assessmentResult" class="d-none"></div>
-                <button onclick="startAssessment(${e.nextLevel})" id="startTestBtn" class="btn btn-primary w-100 py-2">
-                    <i class="fas fa-play me-2"></i>Start Upgrade Test
-                </button>
-            </div>
-        </div>`;
+            <div id="assessmentQuestions"></div>
+            <div id="assessmentResult" class="d-none"></div>
+            <button onclick="startAssessment(${e.nextLevel})" id="startTestBtn" class="btn btn-primary w-100 py-2">
+                <i class="fas fa-play me-2"></i>Start Upgrade Test
+            </button>
+        </div>
+    </div>`;
         }
 
         const ASSESSMENT_QUESTIONS = {
@@ -1894,31 +1812,19 @@
             testStarted = true;
             const questions = ASSESSMENT_QUESTIONS[level];
             if (!questions || !questions.length) {
-                document.getElementById("assessmentQuestions").innerHTML =
-                    `<div class="alert alert-warning">No questions available for this level. Contact admin.</div>`;
+                document.getElementById("assessmentQuestions").innerHTML = `<div class="alert alert-warning">No questions available for this level. Contact admin.</div>`;
                 return;
             }
             document.getElementById("startTestBtn").style.display = "none";
-            let html = `<div class="border rounded p-3 mb-3 bg-light">
-        <p class="text-muted small mb-2">Answer all questions. You need 70% to pass.</p>`;
+            let html = `<div class="border rounded p-3 mb-3 bg-light"><p class="text-muted small mb-2">Answer all questions. You need 70% to pass.</p>`;
             questions.forEach((q, idx) => {
-                html += `<div class="mb-4">
-            <p class="fw-bold">${idx + 1}. ${q.q}</p>
-            <div class="d-flex flex-column gap-2">`;
+                html += `<div class="mb-4"><p class="fw-bold">${idx + 1}. ${q.q}</p><div class="d-flex flex-column gap-2">`;
                 q.a.forEach((opt, oidx) => {
-                    html += `<div class="form-check">
-                <input class="form-check-input" type="radio" name="q${idx}"
-                    id="q${idx}o${oidx}" value="${oidx}"
-                    onchange="userAnswers[${idx}]=${oidx}">
-                <label class="form-check-label" for="q${idx}o${oidx}">${opt}</label>
-            </div>`;
+                    html += `<div class="form-check"><input class="form-check-input" type="radio" name="q${idx}" id="q${idx}o${oidx}" value="${oidx}" onchange="userAnswers[${idx}]=${oidx}"><label class="form-check-label" for="q${idx}o${oidx}">${opt}</label></div>`;
                 });
                 html += `</div></div>`;
             });
-            html += `</div>
-        <button onclick="submitAssessment()" class="btn btn-success w-100 py-2" id="submitTestBtn">
-            <i class="fas fa-check me-2"></i>Submit Test
-        </button>`;
+            html += `</div><button onclick="submitAssessment()" class="btn btn-success w-100 py-2" id="submitTestBtn"><i class="fas fa-check me-2"></i>Submit Test</button>`;
             document.getElementById("assessmentQuestions").innerHTML = html;
         }
 
@@ -1926,36 +1832,18 @@
             if (!testStarted) return;
             const questions = ASSESSMENT_QUESTIONS[currentTestLevel];
             if (!questions) return;
-            const answered = Object.keys(userAnswers).length;
-            if (answered < questions.length) {
-                return showToast(`Please answer all ${questions.length} questions before submitting.`, "error");
-            }
+            if (Object.keys(userAnswers).length < questions.length) return showToast(`Please answer all ${questions.length} questions before submitting.`, "error");
             let score = 0;
-            questions.forEach((q, idx) => {
-                if (userAnswers[idx] === q.correct) score++;
-            });
+            questions.forEach((q, idx) => { if (userAnswers[idx] === q.correct) score++; });
             disableBtn("submitTestBtn", 8000);
-            const res = await apiCall("submitAssessmentResult", {
-                token: currentToken, score, totalQuestions: questions.length
-            }, false);
+            const res = await apiCall("submitAssessmentResult", { token: currentToken, score, totalQuestions: questions.length }, false);
             const resultEl = document.getElementById("assessmentResult");
             resultEl.classList.remove("d-none");
             const pct = Math.round((score / questions.length) * 100);
             if (res.success && res.passed) {
-                resultEl.innerHTML = `
-            <div class="alert alert-success">
-                <h5><i class="fas fa-trophy me-2"></i>Congratulations! You Passed!</h5>
-                <p>Score: <strong>${pct}%</strong> (${score}/${questions.length})</p>
-                <p>${res.message}</p>
-            </div>`;
+                resultEl.innerHTML = `<div class="alert alert-success"><h5><i class="fas fa-trophy me-2"></i>Congratulations! You Passed!</h5><p>Score: <strong>${pct}%</strong> (${score}/${questions.length})</p><p>${res.message}</p></div>`;
             } else {
-                resultEl.innerHTML = `
-            <div class="alert alert-danger">
-                <h5><i class="fas fa-times-circle me-2"></i>Test Not Passed</h5>
-                <p>Score: <strong>${pct}%</strong> (${score}/${questions.length})</p>
-                <p>You need at least 70% to pass. ${res.message || ""}</p>
-                <p class="mb-0 small text-muted">You can retake after 7 days. We will send you a reminder.</p>
-            </div>`;
+                resultEl.innerHTML = `<div class="alert alert-danger"><h5><i class="fas fa-times-circle me-2"></i>Test Not Passed</h5><p>Score: <strong>${pct}%</strong> (${score}/${questions.length})</p><p>You need at least 70% to pass. ${res.message || ""}</p><p class="mb-0 small text-muted">You can retake after 7 days.</p></div>`;
             }
             document.getElementById("assessmentQuestions").innerHTML = "";
             document.getElementById("startTestBtn").style.display = "none";
@@ -1974,9 +1862,7 @@
                 document.getElementById("complaintSubject").value = "";
                 document.getElementById("complaintMessage").value = "";
                 loadComplaints();
-            } else {
-                showToast(res.message || "Failed", "error");
-            }
+            } else showToast(res.message || "Failed", "error");
         }
 
         async function loadComplaints() {
@@ -1990,16 +1876,12 @@
             let html = "";
             res.complaints.forEach(c => {
                 const statusBg = c.status === "Resolved" ? "success" : c.status === "In Review" ? "warning" : "secondary";
-                html += `
-            <div class="border rounded p-3 mb-3">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <strong>${c.subject}</strong>
-                    <span class="complaint-badge bg-${statusBg}">${c.status}</span>
-                </div>
-                <p class="small text-muted mb-1">${new Date(c.date).toLocaleDateString("en-GB")}</p>
-                <p class="mb-2">${c.message}</p>
-                ${c.adminReply ? `<div class="alert alert-info mb-0 small"><strong>Admin Reply:</strong> ${c.adminReply}</div>` : ""}
-            </div>`;
+                html += `<div class="border rounded p-3 mb-3">
+            <div class="d-flex justify-content-between align-items-start mb-2"><strong>${c.subject}</strong><span class="complaint-badge bg-${statusBg}">${c.status}</span></div>
+            <p class="small text-muted mb-1">${new Date(c.date).toLocaleDateString("en-GB")}</p>
+            <p class="mb-2">${c.message}</p>
+            ${c.adminReply ? `<div class="alert alert-info mb-0 small"><strong>Admin Reply:</strong> ${c.adminReply}</div>` : ""}
+        </div>`;
             });
             container.innerHTML = html;
         }
@@ -2015,75 +1897,10 @@
             });
         }
 
-        function showOnboardingMessage(onboarding) {
-            if (!onboarding || !onboarding.show) return;
-
-            const dashboardContainer = document.getElementById('dashboardSection');
-            if (!dashboardContainer) return;
-
-            // Remove any existing onboarding message first
-            const existing = document.getElementById('onboarding-guide');
-            if (existing) existing.remove();
-
-            const onboardingHTML = `
-    <div id="onboarding-guide" class="alert alert-warning border-0 shadow-sm p-4 mb-4" style="background: linear-gradient(135deg, #fafafa, #d3d3d3); color: #000000; border-radius: 12px;">
-        <div class="d-flex align-items-start gap-3">
-            <div style="font-size: 2.5rem;">👋</div>
-            <div class="flex-grow-1">
-                <h4 class="mb-2">${onboarding.title || "Welcome to The Victorias Career Hub!"}</h4>
-                <p class="mb-3">${onboarding.message || "Let's get you started on the right path."}</p>
-                
-                <div class="mb-3">
-                    ${Array.isArray(onboarding.steps) ? onboarding.steps.map(step => `
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                            <span class="badge bg-dark text-white">→</span>
-                            <span>${step}</span>
-                        </div>
-                    `).join('') : ''}
-                </div>
-                <div class="mt-8 flex gap-4">
-            
-            <button onclick="this.closest('.fixed').remove(); startAssessment(${e.nextLevel})" 
-                  class="flex-1 bg-orange-500 hover:bg-orange-600 py-4 rounded-2xl font-semibold" id="startTestBtn">
-            Start Assessment Now
-          </button>
-          <button onclick="this.closest('.fixed').remove()" 
-                  class="flex-1 bg-slate-700 hover:bg-slate-600 py-4 rounded-2xl font-semibold">
-            Close
-          </button>
-        </div>
-            </div>
-        </div>
-    </div>`;
-
-            // Insert at the top of the dashboard
-            dashboardContainer.insertAdjacentHTML('afterbegin', onboardingHTML);
-        }
-
-        function showGettingStartedGuide() {
-            const guide = `
-    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div class="bg-slate-900 text-white max-w-2xl mx-4 rounded-3xl p-8">
-        <h2 class="text-3xl font-bold mb-6 text-orange-400">🚀 Getting Started Guide</h2>
-        
-        <div class="space-y-6">
-          <div><strong>Step 1:</strong> Take the Assessment Test</div>
-          <div><strong>Step 2:</strong> Submit your first client jobs</div>
-          <div><strong>Step 3:</strong> Get approved and earn commissions</div>
-          <div><strong>Step 4:</strong> Request payout once you reach ₦15,000</div>
-        </div>
-      </div>
-    </div>
-  `;
-
-            document.body.insertAdjacentHTML('beforeend', guide);
-        }
-
         // =========== PAGE LOAD ===========
         window.onload = () => {
-            hideLoader(); // Ensure loader is hidden first
+            forceHideLoader();        // Ensure loader is completely hidden at start
 
-            // Handle email verification from link
             const params = new URLSearchParams(window.location.search);
             const emailParam = params.get("email");
             const codeParam = params.get("code");
@@ -2096,7 +1913,6 @@
                 return;
             }
 
-            // Auto-login
             currentToken = localStorage.getItem("victoriasToken");
             const savedUser = localStorage.getItem("victoriasUser");
             const expiryStr = localStorage.getItem("victoriasExpiry");
@@ -2104,25 +1920,19 @@
             if (currentToken && savedUser && expiryStr && Date.now() < parseInt(expiryStr)) {
                 try {
                     currentUser = JSON.parse(savedUser);
-
-                    // Show dashboard
                     document.getElementById("authSection").classList.add("d-none");
                     document.getElementById("dashboardSection").classList.remove("d-none");
-
                     loadDashboard();
                 } catch (e) {
                     console.error("Login restore failed", e);
-                    localStorage.removeItem("victoriasToken");
-                    localStorage.removeItem("victoriasUser");
-                    localStorage.removeItem("victoriasExpiry");
+                    localStorage.clear(); // safer cleanup
+                    document.getElementById("authSection").classList.remove("d-none");
                 }
             } else {
-                // Not logged in → show login page
                 document.getElementById("authSection").classList.remove("d-none");
                 document.getElementById("dashboardSection").classList.add("d-none");
             }
         };
-
     </script>
 
     <script src="lib/wow/wow.min.js"></script>
