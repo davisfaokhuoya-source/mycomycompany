@@ -38,21 +38,21 @@ const footerHTML = `<!-- Victoria AI Bubble Integration -->
                             <h4 class="text-white mb-4">Contact Info</h4>
                             <div class="d-flex align-items-center">
                                 <i class="fas fa-map-marker-alt text-primary me-3"></i>
-                                <p class="text-white mb-0">Abuja, Nigeria</p>
+                                <p class="mb-0">Abuja, Nigeria</p>
                             </div>
                             <div class="d-flex align-items-center">
                                 <i class="fas fa-envelope text-primary me-3"></i>
-                                <p class="text-white mb-0">@thevictorias.com.ng</p>
+                                <p class="mb-0">@thevictorias.com.ng</p>
                             </div>
                             <div class="d-flex align-items-center">
                                 <i class="fa fa-phone-alt text-primary me-3"></i>
-                                <p class="text-white mb-0">+2348055538518</p>
+                                <p class=" mb-0">+2348055538518</p>
                             </div>
                         
                             <div class="d-flex">
-                                <a class="btn btn-primary btn-sm-square rounded-circle me-3" href="https://facebook.com/thevictoriasltd"><i class="fab fa-facebook-f text-white"></i></a>
-                                <a class="btn btn-primary btn-sm-square rounded-circle me-3" href="https://x.com/thevictoriasltd"><i class="fab fa-twitter text-white"></i></a>
-                                <a class="btn btn-primary btn-sm-square rounded-circle me-0" href="linkedin.com/company/thevictoriasltd"><i class="fab fa-linkedin-in text-white"></i></a>
+                                <a class="btn btn-primary btn-sm-square rounded-circle me-3" href="https://facebook.com/thevictoriasltd"><i class="fab fa-facebook-f"></i></a>
+                                <a class="btn btn-primary btn-sm-square rounded-circle me-3" href="https://x.com/thevictoriasltd"><i class="fab fa-twitter"></i></a>
+                                <a class="btn btn-primary btn-sm-square rounded-circle me-0" href="linkedin.com/company/thevictoriasltd"><i class="fab fa-linkedin-in"></i></a>
                             </div>
                         </div>
                     </div>
@@ -87,7 +87,7 @@ const footerHTML = `<!-- Victoria AI Bubble Integration -->
 
 function renderFooter() {
     const footerContainer = document.querySelector('.addfooter');
-    
+
     if (footerContainer) {
         footerContainer.innerHTML = footerHTML;
     } else {
@@ -98,14 +98,14 @@ function renderFooter() {
 // Just call it directly
 renderFooter();
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const button = document.getElementById('victoria-btn');
     const container = document.getElementById('victoriaai');
-    
+
     let isOpen = false;
     let iframe = null;
 
-    button.addEventListener('click', function() {
+    button.addEventListener('click', function () {
         if (isOpen) {
             // Close
             if (iframe) {
@@ -126,28 +126,28 @@ document.addEventListener('DOMContentLoaded', function() {
             iframe.allow = "clipboard-write";
 
             // Function to handle responsive styling
-function applyResponsiveStyles() {
-    if (window.innerWidth <= 767) {
-        // Mobile Styles
-        iframe.style.bottom = "0px";
-        iframe.style.right = "0px";
-        iframe.style.width = "280px";
-        iframe.style.height = "600px";
-    } else {
-        // Desktop Styles
-        iframe.style.bottom = "100px";
-        iframe.style.right = "20px";
-        iframe.style.width = "550px";
-        iframe.style.height = "600px";
-    }
-}
+            function applyResponsiveStyles() {
+                if (window.innerWidth <= 767) {
+                    // Mobile Styles
+                    iframe.style.bottom = "0px";
+                    iframe.style.right = "0px";
+                    iframe.style.width = "280px";
+                    iframe.style.height = "600px";
+                } else {
+                    // Desktop Styles
+                    iframe.style.bottom = "100px";
+                    iframe.style.right = "20px";
+                    iframe.style.width = "550px";
+                    iframe.style.height = "600px";
+                }
+            }
 
-    // Run on load and whenever the window is resized
-        applyResponsiveStyles();
-        window.addEventListener('resize', applyResponsiveStyles);
-            
+            // Run on load and whenever the window is resized
+            applyResponsiveStyles();
+            window.addEventListener('resize', applyResponsiveStyles);
+
             container.appendChild(iframe);
-            
+
             isOpen = true;
             button.innerHTML = '💬 Close Chat';
             button.classList.add('open');
@@ -158,26 +158,26 @@ function applyResponsiveStyles() {
 function onClick(e) {
     e.preventDefault();
     grecaptcha.enterprise.ready(async () => {
-      const token = await grecaptcha.enterprise.execute('6Lew17AsAAAAANmbaXcMBQt2IgSv-d8SM14-f4s0', {action: 'LOGIN'});
+        const token = await grecaptcha.enterprise.execute('6Lew17AsAAAAANmbaXcMBQt2IgSv-d8SM14-f4s0', { action: 'LOGIN' });
     });
-  }
+}
 
-  //google translator 
-  function googleTranslateElementInit() {
-  new google.translate.TranslateElement({
-    pageLanguage: 'en',
-    autoDisplay: false,          // Helps with auto behavior
-    layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-  }, 'google_translate_element');
+//google translator 
+function googleTranslateElementInit() {
+    new google.translate.TranslateElement({
+        pageLanguage: 'en',
+        autoDisplay: false,          // Helps with auto behavior
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+    }, 'google_translate_element');
 }
 
 // Optional: Auto translate based on browser language
-window.onload = function() {
-  // This tries to trigger translation based on browser settings
-  var lang = navigator.language || navigator.userLanguage || 'en';
-  if (lang !== 'en') {
-    // You can try to trigger translation here (limited control)
-    console.log('Detected language: ' + lang);
-  }
+window.onload = function () {
+    // This tries to trigger translation based on browser settings
+    var lang = navigator.language || navigator.userLanguage || 'en';
+    if (lang !== 'en') {
+        // You can try to trigger translation here (limited control)
+        console.log('Detected language: ' + lang);
+    }
 };
 

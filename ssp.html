@@ -1186,24 +1186,52 @@
             document.getElementById("loginEmail").value = "";
             document.getElementById("loginPassword").value = "";
         }
+
         // =========== DASHBOARD ===========
-        // REPLACE loadDashboard():
         async function loadDashboard(initialAssessmentNotif = null) {
             if (!currentUser || !currentToken) return;
+
+            let refreshRes = { success: false };
+
             try {
-                // Try to refresh user data from server, but NEVER fail hard
                 try {
-                    const refreshRes = await apiCall("getDashboard", { token: currentToken }, false);
+                    const payload = JSON.stringify({
+                        system: "career",
+                        action: "getDashboard",
+                        token: currentToken
+                    });
+                    const res = await fetch(WEBAPP_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "text/plain;charset=utf-8" },
+                        body: payload,
+                        redirect: "follow"
+                    });
+                    const text = await res.text();
+                    const start = text.indexOf("{");
+                    refreshRes = JSON.parse(start !== -1 ? text.substring(start) : "{}");
+
                     if (refreshRes.success && refreshRes.user) {
                         currentUser = refreshRes.user;
-                        // Keep localStorage in sync with latest server data
                         localStorage.setItem("victoriasUser", JSON.stringify(currentUser));
+                        localStorage.setItem(
+                            "victoriasExpiry",
+                            (Date.now() + 7 * 24 * 60 * 60 * 1000).toString()
+                        );
                     }
-                    // If server call failed, currentUser still holds the localStorage copy — that's fine
+                    if (
+                        !refreshRes.success &&
+                        refreshRes.message &&
+                        refreshRes.message.toLowerCase().includes("session expired")
+                    ) {
+                        console.warn("Server session expired — attempting silent re-auth");
+                        await attemptSilentReauth();
+                        return;
+                    }
                 } catch (serverErr) {
-                    console.warn("Server refresh failed, using cached user:", serverErr);
+                    console.warn("getDashboard network error, using cache:", serverErr);
                 }
 
+                // Render with whatever currentUser we have (server-fresh or cached)
                 document.getElementById("dashUsername").textContent =
                     currentUser.name || currentUser.username || "Partner";
                 document.getElementById("dashUniqueID").textContent =
@@ -1222,16 +1250,12 @@
                     const refInput = document.getElementById("referralLinkInput");
                     if (refInput) refInput.value = refLink;
 
-                    const assessmentNotif = (
-                        typeof refreshRes !== "undefined" &&
-                        refreshRes?.assessmentNotification
-                    ) || initialAssessmentNotif;
-
-                    if (assessmentNotif && assessmentNotif.eligible) {
+                    if (refreshRes.assessmentNotification?.eligible || initialAssessmentNotif?.eligible) {
+                        const notif = refreshRes.assessmentNotification || initialAssessmentNotif;
                         const banner = document.getElementById("assessmentBanner");
                         if (banner) {
                             document.getElementById("assessmentBannerMsg").textContent =
-                                assessmentNotif.message || "";
+                                notif.message || "";
                             banner.classList.add("show");
                         }
                     }
@@ -1251,11 +1275,11 @@
                 startUnreadPolling();
 
             } catch (error) {
-                console.error("Load Dashboard Error:", error);
-                // Don't log out — just show a toast so the user knows something went wrong
+                console.error("loadDashboard error:", error);
                 showToast("Could not refresh dashboard. Your session is still active.", "warning");
             }
         }
+
         // =========== UNREAD POLLING ===========
         function startUnreadPolling() {
             if (unreadPollingInterval) clearInterval(unreadPollingInterval);
@@ -2007,6 +2031,48 @@
             showToast("Refreshing...", "info", 1500);
             await loadDashboard();
             showToast("Dashboard refreshed", "success", 2000);
+        }
+
+        async function attemptSilentReauth() {
+            const email = currentUser?.email;
+            if (!email || !currentToken) {
+                clearSession();
+                return;
+            }
+            try {
+                const res = await fetch(WEBAPP_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        system: "career",
+                        action: "refreshSession",
+                        oldToken: currentToken,
+                        email: email
+                    }),
+                    redirect: "follow"
+                });
+                const text = await res.text();
+                const start = text.indexOf("{");
+                const data = JSON.parse(start !== -1 ? text.substring(start) : "{}");
+
+                if (data.success) {
+                    // Got a fresh token — update everything and reload dashboard
+                    currentToken = data.token;
+                    currentUser = data.user;
+                    localStorage.setItem("victoriasToken", currentToken);
+                    localStorage.setItem("victoriasUser", JSON.stringify(currentUser));
+                    localStorage.setItem("victoriasExpiry", (Date.now() + 7 * 24 * 60 * 60 * 1000).toString());
+                    // Now load dashboard with the fresh token
+                    loadDashboard();
+                } else {
+                    // Can't reauth — user must log in again
+                    showToast("Your session could not be renewed. Please log in.", "warning", 4000);
+                    setTimeout(() => clearSession(), 2000);
+                }
+            } catch (e) {
+                // Network error during reauth — don't log out, they might just be offline
+                showToast("Network error. Please check your connection.", "warning");
+            }
         }
         // =========== PAGE LOAD ===========
         // REPLACE the entire window.onload with this:
