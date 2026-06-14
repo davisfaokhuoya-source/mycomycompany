@@ -118,7 +118,7 @@
                         class="block text-xs font-mono tracking-wide uppercase text-slate-400 mb-1">Secure
                         Gateway
                         Access URL</label>
-                    <input type="url" id="webappUrl" placeholder="url"
+                    <input type="url" id="webappUrl" required placeholder="https://script.google.com/macros/s/.../exec"
                         class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm font-mono text-emerald-400 focus:outline-none focus:border-emerald-500" />
                 </div>
                 <div class="grid grid-cols-2 gap-4">
@@ -259,10 +259,15 @@
                                 <select id="uniFilterLevel" onchange="applyUniversalFilter()"
                                     class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-[10px] text-white focus:outline-none focus:border-emerald-500">
                                     <option value="">All Levels</option>
-                                    <option value="1">Marketer</option>
-                                    <option value="2">Consultant</option>
-                                    <option value="3">Senior Consultant</option>
-                                    <option value="4">Area Manager</option>
+                                    <option value="1">Level 1</option>
+                                    <option value="2">Level 2</option>
+                                    <option value="3">Level 3</option>
+                                    <option value="4">Level 4</option>
+                                    <option value="5">Level 5</option>
+                                    <option value="MARKETER">MARKETER</option>
+                                    <option value="SENIOR_CONSULTANT">SENIOR_CONSULTANT</option>
+                                    <option value="REGIONAL_DIRECTOR">REGIONAL_DIRECTOR</option>
+                                    <option value="ADMIN">ADMIN</option>
                                 </select>
                             </div>
                             <div>
@@ -392,12 +397,13 @@
                                     class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
                                     <tr>
                                         <th class="p-3">Timestamp Node</th>
-                                        <th class="p-3">Partner UniqueID Ref</th>
-                                        <th class="p-3">Amount Charged</th>
-                                        <th class="p-3">Assigned Service</th>
-                                        <th class="p-3">Payout Status</th>
-                                        <th class="p-3">Paid</th>
+                                        <th class="p-3">Partner ID</th>
+                                        <th class="p-3">Amount Paid </th>
                                         <th class="p-3">Earned</th>
+                                        <th class="p-3">Service Payment Date</th>
+                                        <th class="p-3">Assigned Service Block</th>
+                                        <th class="p-3">Vet Status</th>
+                                        <th class="p-3">Payment Status</th>
                                         <th class="p-3 text-center">Action</th>
                                     </tr>
                                 </thead>
@@ -423,9 +429,11 @@
                                     <tr>
                                         <th class="p-3">Queue ID</th>
                                         <th class="p-3">Partner Entity</th>
-                                        <th class="p-3">Settlement Account Parameters</th>
-                                        <th class="p-3 font-mono">Gross Amount Denominated</th>
-                                        <th class="p-3">Tracking State</th>
+                                        <th class="p-3"> Bank Info</th>
+                                        <th class="p-3 font-mono">Withdrawal</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3">Date of Payment</th>
+                                        <th class="p-3">Successful Jobs</th>
                                         <th class="p-3 text-right">Action</th>
                                     </tr>
                                 </thead>
@@ -1045,12 +1053,9 @@
                                         <th class="p-3">TxRef</th>
                                         <th class="p-3">Client Name</th>
                                         <th class="p-3">Client Email</th>
-                                        <th class="p-3">Client Phone</th>
                                         <th class="p-3">Service</th>
-                                        <th class="p-3 font-mono">Amount Charged</th>
                                         <th class="p-3 font-mono">Amount Paid</th>
                                         <th class="p-3">Payment Type</th>
-                                        <th class="p-3">Payment Date</th>
                                         <th class="p-3">Partner ID</th>
                                         <th class="p-3">Partner Email</th>
                                         <th class="p-3">Status</th>
@@ -1856,48 +1861,82 @@
         const CAL_EVENTS_PER_PAGE = 20;
 
         const EDIT_MODAL_FORM_SCHEMAS = {
-
+            'career-complaints': [
+                { name: 'Email', key: 'Email', type: 'email', required: true },
+                { name: 'Subject', key: 'Subject', type: 'text', required: false },
+                {
+                    name: 'Status', key: 'Status', type: 'select', required: true, options: [
+                        { value: 'Open', label: 'Open' }, { value: 'In Review', label: 'In Review' }, { value: 'Resolved', label: 'Resolved' }]
+                },
+                { name: 'Admin Reply', key: 'AdminReply', type: 'textarea', required: false }],
             'career-users': [
                 { name: 'Full Name', key: 'Name', type: 'text', required: true },
                 { name: 'Email Address', key: 'Email', type: 'email', required: true },
+                { name: 'Phone', key: 'Phone', type: 'tel', required: false },
                 { name: 'Bank Name', key: 'BankName', type: 'text', required: false },
                 { name: 'Account Number', key: 'AccountNumber', type: 'text', required: false },
                 { name: 'Account Name', key: 'AccountName', type: 'text', required: false },
-                { name: 'User Level', key: 'Level', type: 'number', required: false, min: 1, max: 5 },
-                { name: 'Status', key: 'Approved', type: 'select', required: false, options: [{ value: true, label: 'Approved' }, { value: false, label: 'Pending' }] }
-            ],
-            'career-earnings': [
-                { name: 'Partner ID', key: 'PartnerID', type: 'text', required: true },
-                { name: 'Client Name', key: 'ClientName', type: 'text', required: true },
-                { name: 'Service', key: 'Service', type: 'text', required: true },
-                { name: 'Amount Charged', key: 'AmountToCharge', type: 'number', required: true },
-                { name: 'Payout Status', key: 'PayoutStatus', type: 'select', required: true, options: [{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Paid', label: 'Paid' }] },
-                { name: 'Status', key: 'Status', type: 'select', required: true, options: [{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }] }
-            ],
-            'career-settlements': [
-                { name: 'Partner Email', key: 'Email', type: 'email', required: true },
-                { name: 'Amount (₦)', key: 'AmountNaira', type: 'number', required: true },
-                { name: 'Status', key: 'Status', type: 'select', required: true, options: [{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Denied', label: 'Denied' }, { value: 'Investigating', label: 'Investigating' }] },
-                { name: 'Admin Notes', key: 'AdminNotes', type: 'textarea', required: false }
-            ],
-            'career-complaints': [
-                { name: 'Email', key: 'Email', type: 'email', required: true },
-                { name: 'Subject', key: 'Subject', type: 'text', required: true },
-                { name: 'Message', key: 'Message', type: 'textarea', required: true },
+                { name: 'User Level', key: 'Level', type: 'number', required: false, min: 0, max: 5 },
                 {
-                    name: 'Status',
-                    key: 'Status',
-                    type: 'select',
-                    required: true,
+                    name: 'Status', key: 'Approved', type: 'select', required: true,
                     options: [
-                        { value: 'Open', label: 'Open' },
-                        { value: 'In Review', label: 'In Review' },
-                        { value: 'Resolved', label: 'Resolved' }
+                        { value: true, label: 'Approved' },
+                        { value: false, label: 'Pending' }
                     ]
                 },
-                { name: 'Admin Reply', key: 'AdminReply', type: 'textarea', required: false },
-                { name: 'Timestamp', key: 'Timestamp', type: 'text', required: false }
+                {
+                    name: 'Block Until', key: 'BlockedUntil', type: 'select', required: false,
+                    options: [
+                        { value: '', label: 'Never' },
+                        { value: '24h', label: 'Block for 24 Hours' },
+                        { value: '48h', label: 'Block for 48 Hours' },
+                        { value: '7d', label: 'Block for 7 Days' },
+                        { value: '30d', label: 'Block for 30 Days' },
+                        { value: 'custom', label: 'Custom Date' }
+                    ]
+                },
+                { name: 'Total Earned', key: 'TotalEarned', type: 'number', required: false },
+                { name: 'Current Balance', key: 'CurrentBalance', type: 'number', required: false }
             ],
+
+            'career-earnings': [
+                { name: 'Timestamp', key: 'Date', type: 'text', required: false },
+                { name: 'Partner Unique Ref', key: 'PartnerID', type: 'text', required: true },
+                { name: 'Amount Charged (₦)', key: 'AmountToCharge', type: 'number', required: true },
+                { name: 'Assigned Service', key: 'Service', type: 'text', required: true },
+                {
+                    name: 'Payout Status', key: 'PayoutStatus', type: 'select', required: true,
+                    options: [
+                        { value: 'Pending', label: 'Pending' },
+                        { value: 'Approved', label: 'Approved' },
+                        { value: 'Paid', label: 'Paid' },
+                        { value: 'Denied', label: 'Denied' }
+                    ]
+                }
+            ],
+
+            'career-settlements': [
+                { name: 'Partner Email', key: 'Email', type: 'email', required: true },
+                { name: 'Partner Name', key: 'Name', type: 'text', required: false },
+                { name: 'Bank Name', key: 'BankName', type: 'text', required: false },
+                { name: 'Account Number', key: 'AccountNumber', type: 'text', required: false },
+                { name: 'Account Name', key: 'AccountName', type: 'text', required: false },
+                { name: 'Gross Amount (₦)', key: 'AmountNaira', type: 'number', required: true },
+                { name: 'Paid Date', key: 'PaidDate', type: 'date', required: false },
+                { name: 'Successful Jobs', key: 'SuccessfulJobs', type: 'number', required: false },
+                {
+                    name: 'Status', key: 'Status', type: 'select', required: true,
+                    options: [
+                        { value: 'Pending', label: 'Pending' },
+                        { value: 'Approved', label: 'Approved' },
+                        { value: 'Denied', label: 'Denied' },
+                        { value: 'Investigating', label: 'Investigating' },
+                        { value: 'Paid', label: 'Paid' }
+                    ]
+                },
+                { name: 'Admin Notes', key: 'AdminNotes', type: 'textarea', required: false }
+            ],
+
             'assessment-students': [
                 { name: 'Student Email', key: 'userEmail', type: 'email', required: true },
                 { name: 'Submission ID', key: 'submissionId', type: 'text', required: false },
@@ -1934,21 +1973,37 @@
                 { name: 'Status', key: 'Status', type: 'select', required: true, options: [{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Rejected', label: 'Rejected' }] },
                 { name: 'Notes', key: 'Notes', type: 'textarea', required: false }
             ],
+
             'client-submitted': [
+                { name: 'Timestamp', key: 'Date', type: 'text', required: false },
                 { name: 'Client Name', key: 'ClientName', type: 'text', required: true },
-                { name: 'Service', key: 'Service', type: 'text', required: true },
+                { name: 'Client Email', key: 'Email', type: 'email', required: true },
                 { name: 'Partner ID', key: 'PartnerID', type: 'text', required: true },
-                { name: 'Amount', key: 'Amount', type: 'number', required: true },
-                { name: 'Payment Status', key: 'Status', type: 'select', required: true, options: [{ value: 'Pending', label: 'Pending' }, { value: 'In Review', label: 'In Review' }, { value: 'Approved', label: 'Approved' }] }
+                { name: 'Service', key: 'Service', type: 'text', required: true },
+                { name: 'Amount Charged', key: 'AmountToCharge', type: 'number', required: true },
+                { name: 'Urgency', key: 'Urgency', type: 'text', required: false }
             ],
             'client-onboarded': [
+                { name: 'Tracking Code', key: 'TrackingCode', type: 'text', required: false },
+                { name: 'TxRef', key: 'TxRef', type: 'text', required: false },
                 { name: 'Client Name', key: 'ClientName', type: 'text', required: true },
                 { name: 'Client Email', key: 'ClientEmail', type: 'email', required: true },
-                { name: 'Service Item', key: 'Service', type: 'text', required: true },
-                { name: 'Amount', key: 'Amount', type: 'number', required: true },
-                { name: 'Fulfillment Status', key: 'Status', type: 'select', required: true, options: [{ value: 'In Progress', label: 'In Progress' }, { value: 'On Hold', label: 'On Hold' }, { value: 'Completed', label: 'Completed' }] },
+                { name: 'Client Phone', key: 'ClientPhone', type: 'tel', required: false },
+                { name: 'Service', key: 'Service', type: 'text', required: true },
+                { name: 'Amount Charged', key: 'Amount', type: 'number', required: true },
+                { name: 'Partner ID', key: 'PartnerID', type: 'text', required: false },
+                { name: 'Partner Email', key: 'PartnerEmail', type: 'email', required: false },
+                {
+                    name: 'Status', key: 'Status', type: 'select', required: true,
+                    options: [
+                        { value: 'Pending', label: 'Pending' },
+                        { value: 'In Progress', label: 'In Progress' },
+                        { value: 'Completed', label: 'Completed' }
+                    ]
+                },
                 { name: 'Progress Notes', key: 'ProgressNotes', type: 'textarea', required: false }
             ],
+
             'leads-matrix': [
                 { name: 'Full Name', key: 'Name', type: 'text', required: true },
                 { name: 'Email', key: 'Email', type: 'email', required: true },
@@ -2005,7 +2060,7 @@
         };
 
         async function executeSecureBridgeCall(systemTarget, actionTarget, analyticalPayload = {}) {
-            const url = "https://script.google.com/macros/s/AKfycbx4Ftqr-C_OOMQxqvVi5r_WEHBEhXDx21m8cDada3B9wdU7G5lnr316qtLy9dPYINMg/exec";
+            const url = "https://script.google.com/macros/s/AKfycbzaxpTeQzLZKIGvjbtcMSxu1VNXx0mkJZWn5Jt4hMdWQXbOjRyPmcJI8eIImcYRT67n/exec";
             if (!url) {
                 alert("Please enter your Web App URL in the login screen.");
                 return { success: false, message: "No endpoint URL" };
@@ -2312,40 +2367,45 @@
         function updateKPIs() {
             executeSecureBridgeCall('career', 'career-earnings', {}).then(data => {
                 if (!data.success || !data.data) return;
-
                 let filtered = filterTableByState(data.data, UNI_FILTER_STATE);
 
-                // Gross Distributed Commissions = All EarningsNaira
-                const gross = filtered.reduce((sum, r) => {
-                    return sum + parseFloat(r.EarningsNaira || r.AmountToCharge || r.amount || 0);
-                }, 0);
+                const gross = filtered
+                    .filter(r => (r.PayoutStatus || r['Payout Status'] || '') === 'Paid')
+                    .reduce((s, r) => s + parseFloat(r.AmountToCharge || r.EarningsNaira || 0), 0);
+                const el = document.getElementById('kpi-gross');
+                if (el) el.textContent = fmtNaira(gross);
 
-                // Active Payout Pipeline = Approved but not yet Paid
-                const activePayout = filtered
-                    .filter(r => String(r.PayoutStatus || r['Payout Status'] || '').toLowerCase() === 'approved')
-                    .reduce((sum, r) => sum + parseFloat(r.EarningsNaira || r.AmountToCharge || 0), 0);
+                const active = filtered
+                    .filter(r => (r.PayoutStatus || r['Payout Status'] || '') === 'Approved')
+                    .reduce((s, r) => s + parseFloat(r.AmountToCharge || r.EarningsNaira || 0), 0);
+                const payoutEl = document.getElementById('kpi-payout');
+                if (payoutEl) payoutEl.textContent = fmtNaira(active);
+            });
 
-                // Total Sourced Projects
-                const totalProjects = filtered.length;
-
-                // Update KPI cards
-                document.getElementById('kpi-gross').textContent = fmtNaira(gross);
-                document.getElementById('kpi-payout').textContent = fmtNaira(activePayout);
-                document.getElementById('kpi-projects').textContent = `${totalProjects} Units`;
+            executeSecureBridgeCall('client', 'client-onboarded', {}).then(data => {
+                if (!data.success || !data.data) return;
+                const filtered = filterTableByState(data.data, UNI_FILTER_STATE);
+                const count = filtered.filter(r => r.Status === 'Completed').length;
+                const el = document.getElementById('kpi-projects');
+                if (el) el.textContent = count + ' Units';
             });
         }
 
         const paginationState = {
-            'career-users': { page: 1, totalPages: 1, total: 0 },
-            'career-earnings': { page: 1, totalPages: 1, total: 0 },
-            'career-settlements': { page: 1, totalPages: 1, total: 0 },
-            'career-complaints': { page: 1, totalPages: 1, total: 0 },
-            'assessment-students': { page: 1, totalPages: 1, total: 0 },
-            'client-submitted': { page: 1, totalPages: 1, total: 0 },
-            'client-onboarded': { page: 1, totalPages: 1, total: 0 },
-            'leads-matrix': { page: 1, totalPages: 1, total: 0 }
+            'career-users': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
+            'career-earnings': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
+            'career-settlements': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
+            'career-messages': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
+            'assessment-students': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
+            'assessment-certificates': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
+            'assessment-courses': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
+            'assessment-questions': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
+            'leads-matrix': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
+            'client-submitted': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
+            'client-onboarded': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
+            'career-complaints': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
+            'leads-calendar': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false }
         };
-
 
         function updatePaginationState(viewName, response) {
             if (!response || !response.success) return;
@@ -2361,435 +2421,109 @@
 
         function updatePaginationUI(viewName) {
             const state = paginationState[viewName];
-            if (!state) return;
+            const batchSize = 50;
+            const recordsEnd = Math.min(state.page * batchSize, state.total);
 
-            const currentPageEl = document.getElementById(`currentPage-${viewName}`);
-            const totalPagesEl = document.getElementById(`totalPages-${viewName}`);
-            const recordsShowingEl = document.getElementById(`recordsShowing-${viewName}`);
-            const totalRecordsEl = document.getElementById(`totalRecords-${viewName}`);
+            const currentPageEl = document.getElementById('currentPage-' + viewName);
+            const totalPagesEl = document.getElementById('totalPages-' + viewName);
+            const recordsShowingEl = document.getElementById('recordsShowing-' + viewName);
+            const totalRecordsEl = document.getElementById('totalRecords-' + viewName);
 
             if (currentPageEl) currentPageEl.textContent = state.page;
-            if (totalPagesEl) totalPagesEl.textContent = state.totalPages || 1;
-            if (recordsShowingEl) recordsShowingEl.textContent = Math.min(state.page * 50, state.total || 0);
-            if (totalRecordsEl) totalRecordsEl.textContent = state.total || 0;
+            if (totalPagesEl) totalPagesEl.textContent = state.totalPages;
+            if (recordsShowingEl) recordsShowingEl.textContent = recordsEnd;
+            if (totalRecordsEl) totalRecordsEl.textContent = state.total;
 
-            const btnPrev = document.getElementById(`btnPrev-${viewName}`);
-            const btnNext = document.getElementById(`btnNext-${viewName}`);
+            const btnPrev = document.getElementById('btnPrev-' + viewName);
+            const btnNext = document.getElementById('btnNext-' + viewName);
 
-            if (btnPrev) btnPrev.disabled = state.page <= 1;
-            if (btnNext) btnNext.disabled = state.page >= (state.totalPages || 1);
+            if (btnPrev) btnPrev.disabled = !state.hasPrev;
+            if (btnNext) btnNext.disabled = !state.hasNext;
         }
-
 
         function previousPage(viewName) {
             const state = paginationState[viewName];
-            if (!state || state.page <= 1) return;
+            if (state.page <= 1) return;
             state.page--;
             loadTableData(viewName, state.page);
         }
 
         function nextPage(viewName) {
             const state = paginationState[viewName];
-            if (!state || state.page >= (state.totalPages || 1)) return;
+            if (state.page >= state.totalPages) return;
             state.page++;
             loadTableData(viewName, state.page);
         }
 
-        // =======================================================
-        // UNIVERSAL TABLE LOADER WITH PAGINATION
-        // =======================================================
-
-        async function loadTableData(viewName, page = 1) {
-            console.log(`Loading ${viewName} - Page ${page}`);
+        function loadTableData(viewName, page) {
+            toggleSystemLoader(true);
 
             const actionMap = {
                 'career-users': 'career-users',
                 'career-earnings': 'career-earnings',
                 'career-settlements': 'career-settlements',
-                'career-complaints': 'career-complaints',
+                'career-messages': 'career-messages',
                 'assessment-students': 'assessment-students',
+                'assessment-certificates': 'assessment-certificates',
+                'assessment-courses': 'assessment-courses',
+                'assessment-questions': 'assessment-questions',
+                'leads-matrix': 'leads-matrix',
                 'client-submitted': 'client-submitted',
                 'client-onboarded': 'client-onboarded',
-                'leads-matrix': 'leads-matrix'
+                'career-complaints': 'career-complaints',
             };
 
             const systemMap = {
                 'career-users': 'career',
                 'career-earnings': 'career',
                 'career-settlements': 'career',
-                'career-complaints': 'career',
+                'career-messages': 'career',
                 'assessment-students': 'assessment',
+                'assessment-certificates': 'assessment',
+                'assessment-courses': 'assessment',
+                'assessment-questions': 'assessment',
+                'leads-matrix': 'leads',
                 'client-submitted': 'client',
                 'client-onboarded': 'client',
-                'leads-matrix': 'leads'
+                'career-complaints': 'career'
             };
 
             const action = actionMap[viewName];
             const system = systemMap[viewName];
 
             if (!action || !system) {
-                console.warn(`No mapping found for view: ${viewName}`);
+                toggleSystemLoader(false);
                 return;
             }
 
-            // Show loading skeleton
-            const tbodyId = getTbodyId(viewName);
-            if (tbodyId) showTableSkeleton(tbodyId, 7);
+            fetch(WEBAPP_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    system: system,
+                    action: action,
+                    token: SESSION_MASTER_TOKEN,
+                    page: page
+                }),
+                redirect: "follow"
+            })
+                .then(response => response.json())
+                .then(result => {
+                    toggleSystemLoader(false);
 
-            const res = await executeSecureBridgeCall(system, action, { page: page });
+                    if (!result.success) {
+                        showToast("Failed to load data", "error");
+                        return;
+                    }
 
-            if (res.success) {
-                // Update pagination state
-                paginationState[viewName] = {
-                    page: res.page || page,
-                    totalPages: res.totalPages || 1,
-                    total: res.total || (res.data ? res.data.length : 0)
-                };
-
-                updatePaginationUI(viewName);
-
-                // Render the correct table
-                renderTable(viewName, res.data || []);
-            } else {
-                console.error(`Failed to load ${viewName}:`, res);
-                const tbody = document.getElementById(getTbodyId(viewName));
-                if (tbody) tbody.innerHTML = emptyRow('Failed to load data.', 7);
-            }
-        }
-
-        // Helper to get tbody ID
-        function getTbodyId(viewName) {
-            const map = {
-                // === CAREER HUB ===
-                'career-users': 'careerUsersTableBody',
-                'career-earnings': 'careerEarningsTableBody',
-                'career-settlements': 'careerSettlementsTableBody',
-                'career-complaints': 'careerComplaintsTableBody',
-                'career-messages': 'careerMessagesLogsTableBody',
-
-                // === ASSESSMENT HUB ===
-                'assessment-students': 'assessmentSubmissionsTableBody',
-                'assessment-certificates': 'certificateRegistryTableBody',
-                'assessment-courses': 'assessmentTracksTableBody',
-                'assessment-questions': 'questionsGridTableBody',
-                'assessment-applications': 'applicationsTableBody',
-                'assessment-messages': 'academicSupportLogsTableBody',
-
-                // === CLIENT HUB ===
-                'client-submitted': 'sourcedIntakeTableBody',
-                'client-onboarded': 'productionFulfillmentTableBody',
-
-                // === LEADS HUB ===
-                'leads-matrix': 'crmLeadsGridTableBody',
-                'leads-broadcast': 'timedBroadcastCronTableBody',
-                'leads-drive': 'crmMailDriveReportsTableBody',
-                'leads-calendar': 'calendarEventsTableBody'
-            };
-            return map[viewName];
-        }
-
-        // Generic Table Renderer
-        function renderTable(viewName, data) {
-            const tbodyId = getTbodyId(viewName);
-            const tbody = document.getElementById(tbodyId);
-            if (!tbody) return;
-
-            if (!data || data.length === 0) {
-                tbody.innerHTML = emptyRow('No records found.', 7);
-                return;
-            }
-
-            switch (viewName) {
-
-                // ==================== CAREER HUB ====================
-                case 'career-users':
-                    html = data.map(u => `
-                <tr>
-                    <td class="p-3 text-slate-400 font-mono text-xs">${escapeHtml(u.UniqueID || u.uniqueID || '—')}</td>
-                    <td class="p-3">
-                        <div class="font-medium text-slate-300">${escapeHtml(u.Name || u.name || '—')}</div>
-                        <div class="text-[10px] text-slate-500 font-mono">${escapeHtml(u.Email || u.email || '—')}</div>
-                    </td>
-                    <td class="p-3 text-xs">
-                        <div class="text-slate-300">${escapeHtml(u.AccountName || '—')}</div>
-                        <div class="text-slate-400">${escapeHtml(u.AccountNumber || '—')}</div>
-                        <div class="text-slate-500">${escapeHtml(u.BankName || '—')}</div>
-                    </td>
-                    <td class="p-3 text-center font-bold">Level ${escapeHtml(String(u.Level || 1))}</td>
-                    <td class="p-3 text-center">${badge((u.Approved === true || u.Approved === 'TRUE') ? 'Approved' : 'Pending')}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="openEditModal('${escapeHtml(u.UniqueID || '')}', ${JSON.stringify(u).replace(/"/g, '&quot;')}, 'career-users')"
-                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
-                    </td>
-                </tr>
-            `).join('');
-                    break;
-
-                case 'career-earnings':
-                    html = data.map(r => `
-                <tr>
-                    <td class="p-3 text-slate-500">${fmtDate(r.Timestamp || r.Date)}</td>
-                    <td class="p-3 font-mono">${escapeHtml(r.PartnerID || '—')}</td>
-                    <td class="p-3">${escapeHtml(r.ClientName || '—')}</td>
-                    <td class="p-3">${escapeHtml(r.Service || '—')}</td>
-                    <td class="p-3 font-bold text-emerald-400 text-right">${fmtNaira(r.AmountToCharge || r.EarningsNaira || 0)}</td>
-                    <td class="p-3 text-center">${badge(r.PayoutStatus || 'Pending')}</td>
-                    <td class="p-3 text-center">${badge(r.Status || 'Pending')}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="openEditModal('${escapeHtml(r.PartnerID || '')}', ${JSON.stringify(r).replace(/"/g, '&quot;')}, 'career-earnings')"
-                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
-                    </td>
-                </tr>
-            `).join('');
-                    break;
-
-                case 'career-settlements':
-                    html = data.map(r => `
-                <tr>
-                    <td class="p-3 font-mono text-xs">${escapeHtml(r.QueueID || r.Timestamp || '—')}</td>
-                    <td class="p-3">${escapeHtml(r.Email || '—')}</td>
-                    <td class="p-3 text-xs">
-                        <div>${escapeHtml(r.AccountName || '—')}</div>
-                        <div class="font-mono">${escapeHtml(r.AccountNumber || '—')}</div>
-                    </td>
-                    <td class="p-3 font-bold text-emerald-400 text-right">${fmtNaira(r.AmountNaira || 0)}</td>
-                    <td class="p-3 text-center">${badge(r.Status || 'Pending')}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="openEditModal('${escapeHtml(r.Email || '')}', ${JSON.stringify(r).replace(/"/g, '&quot;')}, 'career-settlements')"
-                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
-                    </td>
-                </tr>
-            `).join('');
-                    break;
-
-                case 'career-complaints':
-                    html = data.map(c => `
-                <tr>
-                    <td class="p-3 text-slate-500">${fmtDate(c.Timestamp)}</td>
-                    <td class="p-3 font-mono">${escapeHtml(c.Email || '—')}</td>
-                    <td class="p-3">${escapeHtml((c.Subject || '').substring(0, 50))}</td>
-                    <td class="p-3 text-slate-400">${escapeHtml((c.Message || '').substring(0, 60))}</td>
-                    <td class="p-3 text-center">${badge(c.Status || 'Open')}</td>
-                    <td class="p-3 text-slate-400">${escapeHtml((c.AdminReply || '').substring(0, 40))}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="openEditModal('${escapeHtml(c.Email || '')}', ${JSON.stringify(c).replace(/"/g, '&quot;')}, 'career-complaints')"
-                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
-                    </td>
-                </tr>
-            `).join('');
-                    break;
-
-                case 'career-messages':
-                    html = data.map(m => `
-                <tr>
-                    <td class="p-3 text-slate-500">${fmtDate(m.Timestamp)}</td>
-                    <td class="p-3 font-mono">${escapeHtml(m.RecipientEmail || m['Recipient Email'] || '—')}</td>
-                    <td class="p-3">${escapeHtml((m.Subject || '').substring(0, 45))}</td>
-                    <td class="p-3 text-center">${badge(m.Status || m.isRead ? 'Read' : 'Sent')}</td>
-                </tr>
-            `).join('');
-                    break;
-
-                // ==================== ASSESSMENT HUB ====================
-                case 'assessment-students':
-                    html = data.map(s => `
-                <tr>
-                    <td class="p-3 font-mono">${escapeHtml(s.submissionId || s.SubmissionID || '—')}</td>
-                    <td class="p-3 font-mono">${escapeHtml(s.userEmail || s.StudentEmail || '—')}</td>
-                    <td class="p-3">${escapeHtml(s.assessmentId || s.trackId || '—')}</td>
-                    <td class="p-3 text-right font-bold">${parseFloat(s.rawScore || 0).toFixed(1)}</td>
-                    <td class="p-3 text-right font-bold">${parseFloat(s.percentageGrade || 0).toFixed(1)}%</td>
-                    <td class="p-3 text-center">${badge(s.status || 'Completed')}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="openEditModal('${escapeHtml(s.submissionId)}', ${JSON.stringify(s).replace(/"/g, '&quot;')}, 'assessment-students')"
-                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
-                    </td>
-                </tr>
-            `).join('');
-                    break;
-
-                case 'assessment-certificates':
-                    html = data.map(c => `
-                <tr>
-                    <td class="p-3 font-mono">${escapeHtml(c.CertCode || '—')}</td>
-                    <td class="p-3">${escapeHtml(c.StudentEmail || '—')}</td>
-                    <td class="p-3">${escapeHtml(c.CourseName || '—')}</td>
-                    <td class="p-3">${fmtDate(c.IssueDate || c.Timestamp)}</td>
-                    <td class="p-3 text-right">${badge(c.Status || 'Pending')}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="openEditModal('${escapeHtml(c.CertCode)}', ${JSON.stringify(c).replace(/"/g, '&quot;')}, 'assessment-certificates')"
-                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
-                    </td>
-                </tr>
-            `).join('');
-                    break;
-
-                case 'assessment-courses':
-                    html = data.map(c => `
-                <tr>
-                    <td class="p-3 font-mono">${escapeHtml(c.CourseID || c['Track Schema ID'] || '—')}</td>
-                    <td class="p-3">${escapeHtml(c.CourseName || c.Title || '—')}</td>
-                    <td class="p-3 text-center">${c.Duration || 0} min</td>
-                    <td class="p-3 text-center font-bold text-amber-400">${c.PassMark || c['PassMark%'] || 70}%</td>
-                    <td class="p-3 text-center">${badge(c.IsActive ? 'Active' : 'Inactive')}</td>
-                </tr>
-            `).join('');
-                    break;
-
-                case 'assessment-questions':
-                    html = data.map(q => `
-                <tr>
-                    <td class="p-3 font-mono">${escapeHtml(q.QuestionID || '—')}</td>
-                    <td class="p-3 font-mono">${escapeHtml(q.CourseID || '—')}</td>
-                    <td class="p-3">${escapeHtml((q.QuestionText || q.Question || '').substring(0, 65))}</td>
-                    <td class="p-3 text-xs font-mono">${escapeHtml(q.OptionA)} | ${escapeHtml(q.OptionB)} | ${escapeHtml(q.OptionC)} | ${escapeHtml(q.OptionD)}</td>
-                    <td class="p-3 text-center font-bold text-emerald-400">${escapeHtml(q.CorrectAnswer || '—')}</td>
-                    <td class="p-3 text-center font-mono">${q.Points || 1}</td>
-                </tr>
-            `).join('');
-                    break;
-
-                case 'assessment-applications':
-                    html = data.map(a => `
-                <tr>
-                    <td class="p-3">${fmtDate(a.Timestamp)}</td>
-                    <td class="p-3 font-mono">${escapeHtml(a.ApplicationID || '—')}</td>
-                    <td class="p-3">${escapeHtml(a.StudentEmail || '—')}</td>
-                    <td class="p-3 font-mono">${escapeHtml(a.CourseID || '—')}</td>
-                    <td class="p-3">${escapeHtml(a.CourseName || '—')}</td>
-                    <td class="p-3 text-center">${badge(a.Status || 'Pending')}</td>
-                    <td class="p-3 text-slate-400">${escapeHtml((a.Notes || '').substring(0, 40))}</td>
-                    <td class="p-3 text-center">${badge(a.PaymentGenerated ? 'Yes' : 'No')}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="openEditModal('${escapeHtml(a.ApplicationID)}', ${JSON.stringify(a).replace(/"/g, '&quot;')}, 'assessment-applications')"
-                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
-                    </td>
-                </tr>
-            `).join('');
-                    break;
-
-                case 'assessment-messages':
-                    html = data.map(m => `
-                <tr>
-                    <td class="p-3">${fmtDate(m.Timestamp)}</td>
-                    <td class="p-3 font-mono">${escapeHtml(m.RecipientEmail || '—')}</td>
-                    <td class="p-3 font-mono">${escapeHtml(m.FromEmail || '—')}</td>
-                    <td class="p-3">${escapeHtml((m.Subject || '').substring(0, 50))}</td>
-                    <td class="p-3 text-center">${badge(m.Priority || 'Standard')}</td>
-                </tr>
-            `).join('');
-                    break;
-
-                // ==================== CLIENT HUB ====================
-                case 'client-submitted':
-                    html = data.map(p => `
-                <tr>
-                    <td class="p-3">${fmtDate(p.Timestamp)}</td>
-                    <td class="p-3">
-                        <div>${escapeHtml(p.ClientName || '—')}</div>
-                        <div class="text-xs text-slate-500">${escapeHtml(p.ClientEmail || '—')}</div>
-                    </td>
-                    <td class="p-3 font-mono">${escapeHtml(p.PartnerID || '—')}</td>
-                    <td class="p-3">${escapeHtml(p.Service || '—')}</td>
-                    <td class="p-3">${p.PaymentLink ? `<a href="${p.PaymentLink}" target="_blank" class="text-blue-400">Link</a>` : '—'}</td>
-                    <td class="p-3 font-bold text-emerald-400 text-right">${fmtNaira(p.AmountToCharge || p.Amount)}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="openEditModal('${escapeHtml(p.Timestamp)}', ${JSON.stringify(p).replace(/"/g, '&quot;')}, 'client-submitted')"
-                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
-                    </td>
-                </tr>
-            `).join('');
-                    break;
-
-                case 'client-onboarded':
-                    html = data.map(f => `
-                <tr>
-                    <td class="p-3">${fmtDate(f.Timestamp)}</td>
-                    <td class="p-3 font-mono">${escapeHtml(f.TrackingCode || '—')}</td>
-                    <td class="p-3">${escapeHtml(f.ClientName || '—')}</td>
-                    <td class="p-3">${escapeHtml(f.Service || '—')}</td>
-                    <td class="p-3 font-bold text-emerald-400">${fmtNaira(f.Amount)}</td>
-                    <td class="p-3 text-center">${badge(f.Status || 'In Progress')}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="openEditModal('${escapeHtml(f.TrackingCode)}', ${JSON.stringify(f).replace(/"/g, '&quot;')}, 'client-onboarded')"
-                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
-                    </td>
-                </tr>
-            `).join('');
-                    break;
-
-                // ==================== LEADS HUB ====================
-                case 'leads-matrix':
-                    html = data.map(l => `
-                <tr>
-                    <td class="p-3 font-mono">${escapeHtml(l.ID || l.LeadID || '—')}</td>
-                    <td class="p-3">${escapeHtml(l['Full Name'] || l.Name || '—')}</td>
-                    <td class="p-3 font-mono">${escapeHtml(l.Email || '—')}</td>
-                    <td class="p-3">${escapeHtml(l.Source || '—')}</td>
-                    <td class="p-3">${escapeHtml(l.State || '—')}</td>
-                    <td class="p-3 text-center">${badge(l['Funnel Stage'] || l.Stage || 'New Prospect')}</td>
-                    <td class="p-3 text-center">
-                        <span class="px-3 py-1 text-xs rounded-full ${l.Priority === 'High' ? 'bg-red-900 text-red-300' : 'bg-amber-900 text-amber-300'}">
-                            ${escapeHtml(l.Priority || 'Medium')}
-                        </span>
-                    </td>
-                    <td class="p-3 text-center">
-                        <button onclick="openEditModal('${escapeHtml(l.ID)}', ${JSON.stringify(l).replace(/"/g, '&quot;')}, 'leads-matrix')"
-                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
-                    </td>
-                </tr>
-            `).join('');
-                    break;
-
-                case 'leads-broadcast':
-                    html = data.map(b => `
-                <tr>
-                    <td class="p-3 font-mono">${escapeHtml(b.CronID || '—')}</td>
-                    <td class="p-3">${escapeHtml(b.Segment || '—')}</td>
-                    <td class="p-3">${fmtDate(b.ScheduledTime)}</td>
-                    <td class="p-3">${escapeHtml((b.Subject || '').substring(0, 45))}</td>
-                    <td class="p-3 text-center">${badge(b.Status || 'Scheduled')}</td>
-                </tr>
-            `).join('');
-                    break;
-
-                case 'leads-drive':
-                    html = data.map(m => `
-                <tr>
-                    <td class="p-3 font-mono">${escapeHtml(m.DispatchID || '—')}</td>
-                    <td class="p-3 font-mono">${escapeHtml(m.Email || '—')}</td>
-                    <td class="p-3">${escapeHtml((m.Subject || '').substring(0, 50))}</td>
-                    <td class="p-3 text-center">${badge(m.TransmissionState || 'Sent')}</td>
-                    <td class="p-3 text-center">${badge(m.SentReport ? 'Confirmed' : 'Pending')}</td>
-                    <td class="p-3 text-center">${badge(m.ReadReport ? 'Read' : 'Unread')}</td>
-                </tr>
-            `).join('');
-                    break;
-
-                case 'leads-calendar':
-                    html = data.map(ev => `
-                <tr>
-                    <td class="p-3 font-mono">${escapeHtml(ev.EventID || '—')}</td>
-                    <td class="p-3">${escapeHtml(ev.Title || '—')}</td>
-                    <td class="p-3">${fmtDate(ev.DateTime)}</td>
-                    <td class="p-3">${escapeHtml(ev.Type || '—')}</td>
-                    <td class="p-3 font-mono">${escapeHtml(ev.AssignedTo || '—')}</td>
-                    <td class="p-3">${escapeHtml((ev.Notes || '').substring(0, 45))}</td>
-                    <td class="p-3 text-center">${badge(ev.Status || 'Upcoming')}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="openEditModal('${escapeHtml(ev.EventID)}', ${JSON.stringify(ev).replace(/"/g, '&quot;')}, 'leads-calendar')"
-                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
-                    </td>
-                </tr>
-            `).join('');
-                    break;
-
-                default:
-                    html = `<tr><td colspan="10" class="p-8 text-center text-slate-400">
-                <strong>Renderer not implemented</strong><br>
-                <small>View: ${viewName}</small>
-            </td></tr>`;
-            }
+                    updatePaginationState(viewName, result);
+                    populateTable(viewName, result.data);
+                })
+                .catch(error => {
+                    toggleSystemLoader(false);
+                    console.error("Error:", error);
+                    showToast("Error loading data", "error");
+                });
         }
 
         function filterTableByState(data, _legacyState) {
@@ -2861,104 +2595,39 @@
             if (!careerUsersView || careerUsersView.querySelector('#careerFilterLevel')) return;
 
             const filterHtml = `
-    <div id="careerHubFilter" class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 grid grid-cols-4 gap-3"><center>A parnter you can trust...</center>
+    <div id="careerHubFilter" class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 grid grid-cols-4 gap-3">
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">User Level</label>
+        <select id="careerFilterLevel" onchange="applyCareerFilter()" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+          <option value="">All Levels</option>
+          <option value="1">Level 1</option>
+          <option value="2">Level 2</option>
+          <option value="3">Level 3</option>
+          <option value="4">Level 4</option>
+          <option value="5">Level 5</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Status</label>
+        <select id="careerFilterStatus" onchange="applyCareerFilter()" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+          <option value="">All Status</option>
+          <option value="Approved">Approved</option>
+          <option value="Pending">Pending</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">From Date</label>
+        <input type="date" id="careerFilterDateStart" onchange="applyCareerFilter()" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">To Date</label>
+        <input type="date" id="careerFilterDateEnd" onchange="applyCareerFilter()" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+      </div>
     </div>
   `;
 
             const firstChild = careerUsersView.querySelector('div:first-child');
             if (firstChild) firstChild.insertAdjacentHTML('afterend', filterHtml);
-        }
-
-        async function initializeModule_career_settlements() {
-            const tbodyId = 'careerSettlementsTableBody';
-            showTableSkeleton(tbodyId, 6);
-
-            const [settRes, usersRes] = await Promise.all([
-                executeSecureBridgeCall('career', 'career-settlements', {}),
-                executeSecureBridgeCall('career', 'career-users', {})
-            ]);
-
-            const tbody = document.getElementById(tbodyId);
-            if (!tbody) return;
-
-            if (!settRes.success || !settRes.data || !settRes.data.length) {
-                tbody.innerHTML = emptyRow('No settlement requests found.', 6);
-                return;
-            }
-
-            // Build lookup map by EMAIL (PaymentRequests uses email as key)
-            const userMapByEmail = {};
-            if (usersRes.success && usersRes.data) {
-                usersRes.data.forEach(u => {
-                    const email = String(u.Email || u.email || '').toLowerCase().trim();
-                    if (email) {
-                        userMapByEmail[email] = {
-                            name: u.Name || u.name || '',
-                            accountName: u.AccountName || u.accountName || '',
-                            accountNumber: u.AccountNumber || u.accountNumber || '',
-                            bankName: u.BankName || u.bankName || '',
-                            uniqueID: u.UniqueID || u.uniqueID || ''
-                        };
-                    }
-                });
-            }
-
-            const data = filterTableByState(settRes.data, UNI_FILTER_STATE);
-
-            tbody.innerHTML = data.map(r => {
-                // PaymentRequests sheet: col A=Timestamp, B=PartnerID, C=Email, D=AmountNaira, E=Status
-                const email = String(r.Email || r.email || r['User Email'] || '').toLowerCase().trim();
-                const partnerID = String(r.PartnerID || r.partnerID || r['Partner ID'] || '').trim();
-                const userInfo = userMapByEmail[email] || {};
-
-                const amount = parseFloat(r.AmountNaira || r.Amount || r.amount || r['Amount Naira'] || 0);
-                const status = r.Status || r.status || 'Pending';
-                const queueID = r.QueueID || r.Timestamp || partnerID || '—';
-
-                return `
-        <tr class="hover:bg-slate-800/50 transition-colors">
-            <td class="p-3 text-slate-400 font-mono text-xs">
-                ${escapeHtml(String(queueID))}
-            </td>
-
-            <td class="p-3">
-                <div class="font-medium text-slate-200">${escapeHtml(userInfo.name || '—')}</div>
-                <div class="text-xs text-slate-500 font-mono">${escapeHtml(email || partnerID || '—')}</div>
-                <div class="text-xs text-slate-600 font-mono">${escapeHtml(partnerID || userInfo.uniqueID || '')}</div>
-            </td>
-
-            <td class="p-3 text-xs text-slate-400">
-                <div>${escapeHtml(userInfo.accountName || r.AccountName || '—')}</div>
-                <div class="font-mono">${escapeHtml(userInfo.accountNumber || r.AccountNumber || '—')}</div>
-                <div class="text-slate-500">${escapeHtml(userInfo.bankName || r.BankName || '—')}</div>
-            </td>
-
-            <td class="p-3 font-bold text-emerald-400 text-right font-mono">
-                ${fmtNaira(amount)}
-            </td>
-
-            <td class="p-3 text-center">
-                <select onchange="updateSettlementStatus('${escapeHtml(email)}', this.value)"
-                    class="text-xs bg-slate-900 border border-slate-800 rounded p-1 text-white focus:outline-none focus:border-emerald-500">
-                    <option value="Pending"       ${status === 'Pending' ? 'selected' : ''}>Pending</option>
-                    <option value="Approved"      ${status === 'Approved' ? 'selected' : ''}>Approved</option>
-                    <option value="Denied"        ${status === 'Denied' ? 'selected' : ''}>Denied</option>
-                    <option value="Investigating" ${status === 'Investigating' ? 'selected' : ''}>Investigating</option>
-                </select>
-            </td>
-
-            <td class="p-3 text-center">
-                <button onclick="openEditModal(
-                    '${escapeHtml(email)}',
-                    ${JSON.stringify(r).replace(/"/g, '&quot;')},
-                    'career-settlements')"
-                    class="text-xs px-4 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-white transition-colors">
-                    Edit
-                </button>
-            </td>
-        </tr>`;
-            }).join('');
-            initViewWithPagination('career-settlements');
         }
 
         async function initializeModule_career_users() {
@@ -2976,77 +2645,210 @@
             CACHED_CAREER_USERS = res.data;
             tbody.innerHTML = data.map(u => `
     <tr>
-      <td class="p-3 text-slate-400 font-mono text-xs">${escapeHtml(u.UniqueID || u.uniqueID || '—')}</td>
-      <td class="p-3">
-        <div class="font-medium text-slate-300">${escapeHtml(u.Name || u.name || '—')}</div>
-        <div class="text-[10px] text-slate-500 font-mono">${escapeHtml(u.Email || u.email || '—')}</div>
-      </td>
-      <td class="p-3 text-xs">
-        <div class="text-slate-300">${escapeHtml(u.AccountName || u.accountName || '—')}</div>
-        <div class="text-slate-400">${escapeHtml(u.AccountNumber || u.accountNumber || '—')}</div>
-        <div class="text-slate-500 italic">${escapeHtml(u.BankName || u.bankName || '—')}</div>
-      </td>
-      <td class="p-3 text-center text-slate-300 font-bold">Level ${escapeHtml(String(u.Level || u.level || 1))}</td>
-      <td class="p-3 text-center">${badge((u.Approved === true || u.Approved === 'TRUE') ? 'Approved' : 'Pending')}</td>
-      <td class="p-3 text-center">
-        <button onclick="openEditModal('${escapeHtml(u.UniqueID || u.uniqueID || '')}', ${JSON.stringify(u).replace(/"/g, '&quot;')}, 'career-users')"
-          style="font-size:11px;padding:4px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">Edit</button>
-      </td>
+        <td class="p-3 text-slate-400 font-mono text-xs">${escapeHtml(u.UniqueID || u.uniqueID || '—')}</td>
+        <td class="p-3">
+            <div class="font-medium text-slate-300">${escapeHtml(u.Name || u.name || '—')}</div>
+            <div class="text-[10px] text-slate-500 font-mono">${escapeHtml(u.Email || u.email || '—')}</div>
+        </td>
+        <td class="p-3 text-xs">
+            <div class="text-slate-300">${escapeHtml(u.AccountName || '—')}</div>
+            <div class="text-slate-400">${escapeHtml(u.AccountNumber || '—')}</div>
+            <div class="text-slate-500 italic">${escapeHtml(u.BankName || '—')}</div>
+        </td>
+        <td class="p-3 text-center text-slate-300 font-bold">Level ${escapeHtml(String(u.Level || u.level || 1))}</td>
+        <td class="p-3 text-center">${badge((u.Approved === true || u.Approved === 'TRUE') ? 'Approved' : 'Pending')}</td>
+        <td class="p-3 text-center">
+            <select onchange="handleUserAction('${escapeHtml(u.UniqueID || u.uniqueID || '')}', this.value, ${JSON.stringify(u).replace(/"/g, '&quot;')})"
+                class="bg-slate-900 border border-slate-700 text-xs rounded px-3 py-1 text-white focus:outline-none">
+                <option value="">Action...</option>
+                <option value="edit">✏️ Edit</option>
+                <option value="email">✉️ Email</option>
+                <option value="message">💬 Message</option>
+            </select>
+        </td>
     </tr>
-  `).join('');
+`).join('');
             showToast(`Loaded ${data.length} users`, 'success');
             updateKPIs();
-            initViewWithPagination('career-users');
+        }
+
+        function handleUserAction(userId, action, userData) {
+            if (!action) return;
+
+            if (action === 'edit') {
+                openEditModal(userId, userData, 'career-users');
+            }
+            else if (action === 'email') {
+                openSendClientEmailModal(userData.Email || userData.email, userData.Name || userData.name);
+            }
+            else if (action === 'message') {
+                // Reuse existing admin message function
+                const subject = prompt("Enter message subject:", "Important Notice");
+                if (!subject) return;
+                const body = prompt("Enter message body:");
+                if (!body) return;
+
+                executeSecureBridgeCall("career", "send-message-admin", {
+                    recipientEmail: userData.Email || userData.email,
+                    subject: subject,
+                    message: body
+                }).then(res => {
+                    showToast(res.success ? "Message sent successfully" : "Failed to send message",
+                        res.success ? "success" : "error");
+                });
+            }
         }
 
         async function initializeModule_career_earnings() {
             const tbodyId = 'careerEarningsTableBody';
             showTableSkeleton(tbodyId, 7);
-
             const res = await executeSecureBridgeCall('career', 'career-earnings', {});
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
-
             if (!res.success || !res.data || !res.data.length) {
-                tbody.innerHTML = emptyRow('No earnings records found.', 7);
-                updateKPIs(); // still try to update cards
+                tbody.innerHTML = emptyRow('No earnings found.', 7);
                 return;
             }
-
             const data = filterTableByState(res.data, UNI_FILTER_STATE);
-
-            // Build table with EarningsNaira moved to Status position (more prominent)
             tbody.innerHTML = data.map(r => `
-        <tr>
-            <td class="p-3 text-slate-500">${fmtDate(r.Timestamp || r.Date || r.date)}</td>
-            <td class="p-3 text-slate-400 font-mono">${escapeHtml(r.PartnerID || r['Partner ID'] || r.partnerID || '—')}</td>
-            <td class="p-3">${escapeHtml(r.ClientName || r['Client Name'] || r.clientName || '—')}</td>
-            <td class="p-3 text-slate-200">${escapeHtml(r.Service || r.service || '—')}</td>
-            <!-- EarningsNaira moved here (was Status) -->
-            <td class="p-3 font-bold text-emerald-400 text-right">
-                ${fmtNaira(r.Paid || r.paid || r["Paid"] || 0)}
-            </td>
-            <!-- EarningsNaira moved here (was Status) -->
-            <td class="p-3 font-bold text-emerald-400 text-right">
-                ${fmtNaira(r.EarningsNaira || r.AmountToCharge || r.amount || 0)}
-            </td>
-            
-            <td class="p-3 text-center">${badge(r.Status || r.status || 'Pending')}</td>
-            
-            <td class="p-3 text-center">
-                <button onclick="openEditModal('${escapeHtml(r.PartnerID || r.Date || '')}', 
-                    ${JSON.stringify(r).replace(/"/g, '&quot;')}, 'career-earnings')"
-                    class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">
-                    Edit
-                </button>
-            </td>
-        </tr>
-    `).join('');
-
+    <tr>
+        <td class="p-3 text-slate-500">${fmtDate(r.Date || r.date)}</td>
+        <td class="p-3 text-center">${badge(r.PartnerID || r['Partner ID'] || r['PartnerID']) || '—'}
+            ${badge(r.PartnerEmail || r['Partner Email'] || r['PartnerEmail']) || '—'}</td>
+        <td class="p-3 text-slate-400 font-mono">${fmtNaira(r.Paid || r['Paid'] || '—')}
+            ${badge(r['Payment Type'] || '—')}</td> 
+        <td class="p-3 font-bold text-emerald-400">${fmtNaira(r.EarningsNaira || r['EarningsNaira'] || 0)}</td>
+        <td class="p-3 text-center">${badge(r['Paid Date'] || '')}</td>
+        <td class="p-3 text-slate-400">${escapeHtml(r.Service || r.service || '—')}</td>
+        <td class="p-3 text-center">${badge(r['Vet Status'] || 'Pending')}</td>
+        <td class="p-3 text-center">${badge(r.PayoutStatus || r['Payout Status'] || 'Pending')}</td>
+        <td class="p-3 text-center">
+            <select onchange="handleEarningsAction('${escapeHtml(r.PartnerID || r.Date || '')}', this.value, ${JSON.stringify(r).replace(/"/g, '&quot;')})"
+                class="bg-slate-900 border border-slate-700 text-xs rounded px-3 py-1 text-white focus:outline-none">
+                <option value="">Action...</option>
+                <option value="edit">✏️ Edit</option>
+                <option value="email">✉️ Email</option>
+                <option value="message">💬 Message</option>
+            </select>
+        </td>
+    </tr>
+`).join('');
             updateKPIs();
-            initViewWithPagination('career-earnings');
         }
 
+        function handleEarningsAction(recordId, action, recordData) {
+            if (!action) return;
+
+            if (action === 'edit') {
+                openEditModal(recordId, recordData, 'career-earnings');
+            }
+            else if (action === 'email') {
+                openSendClientEmailModal(recordData.Email || recordData.partnerEmail || "",
+                    recordData.ClientName || recordData.clientName || "Partner");
+            }
+            else if (action === 'message') {
+                const subject = prompt("Enter message subject:", "Earnings Update");
+                if (!subject) return;
+                const body = prompt("Enter message body:");
+                if (!body) return;
+
+                executeSecureBridgeCall("career", "send-message-admin", {
+                    recipientEmail: recordData.Email || recordData.partnerEmail || recordData['Partner Email'],
+                    subject: subject,
+                    message: body
+                }).then(res => {
+                    showToast(res.success ? "Message sent successfully" : "Failed to send",
+                        res.success ? "success" : "error");
+                });
+            }
+        }
+
+        async function initializeModule_career_settlements() {
+            const tbodyId = 'careerSettlementsTableBody';
+            showTableSkeleton(tbodyId, 6);
+            const [settRes, usersRes] = await Promise.all([
+                executeSecureBridgeCall('career', 'career-settlements', {}),
+                executeSecureBridgeCall('career', 'career-users', {})
+            ]);
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+
+            const userBalanceMap = {};
+            if (usersRes.success && usersRes.data) {
+                usersRes.data.forEach(u => {
+                    userBalanceMap[String(u.Email || u.email || '').toLowerCase()] = parseFloat(u.CurrentBalance || u.currentBalance || 0);
+                });
+            }
+
+            if (!settRes.success || !settRes.data || !settRes.data.length) {
+                tbody.innerHTML = emptyRow('No settlements found.', 6);
+                return;
+            }
+            const data = filterTableByState(settRes.data, UNI_FILTER_STATE);
+            tbody.innerHTML = data.map(r => {
+                const email = String(r.Email || r.email || '').toLowerCase();
+                const name = r.Name || r.name || '—';
+                const balance = parseFloat(r.AmountNaira || r.amountNaira || 0);
+
+                return `
+    <tr>
+        <td class="p-3 text-slate-500 font-mono text-xs">${fmtDate(r.Timestamp || r.Date || r.date)}</td>
+        
+        <td class="p-3">
+            <div class="font-medium">${escapeHtml(name || r.Name || r['PartnerName'] || '—')}</div>
+            <div class="text-xs text-slate-400 font-mono">${escapeHtml(email)}</div>
+            <div class="text-[10px] text-slate-500">ID: ${escapeHtml(r.UniqueID || r.uniqueID || r.PartnerID || '—')}</div>
+        </td>
+        
+        <td class="p-3 text-xs">
+            <div>${escapeHtml(r.BankName || r['BankName'] || '—')}</div>
+            <div class="font-mono">${escapeHtml(r.AccountNumber || '—')}</div>
+            <div class="text-slate-400">${escapeHtml(r.AccountName || '—')}</div>
+        </td>
+        
+        <td class="p-3 text-right font-bold text-emerald-400">${fmtNaira(r['AmountNaira'])}</td>
+        <td class="p-3 text-slate-400">${fmtDate(r.Status || r['Status'])}</td>
+        <td class="p-3 text-slate-400">${fmtDate(r.PaidDate || r['PaidDate'] || r.paidDate)}</td>
+        <td class="p-3 text-center font-mono">${escapeHtml(r.SuccessfulJobs || r.successfulJobs || r['SuccessfulJobs'] || '—')}</td>
+        
+        <td class="p-3 text-center">
+            <select onchange="handleSettlementAction('${escapeHtml(email)}', this.value, ${JSON.stringify(r).replace(/"/g, '&quot;')})"
+                class="bg-slate-900 border border-slate-700 text-xs rounded px-3 py-1 text-white focus:outline-none">
+                <option value="">Action...</option>
+                <option value="edit">✏️ Edit</option>
+                <option value="email">✉️ Email</option>
+                <option value="message">💬 Message</option>
+            </select>
+        </td>
+    </tr>`;
+            }).join('');
+        }
+
+        function handleSettlementAction(email, action, recordData) {
+            if (!action) return;
+
+            if (action === 'edit') {
+                openEditModal(email, recordData, 'career-settlements');
+            }
+            else if (action === 'email') {
+                openSendClientEmailModal(email, recordData.Name || recordData.name || "Partner");
+            }
+            else if (action === 'message') {
+                const subject = prompt("Enter message subject:", "Settlement Update");
+                if (!subject) return;
+                const body = prompt("Enter message body:");
+                if (!body) return;
+
+                executeSecureBridgeCall("career", "send-message-admin", {
+                    recipientEmail: email,
+                    subject: subject,
+                    message: body
+                }).then(res => {
+                    showToast(res.success ? "Message sent successfully" : "Failed to send message",
+                        res.success ? "success" : "error");
+                });
+            }
+        }
 
         function updateSettlementStatus(email, newStatus) {
             executeSecureBridgeCall("career", "update-settlement-status", { email, status: newStatus }).then(res => {
@@ -3092,11 +2894,12 @@
         <thead class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
   <tr>
     <th class="p-3">Date</th>
-    <th class="p-3">Partner ID</th>
+    <th class="p-3">Unique ID</th>
     <th class="p-3">Email</th>
-    <th class="p-3">Request Type</th>
-    <th class="p-3">Parters Message</th>
-    <th class="p-3">Approval Status</th>
+    <th class="p-3">Request</th>
+    <th class="p-3">Message</th>
+    <th class="p-3">Status</th>
+    <th class="p-3">Admin Note</th>
     <th class="p-3">Action</th>
   </tr>
 </thead>
@@ -3132,15 +2935,11 @@
         }
 
         function approveElevation(email) {
-            if (!confirm(`Approve elevation for ${email}?`)) return;
-
-            executeSecureBridgeCall("career", "approve-elevation", {
-                email: email
-            }).then(res => {
-                showToast(res.success ? "User approved successfully" : res.message,
-                    res.success ? "success" : "error");
+            executeSecureBridgeCall("career", "approve-elevation", { email }).then(res => {
+                showToast(res.success ? "Elevation approved." : (res.error || "Approval failed."), res.success ? "success" : "error");
                 if (res.success) {
-                    initializeModule_career_elevation();   // refresh table
+                    initializeModule_career_elevation();
+                    initializeModule_career_users();
                 }
             });
         }
@@ -3227,7 +3026,6 @@
       </td>
     </tr>
   `).join("");
-            initViewWithPagination('assessment-students');
         }
 
         async function loadCertificateData() {
@@ -3562,7 +3360,6 @@
       </td>
     </tr>
   `).join('');
-            initViewWithPagination('assessment-applications');
         }
 
         async function loadAcademicSupportMessages() {
@@ -3762,7 +3559,6 @@
 
             let res = await executeSecureBridgeCall('career', 'client-submitted', {});
 
-            // Fallback
             if (!res.success || !res.data || res.data.length === 0) {
                 res = await executeSecureBridgeCall('career', 'career-earnings', {});
             }
@@ -3777,69 +3573,84 @@
 
             tbody.innerHTML = res.data.map((p, index) => {
                 const rowDataStr = JSON.stringify(p).replace(/"/g, '&quot;');
-                const trackingCode = p.TrackingCode || p.trackingCode || p['Tracking Code'] ||
-                    p.Status === 'Approved' || p.status === 'Approved' ||
-                    (p.TrackingCode && p.TrackingCode.includes('VCH-'));
 
+                const trackingFlag = String(p.OnboardTrackingCode || '').trim();
+                const trackingCode = trackingFlag || p.TrackingCode || p.trackingCode || p['Tracking Code'] || '';
                 const isOnboarded = !!trackingCode;
 
-                // Extract Client Name & Email with multiple possible keys
                 const clientName = p.ClientName || p.clientName || p['Client Name'] || p.Name || '—';
-                const clientEmail = p.ClientEmail || p.email || p['Client Email'] || p.Email || p['Email Address'] || '—';
-                const phone = p.Phone || p['Phone'] || '';
-                const partnerID = p.PartnerID || p.partnerID || p['Partner ID'] || '—';
-                const service = p.Service || p.service || p['Engaged Service'] || p.EngagedService || '—';
-                const amount = parseFloat(p.AmountToCharge || p.Amount || p.amount || 0);
-                const paymentLink = p.PaymentLink || p.paymentLink || p['Payment Matrix Link'] || '';
+                const clientEmail = p.ClientEmail || p.clientEmail || p.Email || '—';
+                const service = p.Service || p.service || p['Engaged Service'] || '—';
+                const amount = parseFloat(p.AmountToCharge || p.Amount || 0);
 
                 return `
-        <tr class="hover:bg-slate-800/60 transition-colors">
-            <td class="p-3 text-slate-500 font-mono text-xs">${fmtDate(p.Timestamp || p.Date || p.date)}</td>
-            
-            <!-- CLIENT INFO: Name + Email -->
-            <td class="p-3">
-                <div class="font-medium text-slate-200">${escapeHtml(clientName)}</div>
-                <div class="text-[10px] text-slate-400 font-mono break-all">${escapeHtml(clientEmail)}</div>
-                <div class="text-[10px] text-slate-400 font-mono break-all">${escapeHtml(phone)}</div>
-            </td>
-            
-            <td class="p-3 text-slate-400 font-mono text-xs">${escapeHtml(partnerID)}</td>
-            <td class="p-3 text-slate-200">${escapeHtml(service)}</td>
-            
-            <td class="p-3">
-                ${paymentLink
-                        ? `<a href="${escapeHtml(paymentLink)}" target="_blank" class="text-blue-400 underline text-xs">View Link</a>`
-                        : '<span class="text-slate-500 text-xs">—</span>'}
-            </td>
-            
-            <td class="p-3 font-bold text-emerald-400 text-right">${fmtNaira(amount)}</td>
-            
-            <td class="p-3 text-center">
-    <div class="flex flex-wrap gap-1 justify-center">
-        <button onclick="openSendClientEmailModal('${escapeHtml(clientEmail)}', '${escapeHtml(clientName)}')" 
-            class="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">
-            ✉ Email
-        </button>
-        
-        <button onclick="generatePaymentLinkFromRow(${index}, ${rowDataStr})" 
-            class="text-xs px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">
-            🔗 Generate Link
-        </button>
-
-        <!-- IMPROVED ONBOARD BUTTON -->
-        <button onclick="${isOnboarded ? '' : `openOnboardToLedgerModal(${rowDataStr})`}" 
-            class="text-xs px-3 py-1 rounded text-white transition-colors
-                ${isOnboarded
-                        ? 'bg-gray-700 cursor-not-allowed'
-                        : 'bg-indigo-600 hover:bg-indigo-500'}"
-            ${isOnboarded ? 'disabled' : ''}>
-            ${isOnboarded ? '✅ Onboarded' : 'Onboard'}
-        </button>
-    </div>
-</td>
-        </tr>`;
+<tr class="hover:bg-slate-800/60 transition-colors">
+    <td class="p-3 text-slate-500 font-mono text-xs">${fmtDate(p.Timestamp || p.Date || p.date)}</td>
+    <td class="p-3">
+        <div class="font-medium text-slate-200">${escapeHtml(clientName)}</div>
+        <div class="text-[10px] text-slate-400 font-mono">${escapeHtml(clientEmail)}</div>
+    </td>
+    <td class="p-3 text-slate-400 font-mono text-xs">${escapeHtml(p.PartnerID || p['Partner ID'] || '—')}</td>
+    <td class="p-3 text-slate-200">${escapeHtml(service)}</td>
+    <td class="p-3">${p.PaymentLink ? `<a href="${escapeHtml(p.PaymentLink)}" target="_blank" class="text-blue-400 text-xs underline">View</a>` : '<span class="text-slate-500">—</span>'}</td>
+    <td class="p-3 font-bold text-emerald-400 text-right">${fmtNaira(amount)}</td>
+    <td class="p-3 text-center">
+        <div class="flex flex-wrap gap-1 justify-center">
+            <button onclick="handleClientProjectAction('edit', ${rowDataStr})" 
+                class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">✏️ Edit</button>
+            <button onclick="handleClientProjectAction('email', ${rowDataStr})" 
+                class="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">✉️ Email</button>
+            <button onclick="handleClientProjectAction('payment', ${rowDataStr})" 
+                class="text-xs px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">🔗 Payment</button>
+            ${isOnboarded ?
+                        `<button disabled class="text-xs px-3 py-1 bg-gray-700 cursor-not-allowed rounded text-gray-400" title="Already onboarded: ${escapeHtml(trackingCode)}">✅ Onboarded</button>` :
+                        `<button onclick="handleClientProjectAction('onboard', ${rowDataStr})" 
+                class="text-xs px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white">🚀 Onboard</button>`}
+        </div>
+    </td>
+</tr>`;
             }).join('');
-            initViewWithPagination('client-submitted');
+        }
+
+        function handleClientProjectAction(action, rowData) {
+            if (!action) return;
+
+            // Safely parse the row data
+            let p;
+            try {
+                p = typeof rowData === 'string' ? JSON.parse(rowData) : rowData;
+            } catch (e) {
+                console.error("Data parse error", e);
+                showToast("Error processing row data", "error");
+                return;
+            }
+
+            if (action === 'edit') {
+                openEditModal(
+                    p.PartnerID || p.partnerID || p.Timestamp || '',
+                    p,
+                    'client-submitted'
+                );
+            }
+            else if (action === 'email') {
+                openSendClientEmailModal(
+                    p.ClientEmail || p.clientEmail || p.Email || "",
+                    p.ClientName || p.clientName || p.Name || "Client"
+                );
+            }
+            else if (action === 'payment') {
+                generatePaymentLinkFromRow(0, p);
+            }
+            else if (action === 'onboard') {
+                const trackingFlag = String(p.OnboardTrackingCode || '').trim();
+                if (trackingFlag || p.TrackingCode || p.trackingCode || p['Tracking Code']) {
+                    showToast("This project is already onboarded.", "info");
+                    return;
+                }
+                openOnboardToLedgerModal(p);
+            }
+
+
         }
 
         async function generatePaymentLinkFromRow(rowIndex, rowData) {
@@ -3870,14 +3681,6 @@
             }
         }
 
-        function handleClientProjectAction(action, projectId, projectData) {
-            if (action === 'edit') {
-                openEditModal(projectId, projectData || {}, 'client-submitted');
-            } else if (action === 'onboard') {
-                openClientOnboardingPortalModal(projectId, (projectData && projectData.Service) || '');
-            }
-        }
-
         async function loadProductionFulfillment() {
             const tbodyId = 'productionFulfillmentTableBody';
             showTableSkeleton(tbodyId, 15);
@@ -3888,29 +3691,56 @@
                 tbody.innerHTML = emptyRow('No fulfillment records.', 15);
                 return;
             }
-            tbody.innerHTML = res.data.map(f => `
-    <tr>
-      <td class="p-3 text-slate-500">${fmtDate(f.Timestamp || f.timestamp)}</td>
-      <td class="p-3 font-mono text-slate-400">${escapeHtml(f.TrackingCode || f['Tracking Code'] || '—')}</td>
-      <td class="p-3 font-mono text-slate-500">${escapeHtml(f.TxRef || f['TxRef'] || '—')}</td>
-      <td class="p-3 text-slate-300">${escapeHtml(f.ClientName || f['Client Name'] || '—')}</td>
-      <td class="p-3 text-slate-400 font-mono">${escapeHtml(f.ClientEmail || f['Client Email'] || '—')}</td>
-      <td class="p-3 text-slate-400 font-mono">${escapeHtml(f.ClientPhone || f['Client Phone'] || '—')}</td>
-      <td class="p-3 text-slate-200">${escapeHtml(f.Service || f['Service Item'] || '—')}</td>
-      <td class="p-3 font-bold text-emerald-400">${fmtNaira(f.Amount || 0)}</td>
-      <td class="p-3 text-slate-400 font-mono">${escapeHtml(f.PartnerID || f['Partner ID'] || '—')}</td>
-      <td class="p-3 text-slate-400 font-mono">${escapeHtml(f.PartnerEmail || f['Partner Email'] || '—')}</td>
-      <td class="p-3 text-center">${badge(f.Status || f.FulfillmentStatus || 'In Progress')}</td>
-      <td class="p-3 text-slate-400 text-xs max-w-xs truncate">${escapeHtml((f.ProgressNotes || f['Progress Notes'] || '').substring(0, 80))}</td>
-      <td class="p-3 text-slate-500">${fmtDate(f.LastUpdated || f['Last Updated'])}</td>
-      <td class="p-3 text-slate-400">${escapeHtml((f.AdminMessages || f['Admin Messages'] || '').toString().substring(0, 30))}</td>
-      <td class="p-3 text-right">
-        <button onclick="openEditModal('${escapeHtml(f.TrackingCode || f['Tracking Code'] || '')}', ${JSON.stringify(f).replace(/"/g, '&quot;')}, 'client-onboarded')"
-          style="font-size:11px;padding:3px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">Edit</button>
-      </td>
-    </tr>
-  `).join('');
-            initViewWithPagination('client-onboarded');
+            tbody.innerHTML = res.data.map(job => {
+                const trackingCode = escapeHtml(job.TrackingCode || job.trackingCode || job.Tracking || '—');
+                const txRef = escapeHtml(job.TxRef || job.tx_ref || job.Txref || '—');
+                const clientName = escapeHtml(job.ClientName || job.clientName || job['Client Name'] || '—');
+                const clientEmail = escapeHtml(job.ClientEmail || job.clientEmail || '—');
+                const service = escapeHtml(job.Service || job.service || '—');
+                const amount = parseFloat(job.Amount || job.amount || job.AmountCharged || 0);
+                const paid = parseFloat(job.Paid || job.paid || 0);
+                const status = escapeHtml(job.Status || job.status || 'Pending');
+                const progress = escapeHtml(job.ProgressNotes || job.progressNotes || job['Progress Notes'] || '—');
+                const partnerID = escapeHtml(job.PartnerID || job.partnerID || '—');
+                const partnerEmail = escapeHtml(job.PartnerEmail || job.partnerEmail || '—');
+                const timestamp = fmtDate(job.Timestamp || job.Date || job.date);
+
+                return `
+        <tr>
+            <td class="p-3 text-slate-500">${timestamp}</td>
+            <td class="p-3 font-mono text-emerald-400">${trackingCode}</td>
+            <td class="p-3 font-mono text-slate-400">${txRef}</td>
+            <td class="p-3">${clientName}</td>
+            <td class="p-3 font-mono text-xs">${clientEmail}</td>
+            <td class="p-3">${service}</td>
+            <td class="p-3 font-bold text-emerald-400 text-right">${fmtNaira(amount)}</td>
+            <td class="p-3">${badge(job.PaymentType || 'Digital')}</td>
+            <td class="p-3 font-mono">${partnerID}</td>
+            <td class="p-3 font-mono text-xs">${partnerEmail}</td>
+            <td class="p-3 text-center">${badge(status)}</td>
+            <td class="p-3 text-xs max-w-xs truncate">${progress}</td>
+            <td class="p-3 text-center">
+                <button onclick="openEditModal('${trackingCode}', ${JSON.stringify(job).replace(/"/g, '&quot;')}, 'client-onboarded')"
+                    class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">
+                    ✏️ Edit
+                </button>
+            </td>
+        </tr>`;
+            }).join('');
+        }
+
+        function handleActiveJobAction(trackingCode, action, recordData) {
+            if (!action) return;
+
+            if (action === 'edit') {
+                openEditModal(trackingCode, recordData, 'client-onboarded');
+            }
+            else if (action === 'email') {
+                openSendClientEmailModal(
+                    recordData.ClientEmail || recordData.clientEmail || "",
+                    recordData.ClientName || recordData.clientName || "Client"
+                );
+            }
         }
 
         function openClientOnboardingPortalModal(projectId, serviceName) {
@@ -3928,74 +3758,6 @@
             if (modal) modal.classList.add("hidden");
             const form = document.getElementById("clientOnboardingModalForm");
             if (form) form.reset();
-        }
-
-        function openAddProjectRowModal() {
-            const modal = document.getElementById('modalAddProjectRow');
-            if (!modal) {
-                showToast("Add Project Modal not found in DOM", "error");
-                return;
-            }
-
-            // Clear previous values
-            document.getElementById('newRowPartnerID').value = '';
-            document.getElementById('newRowClientName').value = '';
-            document.getElementById('newRowPhone').value = '';
-            document.getElementById('newRowEmail').value = '';
-            document.getElementById('newRowLocation').value = '';
-            document.getElementById('newRowService').value = '';
-            document.getElementById('newRowAmountCharge').value = '';
-            document.getElementById('newRowUrgency').value = 'Normal';
-            document.getElementById('newRowComments').value = '';
-
-            modal.classList.remove('hidden');
-        }
-
-        function closeAddProjectRowModal() {
-            const modal = document.getElementById('modalAddProjectRow');
-            if (modal) modal.classList.add('hidden');
-        }
-
-        async function submitNewProjectRow(event) {
-            event.preventDefault();
-
-            const payload = {
-                partnerID: document.getElementById('newRowPartnerID').value.trim(),
-                clientName: document.getElementById('newRowClientName').value.trim(),
-                phone: document.getElementById('newRowPhone').value.trim(),
-                email: document.getElementById('newRowEmail').value.trim(),
-                location: document.getElementById('newRowLocation').value.trim(),
-                service: document.getElementById('newRowService').value.trim(),
-                amount: parseFloat(document.getElementById('newRowAmountCharge').value) || 0,
-                urgency: document.getElementById('newRowUrgency').value,
-                comments: document.getElementById('newRowComments').value.trim()
-            };
-
-            if (!payload.partnerID || !payload.clientName || !payload.service || payload.amount <= 0) {
-                showToast("Partner ID, Client Name, Service and Amount are required", "error");
-                return;
-            }
-
-            const btn = event.target.querySelector('button[type="submit"]');
-            if (btn) {
-                btn.disabled = true;
-                btn.textContent = "Adding Row...";
-            }
-
-            const res = await executeSecureBridgeCall('career', 'add-datasheet-row', payload);
-
-            if (btn) {
-                btn.disabled = false;
-                btn.textContent = "Add Row to DataSheet";
-            }
-
-            if (res.success) {
-                showToast("✅ New project row added successfully!", "success");
-                closeAddProjectRowModal();
-                loadClientSubmittedProjects(); // Refresh table
-            } else {
-                showToast(res.message || "Failed to add row", "error");
-            }
         }
 
         async function submitClientOnboardingPortalData(event) {
@@ -4081,7 +3843,6 @@
             </td>
         </tr>`;
             }).join('');
-            initViewWithPagination('leads-matrix');
         }
         function openLeadEmailModal(clientEmail, clientName) {
             const modal = document.getElementById('modalSendClientEmail');
@@ -4218,7 +3979,6 @@
           style="font-size:11px;padding:3px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">Edit</button>
       </td>
     </tr>`).join('');
-            initViewWithPagination('career-complaints');
         }
 
         async function submitTimedQueueBatchRelease(event) {
@@ -4266,20 +4026,6 @@
   `).join("");
         }
 
-        // Unified View Initializer with Pagination
-        function initViewWithPagination(viewName, initializerFn) {
-            // Store the current view for pagination
-            window.currentView = viewName;
-
-            // Load first page
-            loadTableData(viewName, 1);
-
-            // Optional: If you have custom initializer logic, run it too
-            if (typeof initializerFn === 'function') {
-                initializerFn();
-            }
-        }
-
         function openEditModal(recordId, recordData, recordType) {
             const modal = document.getElementById('edit-modal');
             const form = document.getElementById('edit-form');
@@ -4299,7 +4045,7 @@
             const schema = EDIT_MODAL_FORM_SCHEMAS[recordType] || [];
             const usedKeys = new Set();
 
-            // 1. First render fields from predefined schema (with better prefill)
+            // 1. Render fields from predefined schema
             if (schema.length > 0) {
                 schema.forEach(field => {
                     usedKeys.add(field.key);
@@ -4307,22 +4053,22 @@
                 });
             }
 
-            // 2. Then automatically add ALL other fields from the record (dynamic)
-            Object.keys(rec).forEach(key => {
-                if (usedKeys.has(key)) return; // Skip already added from schema
-
-                const fieldConfig = {
-                    name: key.replace(/([A-Z])/g, ' $1').trim(), // Make readable
-                    key: key,
-                    type: getFieldType(key, rec[key]),
-                    required: false
-                };
-                createFormField(fieldsContainer, fieldConfig, rec);
-            });
+            // 2. Only auto-add extra fields for record types WITHOUT a defined schema
+            if (schema.length === 0) {
+                Object.keys(rec).forEach(key => {
+                    if (usedKeys.has(key)) return;
+                    const fieldConfig = {
+                        name: key.replace(/([A-Z])/g, ' $1').trim(),
+                        key: key,
+                        type: getFieldType(key, rec[key]),
+                        required: false
+                    };
+                    createFormField(fieldsContainer, fieldConfig, rec);
+                });
+            }
 
             modal.classList.remove('hidden');
         }
-
         // Helper: Create individual form field
         function createFormField(container, field, rec) {
             const wrapper = document.createElement('div');
@@ -4543,57 +4289,40 @@
                 Object.assign(EDIT_MODAL_FORM_SCHEMAS, EDIT_MODAL_EXTRA_SCHEMAS);
             }
 
-            // Replace the entire edit form submit listener (around the DOMContentLoaded section)
             const editForm = document.getElementById('edit-form');
             if (editForm) {
                 editForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
-
-                    const recordId = document.getElementById('edit-record-id').value.trim();
+                    const recordId = document.getElementById('edit-record-id').value;
                     const recordType = e.target.dataset.recordType;
                     const formData = new FormData(e.target);
                     const updates = Object.fromEntries(formData);
 
-                    if (!recordId || !recordType) {
-                        showToast("Missing record ID or type", "error");
-                        return;
-                    }
-                    const btn = e.target.querySelector('button[type="submit"]');
-                    if (btn) {
-                        btn.disabled = true;
-                        btn.textContent = "Saving...";
-                    }
-
-                    // Use correct system based on recordType
-                    const system = recordType.startsWith('assessment') ? 'assessment' :
-                        recordType.startsWith('leads') ? 'leads' : 'career';
-
-                    const payload = {
-                        recordType: recordType,
-                        recordId: recordId,
-                        updates: updates
+                    // Map recordType to the correct system and action
+                    const systemMap = {
+                        'career-users': 'career', 'career-earnings': 'career',
+                        'career-settlements': 'career', 'career-complaints': 'career',
+                        'career-elevation': 'career', 'assessment-students': 'assessment',
+                        'assessment-courses': 'assessment', 'assessment-questions': 'assessment',
+                        'assessment-certificates': 'assessment', 'assessment-applications': 'assessment',
+                        'client-submitted': 'career', 'client-onboarded': 'career',
+                        'leads-matrix': 'leads', 'leads-calendar': 'leads'
                     };
+                    const system = systemMap[recordType] || 'admin';
 
-                    console.log(`[Edit Submit] → ${system} | ${recordType} | ID: ${recordId}`, updates);
-
-                    const res = await executeSecureBridgeCall(system, 'update-record', payload);
-
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.textContent = "Save Changes";
-                    }
+                    const res = await executeSecureBridgeCall(system, 'update-record', {
+                        recordId, recordType, updates
+                    });
 
                     if (res.success) {
-                        showToast("✅ Record updated successfully", "success");
+                        showToast('Record updated successfully', 'success');
                         closeEditModal();
-
-                        // Refresh the relevant table
-                        const refreshMap = {
-                            'career-complaints': initializeModule_career_complaints,
+                        const reloadMap = {
                             'career-users': initializeModule_career_users,
                             'career-earnings': initializeModule_career_earnings,
                             'career-settlements': initializeModule_career_settlements,
-                            'career-elevation': initializeModule_career_elevation,   // ← ADD THIS
+                            'career-complaints': initializeModule_career_complaints,
+                            'career-elevation': initializeModule_career_elevation,
                             'assessment-students': initializeModule_assess_submissions,
                             'assessment-courses': initializeModule_assessment_courses,
                             'assessment-questions': initializeModule_assessment_questions,
@@ -4604,12 +4333,10 @@
                             'leads-matrix': loadLeadsMatrix,
                             'leads-calendar': loadCalendarEvents,
                         };
-
-                        const refreshFn = refreshMap[recordType];
-                        if (refreshFn) setTimeout(refreshFn, 300);
+                        const fn = reloadMap[recordType];
+                        if (fn) fn();
                     } else {
-                        showToast(res.message || res.error || "Update failed", "error");
-                        console.error("Update Error:", res);
+                        showToast(res.error || 'Update failed', 'error');
                     }
                 });
             }
