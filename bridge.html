@@ -2460,14 +2460,30 @@
         // Helper to get tbody ID
         function getTbodyId(viewName) {
             const map = {
+                // === CAREER HUB ===
                 'career-users': 'careerUsersTableBody',
                 'career-earnings': 'careerEarningsTableBody',
                 'career-settlements': 'careerSettlementsTableBody',
                 'career-complaints': 'careerComplaintsTableBody',
+                'career-messages': 'careerMessagesLogsTableBody',
+
+                // === ASSESSMENT HUB ===
                 'assessment-students': 'assessmentSubmissionsTableBody',
+                'assessment-certificates': 'certificateRegistryTableBody',
+                'assessment-courses': 'assessmentTracksTableBody',
+                'assessment-questions': 'questionsGridTableBody',
+                'assessment-applications': 'applicationsTableBody',
+                'assessment-messages': 'academicSupportLogsTableBody',
+
+                // === CLIENT HUB ===
                 'client-submitted': 'sourcedIntakeTableBody',
                 'client-onboarded': 'productionFulfillmentTableBody',
-                'leads-matrix': 'crmLeadsGridTableBody'
+
+                // === LEADS HUB ===
+                'leads-matrix': 'crmLeadsGridTableBody',
+                'leads-broadcast': 'timedBroadcastCronTableBody',
+                'leads-drive': 'crmMailDriveReportsTableBody',
+                'leads-calendar': 'calendarEventsTableBody'
             };
             return map[viewName];
         }
@@ -2484,36 +2500,22 @@
             }
 
             switch (viewName) {
-                case 'career-complaints':
-                    tbody.innerHTML = data.map(c => `
-                <tr>
-                    <td class="p-3 text-slate-500">${fmtDate(c.Timestamp)}</td>
-                    <td class="p-3 text-slate-300 font-mono">${escapeHtml(c.Email || '—')}</td>
-                    <td class="p-3 text-slate-200">${escapeHtml((c.Subject || '').substring(0, 50))}</td>
-                    <td class="p-3 text-slate-400">${escapeHtml((c.Message || '').substring(0, 60))}</td>
-                    <td class="p-3 text-center">${badge(c.Status || 'Open')}</td>
-                    <td class="p-3 text-slate-400">${escapeHtml((c.AdminReply || '—').substring(0, 40))}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="openEditModal('${escapeHtml(c.Email || '')}', ${JSON.stringify(c).replace(/"/g, '&quot;')}, 'career-complaints')"
-                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
-                    </td>
-                </tr>
-            `).join('');
-                    break;
 
+                // ==================== CAREER HUB ====================
                 case 'career-users':
-                    tbody.innerHTML = data.map(u => `
+                    html = data.map(u => `
                 <tr>
-                    <td class="p-3 text-slate-400 font-mono text-xs">${escapeHtml(u.UniqueID || '—')}</td>
+                    <td class="p-3 text-slate-400 font-mono text-xs">${escapeHtml(u.UniqueID || u.uniqueID || '—')}</td>
                     <td class="p-3">
-                        <div class="font-medium text-slate-300">${escapeHtml(u.Name || '—')}</div>
-                        <div class="text-[10px] text-slate-500 font-mono">${escapeHtml(u.Email || '—')}</div>
+                        <div class="font-medium text-slate-300">${escapeHtml(u.Name || u.name || '—')}</div>
+                        <div class="text-[10px] text-slate-500 font-mono">${escapeHtml(u.Email || u.email || '—')}</div>
                     </td>
                     <td class="p-3 text-xs">
                         <div class="text-slate-300">${escapeHtml(u.AccountName || '—')}</div>
                         <div class="text-slate-400">${escapeHtml(u.AccountNumber || '—')}</div>
+                        <div class="text-slate-500">${escapeHtml(u.BankName || '—')}</div>
                     </td>
-                    <td class="p-3 text-center">Level ${escapeHtml(u.Level || 1)}</td>
+                    <td class="p-3 text-center font-bold">Level ${escapeHtml(String(u.Level || 1))}</td>
                     <td class="p-3 text-center">${badge((u.Approved === true || u.Approved === 'TRUE') ? 'Approved' : 'Pending')}</td>
                     <td class="p-3 text-center">
                         <button onclick="openEditModal('${escapeHtml(u.UniqueID || '')}', ${JSON.stringify(u).replace(/"/g, '&quot;')}, 'career-users')"
@@ -2523,8 +2525,270 @@
             `).join('');
                     break;
 
+                case 'career-earnings':
+                    html = data.map(r => `
+                <tr>
+                    <td class="p-3 text-slate-500">${fmtDate(r.Timestamp || r.Date)}</td>
+                    <td class="p-3 font-mono">${escapeHtml(r.PartnerID || '—')}</td>
+                    <td class="p-3">${escapeHtml(r.ClientName || '—')}</td>
+                    <td class="p-3">${escapeHtml(r.Service || '—')}</td>
+                    <td class="p-3 font-bold text-emerald-400 text-right">${fmtNaira(r.AmountToCharge || r.EarningsNaira || 0)}</td>
+                    <td class="p-3 text-center">${badge(r.PayoutStatus || 'Pending')}</td>
+                    <td class="p-3 text-center">${badge(r.Status || 'Pending')}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="openEditModal('${escapeHtml(r.PartnerID || '')}', ${JSON.stringify(r).replace(/"/g, '&quot;')}, 'career-earnings')"
+                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
+                    </td>
+                </tr>
+            `).join('');
+                    break;
+
+                case 'career-settlements':
+                    html = data.map(r => `
+                <tr>
+                    <td class="p-3 font-mono text-xs">${escapeHtml(r.QueueID || r.Timestamp || '—')}</td>
+                    <td class="p-3">${escapeHtml(r.Email || '—')}</td>
+                    <td class="p-3 text-xs">
+                        <div>${escapeHtml(r.AccountName || '—')}</div>
+                        <div class="font-mono">${escapeHtml(r.AccountNumber || '—')}</div>
+                    </td>
+                    <td class="p-3 font-bold text-emerald-400 text-right">${fmtNaira(r.AmountNaira || 0)}</td>
+                    <td class="p-3 text-center">${badge(r.Status || 'Pending')}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="openEditModal('${escapeHtml(r.Email || '')}', ${JSON.stringify(r).replace(/"/g, '&quot;')}, 'career-settlements')"
+                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
+                    </td>
+                </tr>
+            `).join('');
+                    break;
+
+                case 'career-complaints':
+                    html = data.map(c => `
+                <tr>
+                    <td class="p-3 text-slate-500">${fmtDate(c.Timestamp)}</td>
+                    <td class="p-3 font-mono">${escapeHtml(c.Email || '—')}</td>
+                    <td class="p-3">${escapeHtml((c.Subject || '').substring(0, 50))}</td>
+                    <td class="p-3 text-slate-400">${escapeHtml((c.Message || '').substring(0, 60))}</td>
+                    <td class="p-3 text-center">${badge(c.Status || 'Open')}</td>
+                    <td class="p-3 text-slate-400">${escapeHtml((c.AdminReply || '').substring(0, 40))}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="openEditModal('${escapeHtml(c.Email || '')}', ${JSON.stringify(c).replace(/"/g, '&quot;')}, 'career-complaints')"
+                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
+                    </td>
+                </tr>
+            `).join('');
+                    break;
+
+                case 'career-messages':
+                    html = data.map(m => `
+                <tr>
+                    <td class="p-3 text-slate-500">${fmtDate(m.Timestamp)}</td>
+                    <td class="p-3 font-mono">${escapeHtml(m.RecipientEmail || m['Recipient Email'] || '—')}</td>
+                    <td class="p-3">${escapeHtml((m.Subject || '').substring(0, 45))}</td>
+                    <td class="p-3 text-center">${badge(m.Status || m.isRead ? 'Read' : 'Sent')}</td>
+                </tr>
+            `).join('');
+                    break;
+
+                // ==================== ASSESSMENT HUB ====================
+                case 'assessment-students':
+                    html = data.map(s => `
+                <tr>
+                    <td class="p-3 font-mono">${escapeHtml(s.submissionId || s.SubmissionID || '—')}</td>
+                    <td class="p-3 font-mono">${escapeHtml(s.userEmail || s.StudentEmail || '—')}</td>
+                    <td class="p-3">${escapeHtml(s.assessmentId || s.trackId || '—')}</td>
+                    <td class="p-3 text-right font-bold">${parseFloat(s.rawScore || 0).toFixed(1)}</td>
+                    <td class="p-3 text-right font-bold">${parseFloat(s.percentageGrade || 0).toFixed(1)}%</td>
+                    <td class="p-3 text-center">${badge(s.status || 'Completed')}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="openEditModal('${escapeHtml(s.submissionId)}', ${JSON.stringify(s).replace(/"/g, '&quot;')}, 'assessment-students')"
+                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
+                    </td>
+                </tr>
+            `).join('');
+                    break;
+
+                case 'assessment-certificates':
+                    html = data.map(c => `
+                <tr>
+                    <td class="p-3 font-mono">${escapeHtml(c.CertCode || '—')}</td>
+                    <td class="p-3">${escapeHtml(c.StudentEmail || '—')}</td>
+                    <td class="p-3">${escapeHtml(c.CourseName || '—')}</td>
+                    <td class="p-3">${fmtDate(c.IssueDate || c.Timestamp)}</td>
+                    <td class="p-3 text-right">${badge(c.Status || 'Pending')}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="openEditModal('${escapeHtml(c.CertCode)}', ${JSON.stringify(c).replace(/"/g, '&quot;')}, 'assessment-certificates')"
+                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
+                    </td>
+                </tr>
+            `).join('');
+                    break;
+
+                case 'assessment-courses':
+                    html = data.map(c => `
+                <tr>
+                    <td class="p-3 font-mono">${escapeHtml(c.CourseID || c['Track Schema ID'] || '—')}</td>
+                    <td class="p-3">${escapeHtml(c.CourseName || c.Title || '—')}</td>
+                    <td class="p-3 text-center">${c.Duration || 0} min</td>
+                    <td class="p-3 text-center font-bold text-amber-400">${c.PassMark || c['PassMark%'] || 70}%</td>
+                    <td class="p-3 text-center">${badge(c.IsActive ? 'Active' : 'Inactive')}</td>
+                </tr>
+            `).join('');
+                    break;
+
+                case 'assessment-questions':
+                    html = data.map(q => `
+                <tr>
+                    <td class="p-3 font-mono">${escapeHtml(q.QuestionID || '—')}</td>
+                    <td class="p-3 font-mono">${escapeHtml(q.CourseID || '—')}</td>
+                    <td class="p-3">${escapeHtml((q.QuestionText || q.Question || '').substring(0, 65))}</td>
+                    <td class="p-3 text-xs font-mono">${escapeHtml(q.OptionA)} | ${escapeHtml(q.OptionB)} | ${escapeHtml(q.OptionC)} | ${escapeHtml(q.OptionD)}</td>
+                    <td class="p-3 text-center font-bold text-emerald-400">${escapeHtml(q.CorrectAnswer || '—')}</td>
+                    <td class="p-3 text-center font-mono">${q.Points || 1}</td>
+                </tr>
+            `).join('');
+                    break;
+
+                case 'assessment-applications':
+                    html = data.map(a => `
+                <tr>
+                    <td class="p-3">${fmtDate(a.Timestamp)}</td>
+                    <td class="p-3 font-mono">${escapeHtml(a.ApplicationID || '—')}</td>
+                    <td class="p-3">${escapeHtml(a.StudentEmail || '—')}</td>
+                    <td class="p-3 font-mono">${escapeHtml(a.CourseID || '—')}</td>
+                    <td class="p-3">${escapeHtml(a.CourseName || '—')}</td>
+                    <td class="p-3 text-center">${badge(a.Status || 'Pending')}</td>
+                    <td class="p-3 text-slate-400">${escapeHtml((a.Notes || '').substring(0, 40))}</td>
+                    <td class="p-3 text-center">${badge(a.PaymentGenerated ? 'Yes' : 'No')}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="openEditModal('${escapeHtml(a.ApplicationID)}', ${JSON.stringify(a).replace(/"/g, '&quot;')}, 'assessment-applications')"
+                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
+                    </td>
+                </tr>
+            `).join('');
+                    break;
+
+                case 'assessment-messages':
+                    html = data.map(m => `
+                <tr>
+                    <td class="p-3">${fmtDate(m.Timestamp)}</td>
+                    <td class="p-3 font-mono">${escapeHtml(m.RecipientEmail || '—')}</td>
+                    <td class="p-3 font-mono">${escapeHtml(m.FromEmail || '—')}</td>
+                    <td class="p-3">${escapeHtml((m.Subject || '').substring(0, 50))}</td>
+                    <td class="p-3 text-center">${badge(m.Priority || 'Standard')}</td>
+                </tr>
+            `).join('');
+                    break;
+
+                // ==================== CLIENT HUB ====================
+                case 'client-submitted':
+                    html = data.map(p => `
+                <tr>
+                    <td class="p-3">${fmtDate(p.Timestamp)}</td>
+                    <td class="p-3">
+                        <div>${escapeHtml(p.ClientName || '—')}</div>
+                        <div class="text-xs text-slate-500">${escapeHtml(p.ClientEmail || '—')}</div>
+                    </td>
+                    <td class="p-3 font-mono">${escapeHtml(p.PartnerID || '—')}</td>
+                    <td class="p-3">${escapeHtml(p.Service || '—')}</td>
+                    <td class="p-3">${p.PaymentLink ? `<a href="${p.PaymentLink}" target="_blank" class="text-blue-400">Link</a>` : '—'}</td>
+                    <td class="p-3 font-bold text-emerald-400 text-right">${fmtNaira(p.AmountToCharge || p.Amount)}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="openEditModal('${escapeHtml(p.Timestamp)}', ${JSON.stringify(p).replace(/"/g, '&quot;')}, 'client-submitted')"
+                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
+                    </td>
+                </tr>
+            `).join('');
+                    break;
+
+                case 'client-onboarded':
+                    html = data.map(f => `
+                <tr>
+                    <td class="p-3">${fmtDate(f.Timestamp)}</td>
+                    <td class="p-3 font-mono">${escapeHtml(f.TrackingCode || '—')}</td>
+                    <td class="p-3">${escapeHtml(f.ClientName || '—')}</td>
+                    <td class="p-3">${escapeHtml(f.Service || '—')}</td>
+                    <td class="p-3 font-bold text-emerald-400">${fmtNaira(f.Amount)}</td>
+                    <td class="p-3 text-center">${badge(f.Status || 'In Progress')}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="openEditModal('${escapeHtml(f.TrackingCode)}', ${JSON.stringify(f).replace(/"/g, '&quot;')}, 'client-onboarded')"
+                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
+                    </td>
+                </tr>
+            `).join('');
+                    break;
+
+                // ==================== LEADS HUB ====================
+                case 'leads-matrix':
+                    html = data.map(l => `
+                <tr>
+                    <td class="p-3 font-mono">${escapeHtml(l.ID || l.LeadID || '—')}</td>
+                    <td class="p-3">${escapeHtml(l['Full Name'] || l.Name || '—')}</td>
+                    <td class="p-3 font-mono">${escapeHtml(l.Email || '—')}</td>
+                    <td class="p-3">${escapeHtml(l.Source || '—')}</td>
+                    <td class="p-3">${escapeHtml(l.State || '—')}</td>
+                    <td class="p-3 text-center">${badge(l['Funnel Stage'] || l.Stage || 'New Prospect')}</td>
+                    <td class="p-3 text-center">
+                        <span class="px-3 py-1 text-xs rounded-full ${l.Priority === 'High' ? 'bg-red-900 text-red-300' : 'bg-amber-900 text-amber-300'}">
+                            ${escapeHtml(l.Priority || 'Medium')}
+                        </span>
+                    </td>
+                    <td class="p-3 text-center">
+                        <button onclick="openEditModal('${escapeHtml(l.ID)}', ${JSON.stringify(l).replace(/"/g, '&quot;')}, 'leads-matrix')"
+                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
+                    </td>
+                </tr>
+            `).join('');
+                    break;
+
+                case 'leads-broadcast':
+                    html = data.map(b => `
+                <tr>
+                    <td class="p-3 font-mono">${escapeHtml(b.CronID || '—')}</td>
+                    <td class="p-3">${escapeHtml(b.Segment || '—')}</td>
+                    <td class="p-3">${fmtDate(b.ScheduledTime)}</td>
+                    <td class="p-3">${escapeHtml((b.Subject || '').substring(0, 45))}</td>
+                    <td class="p-3 text-center">${badge(b.Status || 'Scheduled')}</td>
+                </tr>
+            `).join('');
+                    break;
+
+                case 'leads-drive':
+                    html = data.map(m => `
+                <tr>
+                    <td class="p-3 font-mono">${escapeHtml(m.DispatchID || '—')}</td>
+                    <td class="p-3 font-mono">${escapeHtml(m.Email || '—')}</td>
+                    <td class="p-3">${escapeHtml((m.Subject || '').substring(0, 50))}</td>
+                    <td class="p-3 text-center">${badge(m.TransmissionState || 'Sent')}</td>
+                    <td class="p-3 text-center">${badge(m.SentReport ? 'Confirmed' : 'Pending')}</td>
+                    <td class="p-3 text-center">${badge(m.ReadReport ? 'Read' : 'Unread')}</td>
+                </tr>
+            `).join('');
+                    break;
+
+                case 'leads-calendar':
+                    html = data.map(ev => `
+                <tr>
+                    <td class="p-3 font-mono">${escapeHtml(ev.EventID || '—')}</td>
+                    <td class="p-3">${escapeHtml(ev.Title || '—')}</td>
+                    <td class="p-3">${fmtDate(ev.DateTime)}</td>
+                    <td class="p-3">${escapeHtml(ev.Type || '—')}</td>
+                    <td class="p-3 font-mono">${escapeHtml(ev.AssignedTo || '—')}</td>
+                    <td class="p-3">${escapeHtml((ev.Notes || '').substring(0, 45))}</td>
+                    <td class="p-3 text-center">${badge(ev.Status || 'Upcoming')}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="openEditModal('${escapeHtml(ev.EventID)}', ${JSON.stringify(ev).replace(/"/g, '&quot;')}, 'leads-calendar')"
+                            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit</button>
+                    </td>
+                </tr>
+            `).join('');
+                    break;
+
                 default:
-                    tbody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-400">Renderer not implemented for ${viewName}</td></tr>`;
+                    html = `<tr><td colspan="10" class="p-8 text-center text-slate-400">
+                <strong>Renderer not implemented</strong><br>
+                <small>View: ${viewName}</small>
+            </td></tr>`;
             }
         }
 
