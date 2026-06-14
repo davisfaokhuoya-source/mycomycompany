@@ -2578,6 +2578,107 @@
             updateKPIs();
         }
 
+        async function updateKPIs() {
+            // Get fresh data for accurate calculations
+            const earningsRes = await executeSecureBridgeCall('career', 'career-earnings', {});
+
+            if (!earningsRes.success || !earningsRes.data) {
+                console.warn("Could not load earnings for KPIs");
+                return;
+            }
+
+            let data = earningsRes.data;
+
+            // Apply the same universal filter that the table uses
+            data = filterTableByState(data, UNI_FILTER_STATE);
+
+            // === Gross Distributed Commissions (Total Paid) ===
+            const grossPaid = data
+                .filter(r => {
+                    const status = String(r.PayoutStatus || r['Payout Status'] || r.Status || '').toLowerCase();
+                    return status.includes('paid') || status === 'approved';
+                })
+                .reduce((sum, r) => {
+                    const amount = parseFloat(r.AmountToCharge || r.EarningsNaira || r.Amount || r.Paid || 0);
+                    return sum + amount;
+                }, 0);
+
+            // === Active Payout Pipeline Retention (Sum Total Earned) ===
+            const totalEarned = data
+                .reduce((sum, r) => {
+                    const amount = parseFloat(r.EarningsNaira || r.AmountToCharge || r.Amount || 0);
+                    return sum + amount;
+                }, 0);
+
+            // === Total Sourced Project Counts ===
+            const totalProjects = data.length;
+
+            // Update DOM
+            document.getElementById('kpi-gross').textContent = fmtNaira(grossPaid);
+            document.getElementById('kpi-payout').textContent = fmtNaira(totalEarned);
+            document.getElementById('kpi-projects').textContent = totalProjects + " Units";
+
+            console.log(`✅ KPIs Updated | Paid: ${grossPaid} | Earned: ${totalEarned} | Projects: ${totalProjects}`);
+        }
+
+        <!-- Add these functions -->
+        function openAddProjectRowModal() {
+            const modal = document.getElementById('modalAddProjectRow');
+            if (modal) {
+                modal.classList.remove('hidden');
+                // Optional: reset form
+                const form = document.getElementById('addProjectRowForm');
+                if (form) form.reset();
+            }
+        }
+
+        function closeAddProjectRowModal() {
+            const modal = document.getElementById('modalAddProjectRow');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        async function submitNewProjectRow(event) {
+            event.preventDefault();
+
+            const payload = {
+                PartnerID: document.getElementById('newRowPartnerID').value.trim(),
+                ClientName: document.getElementById('newRowClientName').value.trim(),
+                ClientPhone: document.getElementById('newRowPhone').value.trim(),
+                ClientEmail: document.getElementById('newRowEmail').value.trim(),
+                Location: document.getElementById('newRowLocation').value.trim(),
+                Service: document.getElementById('newRowService').value.trim(),
+                AmountToCharge: parseFloat(document.getElementById('newRowAmountCharge').value) || 0,
+                Urgency: document.getElementById('newRowUrgency').value,
+                Comments: document.getElementById('newRowComments').value.trim()
+            };
+
+            if (!payload.PartnerID || !payload.ClientName || !payload.Service || !payload.AmountToCharge) {
+                showToast("Partner ID, Client Name, Service and Amount are required.", "error");
+                return;
+            }
+
+            const btn = event.target.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = "Adding Row...";
+            }
+
+            const res = await executeSecureBridgeCall('client', 'add-project-row', payload);
+
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = "Add Row to DataSheet";
+            }
+
+            if (res.success) {
+                showToast("Project row added successfully!", "success");
+                closeAddProjectRowModal();
+                loadClientSubmittedProjects(); // refresh the table
+            } else {
+                showToast(res.message || res.error || "Failed to add row", "error");
+            }
+        }
+
         function clearUniversalFilter() {
             ['uniFilterLevel', 'uniFilterStatus', 'uniFilterDateStart', 'uniFilterDateEnd'].forEach(id => {
                 const el = document.getElementById(id);
@@ -3609,7 +3710,7 @@
         </div>
     </td>
 </tr>`;
-            }).join('');
+            }).join(''); updateKPIs();
         }
 
         function handleClientProjectAction(action, rowData) {
