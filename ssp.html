@@ -1864,15 +1864,20 @@
     </div>`;
         }
 
-
         let currentTestLevel = 0;
         let userAnswers = {};
         let testStarted = false;
         let serverQuestions = [];
+        let testTimerInterval = null;
+        let testEndTime = null;
+        let violationCount = 0;
+        const MAX_VIOLATIONS = 3;
+        const TEST_DURATION_SECONDS = 10 * 60; // 10 minutes
 
         async function startAssessment(level) {
             userAnswers = {};
             testStarted = true;
+            violationCount = 0;
             document.getElementById("startTestBtn").style.display = "none";
 
             const res = await apiCall("getAssessmentQuestions", { token: currentToken }, false);
@@ -1886,8 +1891,13 @@
             serverQuestions = res.questions;
             currentTestLevel = level;
 
-            let html = `<div class="border rounded p-3 mb-3 bg-light">
-    <p class="text-muted small mb-3">Answer all ${serverQuestions.length} questions. You need 70% to pass.</p>`;
+            let html = `
+    <div class="alert alert-warning d-flex justify-content-between align-items-center mb-3" id="testTimerBar">
+        <span><i class="fas fa-exclamation-triangle me-2"></i>Do not switch tabs, minimize, or take screenshots. Violations will end your test.</span>
+        <span class="fw-bold fs-5" id="testTimerDisplay"><i class="fas fa-clock me-1"></i>10:00</span>
+    </div>
+    <div class="border rounded p-3 mb-3 bg-light">
+    <p class="text-muted small mb-3">Answer all ${serverQuestions.length} questions. You need 70% to pass. Test auto-submits when time runs out.</p>`;
 
             serverQuestions.forEach((q, idx) => {
                 html += `<div class="mb-4">
@@ -1905,70 +1915,134 @@
             });
 
             html += `</div>
-    <button onclick="submitAssessment()" class="btn btn-success w-100 py-2" id="submitTestBtn">
+    <button onclick="submitAssessment('manual')" class="btn btn-success w-100 py-2" id="submitTestBtn">
       <i class="fas fa-check me-2"></i>Submit Test
     </button>`;
             document.getElementById("assessmentQuestions").innerHTML = html;
+
+            startTestTimer();
+            enableProctoring();
         }
 
-        // REPLACE submitAssessment() to send answers to server for scoring:
-        async function submitAssessment() {
+        function startTestTimer() {
+            testEndTime = Date.now() + TEST_DURATION_SECONDS * 1000;
+            updateTimerDisplay();
+            if (testTimerInterval) clearInterval(testTimerInterval);
+            testTimerInterval = setInterval(() => {
+                const remaining = Math.max(0, Math.floor((testEndTime - Date.now()) / 1000));
+                updateTimerDisplay(remaining);
+                if (remaining <= 0) {
+                    clearInterval(testTimerInterval);
+                    testTimerInterval = null;
+                    showToast("Time's up! Auto-submitting your test.", "warning");
+                    submitAssessment('timeout');
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay(remaining) {
+            if (remaining === undefined) remaining = TEST_DURATION_SECONDS;
+            const m = Math.floor(remaining / 60).toString().padStart(2, "0");
+            const s = (remaining % 60).toString().padStart(2, "0");
+            const el = document.getElementById("testTimerDisplay");
+            if (el) {
+                el.innerHTML = `<i class="fas fa-clock me-1"></i>${m}:${s}`;
+                const bar = document.getElementById("testTimerBar");
+                if (bar) {
+                    if (remaining <= 60) bar.className = "alert alert-danger d-flex justify-content-between align-items-center mb-3";
+                    else if (remaining <= 180) bar.className = "alert alert-warning d-flex justify-content-between align-items-center mb-3";
+                }
+            }
+        }
+
+        function stopTestTimer() {
+            if (testTimerInterval) {
+                clearInterval(testTimerInterval);
+                testTimerInterval = null;
+            }
+        }
+
+        // ===== PROCTORING: detect tab switch / minimize / blur =====
+        function handleProctorViolation(reason) {
             if (!testStarted) return;
-            if (Object.keys(userAnswers).length < serverQuestions.length) {
+            violationCount++;
+            showToast(`Warning ${violationCount}/${MAX_VIOLATIONS}: ${reason} detected. Test may be terminated.`, "error", 6000);
+            if (violationCount >= MAX_VIOLATIONS) {
+                showToast("Too many violations. Submitting test now.", "error", 6000);
+                submitAssessment('violation');
+            }
+        }
+
+        function onVisibilityChange() {
+            if (document.hidden) {
+                handleProctorViolation("Tab switch or window minimize");
+            }
+        }
+
+        function onWindowBlur() {
+            handleProctorViolation("Window focus lost");
+        }
+
+        function enableProctoring() {
+            document.addEventListener("visibilitychange", onVisibilityChange);
+            window.addEventListener("blur", onWindowBlur);
+        }
+
+        function disableProctoring() {
+            document.removeEventListener("visibilitychange", onVisibilityChange);
+            window.removeEventListener("blur", onWindowBlur);
+        }
+
+        async function submitAssessment(trigger = 'manual') {
+            if (!testStarted) return;
+            testStarted = false; // lock immediately to prevent double submit
+
+            stopTestTimer();
+            disableProctoring();
+
+            if (trigger === 'manual' && Object.keys(userAnswers).length < serverQuestions.length) {
+                testStarted = true; // re-allow, not actually submitting
+                startTestTimer(); // resume timer since we returned early
+                enableProctoring();
                 return showToast(`Please answer all ${serverQuestions.length} questions.`, "error");
             }
 
-            disableBtn("submitTestBtn", 8000);
+            const submitBtn = document.getElementById("submitTestBtn");
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = 'Submitting... <span class="spinner-border spinner-border-sm"></span>'; }
 
-            // Send answers to server — server scores them
             const res = await apiCall("submitAssessmentWithAnswers", {
                 token: currentToken,
-                userAnswers  // { "0": 2, "1": 0, ... }
+                userAnswers
             }, false);
 
             const resultEl = document.getElementById("assessmentResult");
             resultEl.classList.remove("d-none");
+
+            let extraNote = "";
+            if (trigger === 'timeout') extraNote = `<p class="small text-muted mb-0"><i class="fas fa-clock me-1"></i>Test was auto-submitted because time ran out.</p>`;
+            if (trigger === 'violation') extraNote = `<p class="small text-muted mb-0"><i class="fas fa-exclamation-triangle me-1"></i>Test was auto-submitted due to repeated focus/visibility violations.</p>`;
 
             if (res.success && res.passed) {
                 resultEl.innerHTML = `<div class="alert alert-success">
       <h5><i class="fas fa-trophy me-2"></i>Congratulations! You Passed!</h5>
       <p>Score: <strong>${res.score}%</strong></p>
       <p>${res.message}</p>
+      ${extraNote}
     </div>`;
             } else {
                 resultEl.innerHTML = `<div class="alert alert-danger">
       <h5><i class="fas fa-times-circle me-2"></i>Test Not Passed</h5>
-      <p>Score: <strong>${res.score}%</strong></p>
+      <p>Score: <strong>${res.score || 0}%</strong></p>
       <p>${res.message || "You need at least 70% to pass."}</p>
       <p class="mb-0 small text-muted">You can retake after 7 days.</p>
+      ${extraNote}
     </div>`;
             }
             document.getElementById("assessmentQuestions").innerHTML = "";
-            document.getElementById("startTestBtn").style.display = "none";
-            testStarted = false;
+            const startBtn = document.getElementById("startTestBtn");
+            if (startBtn) startBtn.style.display = "none";
         }
 
-        async function submitAssessment() {
-            if (!testStarted) return;
-            const questions = ASSESSMENT_QUESTIONS[currentTestLevel];
-            if (!questions) return;
-            if (Object.keys(userAnswers).length < questions.length) return showToast(`Please answer all ${questions.length} questions before submitting.`, "error");
-            let score = 0;
-            questions.forEach((q, idx) => { if (userAnswers[idx] === q.correct) score++; });
-            disableBtn("submitTestBtn", 8000);
-            const res = await apiCall("submitAssessmentResult", { token: currentToken, score, totalQuestions: questions.length }, false);
-            const resultEl = document.getElementById("assessmentResult");
-            resultEl.classList.remove("d-none");
-            const pct = Math.round((score / questions.length) * 100);
-            if (res.success && res.passed) {
-                resultEl.innerHTML = `<div class="alert alert-success"><h5><i class="fas fa-trophy me-2"></i>Congratulations! You Passed!</h5><p>Score: <strong>${pct}%</strong> (${score}/${questions.length})</p><p>${res.message}</p></div>`;
-            } else {
-                resultEl.innerHTML = `<div class="alert alert-danger"><h5><i class="fas fa-times-circle me-2"></i>Test Not Passed</h5><p>Score: <strong>${pct}%</strong> (${score}/${questions.length})</p><p>You need at least 70% to pass. ${res.message || ""}</p><p class="mb-0 small text-muted">You can retake after 7 days.</p></div>`;
-            }
-            document.getElementById("assessmentQuestions").innerHTML = "";
-            document.getElementById("startTestBtn").style.display = "none";
-            testStarted = false;
-        }
 
         // =========== COMPLAINTS ===========
         async function submitComplaint() {
