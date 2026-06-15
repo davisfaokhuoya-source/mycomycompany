@@ -4385,62 +4385,88 @@
             if (res.success) { closeEventCreationModal(); loadCalendarEvents(); }
         }
 
+        // Replace the entire edit form submit listener with this improved version
         document.addEventListener('DOMContentLoaded', () => {
-            function mergeExtraSchemas() {
-                Object.assign(EDIT_MODAL_FORM_SCHEMAS, EDIT_MODAL_EXTRA_SCHEMAS);
-            }
-
             const editForm = document.getElementById('edit-form');
-            if (editForm) {
-                editForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const recordId = document.getElementById('edit-record-id').value;
-                    const recordType = e.target.dataset.recordType;
-                    const formData = new FormData(e.target);
-                    const updates = Object.fromEntries(formData);
+            if (!editForm) return;
 
-                    // Map recordType to the correct system and action
-                    const systemMap = {
-                        'career-users': 'career', 'career-earnings': 'career',
-                        'career-settlements': 'career', 'career-complaints': 'career',
-                        'career-elevation': 'career', 'assessment-students': 'assessment',
-                        'assessment-courses': 'assessment', 'assessment-questions': 'assessment',
-                        'assessment-certificates': 'assessment', 'assessment-applications': 'assessment',
-                        'client-submitted': 'career', 'client-onboarded': 'career',
-                        'leads-matrix': 'leads', 'leads-calendar': 'leads'
-                    };
-                    const system = systemMap[recordType] || 'admin';
+            editForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
 
-                    const res = await executeSecureBridgeCall(system, 'update-record', {
-                        recordId, recordType, updates
-                    });
+                const recordId = document.getElementById('edit-record-id').value;
+                const recordType = e.target.dataset.recordType;
+                const formData = new FormData(e.target);
+                const updates = Object.fromEntries(formData);
 
-                    if (res.success) {
-                        showToast('Record updated successfully', 'success');
-                        closeEditModal();
-                        const reloadMap = {
-                            'career-users': initializeModule_career_users,
-                            'career-earnings': initializeModule_career_earnings,
-                            'career-settlements': initializeModule_career_settlements,
-                            'career-complaints': initializeModule_career_complaints,
-                            'career-elevation': initializeModule_career_elevation,
-                            'assessment-students': initializeModule_assess_submissions,
-                            'assessment-courses': initializeModule_assessment_courses,
-                            'assessment-questions': initializeModule_assessment_questions,
-                            'assessment-certificates': loadCertificateData,
-                            'assessment-applications': initializeModule_assessment_applications,
-                            'client-submitted': loadClientSubmittedProjects,
-                            'client-onboarded': loadProductionFulfillment,
-                            'leads-matrix': loadLeadsMatrix,
-                            'leads-calendar': loadCalendarEvents,
-                        };
-                        const fn = reloadMap[recordType];
-                        if (fn) fn();
-                    } else {
-                        showToast(res.error || 'Update failed', 'error');
-                    }
+                if (!recordType || !recordId) {
+                    showToast("Missing record information", "error");
+                    return;
+                }
+
+                // === CUSTOM MAPPING TO FIX SETTLEMENT UPDATE ===
+                let system = 'career';
+                let action = 'update-record';
+
+                if (recordType === 'career-settlements') {
+                    system = 'career';           // or 'client' if you prefer
+                    action = 'update-record'; // This is the key change
+                }
+                else if (recordType === 'client-onboarded') {
+                    system = 'client';
+                    action = 'update-job';
+                }
+                else if (['career-users', 'career-earnings', 'career-complaints'].includes(recordType)) {
+                    system = 'career';
+                    action = 'update-record';
+                }
+                else if (recordType.startsWith('assessment-')) {
+                    system = 'assessment';
+                    action = 'update-record';
+                }
+                else if (recordType.startsWith('leads-')) {
+                    system = 'leads';
+                    action = 'update-record';
+                }
+
+                const btn = e.target.querySelector('button[type="submit"]');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = "Saving...";
+                }
+
+                const res = await executeSecureBridgeCall(system, action, {
+                    recordId: recordId,
+                    recordType: recordType,
+                    updates: updates
                 });
-            }
+
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = "Save Changes";
+                }
+
+                if (res.success) {
+                    showToast('Record updated successfully', 'success');
+                    closeEditModal();
+
+                    // Refresh the relevant table
+                    const refreshMap = {
+                        'career-settlements': initializeModule_career_settlements,
+                        'career-users': initializeModule_career_users,
+                        'career-earnings': initializeModule_career_earnings,
+                        'career-complaints': initializeModule_career_complaints,
+                        'client-onboarded': loadProductionFulfillment,
+                        'assessment-students': initializeModule_assess_submissions,
+                        // add more as needed
+                    };
+
+                    if (refreshMap[recordType]) {
+                        refreshMap[recordType]();
+                    }
+                } else {
+                    showToast(res.message || res.error || 'Update failed', 'error');
+                }
+            });
         });
 
         function initializeModule() {
