@@ -319,6 +319,7 @@
                     <li class="breadcrumb-item active text-primary">Career Hub</li>
                 </ol>
             </div>
+            <div id="result"></div>
         </div>
     </div>
 
@@ -2149,10 +2150,61 @@
                 showToast("Network error. Please check your connection.", "warning");
             }
         }
+
+        async function loadTracking() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            try {
+                const response = await fetch("https://YOUR_GATEWAY_URL_HERE/exec", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        action: "trackJob",
+                        data: { trackingCode: code }
+                    })
+                });
+
+                const res = await response.json();
+
+                const resultDiv = document.getElementById('result');
+
+                if (res.success && res.job) {
+                    const job = res.job;
+                    resultDiv.innerHTML = `
+            <div class="tracking-code">Tracking Code: <strong>${job.trackingCode}</strong></div>
+            
+            <p><strong>Client:</strong> ${job.clientName}</p>
+            <p><strong>Service:</strong> ${job.service}</p>
+            <p><strong>Amount:</strong> ₦${Number(job.amount).toLocaleString()}</p>
+            
+            <div class="status ${job.status.replace(/\s+/g, '-')}">
+              Current Status: <strong>${job.status}</strong>
+            </div>
+            
+            <p><strong>Progress Notes:</strong><br>${job.progressNotes || 'No updates yet.'}</p>
+            <p><small>Last Updated: ${new Date(job.lastUpdated).toLocaleString()}</small></p>
+          `;
+                } else {
+                    resultDiv.innerHTML = `
+            <p style="color:red; text-align:center;">
+              ❌ ${res.message || "Job not found. Please check your tracking code."}
+            </p>
+          `;
+                }
+            } catch (err) {
+                document.getElementById('result').innerHTML = `
+          <p style="color:red; text-align:center;">⚠️ Unable to connect to tracking system. Please try again later.</p>
+        `;
+            }
+        }
+
+        // Load when page opens
+
         // =========== PAGE LOAD ===========
         // REPLACE the entire window.onload with this:
         window.onload = () => {
             forceHideLoader();
+            loadTracking();
 
             const params = new URLSearchParams(window.location.search);
             const emailParam = params.get("email");
