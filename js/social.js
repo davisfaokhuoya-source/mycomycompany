@@ -479,3 +479,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 600);
 });
+
+// Auto-open tracker if ?track= param in URL
+const urlParams = new URLSearchParams(window.location.search);
+const autoTrackCode = urlParams.get('track');
+if (autoTrackCode) {
+    setTimeout(() => {
+        const input = document.getElementById("floatTrackingCode");
+        const panel = document.getElementById("trackerPanel");
+        if (input && panel) {
+            input.value = autoTrackCode.toUpperCase();
+            panel.classList.add("open");
+            panel.style.display = "block";
+            trackJobFloating();
+            // Clean URL without reload
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }, 800);
+}
