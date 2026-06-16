@@ -21,7 +21,7 @@ function navbar() {
         <div class="collapse navbar-collapse" id="navbarCollapse">
             <div class="navbar-nav ms-auto py-0">
                 <a href="index.html" class="nav-item nav-link">Home</a>
-                <a href="about.html" class="nav-item nav-link">About Us</a>
+                <a href="about.html" class="nav-item nav-link">About</a>
 
                 <!-- Portals Dropdown -->
                 <div class="nav-item dropdown">
@@ -34,7 +34,7 @@ function navbar() {
                 </div>
                 <!-- Services Dropdown -->
                 <div class="nav-item dropdown">
-                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Our Services</a>
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Services</a>
                     <div class="dropdown-menu m-0">
                         <a href="doc-dev.html" class="dropdown-item">Document Development</a>
                         <a href="social-media-management.html" class="dropdown-item">Social Media Management</a>
@@ -51,15 +51,13 @@ function navbar() {
                 <a href="#" class="nav-item nav-link track-job-link" style="cursor: pointer;">
                     <i class="fas fa-search"></i> Track Job
                 </a>
-
-                <a href="/appointment.html" class="nav-item nav-link">Book Appointment</a>
-                <a href="contact.html" class="nav-item nav-link">Contact Us</a>
+                <a href="contact.html" class="nav-item nav-link">Reach Us</a>
                 <a href="policy.html" class="nav-item nav-link">Policies</a>
             </div>
 
             <a href="https://flutterwave.com/pay/cxbndrtmjsdj" 
                class="btn btn-primary rounded-pill py-2 px-4 my-3 my-lg-0 flex-shrink-0">
-                Make Payment
+                Payment
             </a>
         </div>
 
