@@ -54,7 +54,6 @@ function navbar() {
                 <a href="contact.html" class="nav-item nav-link">Reach Us</a>
                 <a href="policy.html" class="nav-item nav-link">Policies</a>
             </div>
-
             <a href="https://flutterwave.com/pay/cxbndrtmjsdj" 
                class="btn btn-primary rounded-pill py-2 px-4 my-3 my-lg-0 flex-shrink-0">
                 Payment
