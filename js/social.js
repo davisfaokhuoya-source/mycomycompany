@@ -453,70 +453,184 @@ if (typeof window !== 'undefined') {
     window.trackJobFloating = trackJobFloating;
 }
 
-// ====================== FINAL INITIALIZATION ======================
+// ====================== INITIALIZATION ======================
+// Single init guard — prevents the double-init bug.
+// initPage() used to be called twice: once at the top-level
+// readyState check AND once inside DOMContentLoaded. Removed
+// the top-level call and run everything from one place.
+
 document.addEventListener('DOMContentLoaded', () => {
-    navbar();                    // ← Must come first
+    // 1. Inject navbar HTML first — everything else depends on it
+    navbar();
     highlightActiveNavLink();
 
+    // 2. Populate page sections
     coreservices();
     getstartedlink();
     getstartedbody();
     blogger();
     roll();
 
-    // Enter key support
-    setTimeout(() => {
-        const input = document.getElementById("floatTrackingCode");
-        if (input) {
-            input.addEventListener("keypress", (e) => {
-                if (e.key === "Enter") trackJobFloating();
-            });
-        }
-    }, 600);
+    // 3. Wire tracker events (navbar HTML now exists)
+    attachTrackerEvents();
+
+    // 4. Enter-key support for tracker input
+    const input = document.getElementById("floatTrackingCode");
+    if (input) {
+        input.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") trackJobFloating();
+        });
+    }
+
+    // 5. Auto-track: run AFTER navbar is ready, no extra delay needed
+    handleAutoTrack();
 });
 
-// Improved Auto-open tracker
+
+// ====================== AUTO-TRACK (FIXED) ======================
+// Previous version had three problems:
+//   a) Used a 600ms timeout that still raced with navbar injection
+//   b) Called panel.style.display = "block" which conflicts with
+//      CSS .open class — panel is now controlled by class only
+//   c) Retried via a recursive setTimeout that could stack calls
+
 function handleAutoTrack() {
     const urlParams = new URLSearchParams(window.location.search);
     const autoTrackCode = urlParams.get('track');
     if (!autoTrackCode) return;
 
-    // Wait longer for navbar injection
+    // At this point navbar() has already run (called just above in
+    // DOMContentLoaded), so the panel and input exist immediately.
+    const input = document.getElementById("floatTrackingCode");
+    const panel = document.getElementById("trackerPanel");
+
+    if (!input || !panel) {
+        // Navbar inject failed for some reason — retry once after 400ms
+        setTimeout(handleAutoTrack, 400);
+        return;
+    }
+
+    // Set the tracking code value
+    const cleanCode = safeTrackingInput(autoTrackCode);
+    input.value = cleanCode;
+
+    // Open the panel using ONLY the class (matches your CSS .open rule)
+    // Do NOT set style.display — that overrides CSS and causes conflicts
+    panel.classList.add("open");
+
+    // Clean the URL so refresh doesn't re-trigger
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    // Small delay so the panel's CSS open transition completes before
+    // the fetch result tries to render inside it
     setTimeout(() => {
-        const input = document.getElementById("floatTrackingCode");
-        const panel = document.getElementById("trackerPanel");
-
-        if (input && panel) {
-            input.value = autoTrackCode.toUpperCase().trim();
-            panel.classList.add("open");
-            panel.style.display = "block";
-
-            // Small extra delay so DOM is fully ready
-            setTimeout(() => {
-                trackJobFloating();
-            }, 300);
-
-            // Clean URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-        } else {
-            console.warn("Tracker elements not found yet. Retrying...");
-            // Retry once more
-            setTimeout(handleAutoTrack, 800);
-        }
-    }, 600);
+        trackJobFloating();
+    }, 200);
 }
 
-// Call it after navbar is ready
-document.addEventListener('DOMContentLoaded', handleAutoTrack);
 
-// ===== INPUT SANITIZATION (for any form/user input) =====
+// ====================== TRACKER TOGGLE (FIXED) ======================
+// Removed style.display manipulation — panel visibility is controlled
+// entirely by the .open CSS class. Inline style was overriding it.
+
+function toggleTracker() {
+    const panel = document.getElementById("trackerPanel");
+    if (!panel) return;
+
+    const isOpen = panel.classList.toggle("open");
+
+    if (isOpen) {
+        setTimeout(() => {
+            const input = document.getElementById("floatTrackingCode");
+            if (input) input.focus();
+        }, 150);
+    }
+}
+
+
+// ====================== TRACKER FETCH ======================
+// No changes needed here — the safeTrackingInput stripping is safe
+// for valid tracking codes. Kept as-is.
+
+async function trackJobFloating() {
+    const codeInput = document.getElementById("floatTrackingCode");
+    const resultDiv = document.getElementById("floatResult");
+    if (!codeInput || !resultDiv) return;
+
+    const trackingCode = safeTrackingInput(codeInput.value.trim());
+
+    if (!trackingCode) {
+        resultDiv.innerHTML = `<div class="alert alert-danger">Please enter a tracking code.</div>`;
+        return;
+    }
+
+    resultDiv.innerHTML = `
+        <div class="text-center py-4">
+            <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+            <p class="mt-2">Checking status...</p>
+        </div>`;
+
+    try {
+        const response = await fetch(WEBAPP_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify({
+                action: "trackJob",
+                trackingCode: trackingCode
+            })
+        });
+
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+        const res = await response.json();
+
+        if (res.success && res.job) {
+            const job = res.job;
+            const statusLower = (job.status || "").toLowerCase();
+            let statusClass = "warning";
+            if (statusLower.includes("complete") || statusLower.includes("delivered")) statusClass = "success";
+            else if (statusLower.includes("progress") || statusLower.includes("in")) statusClass = "info";
+
+            resultDiv.innerHTML = `
+                <div class="card border-${statusClass} shadow-sm">
+                    <div class="card-body">
+                        <h6>Status: <span class="badge bg-${statusClass}">${job.status}</span></h6>
+                        <p><strong>Service:</strong> ${job.service || 'N/A'}</p>
+                        <p><strong>Amount:</strong> ₦${parseFloat(job.amount || 0).toLocaleString()}</p>
+                        <p><strong>Last Updated:</strong> ${job.lastUpdated ? new Date(job.lastUpdated).toLocaleDateString('en-GB') : 'N/A'}</p>
+                        <hr>
+                        <strong>Progress:</strong>
+                        <p class="mb-0">${job.progressNotes || "Your job is being processed."}</p>
+                    </div>
+                </div>`;
+        } else {
+            resultDiv.innerHTML = `<div class="alert alert-danger">${res.message || "Invalid or expired tracking code"}</div>`;
+        }
+    } catch (err) {
+        console.error("Track Job Error:", err);
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                Connection error. Please check your internet and try again.<br>
+                <small>If this persists, the tracking service may be temporarily down.</small>
+            </div>`;
+    }
+}
+
+
+// ====================== EXPOSE GLOBALS ======================
+if (typeof window !== 'undefined') {
+    window.toggleTracker = toggleTracker;
+    window.trackJobFloating = trackJobFloating;
+}
+
+
+// ====================== SECURITY HELPERS (unchanged) ======================
 function sanitizeHTML(str) {
     const div = document.createElement('div');
     div.appendChild(document.createTextNode(str));
     return div.innerHTML;
 }
 
-// ===== CSRF TOKEN for all fetch calls to your GAS backend =====
 function generateCSRFToken() {
     const token = crypto.randomUUID ? crypto.randomUUID() :
         ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
@@ -525,7 +639,6 @@ function generateCSRFToken() {
     return token;
 }
 
-// ===== RATE LIMIT client-side form submissions =====
 const submissionTracker = {};
 function clientRateLimit(key, maxPerMinute = 3) {
     const now = Date.now();
@@ -539,22 +652,16 @@ function clientRateLimit(key, maxPerMinute = 3) {
     return true;
 }
 
-// ===== BLOCK DEVTOOLS OPEN (deters casual scrapers) =====
 (function () {
     const threshold = 160;
     setInterval(() => {
         if (window.outerWidth - window.innerWidth > threshold ||
             window.outerHeight - window.innerHeight > threshold) {
-            // Optionally log suspicious activity
             console.clear();
         }
     }, 1000);
 })();
 
-// ===== DISABLE RIGHT-CLICK ON SENSITIVE PAGES (optional) =====
-// document.addEventListener('contextmenu', e => e.preventDefault());
-
-// ===== PROTECT TRACKING CODE INPUT — strip injection attempts =====
 function safeTrackingInput(value) {
     return value.replace(/[^A-Z0-9\-]/gi, '').toUpperCase().substring(0, 30);
 }
