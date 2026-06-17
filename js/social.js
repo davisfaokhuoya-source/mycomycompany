@@ -382,7 +382,7 @@ function toggleTracker() {
 
 async function trackJobFloating() {
     const codeInput = document.getElementById("floatTrackingCode");
-    const trackingCode = codeInput.value.trim().toUpperCase();
+    const trackingCode = safeTrackingInput(codeInput.value.trim());
     const resultDiv = document.getElementById("floatResult");
 
     if (!trackingCode) {
@@ -464,8 +464,6 @@ document.addEventListener('DOMContentLoaded', () => {
     blogger();
     roll();
 
-    attachTrackerEvents();       // ← After navbar()
-
     // Enter key support
     setTimeout(() => {
         const input = document.getElementById("floatTrackingCode");
@@ -477,20 +475,86 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 600);
 });
 
-// Auto-open tracker if ?track= param in URL
-const urlParams = new URLSearchParams(window.location.search);
-const autoTrackCode = urlParams.get('track');
-if (autoTrackCode) {
+// Improved Auto-open tracker
+function handleAutoTrack() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const autoTrackCode = urlParams.get('track');
+    if (!autoTrackCode) return;
+
+    // Wait longer for navbar injection
     setTimeout(() => {
         const input = document.getElementById("floatTrackingCode");
         const panel = document.getElementById("trackerPanel");
+
         if (input && panel) {
-            input.value = autoTrackCode.toUpperCase();
+            input.value = autoTrackCode.toUpperCase().trim();
             panel.classList.add("open");
             panel.style.display = "block";
-            trackJobFloating();
-            // Clean URL without reload
+
+            // Small extra delay so DOM is fully ready
+            setTimeout(() => {
+                trackJobFloating();
+            }, 300);
+
+            // Clean URL
             window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+            console.warn("Tracker elements not found yet. Retrying...");
+            // Retry once more
+            setTimeout(handleAutoTrack, 800);
         }
-    }, 800);
+    }, 600);
+}
+
+// Call it after navbar is ready
+document.addEventListener('DOMContentLoaded', handleAutoTrack);
+
+// ===== INPUT SANITIZATION (for any form/user input) =====
+function sanitizeHTML(str) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+}
+
+// ===== CSRF TOKEN for all fetch calls to your GAS backend =====
+function generateCSRFToken() {
+    const token = crypto.randomUUID ? crypto.randomUUID() :
+        ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+            (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+    sessionStorage.setItem('_csrf', token);
+    return token;
+}
+
+// ===== RATE LIMIT client-side form submissions =====
+const submissionTracker = {};
+function clientRateLimit(key, maxPerMinute = 3) {
+    const now = Date.now();
+    if (!submissionTracker[key]) submissionTracker[key] = [];
+    submissionTracker[key] = submissionTracker[key].filter(t => now - t < 60000);
+    if (submissionTracker[key].length >= maxPerMinute) {
+        alert('Too many requests. Please wait a moment.');
+        return false;
+    }
+    submissionTracker[key].push(now);
+    return true;
+}
+
+// ===== BLOCK DEVTOOLS OPEN (deters casual scrapers) =====
+(function () {
+    const threshold = 160;
+    setInterval(() => {
+        if (window.outerWidth - window.innerWidth > threshold ||
+            window.outerHeight - window.innerHeight > threshold) {
+            // Optionally log suspicious activity
+            console.clear();
+        }
+    }, 1000);
+})();
+
+// ===== DISABLE RIGHT-CLICK ON SENSITIVE PAGES (optional) =====
+// document.addEventListener('contextmenu', e => e.preventDefault());
+
+// ===== PROTECT TRACKING CODE INPUT — strip injection attempts =====
+function safeTrackingInput(value) {
+    return value.replace(/[^A-Z0-9\-]/gi, '').toUpperCase().substring(0, 30);
 }
