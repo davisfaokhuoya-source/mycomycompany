@@ -1,198 +1,118 @@
-# Apache .htaccess Configuration for The Victorias Ltd
-# Performance, Security, and SEO Optimization
+# ====================== THE VICTORIAS LTD - .htaccess ======================
+# Last Updated: June 2026
 
-# Enable mod_rewrite
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Remove WWW
-    RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
-    RewriteRule ^(.*)$ http://%1/$1 [R=301,L]
-
-    # HTTPS redirect (uncomment if SSL is installed)
-    # RewriteCond %{HTTPS} !=on
-    # RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
-
-    # Remove trailing slashes
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.+)/$ /$1 [R=301,L]
-</IfModule>
-
-# Enable GZIP compression
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/x-javascript
-</IfModule>
-
-# Browser caching
-<IfModule mod_expires.c>
-    ExpiresActive On
-
-    # Images - Cache for 1 month
-    ExpiresByType image/jpeg "access plus 1 month"
-    ExpiresByType image/gif "access plus 1 month"
-    ExpiresByType image/png "access plus 1 month"
-    ExpiresByType image/webp "access plus 1 month"
-    ExpiresByType image/svg+xml "access plus 1 month"
-    ExpiresByType image/x-icon "access plus 1 month"
-    ExpiresByType image/vnd.microsoft.icon "access plus 1 month"
-
-    # CSS & JavaScript - Cache for 2 weeks
-    ExpiresByType text/css "access plus 2 weeks"
-    ExpiresByType text/javascript "access plus 2 weeks"
-    ExpiresByType application/javascript "access plus 2 weeks"
-    ExpiresByType application/x-javascript "access plus 2 weeks"
-
-    # Fonts - Cache for 1 month
-    ExpiresByType application/x-font-ttf "access plus 1 month"
-    ExpiresByType application/x-font-otf "access plus 1 month"
-    ExpiresByType application/x-font-woff "access plus 1 month"
-    ExpiresByType application/x-font-woff2 "access plus 1 month"
-    ExpiresByType font/ttf "access plus 1 month"
-    ExpiresByType font/otf "access plus 1 month"
-    ExpiresByType font/woff "access plus 1 month"
-    ExpiresByType font/woff2 "access plus 1 month"
-
-    # Default
-    ExpiresDefault "access plus 2 days"
-</IfModule>
-
-# Set correct MIME types
-<IfModule mod_mime.c>
-    AddType application/javascript js
-    AddType text/css css
-    AddType image/svg+xml svg svgz
-    AddEncoding gzip svgz
-    AddType application/x-font-ttf ttf
-    AddType application/x-font-otf otf
-    AddType application/x-font-woff woff
-    AddType application/x-font-woff2 woff2
-    AddType application/vnd.ms-fontobject eot
-</IfModule>
-
-# Security headers
-<IfModule mod_headers.c>
-    # Prevent clickjacking
-    Header set X-Frame-Options "SAMEORIGIN"
-
-    # Prevent MIME sniffing
-    Header set X-Content-Type-Options "nosniff"
-
-    # Enable XSS filter
-    Header set X-XSS-Protection "1; mode=block"
-
-    # Referrer policy
-    Header set Referrer-Policy "strict-origin-when-cross-origin"
-
-    # Feature policy for security
-    Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
-</IfModule>
-
-# Disable directory listing
-<FilesMatch "^\.">
-    <IfModule mod_authz_core.c>
-        Require all denied
-    </IfModule>
-    <IfModule !mod_authz_core.c>
-        Order allow,deny
-        Deny from all
-    </IfModule>
-</FilesMatch>
-
-# Prevent access to sensitive files
-<FilesMatch "\.(env|git|json|log|sql|tmp)$">
-    <IfModule mod_authz_core.c>
-        Require all denied
-    </IfModule>
-    <IfModule !mod_authz_core.c>
-        Order allow,deny
-        Deny from all
-    </IfModule>
-</FilesMatch>
-
-# Disable hotlinking (optional - uncomment to enable)
-# <IfModule mod_rewrite.c>
-#     RewriteCond %{HTTP_REFERER} !^$
-#     RewriteCond %{HTTP_REFERER} !^https://thevictorias.com.ng/.*$ [NC]
-#     RewriteRule ^(img/|css/|js/).*$ - [NC,F,L]
-# </IfModule>
-
-# Enable mod_headers
-<IfModule mod_headers.c>
-    Header set Cache-Control "public, max-age=31536000, immutable"
-    <FilesMatch "\.(html|htm|xml)$">
-        Header set Cache-Control "public, max-age=3600, must-revalidate"
-    </FilesMatch>
-</IfModule>
-
-# Optimize compression level (adjust as needed)
-<IfModule mod_deflate.c>
-    SetOutputFilter DEFLATE
-    SetEnvIfNoCase Request_URI \.(?:gif|jpe?g|png|webp)$ no-gzip dont-vary
-</IfModule>
-
-# ===== SECURITY HEADERS =====
-<IfModule mod_headers.c>
+    # ------------------- 1. Force HTTPS + Non-WWW -------------------
+    # Remove www
+    RewriteCond %{HTTP_HOST} ^www\.thevictorias\.com\.ng [NC]
+    RewriteRule ^(.*)$ https://thevictorias.com.ng/$1 [R=301,L]
 
     # Force HTTPS
-    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
-    # Prevent clickjacking (stop site being embedded in iframes)
+    # ------------------- 2. Clean URLs & Security -------------------
+    # Block direct access to sensitive files
+    RewriteRule ^(\.htaccess|\.env|\.git|\.git/|wp-config\.php|config\.php|\.sql)$ - [F]
+
+    # Prevent directory listing
+    Options -Indexes
+</IfModule>
+
+# ====================== SECURITY HEADERS ======================
+<IfModule mod_headers.c>
+
+    # HSTS - HTTP Strict Transport Security (1 year + preload)
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+
+    # Prevent clickjacking
     Header always set X-Frame-Options "SAMEORIGIN"
 
     # Prevent MIME sniffing
     Header always set X-Content-Type-Options "nosniff"
 
-    # XSS protection for older browsers
+    # XSS Protection
     Header always set X-XSS-Protection "1; mode=block"
 
-    # Control referrer info leakage
+    # Referrer Policy
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
 
-    # Permissions policy — disable unused browser features
-    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), fullscreen=(self)"
+    # Permissions Policy (Feature Policy)
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
 
-    # Content Security Policy — tightened for your actual asset sources
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://ajax.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://use.fontawesome.com https://cdn.tailwindcss.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://use.fontawesome.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://use.fontawesome.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://script.google.com; frame-src 'none'; object-src 'none'; base-uri 'self';"
-
-    # Remove server fingerprinting
-    Header always unset X-Powered-By
+    # Remove Server & Powered-By headers
     Header always unset Server
-
+    Header always unset X-Powered-By
+    Header always unset X-Generator
 </IfModule>
 
-# ===== BLOCK SENSITIVE FILES =====
-<FilesMatch "\.(env|log|sql|bak|config|json|lock|md|sh|yml|yaml|git)$">
-    Require all denied
-</FilesMatch>
-
-# Block .htaccess itself from being read directly
-<Files .htaccess>
-    Require all denied
-</Files>
-
-# ===== FORCE HTTPS =====
-RewriteEngine On
-RewriteCond %{HTTPS} off
-RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-
-# ===== BLOCK BAD BOTS & SCANNERS =====
-RewriteCond %{HTTP_USER_AGENT} (sqlmap|nikto|nmap|masscan|zgrab|nuclei|dirbuster|gobuster|wfuzz|python-requests|curl/7) [NC]
-RewriteRule .* - [F,L]
-
-# ===== PREVENT DIRECTORY LISTING =====
-Options -Indexes
-
-# ===== BLOCK XML-RPC (if using WordPress) =====
-<Files xmlrpc.php>
-    Require all denied
-</Files>
-
-# ===== RATE LIMIT via mod_evasive (if available) =====
-<IfModule mod_evasive24.c>
-    DOSHashTableSize    3097
-    DOSPageCount        5
-    DOSSiteCount        50
-    DOSPageInterval     1
-    DOSSiteInterval     1
-    DOSBlockingPeriod   600
+# ====================== CONTENT SECURITY POLICY (Strong but Functional) ======================
+<IfModule mod_headers.c>
+    Header always set Content-Security-Policy "default-src 'self'; \
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://www.google.com https://translate.google.com https://assets.apollo.io https://connect.facebook.net; \
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; \
+    font-src 'self' https://fonts.gstatic.com; \
+    img-src 'self' data: https:; \
+    connect-src 'self' https://script.google.com https://thevictorias.com.ng; \
+    frame-src 'self' https://docs.google.com; \
+    upgrade-insecure-requests;"
 </IfModule>
+
+# ====================== PERFORMANCE & CACHING ======================
+<IfModule mod_deflate.c>
+    # Compress static files
+    AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    # Images
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+
+    # CSS & JavaScript
+    ExpiresByType text/css "access plus 6 months"
+    ExpiresByType application/javascript "access plus 6 months"
+    ExpiresByType text/javascript "access plus 6 months"
+
+    # Fonts
+    ExpiresByType application/font-woff "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+</IfModule>
+
+<IfModule mod_headers.c>
+    # Cache control for static assets
+    <FilesMatch "\.(jpg|jpeg|png|gif|webp|ico|css|js|woff|woff2|ttf|svg)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>
+
+# ====================== ADDITIONAL PROTECTIONS ======================
+
+# Block common bad bots and scanners
+<IfModule mod_setenvif.c>
+    SetEnvIfNoCase User-Agent "semrush|ahrefs|MJ12bot|DotBot|python|curl|wget" bad_bot
+    Deny from env=bad_bot
+</IfModule>
+
+# Protect against common exploits
+<IfModule mod_rewrite.c>
+    # Block PHP execution in uploads (if any)
+    RewriteRule ^uploads/.*\.(php|php5|phtml)$ - [F]
+
+    # Block suspicious query strings
+    RewriteCond %{QUERY_STRING} (eval|base64_decode|system|shell_exec|cmd|passthru) [NC]
+    RewriteRule .* - [F]
+</IfModule>
+
+# ====================== CUSTOM ERROR PAGES (Optional) ======================
+# ErrorDocument 403 /403.html
+# ErrorDocument 404 /404.html
+
+# ====================== END ======================
