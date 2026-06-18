@@ -1,43 +1,149 @@
-# ====================== DIAGNOSTIC .htaccess ======================
+# =============================================================================
+# THE VICTORIAS LTD — .htaccess
+# Domain: thevictorias.com.ng
 # Last Updated: June 2026
+# Landing Page: /bus/landing.html
+# =============================================================================
 
+# ── OPTIONS ───────────────────────────────────────────────────────────────────
+Options -Indexes
+Options -MultiViews
+
+# ── ENGINE ON ─────────────────────────────────────────────────────────────────
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /
 
-    # Force HTTPS
+    # ── 1. FORCE HTTPS ────────────────────────────────────────────────────────
     RewriteCond %{HTTPS} off
     RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
-    # Remove www
+    # ── 2. REMOVE WWW ─────────────────────────────────────────────────────────
     RewriteCond %{HTTP_HOST} ^www\.thevictorias\.com\.ng [NC]
     RewriteRule ^(.*)$ https://thevictorias.com.ng/$1 [R=301,L]
 
-    # ==================== BUS ROUTING - SIMPLE & AGGRESSIVE ====================
-    # This should catch /bus/anything
-    RewriteRule ^bus/([^/]+)/?$ /bus/index.html [L,QSA]
+    # ── 3. BLOCK SENSITIVE FILES ──────────────────────────────────────────────
+    RewriteRule
+    ^(\.htaccess|\.htpasswd|\.env|\.git|\.gitignore|\.gitattributes|wp-config\.php|config\.php|composer\.json|composer\.lock|package\.json|package-lock\.json|yarn\.lock|\.sql|\.bak|\.log|Thumbs\.db|\.DS_Store)$
+    - [F,L]
 
-    # Admin
+    # ── 4. BLOCK PHP IN UPLOADS ───────────────────────────────────────────────
+    RewriteRule ^uploads/.*\.(php|php5|php7|phtml|phar|cgi|pl|py|sh|bash)$ - [F,L]
+
+    # ── 5. BLOCK MALICIOUS QUERY STRINGS ──────────────────────────────────────
+    RewriteCond %{QUERY_STRING}
+    (eval|base64_decode|base64_encode|system|shell_exec|passthru|exec|popen|proc_open|phpinfo|cmd|wget|curl|python|perl)
+    [NC]
+    RewriteRule .* - [F,L]
+
+    RewriteCond %{QUERY_STRING} (\.\./|\.\.\\|%2e%2e%2f|%2e%2e\/|\.\.%2f|%2e\.%2f) [NC]
+    RewriteRule .* - [F,L]
+
+    # ── 6. BUS SLUG ROUTING (Updated to landing.html) ─────────────────────────
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^bus/[^/]+/?$ /bus/landing.html [L,QSA]
+
+    # Admin page
     RewriteRule ^bus/admin/?$ /bus/admin.html [L,QSA]
 
-    # Block sensitive files
-    RewriteRule ^(\.htaccess|\.env|\.git) - [F,L]
-
-    Options -Indexes
 </IfModule>
 
-# Basic Security Headers
+# ── BLOCK BAD BOTS & SCRAPERS ─────────────────────────────────────────────────
+<IfModule mod_setenvif.c>
+    SetEnvIfNoCase User-Agent
+    "(semrush|ahrefs|MJ12bot|DotBot|masscan|zgrab|sqlmap|nikto|nmap|dirbuster|gobuster|nuclei|python-requests|python-urllib|go-http-client|curl|wget|libwww-perl|lwp-trivial|harvester|scrapy|httrack)"
+    bad_bot
+    <RequireAll>
+        Require all granted
+        Require not env bad_bot
+    </RequireAll>
+</IfModule>
+
+# ── BLOCK DIRECT IP ACCESS ────────────────────────────────────────────────────
+<IfModule mod_rewrite.c>
+    RewriteCond %{HTTP_HOST} ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ [NC]
+    RewriteRule ^ - [F,L]
+</IfModule>
+
+# ── SECURITY HEADERS ──────────────────────────────────────────────────────────
 <IfModule mod_headers.c>
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=(),
+    interest-cohort=()"
+
     Header always unset Server
     Header always unset X-Powered-By
+    Header always unset X-Generator
 </IfModule>
 
-# Temporary Debug CSP (very permissive)
+# ── CONTENT SECURITY POLICY ───────────────────────────────────────────────────
 <IfModule mod_headers.c>
-    Header always set Content-Security-Policy "default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline'
-    'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data:; connect-src *;"
+    Header always set Content-Security-Policy "\
+    default-src 'self'; \
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' \
+    https://cdnjs.cloudflare.com \
+    https://script.google.com \
+    https://script.googleusercontent.com; \
+    style-src 'self' 'unsafe-inline' \
+    https://cdnjs.cloudflare.com; \
+    font-src 'self' \
+    https://cdnjs.cloudflare.com \
+    data:; \
+    img-src 'self' data: blob: https:; \
+    connect-src 'self' \
+    https://script.google.com \
+    https://script.googleusercontent.com \
+    https://thevictorias.com.ng; \
+    frame-src 'self' \
+    https://docs.google.com \
+    https://www.google.com; \
+    frame-ancestors 'self'; \
+    base-uri 'self'; \
+    form-action 'self'; \
+    upgrade-insecure-requests;"
 </IfModule>
 
-# ====================== END ======================
+# ── ADDITIONAL PROTECTIONS ────────────────────────────────────────────────────
+<IfModule mod_rewrite.c>
+    RewriteRule ^xmlrpc\.php$ - [F,L]
+    RewriteRule ^wp-login\.php$ - [F,L]
+    RewriteRule ^wp-admin/$ - [F,L]
+    RewriteRule ^phpmyadmin/? - [F,L]
+    RewriteRule ^adminer\.php$ - [F,L]
+    RewriteRule ^server-status$ - [F,L]
+    RewriteRule ^server-info$ - [F,L]
+</IfModule>
+
+<FilesMatch "\.(env|log|sql|bak|config|ini|sh|bash|py|rb|pl|cgi|json|lock|md|yml|yaml|xml)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# ── ALLOW ONLY SAFE HTTP METHODS ──────────────────────────────────────────────
+<LimitExcept GET POST HEAD OPTIONS>
+    Order allow,deny
+    Deny from all
+</LimitExcept>
+
+# ── COMPRESSION & CACHING ─────────────────────────────────────────────────────
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css text/javascript application/javascript
+    application/json
+</IfModule>
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType text/css "access plus 6 months"
+    ExpiresByType application/javascript "access plus 6 months"
+</IfModule>
+
+# =============================================================================
+# END
+# =============================================================================
