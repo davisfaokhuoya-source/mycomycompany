@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Business Page</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        /* ── LOADER ── */
+        #lp-loader {
+            position: fixed;
+            inset: 0;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            gap: 16px
+        }
+
+        #lp-loader .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #eee;
+            border-top-color: #E07410;
+            border-radius: 50%;
+            animation: spin .8s linear infinite
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        #lp-loader p {
+            color: #999;
+            font-size: .9rem;
+            font-family: sans-serif
+        }
+
+        #lp-root {
+            display: none
+        }
+
+        /* ── SHELL (injected CSS vars from API) ── */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block
+        }
+
+        a {
+            color: var(--color-f, #E07410);
+            text-decoration: none
+        }
+
+        a:hover {
+            text-decoration: underline
+        }
+
+        /* NAV */
+        .lp-nav {
+            background: var(--color-h, #1a1a2e);
+            color: var(--color-ht, #fff);
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+            position: sticky;
+            top: 0;
+            z-index: 100
+        }
+
+        .lp-nav .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px
+        }
+
+        .lp-nav .brand img {
+            height: 40px;
+            width: 40px;
+            object-fit: contain;
+            border-radius: 50%
+        }
+
+        .lp-nav .brand span {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--color-ht, #fff)
+        }
+
+        .lp-nav-links {
+            display: flex;
+            gap: 24px;
+            list-style: none
+        }
+
+        .lp-nav-links a {
+            color: var(--color-ht, #fff);
+            font-size: .9rem;
+            opacity: .85
+        }
+
+        .lp-nav-links a:hover {
+            opacity: 1;
+            text-decoration: none
+        }
+
+        .nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--color-ht, #fff);
+            font-size: 1.5rem;
+            cursor: pointer
+        }
+
+        /* HERO */
+        .lp-hero {
+            background: var(--color-h, #1a1a2e);
+            color: var(--color-ht, #fff);
+            padding: 60px 24px;
+            text-align: center
+        }
+
+        .lp-hero h1 {
+            font-size: clamp(1.6rem, 4vw, 2.8rem);
+            margin-bottom: 12px
+        }
+
+        .lp-hero p {
+            opacity: .8;
+            max-width: 540px;
+            margin: 0 auto 24px;
+            line-height: 1.6
+        }
+
+        .cta-row {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: .95rem;
+            cursor: pointer;
+            border: none;
+            transition: .2s
+        }
+
+        .btn-primary {
+            background: var(--color-f, #E07410);
+            color: #fff
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--color-ht, #fff);
+            color: var(--color-ht, #fff)
+        }
+
+        .btn:hover {
+            opacity: .88;
+            transform: translateY(-1px)
+        }
+
+        /* SECTIONS */
+        .lp-section {
+            padding: 56px 24px;
+            max-width: 1100px;
+            margin: 0 auto
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--color-h, #1a1a2e)
+        }
+
+        .section-divider {
+            width: 48px;
+            height: 4px;
+            background: var(--color-f, #E07410);
+            border-radius: 2px;
+            margin-bottom: 32px
+        }
+
+        /* SERVICES */
+        .services-grid {
+            display: grid;
+            gap: 24px;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr))
+        }
+
+        .svc-card {
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, .08);
+            transition: .2s
+        }
+
+        .svc-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .12)
+        }
+
+        .svc-card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover
+        }
+
+        .svc-card-ph {
+            width: 100%;
+            height: 180px;
+            background: var(--color-h, #1a1a2e);
+            opacity: .1
+        }
+
+        .svc-card-body {
+            padding: 16px
+        }
+
+        .svc-card-body h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--color-h, #1a1a2e)
+        }
+
+        .svc-card-body p {
+            font-size: .875rem;
+            color: #666;
+            line-height: 1.5
+        }
+
+        /* ITEMS */
+        .items-grid {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr))
+        }
+
+        .item-card {
+            background: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .07);
+            transition: .2s
+        }
+
+        .item-card:hover {
+            transform: translateY(-3px)
+        }
+
+        .item-card img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover
+        }
+
+        .item-card-ph {
+            width: 100%;
+            height: 160px;
+            background: #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ccc;
+            font-size: 2rem
+        }
+
+        .item-card-body {
+            padding: 12px
+        }
+
+        .item-name {
+            font-weight: 600;
+            font-size: .9rem;
+            margin-bottom: 4px
+        }
+
+        .item-price {
+            color: var(--color-f, #E07410);
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 4px
+        }
+
+        .item-desc {
+            font-size: .8rem;
+            color: #888;
+            line-height: 1.4
+        }
+
+        /* PAGINATION */
+        .pagination {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 32px;
+            flex-wrap: wrap
+        }
+
+        .page-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1.5px solid var(--color-h, #1a1a2e);
+            color: var(--color-h, #1a1a2e);
+            background: #fff;
+            cursor: pointer;
+            font-size: .875rem;
+            transition: .2s
+        }
+
+        .page-btn.active,
+        .page-btn:hover {
+            background: var(--color-h, #1a1a2e);
+            color: #fff
+        }
+
+        /* CONTACT */
+        .contact-grid {
+            display: grid;
+            gap: 16px;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr))
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: #fff;
+            padding: 16px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .06)
+        }
+
+        .contact-item i {
+            color: var(--color-f, #E07410);
+            font-size: 1.2rem;
+            margin-top: 2px
+        }
+
+        .ci-label {
+            font-size: .75rem;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: .5px
+        }
+
+        .ci-value {
+            font-size: .95rem;
+            font-weight: 500;
+            color: #333
+        }
+
+        /* FOOTER */
+        .lp-footer {
+            background: var(--color-f, #E07410);
+            color: #fff;
+            text-align: center;
+            padding: 32px 24px;
+            margin-top: 48px
+        }
+
+        .lp-footer p {
+            opacity: .85;
+            font-size: .875rem;
+            margin-top: 6px
+        }
+
+        .lp-footer a {
+            color: #fff;
+            text-decoration: underline
+        }
+
+        .powered-by {
+            background: #111;
+            color: #aaa;
+            text-align: center;
+            padding: 10px 24px;
+            font-size: .78rem
+        }
+
+        .powered-by a {
+            color: #E07410
+        }
+
+        /* AD PLACEHOLDER */
+        .ad-box {
+            background: #f0f0f0;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 32px 16px;
+            text-align: center;
+            color: #aaa;
+            font-size: .85rem;
+            margin: 32px 24px
+        }
+
+        .ad-box span {
+            display: block;
+            font-size: 1.5rem;
+            margin-bottom: 8px
+        }
+
+        /* EXPIRED */
+        .expired-notice {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 16px 24px;
+            text-align: center;
+            margin: 24px;
+            font-size: .9rem;
+            color: #856404
+        }
+
+        /* BOLD TEMPLATE */
+        .bold-hero {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 400px
+        }
+
+        .bold-hero-text {
+            padding: 60px 48px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: var(--color-h, #1a1a2e);
+            color: var(--color-ht, #fff)
+        }
+
+        .bold-hero-img {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: color-mix(in srgb, var(--color-h, #1a1a2e) 60%, #000)
+        }
+
+        /* MINIMAL TEMPLATE */
+        .minimal-hero {
+            background: #fff;
+            padding: 80px 24px;
+            text-align: center;
+            border-bottom: 4px solid var(--color-f, #E07410)
+        }
+
+        /* ERROR */
+        .lp-error {
+            text-align: center;
+            padding: 80px 24px
+        }
+
+        .lp-error h2 {
+            color: #ccc;
+            font-size: 3rem;
+            margin-bottom: 16px
+        }
+
+        .lp-error p {
+            color: #666
+        }
+
+        /* MOBILE */
+        @media(max-width:640px) {
+            .lp-nav-links {
+                display: none;
+                flex-direction: column;
+                position: absolute;
+                top: 64px;
+                left: 0;
+                right: 0;
+                background: var(--color-h, #1a1a2e);
+                padding: 16px 24px;
+                gap: 16px
+            }
+
+            .lp-nav-links.open {
+                display: flex
+            }
+
+            .nav-toggle {
+                display: block
+            }
+
+            .bold-hero {
+                grid-template-columns: 1fr !important
+            }
+
+            .bold-hero-img {
+                display: none
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- LOADER -->
+    <div id="lp-loader">
+        <div class="spinner"></div>
+        <p>Loading business page…</p>
+    </div>
+
+    <!-- PAGE ROOT -->
+    <div id="lp-root"></div>
+
+    <script>
+        // ── CONFIG ──────────────────────────────────────────
+        var GATEWAY_URL = "https://script.google.com/macros/s/AKfycbwcCgpVYQmIILB7OrNaLfEco1P8fdVxU_8RNpo92AFDPQ2VqIi8U99edSMOiVyzm_WGQQ/exec";
+        var BASE_PATH = "/bus/";
+        var FREE_MAX_SVC = 2;
+        var FREE_MAX_ITEMS = 6;
+        var PAID_MAX_SVC = 8;
+        var PAID_MAX_ITEMS = 30;
+        var PAID_PER_PAGE = 10;
+
+        var FREE_COLORS = {
+            h: "#1a1a2e", ht: "#ffffff", f: "#E07410"
+        };
+
+        // ── SLUG FROM URL ────────────────────────────────────
+        function getSlug() {
+            var path = window.location.pathname;
+            // /bus/company-name → "company-name"
+            var match = path.match(new RegExp(BASE_PATH.replace("/", "\/") + "([^/?#]+)"));
+            return match ? match[1].toUpperCase() : "";
+        }
+
+        function getPageNum() {
+            return parseInt(new URLSearchParams(window.location.search).get("p")) || 1;
+        }
+
+        // ── MAIN INIT ────────────────────────────────────────
+        (function () {
+            var slug = getSlug();
+            if (!slug) { renderError("No business page specified."); return; }
+            fetchPage(slug, getPageNum());
+        })();
+
+        function fetchPage(slug, page) {
+            fetch(GATEWAY_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify({
+                    system: "business",
+                    action: "getLandingPage",
+                    slug: slug,
+                    page: page
+                })
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (res) {
+                    if (res.success && res.data) {
+                        renderPage(res.data, page);
+                    } else {
+                        renderError(res.message || "Page not found.");
+                    }
+                })
+                .catch(function (e) {
+                    renderError("Connection error. Please try again.");
+                });
+        }
+
+        // ── RENDER ───────────────────────────────────────────
+        function renderPage(d, page) {
+            // Apply CSS vars
+            var colors = d.isPaid && d.colours && d.colours.length >= 3
+                ? { h: d.colours[0], ht: d.colours[1], f: d.colours[2] }
+                : FREE_COLORS;
+
+            var root = document.documentElement;
+            root.style.setProperty("--color-h", colors.h);
+            root.style.setProperty("--color-ht", colors.ht);
+            root.style.setProperty("--color-f", colors.f);
+
+            document.title = d.name + " | Business Page";
+
+            var maxSvc = d.isPaid ? PAID_MAX_SVC : FREE_MAX_SVC;
+            var maxItem = d.isPaid ? PAID_MAX_ITEMS : FREE_MAX_ITEMS;
+            var services = buildServices(d.servicesImages || [], d.servicesDescrip || [], maxSvc);
+            var items = buildItems(d.itemsImages || [], d.itemsDescrip || [], maxItem);
+
+            var html = d.isPaid
+                ? renderPaid(d, services, items, page)
+                : renderFree(d, services, items);
+
+            document.getElementById("lp-root").innerHTML = html;
+            document.getElementById("lp-root").style.display = "block";
+            document.getElementById("lp-loader").style.display = "none";
+
+            // Bind pagination
+            document.querySelectorAll("[data-page]").forEach(function (btn) {
+                btn.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    var pg = parseInt(this.dataset.page);
+                    var slug = getSlug();
+                    history.pushState({}, "", "?p=" + pg);
+                    // Re-render items only
+                    var allItems = buildItems(d.itemsImages || [], d.itemsDescrip || [], maxItem);
+                    var sec = document.getElementById("items-section");
+                    if (sec) sec.innerHTML = buildItemsHTML(allItems, d.isPaid, pg, slug);
+                    bindPagination(d, maxItem);
+                    window.scrollTo({ top: document.getElementById("items-section").offsetTop - 80, behavior: "smooth" });
+                });
+            });
+        }
+
+        function bindPagination(d, maxItem) {
+            document.querySelectorAll("[data-page]").forEach(function (btn) {
+                btn.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    var pg = parseInt(this.dataset.page);
+                    history.pushState({}, "", "?p=" + pg);
+                    var allItems = buildItems(d.itemsImages || [], d.itemsDescrip || [], maxItem);
+                    var sec = document.getElementById("items-section");
+                    if (sec) sec.innerHTML = buildItemsHTML(allItems, d.isPaid, pg, getSlug());
+                    bindPagination(d, maxItem);
+                });
+            });
+        }
+
+        // ── FREE TIER ────────────────────────────────────────
+        function renderFree(d, services, items) {
+            return [
+                d.expired ? expiredBanner() : "",
+                freeHero(d),
+                servicesSection(services),
+                "<div id='items-section'>" + buildItemsHTML(items, false, 1, getSlug()) + "</div>",
+                contactSection(d),
+                adBox(),
+                footerSection(d),
+                poweredBy()
+            ].join("");
+        }
+
+        function freeHero(d) {
+            return "<section class='lp-hero' id='home'>" +
+                (d.logo ? "<img src='" + esc(d.logo) + "' alt='logo' style='height:72px;width:72px;object-fit:contain;border-radius:50%;margin:0 auto 16px;border:3px solid rgba(255,255,255,.3);'>" : "") +
+                "<h1>" + esc(d.name) + "</h1>" +
+                (d.regNo ? "<p style='opacity:.5;font-size:.8rem;'>Reg. No: " + esc(d.regNo) + "</p>" : "") +
+                "<div class='cta-row'>" +
+                (d.whatsapp ? "<a href='https://wa.me/" + d.whatsapp.replace(/\D/g, "") + "' class='btn btn-primary'><i class='fa-brands fa-whatsapp'></i> WhatsApp Us</a>" : "") +
+                (d.phone ? "<a href='tel:" + esc(d.phone) + "' class='btn btn-outline'><i class='fa-solid fa-phone'></i> Call Us</a>" : "") +
+                "</div></section>";
+        }
+
+        // ── PAID TIER ────────────────────────────────────────
+        function renderPaid(d, services, items, page) {
+            var tpl = (d.template || "modern").toLowerCase();
+            return [
+                nav(d),
+                tpl === "bold" ? boldHero(d) :
+                    tpl === "minimal" ? minimalHero(d) : modernHero(d),
+                servicesSection(services),
+                "<div id='items-section'>" + buildItemsHTML(items, true, page, getSlug()) + "</div>",
+                contactSection(d),
+                footerSection(d),
+                poweredBy()
+            ].join("");
+        }
+
+        function modernHero(d) {
+            return "<section class='lp-hero' id='home' style='background:linear-gradient(135deg,var(--color-h) 0%,color-mix(in srgb,var(--color-h) 70%,#000) 100%);'>" +
+                (d.logo ? "<img src='" + esc(d.logo) + "' alt='logo' style='height:90px;width:90px;object-fit:contain;border-radius:50%;margin:0 auto 20px;border:3px solid rgba(255,255,255,.3);'>" : "") +
+                "<h1>" + esc(d.name) + "</h1>" +
+                (d.address ? "<p>" + esc(d.address) + "</p>" : "") +
+                "<div class='cta-row'>" +
+                (d.whatsapp ? "<a href='https://wa.me/" + d.whatsapp.replace(/\D/g, "") + "' class='btn btn-primary'><i class='fa-brands fa-whatsapp'></i> WhatsApp</a>" : "") +
+                (d.phone ? "<a href='tel:" + esc(d.phone) + "' class='btn btn-outline'><i class='fa-solid fa-phone'></i> Call</a>" : "") +
+                (d.email ? "<a href='mailto:" + esc(d.email) + "' class='btn btn-outline'><i class='fa-solid fa-envelope'></i> Email</a>" : "") +
+                "</div></section>";
+        }
+
+        function boldHero(d) {
+            return "<section class='bold-hero' id='home'>" +
+                "<div class='bold-hero-text'>" +
+                "<div style='font-size:.8rem;opacity:.5;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;'>Business</div>" +
+                "<h1 style='font-size:clamp(2rem,5vw,3.5rem);font-weight:800;line-height:1.1;margin-bottom:20px;'>" + esc(d.name) + "</h1>" +
+                (d.address ? "<p style='opacity:.7;margin-bottom:28px;'>" + esc(d.address) + "</p>" : "") +
+                "<div style='display:flex;gap:12px;flex-wrap:wrap;'>" +
+                (d.whatsapp ? "<a href='https://wa.me/" + d.whatsapp.replace(/\D/g, "") + "' class='btn btn-primary'><i class='fa-brands fa-whatsapp'></i> WhatsApp</a>" : "") +
+                (d.phone ? "<a href='tel:" + esc(d.phone) + "' class='btn' style='background:rgba(255,255,255,.15);color:var(--color-ht);'><i class='fa-solid fa-phone'></i> Call</a>" : "") +
+                "</div></div>" +
+                "<div class='bold-hero-img'>" +
+                (d.logo ? "<img src='" + esc(d.logo) + "' alt='logo' style='max-height:220px;max-width:80%;object-fit:contain;'>" : "<div style='font-size:6rem;opacity:.15;'>🏢</div>") +
+                "</div></section>";
+        }
+
+        function minimalHero(d) {
+            return "<section class='minimal-hero' id='home'>" +
+                (d.logo ? "<img src='" + esc(d.logo) + "' alt='logo' style='height:80px;width:80px;object-fit:contain;margin:0 auto 20px;border-radius:12px;'>" : "") +
+                "<h1 style='font-size:clamp(1.8rem,4vw,2.6rem);font-weight:700;color:var(--color-h);'>" + esc(d.name) + "</h1>" +
+                (d.regNo ? "<div style='color:#999;font-size:.8rem;margin:6px 0;'>Reg: " + esc(d.regNo) + "</div>" : "") +
+                (d.address ? "<div style='color:#666;margin-top:8px;'>" + esc(d.address) + "</div>" : "") +
+                "<div style='display:flex;gap:12px;justify-content:center;margin-top:28px;flex-wrap:wrap;'>" +
+                (d.whatsapp ? "<a href='https://wa.me/" + d.whatsapp.replace(/\D/g, "") + "' class='btn btn-primary'><i class='fa-brands fa-whatsapp'></i> WhatsApp</a>" : "") +
+                (d.phone ? "<a href='tel:" + esc(d.phone) + "' class='btn' style='background:var(--color-h);color:#fff;'><i class='fa-solid fa-phone'></i> Call</a>" : "") +
+                "</div></section>";
+        }
+
+        // ── SHARED COMPONENTS ────────────────────────────────
+        function nav(d) {
+            var links = [
+                { href: "#home", label: "Home" },
+                { href: "#services", label: "Services" },
+                { href: "#items", label: "Products" },
+                { href: "#contact", label: "Contact" }
+            ];
+            return "<nav class='lp-nav'>" +
+                "<div class='brand'>" +
+                (d.logo ? "<img src='" + esc(d.logo) + "' alt='logo' onerror=\"this.style.display='none'\">" : "") +
+                "<span>" + esc(d.name) + "</span></div>" +
+                "<button class='nav-toggle' onclick=\"document.getElementById('lp-nav-links').classList.toggle('open')\" aria-label='Menu'>&#9776;</button>" +
+                "<ul class='lp-nav-links' id='lp-nav-links'>" +
+                links.map(function (l) { return "<li><a href='" + l.href + "'>" + l.label + "</a></li>"; }).join("") +
+                "</ul></nav>";
+        }
+
+        function servicesSection(services) {
+            if (!services.length) return "";
+            var cards = services.map(function (s) {
+                return "<div class='svc-card'>" +
+                    (s.image ? "<img src='" + esc(s.image) + "' alt='" + esc(s.title) + "' loading='lazy' onerror=\"this.style.display='none'\">" : "<div class='svc-card-ph'></div>") +
+                    "<div class='svc-card-body'><h3>" + esc(s.title) + "</h3>" +
+                    (s.desc ? "<p>" + esc(s.desc) + "</p>" : "") +
+                    "</div></div>";
+            }).join("");
+            return "<section class='lp-section' id='services'>" +
+                "<div class='section-title'>Our Services</div>" +
+                "<div class='section-divider'></div>" +
+                "<div class='services-grid'>" + cards + "</div></section>";
+        }
+
+        function buildItemsHTML(items, isPaid, page, slug) {
+            if (!items.length) return "";
+            var perPage = isPaid ? PAID_PER_PAGE : FREE_MAX_ITEMS;
+            var total = Math.ceil(items.length / perPage);
+            page = Math.max(1, Math.min(page, total));
+            var start = (page - 1) * perPage;
+            var visible = items.slice(start, start + perPage);
+
+            var cards = visible.map(function (it) {
+                return "<div class='item-card'>" +
+                    (it.image ? "<img src='" + esc(it.image) + "' alt='" + esc(it.name) + "' loading='lazy'>" : "<div class='item-card-ph'><i class='fa-solid fa-image'></i></div>") +
+                    "<div class='item-card-body'>" +
+                    "<div class='item-name'>" + esc(it.name) + "</div>" +
+                    (it.price ? "<div class='item-price'>" + esc(it.price) + "</div>" : "") +
+                    (it.desc ? "<div class='item-desc'>" + esc(it.desc) + "</div>" : "") +
+                    "</div></div>";
+            }).join("");
+
+            var pager = "";
+            if (total > 1) {
+                var btns = "";
+                if (page > 1) btns += "<button class='page-btn' data-page='" + (page - 1) + "'>&#8592; Prev</button>";
+                for (var i = 1; i <= total; i++) {
+                    btns += "<button class='page-btn" + (i === page ? " active" : "") + "' data-page='" + i + "'>" + i + "</button>";
+                }
+                if (page < total) btns += "<button class='page-btn' data-page='" + (page + 1) + "'>Next &#8594;</button>";
+                pager = "<div class='pagination'>" + btns + "</div>";
+            }
+
+            return "<section class='lp-section' id='items'>" +
+                "<div class='section-title'>Products &amp; Items</div>" +
+                "<div class='section-divider'></div>" +
+                "<div class='items-grid'>" + cards + "</div>" +
+                pager + "</section>";
+        }
+
+        function contactSection(d) {
+            var rows = [];
+            if (d.phone) rows.push({ icon: "fa-phone", label: "Phone", val: d.phone, href: "tel:" + d.phone });
+            if (d.whatsapp) rows.push({ icon: "fa-whatsapp", label: "WhatsApp", val: d.whatsapp, href: "https://wa.me/" + d.whatsapp.replace(/\D/g, ""), brand: true });
+            if (d.email) rows.push({ icon: "fa-envelope", label: "Email", val: d.email, href: "mailto:" + d.email });
+            if (d.address) rows.push({ icon: "fa-location-dot", label: "Address", val: d.address, href: null });
+            if (d.url) rows.push({ icon: "fa-globe", label: "Website", val: d.url, href: d.url });
+            if (!rows.length) return "";
+            var items = rows.map(function (r) {
+                var cls = r.brand ? "fa-brands" : "fa-solid";
+                var val = r.href ? "<a href='" + esc(r.href) + "' target='_blank'>" + esc(r.val) + "</a>" : esc(r.val);
+                return "<div class='contact-item'><i class='" + cls + " " + r.icon + "'></i>" +
+                    "<div><div class='ci-label'>" + r.label + "</div>" +
+                    "<div class='ci-value'>" + val + "</div></div></div>";
+            }).join("");
+            return "<section class='lp-section' id='contact'>" +
+                "<div class='section-title'>Contact Us</div>" +
+                "<div class='section-divider'></div>" +
+                "<div class='contact-grid'>" + items + "</div></section>";
+        }
+
+        function footerSection(d) {
+            return "<footer class='lp-footer'>" +
+                "<strong style='font-size:1.1rem;'>" + esc(d.name) + "</strong>" +
+                (d.regNo ? "<p>Reg. No: " + esc(d.regNo) + "</p>" : "") +
+                (d.address ? "<p>" + esc(d.address) + "</p>" : "") +
+                (d.phone ? "<p><a href='tel:" + esc(d.phone) + "'>" + esc(d.phone) + "</a></p>" : "") +
+                (d.email ? "<p><a href='mailto:" + esc(d.email) + "'>" + esc(d.email) + "</a></p>" : "") +
+                "</footer>";
+        }
+
+        function adBox() {
+            return "<div class='ad-box'><span>📢</span>Advertisement Space" +
+                "<br><small>Advertise here — <a href='https://thevictorias.com.ng' style='color:#999;'>thevictorias.com.ng</a></small></div>";
+        }
+
+        function poweredBy() {
+            return "<div class='powered-by'>Powered by " +
+                "<a href='https://thevictorias.com.ng' target='_blank'>thevictorias.com.ng</a>" +
+                " &nbsp;|&nbsp; <a href='https://thevictorias.com.ng/contact.html' target='_blank'>Get your own page</a></div>";
+        }
+
+        function expiredBanner() {
+            return "<div class='expired-notice'>⚠️ Paid plan expired. Showing free version. " +
+                "<a href='https://thevictorias.com.ng/contact.html'>Upgrade →</a></div>";
+        }
+
+        function renderError(msg) {
+            document.getElementById("lp-loader").style.display = "none";
+            document.getElementById("lp-root").style.display = "block";
+            document.getElementById("lp-root").innerHTML =
+                "<div class='lp-error'><h2>404</h2><p>" + esc(msg) + "</p>" +
+                "<a href='https://thevictorias.com.ng' style='color:#E07410;margin-top:16px;display:inline-block;'>← The Victorias Ltd</a></div>" +
+                poweredBy();
+        }
+
+        // ── DATA BUILDERS ────────────────────────────────────
+        function buildServices(images, descrips, limit) {
+            var total = Math.min(Math.max(images.length, descrips.length), limit);
+            var out = [];
+            for (var i = 0; i < total; i++) {
+                var parts = (descrips[i] || "").split("::");
+                out.push({ image: images[i] || "", title: parts[0] || "Service " + (i + 1), desc: parts[1] || "" });
+            }
+            return out;
+        }
+
+        function buildItems(images, descrips, limit) {
+            var total = Math.min(Math.max(images.length, descrips.length), limit);
+            var out = [];
+            for (var i = 0; i < total; i++) {
+                var parts = (descrips[i] || "").split("::");
+                out.push({ image: images[i] || "", name: parts[0] || "Item " + (i + 1), price: parts[1] || "", desc: parts[2] || "" });
+            }
+            return out;
+        }
+
+        // ── UTILS ────────────────────────────────────────────
+        function esc(s) {
+            return String(s || "")
+                .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+    </script>
+</body>
+
+</html>
