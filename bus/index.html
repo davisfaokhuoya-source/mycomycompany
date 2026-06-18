@@ -536,7 +536,7 @@
 
     <script>
         // ── CONFIG ──────────────────────────────────────────
-        var GATEWAY_URL = "https://script.google.com/macros/s/AKfycbwcCgpVYQmIILB7OrNaLfEco1P8fdVxU_8RNpo92AFDPQ2VqIi8U99edSMOiVyzm_WGQQ/exec";
+        var GATEWAY_URL = "https://script.google.com/macros/s/YOUR_DEPLOY_ID/exec";
         var BASE_PATH = "/bus/";
         var FREE_MAX_SVC = 2;
         var FREE_MAX_ITEMS = 6;
@@ -883,97 +883,5 @@
         }
     </script>
 </body>
-<!-- ==================== DEBUGGER ==================== -->
-<script>
-    // ============== BUS PAGE DEBUGGER ==============
-    console.log("%c🚀 BUS PAGE DEBUGGER STARTED", "color: #E07410; font-size: 16px; font-weight: bold;");
-
-    (function () {
-        const debug = {
-            timestamp: new Date().toISOString(),
-            url: window.location.href,
-            pathname: window.location.pathname,
-            slug: null,
-            basePath: "/bus/"
-        };
-
-        // 1. Slug Detection
-        function getSlug() {
-            const path = window.location.pathname;
-            const match = path.match(/\/bus\/([^/?#]+)/i);
-            return match ? match[1] : null;
-        }
-
-        debug.slug = getSlug();
-        console.log("%c📍 Current URL Info:", "color: cyan", debug);
-
-        // 2. Check if rewrite worked
-        if (!debug.slug) {
-            console.error("❌ No slug detected! Rewrite rule may not be working.");
-        } else {
-            console.log(`✅ Slug extracted: %c${debug.slug}`, "color: lime; font-weight:bold");
-        }
-
-        // 3. Test Fetch to Google Script
-        console.log("%c🔍 Testing connection to backend...", "color: orange");
-
-        const GATEWAY_URL = "https://script.google.com/macros/s/AKfycbwcCgpVYQmIILB7OrNaLfEco1P8fdVxU_8RNpo92AFDPQ2VqIi8U99edSMOiVyzm_WGQQ/exec";
-
-        fetch(GATEWAY_URL, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain" },
-            body: JSON.stringify({
-                system: "business",
-                action: "getLandingPage",
-                slug: debug.slug || "test",
-                page: 1
-            })
-        })
-            .then(r => {
-                console.log(`%c📡 Response Status: ${r.status} ${r.statusText}`,
-                    r.ok ? "color:lime" : "color:red");
-                return r.text();
-            })
-            .then(text => {
-                try {
-                    const data = JSON.parse(text);
-                    console.log("%c✅ Backend Response:", "color:lime", data);
-                } catch (e) {
-                    console.log("%c📄 Raw Response:", "color:yellow", text.substring(0, 500));
-                }
-            })
-            .catch(err => {
-                console.error("❌ Fetch Error:", err);
-            });
-
-        // 4. CSP & Resource Check
-        console.log("%c🔐 CSP Check - Look for blocked resources below", "color: violet");
-
-        // 5. Show helpful tips
-        console.group("%c💡 Quick Debug Tips", "color:#E07410");
-        console.log("1. If you still see old 404s → Clear browser cache (Ctrl+Shift+R)");
-        console.log("2. Check Network tab for any red 404s");
-        console.log("3. Confirm you uploaded the NEW index.html (self-contained version)");
-        console.log("4. Make sure .htaccess is in the root folder");
-        console.groupEnd();
-
-        // Optional: Add visible debug banner
-        if (debug.slug) {
-            const banner = document.createElement('div');
-            banner.style.cssText = `
-            position:fixed; top:10px; right:10px; background:#1a1a2e; color:#0f0; 
-            padding:8px 12px; border-radius:4px; font-family:monospace; 
-            font-size:12px; z-index:99999; border:1px solid #0f0;
-        `;
-            banner.innerHTML = `DEBUG: ${debug.slug} | ${new Date().toLocaleTimeString()}`;
-            document.body.appendChild(banner);
-
-            // Auto remove after 8 seconds
-            setTimeout(() => banner.remove(), 8000);
-        }
-
-    })();
-</script>
-<!-- ==================== END DEBUGGER ==================== -->
 
 </html>
