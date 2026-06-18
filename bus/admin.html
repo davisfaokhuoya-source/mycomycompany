@@ -234,6 +234,88 @@
             border: 1.5px dashed var(--border);
         }
 
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 720px;
+        }
+
+        thead th {
+            text-align: left;
+            font-size: .72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #888;
+            background: #fafafa;
+            padding: 14px 18px;
+            border-bottom: 2px solid var(--border);
+            white-space: nowrap;
+        }
+
+        tbody td {
+            padding: 16px 18px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+
+        tbody tr:hover {
+            background: #fbfbfd;
+        }
+
+        td:nth-child(1) {
+            min-width: 180px;
+        }
+
+        td:nth-child(2) {
+            min-width: 200px;
+        }
+
+        td:nth-child(3) {
+            min-width: 90px;
+        }
+
+        td:nth-child(4) {
+            min-width: 110px;
+        }
+
+        td:nth-child(5) {
+            min-width: 110px;
+        }
+
+        td:nth-child(6) {
+            min-width: 110px;
+        }
+
+        .preview-link {
+            font-family: monospace;
+            font-size: .85rem;
+        }
+
+        .badge-paid,
+        .badge-free {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: .75rem;
+            font-weight: 700;
+            letter-spacing: .3px;
+        }
+
+        .badge-paid {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .badge-free {
+            background: #eef0f3;
+            color: #667;
+        }
+
         @media(max-width:640px) {
 
             .form-grid,
@@ -443,6 +525,7 @@
                                             <option value="matrix">Matrix</option>
                                         </optgroup>
                                     </select></div>
+                                <div><label>isPaid</label><input type="text" id="e-ispaid" value="false"></div>
                                 <div><label>Expiry Date</label><input type="date" id="e-expires"></div>
                                 <div class="form-full"><label>Colours (header|text|footer)</label><input type="text"
                                         id="e-colours" placeholder="#1a1a2e|#ffffff|#E07410"></div>
@@ -522,7 +605,10 @@
         function val(id) { return document.getElementById(id).value.trim(); }
 
         // ── DYNAMIC ROWS ─────────────────────────────────────────────
-        function addServiceRow(containerId = "services-container") {
+        // NOTE: now accepts optional image/title/desc so it can be used both
+        // to add a blank row (create form) AND to populate a row with existing
+        // data (edit form via openEdit()).
+        function addServiceRow(containerId = "services-container", image = "", title = "", desc = "") {
             const container = document.getElementById(containerId);
             const div = document.createElement("div");
             div.className = "dynamic-row";
@@ -530,15 +616,15 @@
                 <div class="form-grid">
                     <div>
                         <label>Image URL</label>
-                        <input type="text" placeholder="https://example.com/image.jpg">
+                        <input type="text" value="${esc(image)}" placeholder="https://example.com/image.jpg">
                     </div>
                     <div>
                         <label>Title</label>
-                        <input type="text" placeholder="Service Title">
+                        <input type="text" value="${esc(title)}" placeholder="Service Title">
                     </div>
                     <div class="form-full">
                         <label>Description</label>
-                        <textarea rows="2" placeholder="Service description..."></textarea>
+                        <textarea rows="2" placeholder="Service description...">${esc(desc)}</textarea>
                     </div>
                 </div>
                 <div style="text-align:right; margin-top:8px;">
@@ -550,30 +636,18 @@
             container.appendChild(div);
         }
 
-        function addItemRow(containerId = "items-container") {
+        function addItemRow(containerId = "items-container", image = "", name = "", price = "", desc = "") {
             const container = document.getElementById(containerId);
             const div = document.createElement("div");
             div.className = "dynamic-row";
             div.innerHTML = `
                 <div class="form-grid">
-                    <div>
-                        <label>Image URL</label>
-                        <input type="text" placeholder="https://example.com/image.jpg">
-                    </div>
-                    <div>
-                        <label>Name</label>
-                        <input type="text" placeholder="Product Name">
-                    </div>
-                    <div>
-                        <label>Price</label>
-                        <input type="text" placeholder="₦25,000">
-                    </div>
-                    <div class="form-full">
-                        <label>Description</label>
-                        <textarea rows="2" placeholder="Product description..."></textarea>
-                    </div>
+                    <div><label>Image URL</label><input type="text" value="${esc(image)}" placeholder="https://..."></div>
+                    <div><label>Name</label><input type="text" value="${esc(name)}" placeholder="Product Name"></div>
+                    <div><label>Price</label><input type="text" value="${esc(price)}" placeholder="₦25,000"></div>
+                    <div class="form-full"><label>Description</label><textarea rows="2">${esc(desc)}</textarea></div>
                 </div>
-                <div style="text-align:right; margin-top:8px;">
+                <div style="text-align:right;margin-top:8px;">
                     <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.dynamic-row').remove()">
                         <i class="fa-solid fa-trash"></i> Remove
                     </button>
@@ -714,10 +788,24 @@
         // ── EDIT FUNCTIONS ───────────────────────────────────────────
         var editSlug = "";
 
+        // Tries several plausible header-name variants and returns the first
+        // non-empty value found on the page-data object `p`.
+        function pick(p, keys) {
+            for (const k of keys) {
+                if (p[k] !== undefined && p[k] !== null && String(p[k]).trim() !== "") {
+                    return p[k];
+                }
+            }
+            return "";
+        }
+
         function openEdit(p) {
+            console.log("openEdit() received row data:", p);
+
             editSlug = String(p.cTrackingNo || "").toUpperCase();
             document.getElementById("edit-slug-label").textContent = editSlug;
 
+            // Basic fields
             document.getElementById("e-name").value = p.cName || "";
             document.getElementById("e-phone").value = p.cPhoneNo || "";
             document.getElementById("e-whatsapp").value = p.cWhatsapp || "";
@@ -728,11 +816,54 @@
             document.getElementById("e-url").value = p.cURL || "";
             document.getElementById("e-template").value = p.cTemplate || "neo";
             document.getElementById("e-expires").value = p.Expires ? String(p.Expires).split("T")[0] : "";
-            document.getElementById("e-colours").value = p.cColours || "";
+            document.getElementById("e-colours").value = pick(p, ["cColours", "cColors", "colours"]);
 
-            // Clear previous dynamic rows
+            // Clear containers
             document.getElementById("edit-services-container").innerHTML = "";
             document.getElementById("edit-items-container").innerHTML = "";
+
+            // Load existing Services — row count is the LONGER of images or
+            // descriptions (a row can have an image with no description yet,
+            // or vice versa), matching the backend's buildServices() logic.
+            const serviceDescripRaw = pick(p, ["cServiceDescrip", "cServicesDescrip", "ServiceDescrip", "cServiceDescription"]);
+            const serviceImagesRaw = pick(p, ["cServicesImage", "cServiceImage", "ServicesImage"]);
+            const serviceDescs = serviceDescripRaw ? String(serviceDescripRaw).split("|") : [];
+            const serviceImages = serviceImagesRaw ? String(serviceImagesRaw).split("|") : [];
+            const svcCount = Math.max(serviceDescs.length, serviceImages.length);
+
+            for (let i = 0; i < svcCount; i++) {
+                const parts = (serviceDescs[i] || "").split("::");
+                addServiceRow(
+                    "edit-services-container",
+                    (serviceImages[i] || "").trim(),
+                    (parts[0] || "").trim(),
+                    (parts[1] || "").trim()
+                );
+            }
+            if (svcCount === 0) {
+                console.log("No service data found on this row (checked cServiceDescrip / cServicesDescrip / ServiceDescrip / cServiceDescription / cServicesImage).");
+            }
+
+            // Load existing Items — same longer-of-the-two logic.
+            const itemsDescripRaw = pick(p, ["cItemsDescription", "cItemsDescrip", "ItemsDescription", "cItemDescription"]);
+            const itemImagesRaw = pick(p, ["cItemsImage", "cItemImage", "ItemsImage"]);
+            const itemDescs = itemsDescripRaw ? String(itemsDescripRaw).split("|") : [];
+            const itemImages = itemImagesRaw ? String(itemImagesRaw).split("|") : [];
+            const itemCount = Math.max(itemDescs.length, itemImages.length);
+
+            for (let i = 0; i < itemCount; i++) {
+                const parts = (itemDescs[i] || "").split("::");
+                addItemRow(
+                    "edit-items-container",
+                    (itemImages[i] || "").trim(),
+                    (parts[0] || "").trim(),
+                    (parts[1] || "").trim(),
+                    (parts[2] || "").trim()
+                );
+            }
+            if (itemCount === 0) {
+                console.log("No item data found on this row (checked cItemsDescription / cItemsDescrip / ItemsDescription / cItemDescription / cItemsImage).");
+            }
 
             document.getElementById("edit-modal").style.display = "block";
         }
@@ -762,6 +893,7 @@
                 logo: val("e-logo"),
                 regNo: val("e-regno"),
                 url: val("e-url"),
+                isPaid: val("e-ispaid"),
                 template: val("e-template"),
                 expires: val("e-expires"),
                 servicesDescrip: collectServices("edit-services-container"),
