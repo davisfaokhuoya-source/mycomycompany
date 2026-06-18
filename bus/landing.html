@@ -550,16 +550,18 @@
 
         // ── SLUG FROM URL ────────────────────────────────────
         function getSlug() {
-            // From hash
-            if (window.location.hash) {
-                return window.location.hash.replace(/^#\/?/, '').trim().toUpperCase();
-            }
-
-            // From query parameter
+            // From query parameter ?slug=...
             const params = new URLSearchParams(window.location.search);
             let slug = params.get('slug') || params.get('business');
+
+            // Fallback: from hash (#/slug)
+            if (!slug && window.location.hash) {
+                slug = window.location.hash.replace(/^#\/?/, '');
+            }
+
             return slug ? slug.toUpperCase() : "";
         }
+
         function getPageNum() {
             return parseInt(new URLSearchParams(window.location.search).get("p")) || 1;
         }
