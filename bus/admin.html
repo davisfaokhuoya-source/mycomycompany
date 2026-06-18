@@ -855,9 +855,15 @@
         // ── EDIT PAGE ────────────────────────────────────────────────
         var editSlug = "";
 
+        // ── EDIT PAGE ────────────────────────────────────────────────
+        var editSlug = "";
+
         function openEdit(p) {
             editSlug = String(p.cTrackingNo || "").toUpperCase();
+
             document.getElementById("edit-slug-label").textContent = editSlug;
+
+            // Basic fields
             document.getElementById("e-name").value = p.cName || "";
             document.getElementById("e-phone").value = p.cPhoneNo || "";
             document.getElementById("e-whatsapp").value = p.cWhatsapp || "";
@@ -866,14 +872,22 @@
             document.getElementById("e-logo").value = p.cLogo || "";
             document.getElementById("e-regno").value = p.cRegNo || "";
             document.getElementById("e-url").value = p.cURL || "";
-            document.getElementById("e-template").value = p.cTemplate || "modern";
+
+            // Template - FIXED ID
+            document.getElementById("f-template").value = p.cTemplate || "neo";   // ← Changed from e-template
+
+            // Expiry
             document.getElementById("e-expires").value = p.Expires
-                ? (p.Expires.split ? p.Expires.split("T")[0] : "") : "";
+                ? String(p.Expires).split("T")[0]
+                : "";
+
+            // Services & Items
             document.getElementById("e-svc-images").value = p.cServicesImage || "";
             document.getElementById("e-svc-desc").value = p.cServiceDescrip || "";
             document.getElementById("e-item-images").value = p.cItemsImage || "";
             document.getElementById("e-item-desc").value = p.cItemsDescription || "";
             document.getElementById("e-colours").value = p.cColours || "";
+
             document.getElementById("edit-result").innerHTML = "";
             document.getElementById("edit-modal").style.display = "block";
         }
@@ -885,32 +899,45 @@
 
         function saveEdit() {
             if (!editSlug) return;
+
             var btn = document.getElementById("btn-save");
-            btn.disabled = true; btn.innerHTML = "<i class='fa-solid fa-spinner spin'></i> Saving…";
+            btn.disabled = true;
+            btn.innerHTML = "<i class='fa-solid fa-spinner spin'></i> Saving…";
+
             api("updatePage", {
                 slug: editSlug,
-                name: gv("e-name"),
-                phone: gv("e-phone"),
-                whatsapp: gv("e-whatsapp"),
-                email: gv("e-email"),
-                address: gv("e-address"),
-                logo: gv("e-logo"),
-                regNo: gv("e-regno"),
-                url: gv("e-url"),
-                template: gv("e-template"),
-                expires: gv("e-expires"),
-                servicesImages: gv("e-svc-images"),
-                servicesDescrip: gv("e-svc-desc"),
-                itemsImages: gv("e-item-images"),
-                itemsDescrip: gv("e-item-desc"),
-                colours: gv("e-colours")
+                name: document.getElementById("e-name").value,
+                phone: document.getElementById("e-phone").value,
+                whatsapp: document.getElementById("e-whatsapp").value,
+                email: document.getElementById("e-email").value,
+                address: document.getElementById("e-address").value,
+                logo: document.getElementById("e-logo").value,
+                regNo: document.getElementById("e-regno").value,
+                url: document.getElementById("e-url").value,
+                template: document.getElementById("f-template").value,        // ← Fixed
+                expires: document.getElementById("e-expires").value,
+                servicesImages: document.getElementById("e-svc-images").value,
+                servicesDescrip: document.getElementById("e-svc-desc").value,
+                itemsImages: document.getElementById("e-item-images").value,
+                itemsDescrip: document.getElementById("e-item-desc").value,
+                colours: document.getElementById("e-colours").value
             }).then(function (res) {
                 btn.disabled = false;
                 btn.innerHTML = "<i class='fa-solid fa-floppy-disk'></i> Save Changes";
+
                 document.getElementById("edit-result").innerHTML = res.success
                     ? "<div class='alert alert-success'>✅ " + esc(res.message) + "</div>"
                     : "<div class='alert alert-danger'>❌ " + esc(res.message) + "</div>";
-                if (res.success) loadPages(currentPage);
+
+                if (res.success) {
+                    setTimeout(() => {
+                        closeEdit();
+                        loadPages(currentPage);
+                    }, 1200);
+                }
+            }).catch(function () {
+                btn.disabled = false;
+                btn.innerHTML = "<i class='fa-solid fa-floppy-disk'></i> Save Changes";
             });
         }
 
