@@ -400,10 +400,14 @@
         .svc-list-row {
             display: flex;
             gap: 28px;
-            padding: 30px 0;
+            padding: 32px 0;
             border-bottom: 1px solid var(--border);
             align-items: flex-start;
             transition: padding-left .3s;
+        }
+
+        .svc-list-row:last-child {
+            border-bottom: none;
         }
 
         .svc-list-row:hover {
@@ -412,17 +416,18 @@
 
         .svc-num {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 2.1rem;
+            font-size: 2.4rem;
             font-weight: 800;
-            color: transparent;
-            -webkit-text-stroke: 1.4px var(--f-mid);
-            min-width: 62px;
+            color: var(--f);
+            min-width: 70px;
             line-height: 1;
+            opacity: 0.9;
         }
 
         .svc-list-row:hover .svc-num {
             -webkit-text-stroke-color: var(--f);
             color: var(--f);
+            transform: scale(1.05);
         }
 
         .item-table {
@@ -1032,13 +1037,42 @@
 
         function svcList(svcs) {
             if (!svcs.length) return "";
+
             var rows = svcs.map(function (s, i) {
-                var short = s.desc.length > 180 ? s.desc.substring(0, 177) + "&hellip;" : s.desc;
-                var more = s.desc.length > 180 ? "<span onclick=\"openLpModal('Service','" + escA(s.title) + "','','" + escA(s.desc) + "')\" style='color:var(--f);font-weight:700;cursor:pointer;'> Read more →</span>" : "";
-                var img = s.image ? "<img src='" + esc(s.image) + "' style='width:92px;height:92px;border-radius:12px;object-fit:cover;flex-shrink:0;' loading='lazy' onerror=\"this.style.display='none'\">" : "";
-                return "<div class='svc-list-row reveal'><div class='svc-num'>" + String(i + 1).padStart(2, "0") + "</div><div style='flex:1;'><h3 style='font-family:Space Grotesk,sans-serif;font-size:1.1rem;color:var(--text);margin-bottom:8px;'>" + esc(s.title) + "</h3><p style='font-size:.86rem;color:var(--text-soft);line-height:1.6;'>" + esc(short) + more + "</p></div>" + img + "</div>";
+                var short = s.desc.length > 160
+                    ? s.desc.substring(0, 157) + "..."
+                    : s.desc;
+
+                var more = s.desc.length > 160
+                    ? "<span onclick=\"openLpModal('Service','" + escA(s.title) + "','','" + escA(s.desc) + "')\" style='color:var(--f);font-weight:700;cursor:pointer;font-size:0.85rem;'>Read more →</span>"
+                    : "";
+
+                var img = s.image
+                    ? "<img src='" + esc(s.image) + "' style='width:88px;height:88px;border-radius:12px;object-fit:cover;flex-shrink:0;' loading='lazy' onerror=\"this.style.display='none'\">"
+                    : "";
+
+                return "<div class='svc-list-row reveal'>" +
+                    "<div class='svc-num'>" + String(i + 1).padStart(2, "0") + "</div>" +
+                    "<div style='flex:1; min-width:0;'>" +
+                    "<h3 style='font-family:Space Grotesk,sans-serif;font-size:1.15rem;font-weight:700;color:var(--text);margin-bottom:10px;'>" +
+                    esc(s.title) +
+                    "</h3>" +
+                    "<p style='font-size:0.87rem;color:var(--text-soft);line-height:1.65;'>" +
+                    esc(short) + " " + more +
+                    "</p>" +
+                    "</div>" +
+                    img +
+                    "</div>";
             }).join("");
-            return "<section class='sec' id='sec-services'><div class='sec-hdr'><div class='eyebrow'>Capabilities</div><div class='h2'>What We Do</div><div class='lead'>A closer look at our core service lines.</div></div>" + rows + "</section>";
+
+            return "<section class='sec' id='sec-services'>" +
+                "<div class='sec-hdr'>" +
+                "<div class='eyebrow'>Capabilities</div>" +
+                "<div class='h2'>What We Do</div>" +
+                "<div class='lead'>A closer look at our core service lines.</div>" +
+                "</div>" +
+                rows +
+                "</section>";
         }
 
         function initModal() {
