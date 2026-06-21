@@ -2054,7 +2054,7 @@
         };
 
         async function executeSecureBridgeCall(systemTarget, actionTarget, analyticalPayload = {}) {
-            const url = "https://script.google.com/macros/s/AKfycbw39djd2BUtkAyW86ywcRzGjTGFnEEOtz-J4phUGj-R6w4OBFSCZrQ_66uQUdx5RC9_/exec";
+            const url = "https://script.google.com/macros/s/AKfycbw2j9AJHl0MxFyZa_fNhZfrWPDb2hQiRNVW3Z0qT8BWR-pHLjrDCu1jRHvd-PRMxzF7/exec";
             if (!url) {
                 alert("Please enter your Web App URL in the login screen.");
                 return { success: false, message: "No endpoint URL" };
@@ -3653,11 +3653,8 @@
             const tbodyId = 'sourcedIntakeTableBody';
             showTableSkeleton(tbodyId, 7);
 
-            let res = await executeSecureBridgeCall('career', 'client-submitted', {});
+            let res = await executeSecureBridgeCall('client', 'client-submitted', {});
 
-            if (!res.success || !res.data || res.data.length === 0) {
-                res = await executeSecureBridgeCall('career', 'career-earnings', {});
-            }
 
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
@@ -3667,19 +3664,21 @@
                 return;
             }
 
-            tbody.innerHTML = res.data.map((p, index) => {
-                const rowDataStr = JSON.stringify(p).replace(/"/g, '&quot;');
+            tbody.innerHTML = res.data
+                .filter(p => String(p['Client Name'] || p.ClientName || '').trim() !== '')
+                .map((p, index) => {
+                    const rowDataStr = JSON.stringify(p).replace(/"/g, '&quot;');
 
-                const trackingFlag = String(p.OnboardTrackingCode || '').trim();
-                const trackingCode = trackingFlag || p.TrackingCode || p.trackingCode || p['Tracking Code'] || '';
-                const isOnboarded = !!trackingCode;
+                    const trackingFlag = String(p.OnboardTrackingCode || '').trim();
+                    const trackingCode = trackingFlag || p.TrackingCode || p.trackingCode || p['Tracking Code'] || '';
+                    const isOnboarded = !!trackingCode;
 
-                const clientName = p.ClientName || p.clientName || p['Client Name'] || p.Name || '—';
-                const clientEmail = p.ClientEmail || p.clientEmail || p.Email || '—';
-                const service = p.Service || p.service || p['Engaged Service'] || '—';
-                const amount = parseFloat(p.AmountToCharge || p.Amount || 0);
-
-                return `
+                    const clientName = p['Client Name'] || p.ClientName || p.clientName || '—';
+                    const clientEmail = p['Email'] || p.ClientEmail || p.clientEmail || '—';
+                    const service = p['Service'] || p.service || '—';
+                    const amount = parseFloat(p['AmountToCharge'] || p['Amount To Charge'] || p.AmountToCharge || 0);
+                    const partnerID = p['Partner ID'] || p.PartnerID || '—';
+                    return `
 <tr class="hover:bg-slate-800/60 transition-colors">
     <td class="p-3 text-slate-500 font-mono text-xs">${fmtDate(p.Timestamp || p.Date || p.date)}</td>
     <td class="p-3">
@@ -3699,13 +3698,13 @@
             <button onclick="handleClientProjectAction('payment', ${rowDataStr})" 
                 class="text-xs px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">🔗 Payment</button>
             ${isOnboarded ?
-                        `<button disabled class="text-xs px-3 py-1 bg-gray-700 cursor-not-allowed rounded text-gray-400" title="Already onboarded: ${escapeHtml(trackingCode)}">✅ Onboarded</button>` :
-                        `<button onclick="handleClientProjectAction('onboard', ${rowDataStr})" 
+                            `<button disabled class="text-xs px-3 py-1 bg-gray-700 cursor-not-allowed rounded text-gray-400" title="Already onboarded: ${escapeHtml(trackingCode)}">✅ Onboarded</button>` :
+                            `<button onclick="handleClientProjectAction('onboard', ${rowDataStr})" 
                 class="text-xs px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white">🚀 Onboard</button>`}
         </div>
     </td>
 </tr>`;
-            }).join(''); updateKPIs();
+                }).join(''); updateKPIs(); updatePaginationState('client-submitted', res);
         }
 
         function handleClientProjectAction(action, rowData) {
@@ -3722,11 +3721,11 @@
             }
 
             if (action === 'edit') {
-                openEditModal(
-                    p.RowID || (p.PartnerID + '|' + p.ClientName + '|' + (p.AmountToCharge || p.Amount)),
-                    p,
-                    'client-submitted'
-                );
+                const rowId = p.RowID || p['RowID'] || '';
+                const fallbackId = String(p['Partner ID'] || p.PartnerID || '') + '|' +
+                    String(p['Client Name'] || p.ClientName || '') + '|' +
+                    String(p.AmountToCharge || p.Amount || '');
+                openEditModal(rowId || fallbackId, p, 'client-submitted');
             }
             else if (action === 'email') {
                 openSendClientEmailModal(
