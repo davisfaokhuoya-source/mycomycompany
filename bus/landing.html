@@ -2510,27 +2510,77 @@
             var per = D.isPaid ? PAID_PER_PAGE : FREE_PER_PAGE;
             var tot = Math.ceil(ALL_ITEMS.length / per);
             ITEMS_PAGE = Math.max(1, Math.min(ITEMS_PAGE, tot || 1));
-            var vis = ALL_ITEMS.slice((ITEMS_PAGE - 1) * per, ITEMS_PAGE * per);
-            var cards = vis.map(function (it) {
-                var short = it.desc.length > 70 ? it.desc.substring(0, 68) + "\u2026" : it.desc;
-                var img = it.image ? "<img class='item-img' src='" + esc(it.image) + "' loading='lazy' onerror=\"this.outerHTML='<div class=item-img-ph><i class=\\'fa-solid fa-box\\'></i></div>'\">" : "<div class='item-img-ph'><i class='fa-solid fa-box'></i></div>";
-                var waUrl = buildItemWaUrl(it);
-                var waBtn = waUrl ? "<a href='" + esc(waUrl) + "' target='_blank' class='item-wa-btn' onclick='event.stopPropagation()'><i class='fa-brands fa-whatsapp'></i> Order on WhatsApp</a>" : "";
-                return "<div class='item-card reveal' onclick=\"openLpModal('Product','" + escA(it.name) + "','" + escA(it.price) + "','" + escA(it.desc) + "','" + escA(waUrl) + "')\">" + img + "<div class='item-body'><div class='item-name'>" + esc(it.name) + "</div>" + (it.price ? "<div class='item-price'>" + esc(it.price) + "</div>" : "") + (short ? "<div class='item-desc'>" + esc(short) + "</div>" : "") + waBtn + "</div></div>";
-            }).join("");
+
+            function showPage(pg) {
+                ITEMS_PAGE = Math.max(1, Math.min(pg, tot || 1));
+                var vis = ALL_ITEMS.slice((ITEMS_PAGE - 1) * per, ITEMS_PAGE * per);
+                var cards = vis.map(function (it) {
+                    var short = it.desc.length > 70 ? it.desc.substring(0, 68) + "\u2026" : it.desc;
+                    var img = it.image ? "<img class='item-img' src='" + esc(it.image) + "' loading='lazy' onerror=\"this.outerHTML='<div class=item-img-ph><i class=\\'fa-solid fa-box\\'></i></div>'\">" : "<div class='item-img-ph'><i class='fa-solid fa-box'></i></div>";
+                    var waUrl = buildItemWaUrl(it);
+                    var waBtn = waUrl ? "<a href='" + esc(waUrl) + "' target='_blank' class='item-wa-btn' onclick='event.stopPropagation()'><i class='fa-brands fa-whatsapp'></i> Order on WhatsApp</a>" : "";
+                    return "<div class='item-card reveal' onclick=\"openLpModal('Product','" + escA(it.name) + "','" + escA(it.price) + "','" + escA(it.desc) + "','" + escA(waUrl) + "')\">" + img + "<div class='item-body'><div class='item-name'>" + esc(it.name) + "</div>" + (it.price ? "<div class='item-price'>" + esc(it.price) + "</div>" : "") + (short ? "<div class='item-desc'>" + esc(short) + "</div>" : "") + waBtn + "</div></div>";
+                }).join("");
+
+                var grid = document.getElementById("items-grid");
+                var pgr = document.getElementById("items-pager");
+                var pginfo = document.getElementById("items-pg-info");
+                if (!grid) return;
+
+                grid.style.transition = "opacity 0.8s ease";
+                grid.style.opacity = "0";
+
+                setTimeout(function () {
+                    grid.innerHTML = cards;
+                    if (pginfo) pginfo.textContent = "Page " + ITEMS_PAGE + " of " + tot;
+                    grid.style.opacity = "1";
+                    initScrollReveal();
+                    clearItemsTimer();
+                    startItemsTimer();
+                }, 800);
+            }
+
+            var itemsTimer = null;
+
+            function clearItemsTimer() {
+                if (itemsTimer) { clearTimeout(itemsTimer); itemsTimer = null; }
+            }
+
+            function startItemsTimer() {
+                if (tot <= 1) return;
+                itemsTimer = setTimeout(function () {
+                    var next = ITEMS_PAGE >= tot ? 1 : ITEMS_PAGE + 1;
+                    showPage(next);
+                }, 60000);
+            }
+
             var pager = pagerHtml(tot);
             target.outerHTML = "<section class='sec' id='sec-items'><div class='content-wrap-item'>"
-                + "<div class='sec-hdr'><div class='eyebrow'>Browse</div><div class='h2'>Products &amp; Items</div><div class='lead'>Tap any item to view full details or order via WhatsApp.</div></div>"
-                + "<div class='item-grid'>" + cards + "</div>" + pager + "</div></section>";
-            document.querySelectorAll("[data-pg]").forEach(function (btn) {
-                btn.addEventListener("click", function (e) {
-                    e.preventDefault(); ITEMS_PAGE = parseInt(this.dataset.pg);
-                    var url = new URL(window.location); url.searchParams.set("p", ITEMS_PAGE); history.replaceState({}, "", url);
-                    var s = document.getElementById("sec-items"); if (s) s.outerHTML = "<div id='items-target'></div>";
-                    renderItems(); setTimeout(function () { var s2 = document.getElementById("sec-items"); if (s2) s2.scrollIntoView({ behavior: "smooth", block: "start" }); }, 100); initScrollReveal();
+                + "<div class='sec-hdr'><div class='eyebrow'>Browse</div><div class='h2'>Products &amp; Items</div>"
+                + "<div class='lead'>Tap any item to view full details or order via WhatsApp.</div>"
+                + (tot > 1 ? "<div id='items-pg-info' style='margin-top:8px;font-size:.75rem;color:var(--muted);font-family:JetBrains Mono,monospace;letter-spacing:.1em;'>Page 1 of " + tot + "</div>" : "")
+                + "</div>"
+                + "<div id='items-grid' class='item-grid' style='transition:opacity 0.8s ease;'></div>"
+                + "<div id='items-pager'>" + pager + "</div>"
+                + "</div></section>";
+
+            showPage(ITEMS_PAGE);
+
+            setTimeout(function () {
+                document.querySelectorAll("[data-pg]").forEach(function (btn) {
+                    btn.addEventListener("click", function (e) {
+                        e.preventDefault();
+                        clearItemsTimer();
+                        showPage(parseInt(this.dataset.pg));
+                        var url = new URL(window.location);
+                        url.searchParams.set("p", ITEMS_PAGE);
+                        history.replaceState({}, "", url);
+                        var s = document.getElementById("sec-items");
+                        if (s) s.scrollIntoView({ behavior: "smooth", block: "start" });
+                    });
                 });
-            });
-            initScrollReveal();
+                startItemsTimer();
+            }, 100);
         }
 
         function pagerHtml(tot) {
