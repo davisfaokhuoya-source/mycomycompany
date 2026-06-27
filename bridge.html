@@ -216,6 +216,10 @@
                     class="hub-nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:bg-slate-900 hover:text-white border-l-2 border-transparent">
                     <i class="fa-solid fa-users-rectangle w-5 text-slate-400"></i> CRM &amp; Leads Track
                 </button>
+                <button onclick="switchMasterHub('v5')" id="nav-v5"
+                    class="hub-nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:bg-slate-900 hover:text-white border-l-2 border-transparent">
+                    <i class="fa-solid fa-robot w-5 text-slate-400"></i> V5 Intelligence Engine
+                </button>
             </nav>
 
             <!-- Disconnect -->
@@ -1307,8 +1311,423 @@
 
                 </div>
             </section>
+            <button class="leads-subview-link" data-target-view="v5-drip">Email Drip Builder</button>
+            <button class="leads-subview-link" data-target-view="v5-whatsapp">WhatsApp Drafts</button>
+            <button class="leads-subview-link" data-target-view="v5-competitors">Competitor Analysis</button>
 
-        </main>
+            <!-- Run controls -->
+            <div class="mt-4 border-t border-slate-800 pt-3 px-1 space-y-2">
+                <span class="text-[10px] font-mono tracking-wider text-slate-500 uppercase px-2 mb-1 block">Quick
+                    Run</span>
+                <div>
+                    <label class="block text-[10px] text-slate-500 mb-0.5">Industry / Niche</label>
+                    <input type="text" id="v5QuickIndustry" placeholder="e.g. Fintech Nigeria"
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-[10px] text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-500 mb-0.5">Location</label>
+                    <input type="text" id="v5QuickLocation" placeholder="Nigeria"
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-[10px] text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+            </div>
+    </div>
+
+    <!-- V5 Views Container -->
+    <div class="flex-1 flex flex-col overflow-hidden p-6">
+
+        <!-- ============================================================
+           VIEW: LinkedIn Scraper
+        ============================================================= -->
+        <div id="view-v5-linkedin" class="v5-view flex-1 flex flex-col overflow-hidden space-y-4">
+            <div class="flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="text-lg font-bold text-white">LinkedIn Lead Scraper</h3>
+                    <p class="text-xs text-slate-400">Scrape public LinkedIn search results to surface prospect profiles
+                        by title, location, and industry.</p>
+                </div>
+            </div>
+
+            <!-- Run form -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 grid grid-cols-4 gap-3">
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">Search Query</label>
+                    <input type="text" id="v5LinkedInQuery" placeholder="HR Manager Lagos"
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">Target Title</label>
+                    <input type="text" id="v5LinkedInTitle" placeholder="HR Manager"
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">Location</label>
+                    <input type="text" id="v5LinkedInLocation" placeholder="Lagos, Nigeria"
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div class="flex items-end">
+                    <button onclick="runV5LinkedIn()"
+                        class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-1.5 px-3 rounded transition-colors shadow flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-magnifying-glass"></i> Run Scrape
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results table -->
+            <div
+                class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead
+                        class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                        <tr>
+                            <th class="p-3">Timestamp</th>
+                            <th class="p-3">Query</th>
+                            <th class="p-3">Title</th>
+                            <th class="p-3">Location</th>
+                            <th class="p-3">Snippets Found</th>
+                            <th class="p-3">Source</th>
+                            <th class="p-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="v5LinkedInTableBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ============================================================
+           VIEW: Trend Tracker
+        ============================================================= -->
+        <div id="view-v5-trends" class="v5-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+            <div class="flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="text-lg font-bold text-white">Industry Trend Tracker</h3>
+                    <p class="text-xs text-slate-400">Scrape trending topics, news headlines, and hashtags for your
+                        target industry and location.</p>
+                </div>
+                <button onclick="runV5Trends()"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded transition-colors shadow flex items-center gap-1">
+                    <i class="fa-solid fa-arrow-trend-up"></i> Run Trend Scan
+                </button>
+            </div>
+
+            <!-- Live result panel -->
+            <div id="v5TrendsLiveResult"
+                class="hidden bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 grid grid-cols-3 gap-4">
+                <div>
+                    <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-2">Top
+                        Trends</span>
+                    <ul id="v5TrendsList" class="space-y-1 text-xs text-slate-300"></ul>
+                </div>
+                <div>
+                    <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-2">News
+                        Headlines</span>
+                    <ul id="v5NewsList" class="space-y-1 text-xs text-slate-300"></ul>
+                </div>
+                <div>
+                    <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-2">Trending
+                        Hashtags</span>
+                    <div id="v5HashtagsList" class="flex flex-wrap gap-1"></div>
+                </div>
+            </div>
+
+            <!-- History table -->
+            <div
+                class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead
+                        class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                        <tr>
+                            <th class="p-3">Timestamp</th>
+                            <th class="p-3">Industry</th>
+                            <th class="p-3">Location</th>
+                            <th class="p-3">Top Trends</th>
+                            <th class="p-3">Top News</th>
+                            <th class="p-3">Hashtags</th>
+                            <th class="p-3 text-center">Relevance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="v5TrendsTableBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ============================================================
+           VIEW: Content Generator
+        ============================================================= -->
+        <div id="view-v5-content" class="v5-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+            <div class="flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="text-lg font-bold text-white">AI Social Content Generator</h3>
+                    <p class="text-xs text-slate-400">Generate trend-tied social media posts for LinkedIn, Instagram, X,
+                        Facebook, and TikTok.</p>
+                </div>
+            </div>
+
+            <!-- Run form -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 grid grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">Industry</label>
+                    <input type="text" id="v5ContentIndustry" placeholder="Recruitment / HR"
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">Platform</label>
+                    <select id="v5ContentPlatform"
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+                        <option value="all">All Platforms</option>
+                        <option value="LinkedIn">LinkedIn</option>
+                        <option value="Instagram">Instagram</option>
+                        <option value="X (Twitter)">X (Twitter)</option>
+                        <option value="Facebook">Facebook</option>
+                        <option value="TikTok">TikTok</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="runV5Content()"
+                        class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-1.5 px-3 rounded transition-colors shadow flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Content
+                    </button>
+                </div>
+            </div>
+
+            <!-- Queue table -->
+            <div
+                class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead
+                        class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                        <tr>
+                            <th class="p-3">Timestamp</th>
+                            <th class="p-3">Platform</th>
+                            <th class="p-3">Type</th>
+                            <th class="p-3 w-1/3">Content</th>
+                            <th class="p-3">Status</th>
+                            <th class="p-3">Hook</th>
+                            <th class="p-3">Trend Tied To</th>
+                            <th class="p-3">Visual Suggestion</th>
+                        </tr>
+                    </thead>
+                    <tbody id="v5ContentTableBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ============================================================
+           VIEW: Content Calendar
+        ============================================================= -->
+        <div id="view-v5-calendar-content" class="v5-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+            <div class="flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="text-lg font-bold text-white">30-Day Content Calendar Builder</h3>
+                    <p class="text-xs text-slate-400">Auto-generate a full month of planned content with varied angles:
+                        educational, story, promo, engagement, case-study, and trend-comment.</p>
+                </div>
+            </div>
+
+            <!-- Run form -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 flex gap-3 items-end">
+                <div class="flex-1">
+                    <label class="block text-[10px] text-slate-400 mb-1">Topic / Brand Focus</label>
+                    <input type="text" id="v5CalendarTopic" placeholder="Career services for Nigerian professionals"
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                    <button onclick="runV5Calendar()"
+                        class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-1.5 px-4 rounded transition-colors shadow flex items-center gap-1">
+                        <i class="fa-solid fa-calendar-days"></i> Build 30-Day Calendar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Calendar table -->
+            <div
+                class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead
+                        class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                        <tr>
+                            <th class="p-3">Day</th>
+                            <th class="p-3">Date</th>
+                            <th class="p-3">Platform</th>
+                            <th class="p-3">Theme</th>
+                            <th class="p-3">Post Type</th>
+                            <th class="p-3 w-1/4">Hook</th>
+                            <th class="p-3">Hashtags</th>
+                            <th class="p-3">CTA</th>
+                            <th class="p-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="v5CalendarTableBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ============================================================
+           VIEW: Email Drip Builder
+        ============================================================= -->
+        <div id="view-v5-drip" class="v5-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+            <div class="flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="text-lg font-bold text-white">Cold Email Drip Sequence Builder</h3>
+                    <p class="text-xs text-slate-400">Generate a 5-email cold outreach drip using proven angles: Pattern
+                        Interrupt → Social Proof → Free Value → FOMO → Breakup.</p>
+                </div>
+            </div>
+
+            <!-- Run form -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 flex gap-3 items-end">
+                <div class="flex-1">
+                    <label class="block text-[10px] text-slate-400 mb-1">Niche / Target Audience</label>
+                    <input type="text" id="v5DripNiche" placeholder="SME owners in Lagos needing HR services"
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                    <button onclick="runV5Drip()"
+                        class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-1.5 px-4 rounded transition-colors shadow flex items-center gap-1">
+                        <i class="fa-solid fa-envelope-open-text"></i> Build Drip Sequence
+                    </button>
+                </div>
+            </div>
+
+            <!-- Drip table -->
+            <div
+                class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead
+                        class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                        <tr>
+                            <th class="p-3">Timestamp</th>
+                            <th class="p-3">Niche</th>
+                            <th class="p-3 text-center">Email #</th>
+                            <th class="p-3">Angle</th>
+                            <th class="p-3">Subject Line</th>
+                            <th class="p-3 w-2/5">Body Preview</th>
+                            <th class="p-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="v5DripTableBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ============================================================
+           VIEW: WhatsApp Drafts
+        ============================================================= -->
+        <div id="view-v5-whatsapp" class="v5-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+            <div class="flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="text-lg font-bold text-white">WhatsApp Cold Outreach Drafts</h3>
+                    <p class="text-xs text-slate-400">Auto-generate personalized WhatsApp cold messages for leads, under
+                        60 words, warm and industry-referenced.</p>
+                </div>
+            </div>
+
+            <!-- Run form -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 grid grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">Industry</label>
+                    <input type="text" id="v5WAIndustry" placeholder="Construction / Real Estate"
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">Lead Count (max 10)</label>
+                    <input type="number" id="v5WALeadCount" value="5" min="1" max="10"
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white font-mono focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div class="flex items-end">
+                    <button onclick="runV5WhatsApp()"
+                        class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-1.5 px-3 rounded transition-colors shadow flex items-center justify-center gap-1">
+                        <i class="fa-brands fa-whatsapp"></i> Generate WA Drafts
+                    </button>
+                </div>
+            </div>
+
+            <!-- Drafts table -->
+            <div
+                class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead
+                        class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                        <tr>
+                            <th class="p-3">Timestamp</th>
+                            <th class="p-3">Company</th>
+                            <th class="p-3">Decision Maker</th>
+                            <th class="p-3 w-2/5">Message Draft</th>
+                            <th class="p-3">Status</th>
+                            <th class="p-3">Angle Used</th>
+                            <th class="p-3 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="v5WhatsAppTableBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ============================================================
+           VIEW: Competitor Analysis
+        ============================================================= -->
+        <div id="view-v5-competitors" class="v5-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+            <div class="flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="text-lg font-bold text-white">AI Competitor & Market Gap Analysis</h3>
+                    <p class="text-xs text-slate-400">Surface key competitors, analyze their strengths and weaknesses,
+                        and identify market gaps you can exploit.</p>
+                </div>
+            </div>
+
+            <!-- Run form -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 flex gap-3 items-end">
+                <div class="flex-1">
+                    <label class="block text-[10px] text-slate-400 mb-1">Niche to Analyze</label>
+                    <input type="text" id="v5CompNiche" placeholder="Career coaching services in Nigeria"
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                    <button onclick="runV5Competitors()"
+                        class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-1.5 px-4 rounded transition-colors shadow flex items-center gap-1">
+                        <i class="fa-solid fa-chart-pie"></i> Analyze Market
+                    </button>
+                </div>
+            </div>
+
+            <!-- Market gaps highlight -->
+            <div id="v5MarketGapsPanel"
+                class="hidden bg-slate-950 border border-emerald-800/40 rounded-xl p-4 shrink-0">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-emerald-400 block mb-2">Identified
+                    Market Gaps</span>
+                <ul id="v5MarketGapsList" class="space-y-1 text-xs text-slate-300"></ul>
+                <div class="mt-3 pt-3 border-t border-slate-800">
+                    <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1">Strategic
+                        Recommendation</span>
+                    <p id="v5CompRecommendation" class="text-xs text-slate-200"></p>
+                </div>
+            </div>
+
+            <!-- Competitors table -->
+            <div
+                class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead
+                        class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                        <tr>
+                            <th class="p-3">Timestamp</th>
+                            <th class="p-3">Niche</th>
+                            <th class="p-3">Competitor Name</th>
+                            <th class="p-3">Website</th>
+                            <th class="p-3">Strengths</th>
+                            <th class="p-3">Weaknesses</th>
+                            <th class="p-3">Pricing</th>
+                            <th class="p-3">Opportunity</th>
+                            <th class="p-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="v5CompetitorsTableBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div><!-- end V5 Views Container -->
+    </section>
+    </main>
     </div>
 
     <!-- =====================================================================
@@ -4476,6 +4895,359 @@
                 }
             });
         });
+
+        const _origSwitchMasterHub = switchMasterHub;
+        window.switchMasterHub = function (hubId) {
+            _origSwitchMasterHub(hubId);
+            if (hubId === 'v5') {
+                // Wire v5 sub-nav clicks (they share the leads-subview-link class)
+                setTimeout(() => {
+                    const firstV5Btn = document.querySelector('#hub-v5 [data-target-view]');
+                    if (firstV5Btn && !firstV5Btn.dataset.v5wired) {
+                        initV5SubNav();
+                    }
+                }, 50);
+            }
+        };
+
+        function initV5SubNav() {
+            document.querySelectorAll('#hub-v5 [data-target-view]').forEach(btn => {
+                if (btn.dataset.v5wired) return;
+                btn.dataset.v5wired = "1";
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const targetId = this.getAttribute('data-target-view');
+                    document.querySelectorAll('#hub-v5 .v5-view').forEach(v => v.classList.add('hidden'));
+                    const targetView = document.getElementById('view-' + targetId);
+                    if (targetView) targetView.classList.remove('hidden');
+
+                    document.querySelectorAll('#hub-v5 [data-target-view]').forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+
+                    // Auto-load history tables when switching views
+                    const loaderMap = {
+                        'v5-linkedin': loadV5LinkedInHistory,
+                        'v5-trends': loadV5TrendsHistory,
+                        'v5-content': loadV5ContentHistory,
+                        'v5-calendar-content': loadV5CalendarHistory,
+                        'v5-drip': loadV5DripHistory,
+                        'v5-whatsapp': loadV5WhatsAppHistory,
+                        'v5-competitors': loadV5CompetitorsHistory
+                    };
+                    if (loaderMap[targetId]) loaderMap[targetId]();
+                });
+            });
+        }
+
+        // ---- HELPER: get industry/location from sidebar quick-run inputs ----
+        function v5GetIndustry(overrideId) {
+            return (overrideId ? document.getElementById(overrideId)?.value?.trim() : '') ||
+                document.getElementById('v5QuickIndustry')?.value?.trim() || '';
+        }
+        function v5GetLocation() {
+            return document.getElementById('v5QuickLocation')?.value?.trim() || 'Nigeria';
+        }
+
+        // ================================================================
+        // RUN HANDLERS — trigger V5 jobs via gateway
+        // ================================================================
+
+        async function runV5LinkedIn() {
+            const query = document.getElementById('v5LinkedInQuery')?.value?.trim();
+            const title = document.getElementById('v5LinkedInTitle')?.value?.trim();
+            const location = document.getElementById('v5LinkedInLocation')?.value?.trim() || v5GetLocation();
+
+            if (!query) { showToast('Enter a search query.', 'error'); return; }
+
+            showToast('Running LinkedIn scrape…', 'info');
+            const res = await executeSecureBridgeCall('leads', 'v5-scrape-linkedin', { query, title, location });
+
+            if (res.success) {
+                showToast(`Scrape complete: ${res.snippetsCount || 0} snippets found.`, 'success');
+                loadV5LinkedInHistory();
+            } else {
+                showToast(res.message || 'Scrape failed.', 'error');
+            }
+        }
+
+        async function runV5Trends() {
+            const industry = v5GetIndustry('v5QuickIndustry');
+            const location = v5GetLocation();
+
+            if (!industry) { showToast('Set an industry in Quick Run or the sidebar.', 'error'); return; }
+
+            showToast('Scanning trends…', 'info');
+            const res = await executeSecureBridgeCall('leads', 'v5-scrape-trends', { industry, location });
+
+            if (res.success) {
+                showToast(`Trends loaded for ${industry}.`, 'success');
+
+                // Show live result panel
+                const panel = document.getElementById('v5TrendsLiveResult');
+                if (panel) panel.classList.remove('hidden');
+
+                const trendsList = document.getElementById('v5TrendsList');
+                if (trendsList) trendsList.innerHTML = (res.trends || []).slice(0, 5)
+                    .map(t => `<li class="flex items-start gap-1"><span class="text-emerald-400">▸</span>${escapeHtml(t)}</li>`).join('');
+
+                const newsList = document.getElementById('v5NewsList');
+                if (newsList) newsList.innerHTML = (res.news || []).slice(0, 5)
+                    .map(n => `<li class="flex items-start gap-1"><span class="text-blue-400">▸</span>${escapeHtml(n)}</li>`).join('');
+
+                const tagsEl = document.getElementById('v5HashtagsList');
+                if (tagsEl) tagsEl.innerHTML = (res.hashtags || []).slice(0, 10)
+                    .map(h => `<span class="bg-slate-800 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full font-mono">${escapeHtml(h)}</span>`).join('');
+
+                loadV5TrendsHistory();
+            } else {
+                showToast(res.message || 'Trend scan failed.', 'error');
+            }
+        }
+
+        async function runV5Content() {
+            const industry = document.getElementById('v5ContentIndustry')?.value?.trim() || v5GetIndustry();
+            const platform = document.getElementById('v5ContentPlatform')?.value || 'all';
+
+            if (!industry) { showToast('Enter an industry.', 'error'); return; }
+
+            showToast('Generating content…', 'info');
+            const res = await executeSecureBridgeCall('leads', 'v5-generate-content', { industry, platform });
+
+            if (res.success) {
+                showToast(`Generated ${res.postsCreated || 0} posts using "${res.angle}" angle.`, 'success');
+                loadV5ContentHistory();
+            } else {
+                showToast(res.message || 'Content generation failed.', 'error');
+            }
+        }
+
+        async function runV5Calendar() {
+            const topic = document.getElementById('v5CalendarTopic')?.value?.trim();
+            if (!topic) { showToast('Enter a topic.', 'error'); return; }
+
+            showToast('Building 30-day calendar…', 'info');
+            const res = await executeSecureBridgeCall('leads', 'v5-generate-calendar', { topic });
+
+            if (res.success) {
+                showToast(`Calendar built: ${res.postsPlanned || 0} posts planned.`, 'success');
+                loadV5CalendarHistory();
+            } else {
+                showToast(res.message || 'Calendar build failed.', 'error');
+            }
+        }
+
+        async function runV5Drip() {
+            const niche = document.getElementById('v5DripNiche')?.value?.trim();
+            if (!niche) { showToast('Enter a niche.', 'error'); return; }
+
+            showToast('Building drip sequence…', 'info');
+            const res = await executeSecureBridgeCall('leads', 'v5-generate-drip', { niche });
+
+            if (res.success) {
+                showToast(`${res.emailsCreated || 5}-email drip sequence created.`, 'success');
+                loadV5DripHistory();
+            } else {
+                showToast(res.message || 'Drip build failed.', 'error');
+            }
+        }
+
+        async function runV5WhatsApp() {
+            const industry = document.getElementById('v5WAIndustry')?.value?.trim() || v5GetIndustry();
+            const leadCount = parseInt(document.getElementById('v5WALeadCount')?.value) || 5;
+
+            if (!industry) { showToast('Enter an industry.', 'error'); return; }
+
+            showToast('Generating WhatsApp drafts…', 'info');
+            const res = await executeSecureBridgeCall('leads', 'v5-whatsapp-drafts', { industry, leadCount });
+
+            if (res.success) {
+                showToast(`${res.draftCount || 0} WhatsApp drafts created.`, 'success');
+                loadV5WhatsAppHistory();
+            } else {
+                showToast(res.message || 'Draft generation failed.', 'error');
+            }
+        }
+
+        async function runV5Competitors() {
+            const niche = document.getElementById('v5CompNiche')?.value?.trim() || v5GetIndustry();
+            if (!niche) { showToast('Enter a niche.', 'error'); return; }
+
+            showToast('Analyzing market…', 'info');
+            const res = await executeSecureBridgeCall('leads', 'v5-competitor-analysis', { niche });
+
+            if (res.success) {
+                showToast(`Analyzed ${res.competitorsAnalyzed || 0} competitors.`, 'success');
+
+                // Show gaps panel
+                const panel = document.getElementById('v5MarketGapsPanel');
+                if (panel && res.gaps?.length) {
+                    panel.classList.remove('hidden');
+                    document.getElementById('v5MarketGapsList').innerHTML =
+                        (res.gaps || []).map(g => `<li class="flex items-start gap-1"><span class="text-emerald-400">→</span>${escapeHtml(g)}</li>`).join('');
+                }
+                const recEl = document.getElementById('v5CompRecommendation');
+                if (recEl && res.recommendation) recEl.textContent = res.recommendation;
+
+                loadV5CompetitorsHistory();
+            } else {
+                showToast(res.message || 'Analysis failed.', 'error');
+            }
+        }
+
+        // ================================================================
+        // HISTORY LOADERS — fetch from V5 sheets via gateway read routes
+        // ================================================================
+
+        async function loadV5LinkedInHistory() {
+            const tbodyId = 'v5LinkedInTableBody';
+            showTableSkeleton(tbodyId, 7);
+            const res = await executeSecureBridgeCall('leads', 'leads-v5-scrapes', {});
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            if (!res.success || !res.data?.length) { tbody.innerHTML = emptyRow('No scrape history yet. Run a scrape above.', 7); return; }
+
+            tbody.innerHTML = res.data.map(r => `
+        <tr>
+            <td class="p-3 text-slate-500">${fmtDate(r.Timestamp)}</td>
+            <td class="p-3 text-slate-300">${escapeHtml(r.Query || '—')}</td>
+            <td class="p-3 text-slate-400">${escapeHtml(r.Title || '—')}</td>
+            <td class="p-3 text-slate-400">${escapeHtml(r.Location || '—')}</td>
+            <td class="p-3 text-center font-bold text-emerald-400">${escapeHtml(String(r.SnippetsFound || r.Count || '—'))}</td>
+            <td class="p-3 text-slate-400">${escapeHtml(r.Source || '—')}</td>
+            <td class="p-3 text-center">${badge(r.Status || 'Completed')}</td>
+        </tr>`).join('');
+        }
+
+        async function loadV5TrendsHistory() {
+            const tbodyId = 'v5TrendsTableBody';
+            showTableSkeleton(tbodyId, 7);
+            const res = await executeSecureBridgeCall('leads', 'leads-v5-trends', {});
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            if (!res.success || !res.data?.length) { tbody.innerHTML = emptyRow('No trend history yet.', 7); return; }
+
+            tbody.innerHTML = res.data.map(r => `
+        <tr>
+            <td class="p-3 text-slate-500">${fmtDate(r.Timestamp)}</td>
+            <td class="p-3 text-slate-300">${escapeHtml(r.Industry || '—')}</td>
+            <td class="p-3 text-slate-400">${escapeHtml(r.Location || '—')}</td>
+            <td class="p-3 text-slate-400 text-[10px]">${escapeHtml((r.TopTrends || '').substring(0, 60))}</td>
+            <td class="p-3 text-slate-400 text-[10px]">${escapeHtml((r.TopNews || '').substring(0, 60))}</td>
+            <td class="p-3 text-[10px]"><span class="text-emerald-400 font-mono">${escapeHtml((r.Hashtags || '').substring(0, 40))}</span></td>
+            <td class="p-3 text-center font-bold text-amber-400">${parseFloat(r.RelevanceScore || 0).toFixed(0)}</td>
+        </tr>`).join('');
+        }
+
+        async function loadV5ContentHistory() {
+            const tbodyId = 'v5ContentTableBody';
+            showTableSkeleton(tbodyId, 8);
+            const res = await executeSecureBridgeCall('leads', 'leads-v5-content', {});
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            if (!res.success || !res.data?.length) { tbody.innerHTML = emptyRow('No content generated yet.', 8); return; }
+
+            tbody.innerHTML = res.data.map(r => `
+        <tr>
+            <td class="p-3 text-slate-500">${fmtDate(r.Timestamp)}</td>
+            <td class="p-3">${badge(r.Platform || 'LinkedIn')}</td>
+            <td class="p-3 text-slate-400">${escapeHtml(r.PostType || '—')}</td>
+            <td class="p-3 text-slate-300 text-[10px]">${escapeHtml((r.Content || '').substring(0, 100))}${(r.Content || '').length > 100 ? '…' : ''}</td>
+            <td class="p-3 text-center">${badge(r.Status || 'Queued')}</td>
+            <td class="p-3 text-slate-400 text-[10px]">${escapeHtml((r.Hook || '').substring(0, 50))}</td>
+            <td class="p-3 text-slate-400 text-[10px]">${escapeHtml(r.TrendTiedTo || '—')}</td>
+            <td class="p-3 text-slate-400 text-[10px]">${escapeHtml((r.VisualSuggestion || '—').substring(0, 50))}</td>
+        </tr>`).join('');
+        }
+
+        async function loadV5CalendarHistory() {
+            const tbodyId = 'v5CalendarTableBody';
+            showTableSkeleton(tbodyId, 9);
+            const res = await executeSecureBridgeCall('leads', 'leads-v5-calendar', {});
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            if (!res.success || !res.data?.length) { tbody.innerHTML = emptyRow('No calendar built yet.', 9); return; }
+
+            tbody.innerHTML = res.data.map(r => `
+        <tr>
+            <td class="p-3 text-center font-bold text-emerald-400">${escapeHtml(String(r.Day || '—'))}</td>
+            <td class="p-3 text-slate-400">${escapeHtml(r.Date || '—')}</td>
+            <td class="p-3">${badge(r.Platform || 'LinkedIn')}</td>
+            <td class="p-3 text-slate-300">${escapeHtml(r.Theme || '—')}</td>
+            <td class="p-3 text-slate-400">${escapeHtml(r.PostType || '—')}</td>
+            <td class="p-3 text-slate-300 text-[10px]">${escapeHtml((r.Hook || '').substring(0, 60))}</td>
+            <td class="p-3 text-emerald-400 font-mono text-[10px]">${escapeHtml((r.Hashtags || '').substring(0, 40))}</td>
+            <td class="p-3 text-slate-400 text-[10px]">${escapeHtml((r.CTA || '').substring(0, 40))}</td>
+            <td class="p-3 text-center">${badge(r.Status || 'Draft')}</td>
+        </tr>`).join('');
+        }
+
+        async function loadV5DripHistory() {
+            const tbodyId = 'v5DripTableBody';
+            showTableSkeleton(tbodyId, 7);
+            const res = await executeSecureBridgeCall('leads', 'leads-v5-drip', {});
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            if (!res.success || !res.data?.length) { tbody.innerHTML = emptyRow('No drip sequences yet.', 7); return; }
+
+            tbody.innerHTML = res.data.map(r => `
+        <tr>
+            <td class="p-3 text-slate-500">${fmtDate(r.Timestamp)}</td>
+            <td class="p-3 text-slate-300">${escapeHtml((r.SequenceName || r.Niche || '—').split(' - ')[0])}</td>
+            <td class="p-3 text-center font-bold text-emerald-400">${escapeHtml(String(r.EmailNumber || r.Day || '—'))}</td>
+            <td class="p-3">${badge(r.Angle || '—')}</td>
+            <td class="p-3 text-slate-200">${escapeHtml((r.Subject || '—').substring(0, 50))}</td>
+            <td class="p-3 text-slate-400 text-[10px]">${escapeHtml((r.Body || '').substring(0, 100))}${(r.Body || '').length > 100 ? '…' : ''}</td>
+            <td class="p-3 text-center">${badge(r.Status || 'Draft')}</td>
+        </tr>`).join('');
+        }
+
+        async function loadV5WhatsAppHistory() {
+            const tbodyId = 'v5WhatsAppTableBody';
+            showTableSkeleton(tbodyId, 7);
+            const res = await executeSecureBridgeCall('leads', 'leads-v5-whatsapp', {});
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            if (!res.success || !res.data?.length) { tbody.innerHTML = emptyRow('No WhatsApp drafts yet.', 7); return; }
+
+            tbody.innerHTML = res.data.map(r => `
+        <tr>
+            <td class="p-3 text-slate-500">${fmtDate(r.Timestamp)}</td>
+            <td class="p-3 text-slate-300 font-medium">${escapeHtml(r.Company || '—')}</td>
+            <td class="p-3 text-slate-400">${escapeHtml(r.DecisionMaker || '—')}</td>
+            <td class="p-3 text-slate-300 text-[10px]">${escapeHtml(r.Message || '—')}</td>
+            <td class="p-3 text-center">${badge(r.Status || 'Draft')}</td>
+            <td class="p-3 text-slate-400 text-[10px]">${escapeHtml(r.Angle || '—')}</td>
+            <td class="p-3 text-center">
+                <button onclick="navigator.clipboard.writeText('${escapeHtml(r.Message || '')}').then(()=>showToast('Copied!','success'))"
+                    class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white transition-colors">
+                    📋 Copy
+                </button>
+            </td>
+        </tr>`).join('');
+        }
+
+        async function loadV5CompetitorsHistory() {
+            const tbodyId = 'v5CompetitorsTableBody';
+            showTableSkeleton(tbodyId, 9);
+            const res = await executeSecureBridgeCall('leads', 'leads-v5-competitors', {});
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            if (!res.success || !res.data?.length) { tbody.innerHTML = emptyRow('No competitor analyses yet.', 9); return; }
+
+            tbody.innerHTML = res.data.map(r => `
+        <tr>
+            <td class="p-3 text-slate-500">${fmtDate(r.Timestamp)}</td>
+            <td class="p-3 text-slate-400">${escapeHtml(r.Niche || '—')}</td>
+            <td class="p-3 font-medium text-slate-200">${escapeHtml(r.CompetitorName || '—')}</td>
+            <td class="p-3 text-blue-400 text-[10px] font-mono">${escapeHtml(r.Website || '—')}</td>
+            <td class="p-3 text-emerald-400 text-[10px]">${escapeHtml((r.Strengths || '—').substring(0, 60))}</td>
+            <td class="p-3 text-red-400 text-[10px]">${escapeHtml((r.Weaknesses || '—').substring(0, 60))}</td>
+            <td class="p-3 text-slate-400">${escapeHtml(r.Pricing || '—')}</td>
+            <td class="p-3 text-amber-400 text-[10px]">${escapeHtml((r.Opportunity || '—').substring(0, 60))}</td>
+            <td class="p-3 text-center">${badge(r.Status || 'Pending')}</td>
+        </tr>`).join('');
+        }
 
         function initializeModule() {
             if (!document.getElementById("vh-pulse-style")) {
