@@ -3170,33 +3170,70 @@
             }
 
             const firstSubBtn = targetHub?.querySelector('[data-target-view]');
-            if (firstSubBtn) {
-                const firstViewId = firstSubBtn.getAttribute('data-target-view');
-                switchSubSection(firstViewId);   // ← Use this instead of .click()
+            if (firstSubBtn) firstSubBtn.click();
+
+            if (hubId === 'agent') {
+                setTimeout(() => {
+                    // Hide all agent views first
+                    document.querySelectorAll('.agent-view').forEach(v => v.classList.add('hidden'));
+                    // Show only clients view
+                    const clientsView = document.getElementById('view-agent-clients');
+                    if (clientsView) { clientsView.classList.remove('hidden'); clientsView.style.display = 'flex'; }
+                    // Set active nav
+                    document.querySelectorAll('.agent-subview-link').forEach(l => l.classList.remove('active'));
+                    const firstBtn = document.querySelector('[data-target-view="agent-clients"]');
+                    if (firstBtn) firstBtn.classList.add('active');
+                    // Load data
+                    loadAgentClients();
+                }, 100);
             }
         }
 
-        function initializeNavigation() {
-            const allSubLinks = document.querySelectorAll(
-                '.career-subview-link, .assessment-subview-link, .client-subview-link, .leads-subview-link, .v5-subview-link, .agent-subview-link'
-            );
-
-            allSubLinks.forEach(link => {
-                // Remove old listeners to prevent duplicates
-                link.removeEventListener('click', handleSubLinkClick);
-                link.addEventListener('click', handleSubLinkClick);
+        function switchSubSection(system, action) {
+            document.querySelectorAll('[id^="view-"]').forEach(view => {
+                view.classList.add('hidden');
+                view.style.display = 'none';
             });
+            const targetViewEl = document.getElementById(`view-${action}`);
+            if (targetViewEl) {
+                targetViewEl.classList.remove('hidden');
+                targetViewEl.style.display = 'flex';
+            } else {
+                console.error(`DOM container "#view-${action}" does not exist!`);
+                return;
+            }
+
+            const initMap = {
+                'career-users': initializeModule_career_users,
+                'career-earnings': initializeModule_career_earnings,
+                'career-settlements': initializeModule_career_settlements,
+                'career-messages': initializeModule_career_messages,
+                'career-elevation': initializeModule_career_elevation,
+                'assessment-students': initializeModule_assess_submissions,
+                'assessment-courses': initializeModule_assessment_courses,
+                'assessment-questions': initializeModule_assessment_questions,
+                'assessment-certificates': loadCertificateData,
+                'assessment-messages': loadAcademicSupportMessages,
+                'assessment-applications': initializeModule_assessment_applications,
+                'client-submitted': loadClientSubmittedProjects,
+                'client-onboarded': loadProductionFulfillment,
+                'leads-matrix': loadLeadsMatrix,
+                'leads-broadcast': loadBroadcastQueue,
+                'leads-drive': loadMailDriveReports,
+                'career-complaints': initializeModule_career_complaints,
+                'leads-calendar': loadCalendarEvents,
+                'agent-clients': loadAgentClients,
+                'agent-subscriptions': loadAgentSubscriptions,
+                'agent-quotas': loadAgentQuotas,
+                'agent-usage': loadAgentUsageReports,
+                'agent-tasks': loadAgentTasks,
+                'agent-compliance': loadAgentComplianceLogs,
+            };
+
+            const initFn = initMap[action];
+            if (initFn) initFn();
         }
 
-        function handleSubLinkClick(event) {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-
-            const targetView = this.getAttribute('data-target-view');
-            if (!targetView) return;
-
-            switchSubSection(targetView);
-        }
         function initializeNavigation() {
             document.querySelectorAll(
                 '.career-subview-link, .assessment-subview-link, .leads-subview-link, .client-subview-link, .agent-subview-link, .v5-subview-link, [data-target-view]'  // ← ADD .agent-subview-link
@@ -6177,10 +6214,7 @@
             }, 800);
         }
 
-        document.addEventListener("DOMContentLoaded", () => {
-            initializeModule();
-            initializeNavigation();
-        });
+        document.addEventListener("DOMContentLoaded", initializeModule);
     </script>
 </body>
 
