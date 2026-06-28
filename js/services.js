@@ -4,7 +4,7 @@ const ourservices = [
     { category: 'Administrative Support', link: 'Core Administrative Efficiency', topic: 'Core Administrative Efficiency', text: 'Reliable foundational support including specialized data entry, intelligent document management, physical and online submissions, plus automated follow-up tracking for authorities. AI enhancements streamline data processing, detect errors instantly, trigger smart reminders, and guarantee flawless accuracy with timely compliance every time.', image: 'server-hub-it-staff-members-debugging-optimizing-code.jpg' },
     { category: 'Administrative Support', link: 'Virtual & Strategic Assistance', topic: 'Virtual & Strategic Assistance', text: 'Comprehensive remote virtual assistance covering scheduling, email optimization, technical or creative tasks, local and foreign entity representation (MAH support), and strategic distribution oversight to effectively scale your brand or operations. Powered by AI-driven virtual agents for smart calendar management, automated workflows, priority handling, and real-time insights.', image: 'pexels-jep-gambardella-7690084.jpg' },
     { category: 'Administrative Support', link: 'Training, Capacity Building & Expert Consultation', topic: 'Training, Capacity Building & Expert Consultation', text: 'Customized workshops, targeted skill-enhancement programs, and in-depth consultation addressing all business and administrative challenges you face. AI-powered analytics and personalized learning tools accelerate capacity building, while intelligent consultation platforms deliver data-backed recommendations, scenario modeling, and strategic insights for confident decision-making.', image: 'young-african-american-businessman-reading-newspaper-talking-phone-his-office.jpg' },
-    
+
     // Business Support
     { category: 'Business Support', link: 'Foundation & Compliance', topic: 'Foundation & Compliance', text: 'Expert handling of CAC registration and filing, full regulatory compliance (SCUML, TCC, and related bodies), plus basic business setup delivered with complete transparency and zero hidden fees. AI-assisted verification tools accelerate every process, minimize errors effectively, and provide real-time status updates throughout.', image: 'industrial-designers-working-3d-model.jpg', textlink: 'compliance.html' },
     { category: 'Business Support', link: 'Growth & Visibility Tools', topic: 'Growth & Visibility Tools', text: 'Professional development of winning proposals, in-depth market or competitor research, polished company and individual profiles/portfolios, ATS-optimized CV/resume crafting, plus strategic social media and email marketing campaigns. AI enhancements deliver intelligent drafting, keyword optimization, audience insights, automated scheduling, and analytics for maximum engagement.', image: 'pexels-divinetechygirl-1181605.jpg', textlink: 'doc-dev.html', textlink2: 'social-media-management.html' },
@@ -13,13 +13,12 @@ const ourservices = [
     // General Contract
     { category: 'General Contract', link: 'procurement-supply', topic: 'Procurement and Supply', text: 'Sourcing goods, managing vendors, and ensuring timely delivery of essential supplies.', image: 'closeup-businessman-using-mobile-phone.jpg' },
     { category: 'General Contract', link: 'printing-designing-branding', topic: 'Printing, Designing and Branding', text: 'Logo design, branding strategy, complementary cards, flyers, brochures, and professional printing services.', image: 'happy-african-american-businesswoman-working-touchpad-office.jpg' },
-    { category: 'General Contract', link: 'construction-infrastructural-project', topic: 'Construction and Renovations', text: 'Handling diverse construction and renovations project.', image: 'construction.jpg' },
 ];
 
 // Helper function to generate the HTML for a single service card
 function generateServiceCardHTML(service, index) {
     const delay = `${(index % 3) * 0.1}s`;
-    
+
     // Default to WhatsApp link
     const whatsappMessage = encodeURIComponent(`Hello, I am interested in your ${service.topic} service.`);
     const whatsappLink = `https://wa.me/+2348055538518?text=${whatsappMessage}`;
@@ -36,7 +35,7 @@ function generateServiceCardHTML(service, index) {
         links.push(service.textlink2);
         buttonTexts.push("Social Media Management");
     }
-    
+
     // If no custom links, use WhatsApp as default
     if (links.length === 0) {
         links.push(whatsappLink);
@@ -74,7 +73,7 @@ function generateServiceCardHTML(service, index) {
 // Main function to group and display all services
 function allservices() {
     const servicesContainer = document.querySelector('.ourservices');
-    
+
     if (!servicesContainer) {
         console.error("Target container '.ourservices' not found.");
         return;
@@ -118,11 +117,11 @@ function allservices() {
 // Function to handle cycling of button text and link
 function initButtonCycling() {
     const buttons = document.querySelectorAll('.service-btn');
-    
+
     buttons.forEach(btn => {
         const links = JSON.parse(btn.dataset.links || '[]');
         const texts = JSON.parse(btn.dataset.texts || '[]');
-        
+
         if (links.length <= 1) return; // No cycling needed
 
         let current = 0;

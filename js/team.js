@@ -1,17 +1,17 @@
 const teamData = [ // Renamed the constant to avoid conflict
-    {image:'bar.jpg', sec : 0.2,  name: 'Innocent Ukoha', socialMeida1:'', socialMeida2:'', socialMeida3:'', socialMeida4:'', profession: 'Legal Advisor'},
-    {image:'1761238885388.jpeg', sec : 0.6,  name: 'D. O. F Okhuoya', socialMeida1:'', socialMeida2:'', socialMeida3:'', socialMeida4:'', profession: 'Business Dev'},
-    {image:'Untitled.png', sec : 0.4,  name: 'Habeeb Bright', socialMeida1:'', socialMeida2:'', socialMeida3:'', socialMeida4:'', profession: 'CTO'},
-    {image:'team-compliance-CO3-DPpB.jpg', sec : 0.8,  name: 'Joy Zakaa', socialMeida1:'', socialMeida2:'', socialMeida3:'', socialMeida4:'', profession: 'Financial Consultant'}
+    { image: 'bar.jpg', sec: 0.2, name: 'Innocent Ukoha', socialMeida1: '', socialMeida2: '', socialMeida3: '', socialMeida4: '', profession: 'Legal Advisor' },
+    { image: '1761238885388.jpeg', sec: 0.6, name: 'D. O. F Okhuoya', socialMeida1: '', socialMeida2: '', socialMeida3: '', socialMeida4: '', profession: 'Business Dev' },
+    { image: 'Untitled.png', sec: 0.4, name: 'Habeeb Bright', socialMeida1: '', socialMeida2: '', socialMeida3: '', socialMeida4: '', profession: 'CTO' },
+    { image: 'team-compliance-CO3-DPpB.jpg', sec: 0.8, name: 'Joy Zakaa', socialMeida1: '', socialMeida2: '', socialMeida3: '', socialMeida4: '', profession: 'Financial Consultant' }
 ];
 
 // Renamed the function to renderTeam to avoid name collision with the constant
-function renderTeam(){
+function renderTeam() {
     // It is safer to use a DOMContentLoaded listener for pure JS functions
     document.addEventListener('DOMContentLoaded', (event) => {
         const services = document.querySelector('.teamview');
-        let htmlcode ='';
-    
+        let htmlcode = '';
+
         // Use the renamed constant
         teamData.forEach(element => {
             htmlcode += `<div class ="col-md-6 col-lg-6 col-xl-3 wow fadeInUp" data-wow-delay="${element.sec}">
@@ -32,7 +32,7 @@ function renderTeam(){
                         </div>
                     </div>`;
         });
-        
+
         // Check if the element was found before trying to set innerHTML
         if (services) {
             services.innerHTML = htmlcode;
