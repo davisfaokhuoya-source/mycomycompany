@@ -190,6 +190,10 @@
                     class="hub-nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:bg-slate-900 hover:text-white border-l-2 border-transparent">
                     <i class="fa-solid fa-robot w-5 text-slate-400"></i> V5 Intelligence Engine
                 </button>
+                <button onclick="switchMasterHub('agent')" id="nav-agent"
+                    class="hub-nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:bg-slate-900 hover:text-white border-l-2 border-transparent">
+                    <i class="fa-solid fa-microchip w-5 text-slate-400"></i> AI Agent Control
+                </button>
             </nav>
             <div class="p-3 border-t border-slate-800">
                 <button onclick="terminateTerminalSession()"
@@ -1730,6 +1734,265 @@
 
                 </div><!-- end V5 Views Container -->
             </section>
+            <!-- ================================================================
+   HUB: AI AGENT CONTROL & OVERSIGHT
+================================================================= -->
+            <section id="hub-agent" class="hidden flex-1 flex overflow-hidden">
+                <!-- Agent Sub-Nav -->
+                <div
+                    class="w-56 bg-slate-950/40 border-r border-slate-800/60 flex flex-col shrink-0 px-2 py-4 space-y-1">
+                    <span class="text-[10px] font-mono tracking-wider text-slate-500 uppercase px-3 mb-2 block">Agent
+                        Management</span>
+                    <button class="agent-subview-link active" data-target-view="agent-clients">Client Registry</button>
+                    <button class="agent-subview-link" data-target-view="agent-subscriptions">Subscriptions</button>
+                    <button class="agent-subview-link" data-target-view="agent-quotas">Quota Monitor</button>
+                    <button class="agent-subview-link" data-target-view="agent-usage">Usage Reports</button>
+                    <button class="agent-subview-link" data-target-view="agent-tasks">Active Tasks</button>
+                    <button class="agent-subview-link" data-target-view="agent-compliance">Compliance Logs</button>
+                </div>
+
+                <!-- Agent Views Container -->
+                <div class="flex-1 flex flex-col overflow-hidden p-6">
+
+                    <!-- VIEW: Client Registry -->
+                    <div id="view-agent-clients" class="agent-view flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">AI Agent Client Registry</h3>
+                                <p class="text-xs text-slate-400">Manage B2B AI agent service subscriptions and client
+                                    tiers.</p>
+                            </div>
+                            <button onclick="openAgentClientRegisterModal()"
+                                class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded transition-colors shadow flex items-center gap-1">
+                                <i class="fa-solid fa-plus"></i> Register New Client
+                            </button>
+                        </div>
+                        <div
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead
+                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                    <tr>
+                                        <th class="p-3">Client ID</th>
+                                        <th class="p-3">Company Name</th>
+                                        <th class="p-3">Contact Email</th>
+                                        <th class="p-3">Industry</th>
+                                        <th class="p-3">Subscription Tier</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="agentClientsTableBody" class="divide-y divide-slate-800/50 text-slate-300">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- VIEW: Subscriptions -->
+                    <div id="view-agent-subscriptions"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Subscription Management</h3>
+                                <p class="text-xs text-slate-400">Update client tiers, pricing, and service allocations.
+                                </p>
+                            </div>
+                            <button onclick="loadAgentSubscriptions()"
+                                class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700 transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-4 gap-4 shrink-0">
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                                <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400">Total
+                                    Clients</span>
+                                <span class="text-2xl font-bold text-white mt-1" id="kpi-agent-total">0</span>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                                <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400">Active
+                                    Subscriptions</span>
+                                <span class="text-2xl font-bold text-emerald-400 mt-1" id="kpi-agent-active">0</span>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                                <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400">Monthly
+                                    Revenue (₦)</span>
+                                <span class="text-2xl font-bold text-blue-400 mt-1" id="kpi-agent-revenue">0</span>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                                <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400">Pending
+                                    Approvals</span>
+                                <span class="text-2xl font-bold text-amber-400 mt-1" id="kpi-agent-pending">0</span>
+                            </div>
+                        </div>
+                        <div
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead
+                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                    <tr>
+                                        <th class="p-3">Client ID</th>
+                                        <th class="p-3">Company</th>
+                                        <th class="p-3">Current Tier</th>
+                                        <th class="p-3">Hours/Month</th>
+                                        <th class="p-3">Emails/Month</th>
+                                        <th class="p-3">Proposals/Month</th>
+                                        <th class="p-3">Monthly Fee (₦)</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="agentSubscriptionsTableBody"
+                                    class="divide-y divide-slate-800/50 text-slate-300">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- VIEW: Quota Monitor -->
+                    <div id="view-agent-quotas"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Usage Quota Monitor</h3>
+                                <p class="text-xs text-slate-400">Track real-time consumption against monthly
+                                    allocations.</p>
+                            </div>
+                            <button onclick="loadAgentQuotas()"
+                                class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700 transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                            </button>
+                        </div>
+                        <div
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead
+                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                    <tr>
+                                        <th class="p-3">Client ID</th>
+                                        <th class="p-3">Company</th>
+                                        <th class="p-3">Hours Used / Allocated</th>
+                                        <th class="p-3">Hours Bar</th>
+                                        <th class="p-3">Emails Used / Allocated</th>
+                                        <th class="p-3">Emails Bar</th>
+                                        <th class="p-3">Proposals Used / Allocated</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="agentQuotasTableBody" class="divide-y divide-slate-800/50 text-slate-300">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- VIEW: Usage Reports -->
+                    <div id="view-agent-usage" class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Usage Reports & Analytics</h3>
+                                <p class="text-xs text-slate-400">Detailed service utilization logs by client and month.
+                                </p>
+                            </div>
+                            <button onclick="loadAgentUsageReports()"
+                                class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700 transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                            </button>
+                        </div>
+                        <div
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead
+                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                    <tr>
+                                        <th class="p-3">Date</th>
+                                        <th class="p-3">Client ID</th>
+                                        <th class="p-3">Company</th>
+                                        <th class="p-3">Task Type</th>
+                                        <th class="p-3">Hours Used</th>
+                                        <th class="p-3">Emails Sent</th>
+                                        <th class="p-3">Proposals Created</th>
+                                        <th class="p-3">API Calls</th>
+                                        <th class="p-3">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="agentUsageTableBody" class="divide-y divide-slate-800/50 text-slate-300">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- VIEW: Active Tasks -->
+                    <div id="view-agent-tasks" class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Active Agent Tasks</h3>
+                                <p class="text-xs text-slate-400">Monitor real-time AI work processes and completions.
+                                </p>
+                            </div>
+                            <button onclick="loadAgentTasks()"
+                                class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700 transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                            </button>
+                        </div>
+                        <div
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead
+                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                    <tr>
+                                        <th class="p-3">Task ID</th>
+                                        <th class="p-3">Client</th>
+                                        <th class="p-3">Task Type</th>
+                                        <th class="p-3">Created</th>
+                                        <th class="p-3">Progress</th>
+                                        <th class="p-3">Estimated Completion</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="agentTasksTableBody" class="divide-y divide-slate-800/50 text-slate-300">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- VIEW: Compliance Logs -->
+                    <div id="view-agent-compliance"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Compliance & Audit Logs</h3>
+                                <p class="text-xs text-slate-400">NDPA, FIRS, CAC compliance checks and audit trail.</p>
+                            </div>
+                            <button onclick="loadAgentComplianceLogs()"
+                                class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700 transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                            </button>
+                        </div>
+                        <div
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead
+                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                    <tr>
+                                        <th class="p-3">Date</th>
+                                        <th class="p-3">Client ID</th>
+                                        <th class="p-3">Company</th>
+                                        <th class="p-3">Check Type</th>
+                                        <th class="p-3">Result</th>
+                                        <th class="p-3">Notes</th>
+                                        <th class="p-3">Compliance Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="agentComplianceTableBody"
+                                    class="divide-y divide-slate-800/50 text-slate-300">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
         </main>
     </div>
 
@@ -2262,6 +2525,168 @@
             </form>
         </div>
     </div>
+    <!-- MODAL: Register Agent Client -->
+    <div id="modalAgentClientRegister"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full flex flex-col space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+                    <i class="fa-solid fa-building text-emerald-400"></i> Register AI Agent Client
+                </h3>
+                <button onclick="closeAgentClientRegisterModal()"
+                    class="text-slate-400 hover:text-white transition-colors text-sm font-bold">&times;</button>
+            </div>
+            <form id="agentClientRegisterForm" onsubmit="submitAgentClientRegister(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Company Name</label>
+                    <input type="text" id="agentCompanyName" required placeholder="Acme Corp Ltd"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Contact Email</label>
+                        <input type="email" id="agentContactEmail" required placeholder="ceo@acme.com"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Industry</label>
+                        <input type="text" id="agentIndustry" placeholder="Fintech / HR / Real Estate"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Subscription Tier</label>
+                    <select id="agentTier" required
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                        <option value="starter_ops">Starter Ops (₦350K/mo: 20hrs, 50 emails, 1 proposal)</option>
+                        <option value="growth_ops">Growth Ops (₦900K/mo: 40hrs, 200 emails, 3 proposals)</option>
+                        <option value="enterprise_ops">Enterprise Ops (₦1.5M/mo: Unlimited)</option>
+                        <option value="digital_launch">Digital Launch (₦500K/mo: 10hrs, 30 emails, 1 proposal)</option>
+                        <option value="digital_accelerate">Digital Accelerate (₦1.3M/mo: 20hrs, 100 emails, 2 proposals)
+                        </option>
+                        <option value="digital_scale">Digital Scale (₦3.5M/mo: Unlimited)</option>
+                        <option value="custom">Custom Tier (Bespoke)</option>
+                    </select>
+                </div>
+                <div id="customTierFields" class="hidden space-y-3 pt-3 border-t border-slate-800">
+                    <h4 class="text-xs font-bold text-emerald-400">Custom Tier Details</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Hours/Month</label>
+                            <input type="number" id="agentCustomHours" placeholder="50"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Emails/Month</label>
+                            <input type="number" id="agentCustomEmails" placeholder="150"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Proposals/Month</label>
+                            <input type="number" id="agentCustomProposals" placeholder="2"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Monthly Price (₦)</label>
+                            <input type="number" id="agentCustomPrice" placeholder="1000000"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                        </div>
+                    </div>
+                </div>
+                <button type="submit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded transition-colors shadow">
+                    Register Client & Activate Subscription
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Update Tier -->
+    <div id="modalAgentUpdateTier"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full flex flex-col space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white">Update Client Subscription Tier</h3>
+                <button onclick="closeAgentUpdateTierModal()"
+                    class="text-slate-400 hover:text-white transition-colors text-sm font-bold">&times;</button>
+            </div>
+            <form id="agentUpdateTierForm" onsubmit="submitAgentUpdateTier(event)" class="space-y-4">
+                <input type="hidden" id="updateTierClientId" />
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Client</label>
+                    <input type="text" id="updateTierClientName" readonly
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-400" />
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">New Tier</label>
+                    <select id="updateTierValue" required
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                        <option value="starter_ops">Starter Ops (₦350K/mo)</option>
+                        <option value="growth_ops">Growth Ops (₦900K/mo)</option>
+                        <option value="enterprise_ops">Enterprise Ops (₦1.5M/mo)</option>
+                        <option value="digital_launch">Digital Launch (₦500K/mo)</option>
+                        <option value="digital_accelerate">Digital Accelerate (₦1.3M/mo)</option>
+                        <option value="digital_scale">Digital Scale (₦3.5M/mo)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Effective Date</label>
+                    <input type="date" id="updateTierEffectiveDate" required
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+                <button type="submit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded transition-colors shadow">
+                    Update Subscription Tier
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Enforce Quota Limits -->
+    <div id="modalAgentEnforceQuota"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full flex flex-col space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white">Enforce/Adjust Quota Limits</h3>
+                <button onclick="closeAgentEnforceQuotaModal()"
+                    class="text-slate-400 hover:text-white transition-colors text-sm font-bold">&times;</button>
+            </div>
+            <form id="agentEnforceQuotaForm" onsubmit="submitAgentEnforceQuota(event)" class="space-y-4">
+                <input type="hidden" id="enforceQuotaClientId" />
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Client</label>
+                    <input type="text" id="enforceQuotaClientName" readonly
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-400" />
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Reset Hours</label>
+                        <input type="number" id="enforceQuotaHours" placeholder="40"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Reset Emails</label>
+                        <input type="number" id="enforceQuotaEmails" placeholder="200"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Reset Proposals</label>
+                        <input type="number" id="enforceQuotaProposals" placeholder="3"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                </div>
+                <button type="submit"
+                    class="w-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium py-2.5 rounded transition-colors shadow">
+                    Apply Quota Override
+                </button>
+            </form>
+        </div>
+    </div>
     <script>
         let WEBAPP_URL = localStorage.getItem('VIC_WEBAPP_URL') || "";
         let SESSION_MASTER_TOKEN = localStorage.getItem('VIC_MASTER_TOKEN') || "";
@@ -2718,6 +3143,13 @@
 
             const firstSubBtn = targetHub?.querySelector('[data-target-view]');
             if (firstSubBtn) firstSubBtn.click();
+
+            if (hubId === 'agent') {
+                setTimeout(() => {
+                    const firstAgentBtn = document.querySelector('[data-target-view="agent-clients"]');
+                    if (firstAgentBtn) firstAgentBtn.click();
+                }, 100);
+            }
         }
 
         function switchSubSection(system, action) {
@@ -2759,7 +3191,7 @@
 
         function initializeNavigation() {
             document.querySelectorAll(
-                '.career-subview-link, .assessment-subview-link, .leads-subview-link, .client-subview-link, [data-target-view]'
+                '.career-subview-link, .assessment-subview-link, .leads-subview-link, .client-subview-link, .agent-subview-link, .v5-subview-link, [data-target-view]'  // ← ADD .agent-subview-link
             ).forEach(link => {
                 link.addEventListener('click', function (event) {
                     event.preventDefault();
@@ -5251,6 +5683,446 @@
             <td class="p-3 text-center">${badge(r.Status || 'Pending')}</td>
         </tr>`).join('');
         }
+
+        // ================================================================
+        // AGENT HUB INITIALIZATION & HANDLERS
+        // ================================================================
+
+        function initializeAgentHub() {
+            document.querySelectorAll('.agent-subview-link').forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const viewId = this.getAttribute('data-target-view');
+                    document.querySelectorAll('.agent-view').forEach(v => v.classList.add('hidden'));
+                    document.getElementById('view-agent-' + viewId)?.classList.remove('hidden');
+
+                    document.querySelectorAll('.agent-subview-link').forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+
+                    // Auto-load data
+                    const loaderMap = {
+                        'clients': loadAgentClients,
+                        'subscriptions': loadAgentSubscriptions,
+                        'quotas': loadAgentQuotas,
+                        'usage': loadAgentUsageReports,
+                        'tasks': loadAgentTasks,
+                        'compliance': loadAgentComplianceLogs
+                    };
+                    if (loaderMap[viewId]) loaderMap[viewId]();
+                });
+            });
+        }
+
+        async function loadAgentClients() {
+            const tbodyId = 'agentClientsTableBody';
+            showTableSkeleton(tbodyId, 7);
+
+            const res = await executeSecureBridgeCall('agent', 'agent-get-clients', { page: 1 });
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+
+            if (!res.success || !res.data?.length) {
+                tbody.innerHTML = emptyRow('No clients registered yet.', 7);
+                return;
+            }
+
+            tbody.innerHTML = res.data.map(c => `
+        <tr>
+            <td class="p-3 font-mono text-slate-500">${escapeHtml(c.ClientID || c.clientID || '—')}</td>
+            <td class="p-3 font-medium text-slate-200">${escapeHtml(c.CompanyName || c.companyName || '—')}</td>
+            <td class="p-3 font-mono text-slate-400">${escapeHtml(c.ContactEmail || c.contactEmail || '—')}</td>
+            <td class="p-3 text-slate-400">${escapeHtml(c.Industry || c.industry || '—')}</td>
+            <td class="p-3">${badge(c.SubscriptionTier || c.tier || 'starter_ops')}</td>
+            <td class="p-3 text-center">${badge(c.Status || 'Active')}</td>
+            <td class="p-3 text-center flex gap-1 justify-center">
+                <button onclick="openAgentUpdateTierModal('${escapeHtml(c.ClientID || '')}', '${escapeHtml(c.CompanyName || '')}')"
+                    class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Tier</button>
+                <button onclick="openAgentDeactivateModal('${escapeHtml(c.ClientID || '')}')"
+                    class="text-xs px-3 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Deactivate</button>
+            </td>
+        </tr>
+    `).join('');
+        }
+
+        async function loadAgentSubscriptions() {
+            const tbodyId = 'agentSubscriptionsTableBody';
+            showTableSkeleton(tbodyId, 9);
+
+            const res = await executeSecureBridgeCall('agent', 'agent-get-clients', {});
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+
+            if (!res.success || !res.data?.length) {
+                tbody.innerHTML = emptyRow('No subscriptions found.', 9);
+                return;
+            }
+
+            // Update KPIs
+            document.getElementById('kpi-agent-total').textContent = res.data.length;
+            const active = res.data.filter(c => c.Status === 'Active').length;
+            document.getElementById('kpi-agent-active').textContent = active;
+
+            const revenue = res.data.reduce((sum, c) => {
+                const tierPricing = {
+                    'starter_ops': 350000, 'growth_ops': 900000, 'enterprise_ops': 1500000,
+                    'digital_launch': 500000, 'digital_accelerate': 1300000, 'digital_scale': 3500000
+                };
+                return sum + (tierPricing[c.SubscriptionTier || c.tier] || 0);
+            }, 0);
+            document.getElementById('kpi-agent-revenue').textContent = fmtNaira(revenue);
+            document.getElementById('kpi-agent-pending').textContent = res.data.filter(c => c.Status === 'Pending').length;
+
+            tbody.innerHTML = res.data.map(c => {
+                const tierPricing = {
+                    'starter_ops': { hours: 20, emails: 50, proposals: 1, price: 350000 },
+                    'growth_ops': { hours: 40, emails: 200, proposals: 3, price: 900000 },
+                    'enterprise_ops': { hours: 9999, emails: 9999, proposals: 9999, price: 1500000 },
+                    'digital_launch': { hours: 10, emails: 30, proposals: 1, price: 500000 },
+                    'digital_accelerate': { hours: 20, emails: 100, proposals: 2, price: 1300000 },
+                    'digital_scale': { hours: 9999, emails: 9999, proposals: 9999, price: 3500000 },
+                    'custom': {
+                        hours: c.CustomHours || 0,
+                        emails: c.CustomEmails || 0,
+                        proposals: c.CustomProposals || 0,
+                        price: c.CustomPriceNGN || 0
+                    }
+                };
+                const tierInfo = tierPricing[c.SubscriptionTier || c.tier] || tierPricing['starter_ops'];
+
+                return `
+            <tr>
+                <td class="p-3 font-mono text-slate-500">${escapeHtml(c.ClientID || '')}</td>
+                <td class="p-3 text-slate-300">${escapeHtml(c.CompanyName || '')}</td>
+                <td class="p-3 text-center">${badge(c.SubscriptionTier || 'starter_ops')}</td>
+                <td class="p-3 text-center font-mono">${tierInfo.hours === 9999 ? '∞' : tierInfo.hours}</td>
+                <td class="p-3 text-center font-mono">${tierInfo.emails === 9999 ? '∞' : tierInfo.emails}</td>
+                <td class="p-3 text-center font-mono">${tierInfo.proposals === 9999 ? '∞' : tierInfo.proposals}</td>
+                <td class="p-3 text-right font-bold text-emerald-400">${fmtNaira(tierInfo.price)}</td>
+                <td class="p-3 text-center">${badge(c.Status || 'Active')}</td>
+                <td class="p-3 text-center">
+                    <button onclick="openAgentUpdateTierModal('${escapeHtml(c.ClientID || '')}', '${escapeHtml(c.CompanyName || '')}')"
+                        class="text-xs px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Update</button>
+                </td>
+            </tr>
+        `;
+            }).join('');
+        }
+
+        async function loadAgentQuotas() {
+            const tbodyId = 'agentQuotasTableBody';
+            showTableSkeleton(tbodyId, 9);
+
+            const res = await executeSecureBridgeCall('agent', 'agent-usage-report', {});
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+
+            if (!res.success || !res.data?.length) {
+                tbody.innerHTML = emptyRow('No usage data available.', 9);
+                return;
+            }
+
+            tbody.innerHTML = res.data.map(u => {
+                const hoursPercent = (u.HoursUsed / (u.HoursAllocated || 1)) * 100;
+                const emailsPercent = (u.EmailsUsed / (u.EmailsAllocated || 1)) * 100;
+                const proposalsPercent = (u.ProposalsUsed / (u.ProposalsAllocated || 1)) * 100;
+
+                const hoursColor = hoursPercent > 80 ? 'bg-red-500' : hoursPercent > 60 ? 'bg-amber-500' : 'bg-emerald-500';
+                const emailsColor = emailsPercent > 80 ? 'bg-red-500' : emailsPercent > 60 ? 'bg-amber-500' : 'bg-emerald-500';
+
+                const quotaStatus = hoursPercent > 95 || emailsPercent > 95 ? 'EXCEEDED' : hoursPercent > 80 ? 'WARNING' : 'OK';
+
+                return `
+            <tr>
+                <td class="p-3 font-mono text-slate-500">${escapeHtml(u.ClientID || '')}</td>
+                <td class="p-3 text-slate-300">${escapeHtml(u.CompanyName || '')}</td>
+                <td class="p-3 text-center font-mono text-xs">${u.HoursUsed || 0} / ${u.HoursAllocated || 0}</td>
+                <td class="p-3">
+                    <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div class="${hoursColor} h-full transition-all" style="width: ${Math.min(hoursPercent, 100)}%"></div>
+                    </div>
+                </td>
+                <td class="p-3 text-center font-mono text-xs">${u.EmailsUsed || 0} / ${u.EmailsAllocated || 0}</td>
+                <td class="p-3">
+                    <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div class="${emailsColor} h-full transition-all" style="width: ${Math.min(emailsPercent, 100)}%"></div>
+                    </div>
+                </td>
+                <td class="p-3 text-center font-mono text-xs">${u.ProposalsUsed || 0} / ${u.ProposalsAllocated || 0}</td>
+                <td class="p-3 text-center">${badge(quotaStatus)}</td>
+                <td class="p-3 text-center">
+                    <button onclick="openAgentEnforceQuotaModal('${escapeHtml(u.ClientID || '')}', '${escapeHtml(u.CompanyName || '')}')"
+                        class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Reset</button>
+                </td>
+            </tr>
+        `;
+            }).join('');
+        }
+
+        async function loadAgentUsageReports() {
+            const tbodyId = 'agentUsageTableBody';
+            showTableSkeleton(tbodyId, 9);
+
+            const res = await executeSecureBridgeCall('agent', 'agent-log-task', { action: 'list-all' });
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+
+            if (!res.success || !res.data?.length) {
+                tbody.innerHTML = emptyRow('No usage logs available.', 9);
+                return;
+            }
+
+            tbody.innerHTML = res.data.slice(0, 100).map(t => `
+        <tr>
+            <td class="p-3 text-slate-500">${fmtDate(t.Timestamp || t.timestamp)}</td>
+            <td class="p-3 font-mono text-slate-500">${escapeHtml(t.ClientID || '')}</td>
+            <td class="p-3 text-slate-300">${escapeHtml(t.CompanyName || '')}</td>
+            <td class="p-3 text-slate-400">${escapeHtml(t.TaskType || 'Email')}</td>
+            <td class="p-3 font-mono font-bold">${parseFloat(t.HoursUsed || 0).toFixed(2)}</td>
+            <td class="p-3 font-mono">${t.EmailsSent || 0}</td>
+            <td class="p-3 font-mono">${t.ProposalsCreated || 0}</td>
+            <td class="p-3 font-mono text-slate-500">${t.APICalls || 0}</td>
+            <td class="p-3 text-center">${badge(t.Status || 'Completed')}</td>
+        </tr>
+    `).join('');
+        }
+
+        async function loadAgentTasks() {
+            const tbodyId = 'agentTasksTableBody';
+            showTableSkeleton(tbodyId, 8);
+
+            const res = await executeSecureBridgeCall('agent', 'agent-all-tasks', {});
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+
+            if (!res.success || !res.data?.length) {
+                tbody.innerHTML = emptyRow('No active tasks.', 8);
+                return;
+            }
+
+            tbody.innerHTML = res.data.map(t => {
+                const progress = t.Progress || 0;
+                const progressColor = progress === 100 ? 'bg-emerald-500' : progress > 50 ? 'bg-blue-500' : 'bg-amber-500';
+
+                return `
+            <tr>
+                <td class="p-3 font-mono text-slate-500">${escapeHtml(t.TaskID || t.taskID || '')}</td>
+                <td class="p-3 text-slate-300">${escapeHtml(t.CompanyName || '')}</td>
+                <td class="p-3 text-slate-400">${escapeHtml(t.TaskType || '')}</td>
+                <td class="p-3 text-slate-500">${fmtDate(t.CreatedAt || t.Timestamp)}</td>
+                <td class="p-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-24 bg-slate-700 rounded-full h-2">
+                            <div class="${progressColor} h-full" style="width: ${progress}%"></div>
+                        </div>
+                        <span class="text-xs font-mono text-slate-400">${progress}%</span>
+                    </div>
+                </td>
+                <td class="p-3 text-slate-500">${fmtDate(t.EstimatedCompletion)}</td>
+                <td class="p-3 text-center">${badge(t.Status || 'In Progress')}</td>
+                <td class="p-3 text-center">
+                    <button onclick="viewAgentTaskDetails('${escapeHtml(t.TaskID || '')}')"
+                        class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">View</button>
+                </td>
+            </tr>
+        `;
+            }).join('');
+        }
+
+        async function loadAgentComplianceLogs() {
+            const tbodyId = 'agentComplianceTableBody';
+            showTableSkeleton(tbodyId, 7);
+
+            const res = await executeSecureBridgeCall('agent', 'agent-audit-log', {});
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+
+            if (!res.success || !res.data?.length) {
+                tbody.innerHTML = emptyRow('No compliance logs.', 7);
+                return;
+            }
+
+            tbody.innerHTML = res.data.map(log => {
+                const resultColor = log.Result === 'PASS' ? 'emerald' : log.Result === 'FAIL' ? 'red' : 'amber';
+
+                return `
+            <tr>
+                <td class="p-3 text-slate-500">${fmtDate(log.Timestamp || log.timestamp)}</td>
+                <td class="p-3 font-mono text-slate-500">${escapeHtml(log.ClientID || '')}</td>
+                <td class="p-3 text-slate-300">${escapeHtml(log.CompanyName || '')}</td>
+                <td class="p-3 text-slate-400">${escapeHtml(log.CheckType || 'NDPA')}</td>
+                <td class="p-3 text-center">${badge(log.Result || 'PASS')}</td>
+                <td class="p-3 text-slate-400 text-xs">${escapeHtml((log.Notes || '').substring(0, 50))}</td>
+                <td class="p-3 text-center">${badge(log.ComplianceStatus || 'COMPLIANT')}</td>
+            </tr>
+        `;
+            }).join('');
+        }
+
+        // === MODAL HANDLERS ===
+
+        function openAgentClientRegisterModal() {
+            const modal = document.getElementById('modalAgentClientRegister');
+            if (!modal) return;
+
+            // Wire custom tier toggle
+            document.getElementById('agentTier').onchange = function () {
+                const customFields = document.getElementById('customTierFields');
+                if (this.value === 'custom') {
+                    customFields.classList.remove('hidden');
+                } else {
+                    customFields.classList.add('hidden');
+                }
+            };
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeAgentClientRegisterModal() {
+            const modal = document.getElementById('modalAgentClientRegister');
+            if (modal) modal.classList.add('hidden');
+            const form = document.getElementById('agentClientRegisterForm');
+            if (form) form.reset();
+        }
+
+        async function submitAgentClientRegister(event) {
+            event.preventDefault();
+
+            const companyName = document.getElementById('agentCompanyName').value.trim();
+            const contactEmail = document.getElementById('agentContactEmail').value.trim();
+            const industry = document.getElementById('agentIndustry').value.trim();
+            const tier = document.getElementById('agentTier').value;
+
+            let payload = { companyName, contactEmail, industry, tier };
+
+            if (tier === 'custom') {
+                payload.customTierLabel = companyName + ' Custom';
+                payload.customHours = parseInt(document.getElementById('agentCustomHours').value) || 0;
+                payload.customEmails = parseInt(document.getElementById('agentCustomEmails').value) || 0;
+                payload.customProposals = parseInt(document.getElementById('agentCustomProposals').value) || 0;
+                payload.customPriceNGN = parseFloat(document.getElementById('agentCustomPrice').value) || 0;
+            }
+
+            const btn = event.target.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Registering…'; }
+
+            const res = await executeSecureBridgeCall('agent', 'agent-register-client', payload);
+
+            if (btn) { btn.disabled = false; btn.textContent = 'Register Client & Activate Subscription'; }
+
+            if (res.success) {
+                showToast(`Client ${companyName} registered successfully!`, 'success');
+                closeAgentClientRegisterModal();
+                loadAgentClients();
+            } else {
+                showToast(res.message || 'Registration failed', 'error');
+            }
+        }
+
+        function openAgentUpdateTierModal(clientId, companyName) {
+            const modal = document.getElementById('modalAgentUpdateTier');
+            if (!modal) return;
+
+            document.getElementById('updateTierClientId').value = clientId;
+            document.getElementById('updateTierClientName').value = companyName;
+            document.getElementById('updateTierEffectiveDate').value = new Date().toISOString().split('T')[0];
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeAgentUpdateTierModal() {
+            const modal = document.getElementById('modalAgentUpdateTier');
+            if (modal) modal.classList.add('hidden');
+            const form = document.getElementById('agentUpdateTierForm');
+            if (form) form.reset();
+        }
+
+        async function submitAgentUpdateTier(event) {
+            event.preventDefault();
+
+            const clientId = document.getElementById('updateTierClientId').value;
+            const newTier = document.getElementById('updateTierValue').value;
+            const effectiveDate = document.getElementById('updateTierEffectiveDate').value;
+
+            const btn = event.target.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Updating…'; }
+
+            const res = await executeSecureBridgeCall('agent', 'agent-update-subscription', {
+                clientId, tier: newTier, effectiveDate
+            });
+
+            if (btn) { btn.disabled = false; btn.textContent = 'Update Subscription Tier'; }
+
+            if (res.success) {
+                showToast('Subscription tier updated successfully', 'success');
+                closeAgentUpdateTierModal();
+                loadAgentSubscriptions();
+            } else {
+                showToast(res.message || 'Update failed', 'error');
+            }
+        }
+
+        function openAgentEnforceQuotaModal(clientId, companyName) {
+            const modal = document.getElementById('modalAgentEnforceQuota');
+            if (!modal) return;
+
+            document.getElementById('enforceQuotaClientId').value = clientId;
+            document.getElementById('enforceQuotaClientName').value = companyName;
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeAgentEnforceQuotaModal() {
+            const modal = document.getElementById('modalAgentEnforceQuota');
+            if (modal) modal.classList.add('hidden');
+            const form = document.getElementById('agentEnforceQuotaForm');
+            if (form) form.reset();
+        }
+
+        async function submitAgentEnforceQuota(event) {
+            event.preventDefault();
+
+            const clientId = document.getElementById('enforceQuotaClientId').value;
+            const hours = parseInt(document.getElementById('enforceQuotaHours').value) || 0;
+            const emails = parseInt(document.getElementById('enforceQuotaEmails').value) || 0;
+            const proposals = parseInt(document.getElementById('enforceQuotaProposals').value) || 0;
+
+            const btn = event.target.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Applying…'; }
+
+            const res = await executeSecureBridgeCall('agent', 'agent-enforce-limits', {
+                clientId, hoursLimit: hours, emailsLimit: emails, proposalsLimit: proposals
+            });
+
+            if (btn) { btn.disabled = false; btn.textContent = 'Apply Quota Override'; }
+
+            if (res.success) {
+                showToast('Quota limits reset successfully', 'success');
+                closeAgentEnforceQuotaModal();
+                loadAgentQuotas();
+            } else {
+                showToast(res.message || 'Quota update failed', 'error');
+            }
+        }
+
+        function openAgentDeactivateModal(clientId) {
+            if (!confirm('Are you sure you want to deactivate this client? All services will be halted.')) return;
+
+            executeSecureBridgeCall('agent', 'agent-deactivate-client', { clientId }).then(res => {
+                showToast(res.success ? 'Client deactivated' : (res.message || 'Deactivation failed'),
+                    res.success ? 'success' : 'error');
+                if (res.success) loadAgentClients();
+            });
+        }
+
+        function viewAgentTaskDetails(taskId) {
+            showToast(`Task Details: ${taskId}`, 'info');
+            // Expand this to open a detailed view modal if needed
+        }
+
+        // Initialize on sidebar navigation
+        window.addEventListener('load', () => {
+            setTimeout(() => { initializeAgentHub(); }, 500);
+        });
 
         function initializeModule() {
             if (!document.getElementById("vh-pulse-style")) {
