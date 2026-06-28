@@ -74,6 +74,33 @@
             color: #ffffff;
             border-left-color: #10b981;
         }
+
+        .agent-subview-link {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    border-radius: 0.375rem;
+    border-left: 2px solid transparent;
+    transition: all 0.15s ease;
+    background: transparent;
+    cursor: pointer;
+}
+
+.agent-subview-link:hover {
+    background: #1e293b;
+    color: #f1f5f9;
+    border-left-color: #334155;
+}
+
+.agent-subview-link.active {
+    background: #1e293b;
+    color: #34d399;
+    border-left-color: #34d399;
+    font-weight: 600;
+}
     </style>
 </head>
 
@@ -1737,10 +1764,10 @@
             <!-- ================================================================
    HUB: AI AGENT CONTROL & OVERSIGHT
 ================================================================= -->
-            <section id="hub-agent" class="hidden flex-1 flex overflow-hidden">
-                <!-- Agent Sub-Nav -->
+            <section id="hub-agent" class="flex-1 flex overflow-hidden">
                 <div
                     class="w-56 bg-slate-950/40 border-r border-slate-800/60 flex flex-col shrink-0 px-2 py-4 space-y-1">
+                    <!-- Career Sub-Nav -->
                     <span class="text-[10px] font-mono tracking-wider text-slate-500 uppercase px-3 mb-2 block">Agent
                         Management</span>
                     <button class="agent-subview-link active" data-target-view="agent-clients">Client Registry</button>
@@ -3157,9 +3184,9 @@
 
             const targetViewEl = document.getElementById(`view-${action}`);
             if (targetViewEl) {
-                targetViewEl.classList.remove('hidden');
-                targetViewEl.style.display = '';
-            } else {
+    targetViewEl.classList.remove('hidden');
+    targetViewEl.style.display = 'flex';
+} else {
                 console.error(`DOM container "#view-${action}" does not exist!`);
                 return;
             }
@@ -3183,6 +3210,12 @@
                 'leads-drive': loadMailDriveReports,
                 'career-complaints': initializeModule_career_complaints,
                 'leads-calendar': loadCalendarEvents,
+                'agent-clients': loadAgentClients,
+'agent-subscriptions': loadAgentSubscriptions,
+'agent-quotas': loadAgentQuotas,
+'agent-usage': loadAgentUsageReports,
+'agent-tasks': loadAgentTasks,
+'agent-compliance': loadAgentComplianceLogs,
             };
 
             const initFn = initMap[action];
@@ -3202,10 +3235,9 @@
 
                     const systemName = subTabId.split('-')[0];
 
-                    document.querySelectorAll(
-                        '.career-subview-link, .assessment-subview-link, .leads-subview-link, .client-subview-link, [data-target-view]'
-                    ).forEach(l => l.classList.remove('active'));
-                    this.classList.add('active');
+                   document.querySelectorAll(
+    '.career-subview-link, .assessment-subview-link, .leads-subview-link, .client-subview-link, .agent-subview-link, [data-target-view]'
+).forEach(l => l.classList.remove('active'));
 
                     switchSubSection(systemName, subTabId);
                 });
