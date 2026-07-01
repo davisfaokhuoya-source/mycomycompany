@@ -3767,32 +3767,31 @@
     </div>
     <div id="modalConnectIntegration"
         class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full space-y-4">
+        <div
+            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full space-y-4 max-h-[85vh] overflow-auto custom-scrollbar">
             <div class="flex justify-between items-center border-b border-slate-800 pb-2">
                 <h3 class="text-sm font-bold text-white">Connect Integration</h3>
                 <button onclick="document.getElementById('modalConnectIntegration').classList.add('hidden')"
                     class="text-slate-400 hover:text-white">&times;</button>
             </div>
-            <form onsubmit="submitConnectIntegration(event)" class="space-y-3">
-                <select id="integType" onchange="updateIntegCredentialsPlaceholder()"
-                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
-                    <option value="email">Email (SendGrid / Mailgun / Webhook)</option>
-                    <option value="crm">CRM</option>
-                    <option value="database">Database</option>
-                    <option value="api">Generic API</option>
-                </select>
-                <input type="text" id="integLabel" placeholder="Label e.g. Their SendGrid Key"
-                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
-                <textarea id="integCredentials" required rows="4"
-                    placeholder='{"provider":"sendgrid","apiKey":"SG.xxx","fromAddress":"no-reply@client.com"}'
-                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white"></textarea>
-                <p id="integCredentialsHint" class="text-[10px] text-slate-500">
-                    For Email type, include a "provider" field: sendgrid, mailgun, or webhook — each needs different
-                    fields (see docs).
-                </p>
+            <select id="integType" onchange="renderIntegFields()"
+                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
+                <option value="hubspot">HubSpot (read-only contacts + deals)</option>
+                <option value="zoho">Zoho CRM (read-only contacts + deals)</option>
+                <option value="google_sheets">Client's Google Sheet</option>
+                <option value="generic_rest">Generic REST API</option>
+                <option value="email">Email Sending (SendGrid/Mailgun/Webhook)</option>
+            </select>
+            <input type="text" id="integLabel" placeholder="Label e.g. Their Zoho Account"
+                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+
+            <div id="integDynamicFields" class="space-y-2"></div>
+
+            <form onsubmit="submitConnectIntegration(event)">
                 <button type="submit"
-                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 rounded">Connect
-                    & Encrypt</button>
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 rounded">
+                    Connect & Encrypt
+                </button>
             </form>
         </div>
     </div>
@@ -8527,24 +8526,139 @@
             });
         }
 
+        const INTEG_FIELD_SCHEMAS = {
+            hubspot: [
+                { key: 'accessToken', label: 'Private App Access Token', placeholder: 'pat-na1-xxxxxxxx' }
+            ],
+            zoho: [
+                { key: 'clientId', label: 'Zoho Client ID' },
+                { key: 'clientSecret', label: 'Zoho Client Secret' },
+                { key: 'refreshToken', label: 'Zoho Refresh Token (from Self Client setup)' },
+                { key: 'apiDomain', label: 'API Domain', placeholder: 'https://www.zohoapis.com' },
+                { key: 'accountsDomain', label: 'Accounts Domain', placeholder: 'https://accounts.zoho.com' }
+            ],
+            google_sheets: [
+                { key: 'sheetId', label: 'Google Sheet ID (from its URL)' },
+                { key: 'sheetName', label: 'Tab Name', placeholder: 'Contacts' },
+                { key: 'columnMap_name', label: 'Column header for Name', placeholder: 'Full Name' },
+                { key: 'columnMap_email', label: 'Column header for Email', placeholder: 'Email' },
+                { key: 'columnMap_phone', label: 'Column header for Phone', placeholder: 'Phone' },
+                { key: 'columnMap_company', label: 'Column header for Company', placeholder: 'Company' }
+            ],
+            generic_rest: [
+                { key: 'baseUrl', label: 'Base URL', placeholder: 'https://api.theirsystem.com' },
+                { key: 'authHeaderName', label: 'Auth Header Name', placeholder: 'Authorization' },
+                { key: 'authHeaderValue', label: 'Auth Header Value', placeholder: 'Bearer xxxx' },
+                { key: 'contactsEndpoint', label: 'Contacts Endpoint', placeholder: '/v1/contacts' },
+                { key: 'contactsArrayPath', label: 'Path to contacts array in response', placeholder: 'data.contacts' },
+                { key: 'contactFieldMap_name', label: 'Field name for contact name', placeholder: 'full_name' },
+                { key: 'contactFieldMap_email', label: 'Field name for contact email', placeholder: 'email' },
+                { key: 'contactFieldMap_phone', label: 'Field name for contact phone', placeholder: 'phone' },
+                { key: 'contactFieldMap_company', label: 'Field name for contact company', placeholder: 'company_name' }
+            ],
+            email: [
+                { key: 'provider', label: 'Provider (sendgrid / mailgun / webhook)', placeholder: 'sendgrid' },
+                { key: 'apiKey', label: 'API Key' },
+                { key: 'fromAddress', label: 'From Address (SendGrid/Mailgun)', placeholder: 'no-reply@client.com' },
+                { key: 'domain', label: 'Domain (Mailgun only)', placeholder: 'mg.client.com' },
+                { key: 'url', label: 'Webhook URL (webhook only)' }
+            ]
+        };
+
+        function renderIntegFields() {
+            const type = document.getElementById('integType').value;
+            const container = document.getElementById('integDynamicFields');
+            const fields = INTEG_FIELD_SCHEMAS[type] || [];
+            container.innerHTML = fields.map(f => `
+        <div>
+            <label class="block text-[10px] text-slate-400 mb-0.5">${escapeHtml(f.label)}</label>
+            <input type="text" id="integField_${f.key}" placeholder="${escapeHtml(f.placeholder || '')}"
+                class="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-xs text-white" />
+        </div>
+    `).join('');
+        }
+
+        function submitConnectIntegration(event) {
+            event.preventDefault();
+            const clientId = document.getElementById('integrationsClientSelector')?.value;
+            const type = document.getElementById('integType').value;
+            const label = document.getElementById('integLabel').value.trim();
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+
+            const fields = INTEG_FIELD_SCHEMAS[type] || [];
+            const credentials = {};
+            fields.forEach(f => {
+                const val = document.getElementById(`integField_${f.key}`)?.value?.trim();
+                if (!val) return;
+                if (f.key.includes('_')) {
+                    // nested keys like columnMap_name -> columnMap: {name: val}
+                    const [parent, child] = f.key.split('_');
+                    credentials[parent] = credentials[parent] || {};
+                    credentials[parent][child] = val;
+                } else {
+                    credentials[f.key] = val;
+                }
+            });
+            if (type !== 'email' && type !== 'generic_rest') credentials.provider = type;
+
+            executeSecureBridgeCall('agent', 'agent-connect-integration', { clientId, type, label, credentials }).then(res => {
+                showToast(res.success ? 'Integration connected.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+                if (res.success) { document.getElementById('modalConnectIntegration').classList.add('hidden'); loadIntegrationsUI(); }
+            });
+        }
+
+        // Init default fields when modal opens
+        function openConnectIntegrationModal() {
+            if (!document.getElementById('integrationsClientSelector')?.value) { showToast('Select a client first.', 'error'); return; }
+            document.getElementById('integType').value = 'hubspot';
+            renderIntegFields();
+            document.getElementById('modalConnectIntegration').classList.remove('hidden');
+        }
+
         // ============ integrations ============
         async function loadIntegrationsUI() {
             const clientId = document.getElementById('integrationsClientSelector')?.value;
             const tbody = document.getElementById('agentIntegrationsTableBody');
-            if (!clientId) { tbody.innerHTML = emptyRow('Select a client.', 5); return; }
-            showTableSkeleton('agentIntegrationsTableBody', 5);
-            const res = await executeSecureBridgeCall('agent', 'agent-list-integrations', { clientId });
-            if (!res.success || !res.data?.length) { tbody.innerHTML = emptyRow('No integrations connected.', 5); return; }
-            tbody.innerHTML = res.data.map(i => `
-    <tr><td class="p-3">${badge(i.Type || i.type)}</td>
-    <td class="p-3">${escapeHtml(i.Label || i.label || '—')}</td>
-    <td class="p-3 font-mono text-slate-500">${escapeHtml(i.MaskedCredential || i.masked || '••••')}</td>
-    <td class="p-3 text-center">${badge(i.Status || 'Connected')}</td>
+            if (!clientId) { tbody.innerHTML = emptyRow('Select a client.', 6); return; }
+            showTableSkeleton('agentIntegrationsTableBody', 6);
+
+            const [listRes, syncRes] = await Promise.all([
+                executeSecureBridgeCall('agent', 'agent-list-integrations', { clientId }),
+                executeSecureBridgeCall('agent', 'agent-get-crm-sync-status', { clientId })
+            ]);
+            if (!listRes.success || !listRes.integrations?.length) { tbody.innerHTML = emptyRow('No integrations connected.', 6); return; }
+
+            const syncMap = {};
+            (syncRes.integrations || []).forEach(s => { syncMap[s.provider] = s; });
+            const CRM_TYPES = ['hubspot', 'zoho', 'google_sheets', 'generic_rest'];
+
+            tbody.innerHTML = listRes.integrations.map(i => {
+                const isCrm = CRM_TYPES.indexOf(i.type) !== -1;
+                const sync = syncMap[i.type];
+                const syncInfo = isCrm
+                    ? (sync?.lastSyncedAt ? `Last synced: ${fmtDate(sync.lastSyncedAt)} (${sync.lastSyncCount} records)` : 'Never synced')
+                    : '—';
+                return `
+    <tr><td class="p-3">${badge(i.type)}</td>
+    <td class="p-3">${escapeHtml(i.label || i.type)}</td>
+    <td class="p-3 text-slate-500 text-[10px]">${escapeHtml(syncInfo)}</td>
+    <td class="p-3 text-center">${badge(i.status || 'Connected')}</td>
     <td class="p-3 text-center flex gap-1 justify-center">
-      <button onclick="testIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.Type || i.type)}')" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Test</button>
-      <button onclick="disconnectIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.Type || i.type)}')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Disconnect</button>
-    </td></tr>`).join('');
+      <button onclick="testIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.type)}')" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Test</button>
+      ${isCrm ? `<button onclick="syncCrmNow('${escapeHtml(clientId)}','${escapeHtml(i.type)}')" class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Sync Now</button>` : ''}
+      <button onclick="disconnectIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.type)}')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Disconnect</button>
+    </td></tr>`;
+            }).join('');
         }
+
+        function syncCrmNow(clientId, provider) {
+            showToast('Syncing ' + provider + '…', 'info');
+            executeSecureBridgeCall('agent', 'agent-sync-crm-data', { clientId, provider }).then(res => {
+                showToast(res.success ? res.message : (res.message || 'Sync failed.'), res.success ? 'success' : 'error');
+                if (res.success) loadIntegrationsUI();
+            });
+        }
+
         function openConnectIntegrationModal() {
             if (!document.getElementById('integrationsClientSelector')?.value) { showToast('Select a client first.', 'error'); return; }
             document.getElementById('modalConnectIntegration').classList.remove('hidden');
