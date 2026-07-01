@@ -3308,8 +3308,8 @@
                         <option value="growth_ops">Growth Ops (₦900K/mo)</option>
                         <option value="enterprise_ops">Enterprise Ops (₦1.5M/mo)</option>
                         <option value="digital_launch">Digital Launch (₦500K/mo)</option>
-                        <option value="digital_accelerate">Digital Accelerate (₦1.3M/mo)</option>
-                        <option value="digital_scale">Digital Scale (₦3.5M/mo)</option>
+                        <option value="digital_accelerate">Digital Accelerate (Custom Quote — $800–1,100/mo)</option>
+                        <option value="digital_scale">Digital Scale (Custom Quote — $2,538+/mo)</option>
                         <option value="custom">Custom / Bespoke Package</option>
                     </select>
                     <div id="updateTierCustomFields" class="hidden space-y-2 pt-2 border-t border-slate-800">
@@ -3663,6 +3663,11 @@
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
                 <input type="number" id="vaPrice" required placeholder="Monthly price (₦)"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                <label class="block text-xs text-slate-400 mb-1">Industry/Focus</label>
+                <select id="vaIndustry" required
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></select>
+                <input type="number" id="vaEmailsPerMonth" placeholder="Emails per month" value="100"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
                 <textarea id="vaNotes" placeholder="Notes"
                     class="w-full h-16 bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></textarea>
                 <button type="submit"
@@ -3767,30 +3772,64 @@
     </div>
     <div id="modalConnectIntegration"
         class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
-        <div
-            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full space-y-4 max-h-[85vh] overflow-auto custom-scrollbar">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full space-y-4">
             <div class="flex justify-between items-center border-b border-slate-800 pb-2">
                 <h3 class="text-sm font-bold text-white">Connect Integration</h3>
                 <button onclick="document.getElementById('modalConnectIntegration').classList.add('hidden')"
                     class="text-slate-400 hover:text-white">&times;</button>
             </div>
-            <select id="integType" onchange="renderIntegFields()"
-                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
-                <option value="hubspot">HubSpot (read-only contacts + deals)</option>
-                <option value="zoho">Zoho CRM (read-only contacts + deals)</option>
-                <option value="google_sheets">Client's Google Sheet</option>
-                <option value="generic_rest">Generic REST API</option>
-                <option value="email">Email Sending (SendGrid/Mailgun/Webhook)</option>
-            </select>
-            <input type="text" id="integLabel" placeholder="Label e.g. Their Zoho Account"
-                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
-
-            <div id="integDynamicFields" class="space-y-2"></div>
-
-            <form onsubmit="submitConnectIntegration(event)">
+            <form onsubmit="submitConnectIntegration(event)" class="space-y-3">
+                <select id="integType" onchange="updateIntegCredentialsPlaceholder()"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
+                    <option value="email">Email (SendGrid / Mailgun / Webhook)</option>
+                    <option value="crm">CRM</option>
+                    <option value="database">Database</option>
+                    <option value="api">Generic API</option>
+                    <option value="linkedin">LinkedIn (post on client's behalf)</option>
+                </select>
+                <input type="text" id="integLabel" placeholder="Label e.g. Their SendGrid Key"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                <textarea id="integCredentials" required rows="4"
+                    placeholder='{"provider":"sendgrid","apiKey":"SG.xxx","fromAddress":"no-reply@client.com"}'
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white"></textarea>
+                <p id="integCredentialsHint" class="text-[10px] text-slate-500">
+                    For Email type, include a "provider" field: sendgrid, mailgun, or webhook — each needs different
+                    fields (see docs).
+                </p>
+                <button type="submit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 rounded">Connect
+                    & Encrypt</button>
+            </form>
+        </div>
+    </div>
+    <div id="modalConnectSocialAccount"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white">Connect Social Account</h3>
+                <button onclick="closeConnectSocialAccountModal()"
+                    class="text-slate-400 hover:text-white">&times;</button>
+            </div>
+            <form id="connectSocialAccountForm" onsubmit="submitConnectSocialAccount(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Client</label>
+                    <select id="connectSocialClientId"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Platform</label>
+                    <select id="connectSocialPlatform"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
+                        <option value="facebook">Facebook Page</option>
+                        <option value="instagram">Instagram Business (via linked Facebook Page)</option>
+                        <option value="linkedin">LinkedIn Company Page</option>
+                    </select>
+                </div>
+                <p class="text-[10px] text-slate-500">Clicking below opens a new tab where the CLIENT logs into their
+                    own Facebook/Instagram/LinkedIn account and grants access. Nothing is typed here.</p>
                 <button type="submit"
                     class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 rounded">
-                    Connect & Encrypt
+                    Get Authorization Link
                 </button>
             </form>
         </div>
@@ -6963,30 +7002,33 @@
             document.getElementById('kpi-agent-active').textContent = active;
 
             const revenue = res.data.reduce((sum, c) => {
-                const tierPricing = {
-                    'starter_ops': 350000, 'growth_ops': 900000, 'enterprise_ops': 1500000,
-                    'digital_launch': 500000, 'digital_accelerate': 1300000, 'digital_scale': 3500000
-                };
-                return sum + (tierPricing[c.Tier] || 0);
+                const fixedPricing = { 'starter_ops': 350000, 'growth_ops': 900000, 'enterprise_ops': 1500000, 'digital_launch': 500000 };
+                if (fixedPricing[c.Tier] !== undefined) return sum + fixedPricing[c.Tier];
+                if (c.Tier === 'digital_accelerate' || c.Tier === 'digital_scale') {
+                    // Quote-only tiers — only count if a real negotiated price was set via agent-set-custom-tier
+                    return sum + (parseFloat(c.CustomPriceNGN) || 0);
+                }
+                if (String(c.Tier).toLowerCase() === 'custom') return sum + (parseFloat(c.CustomPriceNGN) || 0);
+                return sum;
             }, 0);
             document.getElementById('kpi-agent-revenue').textContent = fmtNaira(revenue);
             document.getElementById('kpi-agent-pending').textContent = res.data.filter(c => c.Status === 'Pending').length;
 
             tbody.innerHTML = res.data.map(c => {
+
                 const tierPricing = {
                     'starter_ops': { hours: 20, emails: 50, proposals: 1, price: 350000 },
                     'growth_ops': { hours: 40, emails: 200, proposals: 3, price: 900000 },
                     'enterprise_ops': { hours: 9999, emails: 9999, proposals: 9999, price: 1500000 },
                     'digital_launch': { hours: 10, emails: 30, proposals: 1, price: 500000 },
-                    'digital_accelerate': { hours: 20, emails: 100, proposals: 2, price: 1300000 },
-                    'digital_scale': { hours: 9999, emails: 9999, proposals: 9999, price: 3500000 },
+                    'digital_accelerate': { hours: 20, emails: 100, proposals: 2, price: null },   // was 1300000
+                    'digital_scale': { hours: 9999, emails: 9999, proposals: 9999, price: null }, // was 3500000
                     'custom': {
-                        hours: c.CustomHours || 0,
-                        emails: c.CustomEmails || 0,
-                        proposals: c.CustomProposals || 0,
-                        price: c.CustomPriceNGN || 0
+                        hours: c.CustomHours || 0, emails: c.CustomEmails || 0,
+                        proposals: c.CustomProposals || 0, price: c.CustomPriceNGN || 0
                     }
                 };
+
                 const tierInfo = tierPricing[c.Tier] || tierPricing['starter_ops'];
                 const endDate = c.EndDate || c.endDate || '—';
                 const daysLeft = c.EndDate ? Math.floor((new Date(c.EndDate) - new Date()) / 86400000) : null;
@@ -7006,7 +7048,7 @@
             <td class="p-3 text-center font-mono">${tierInfo.hours === 9999 ? '∞' : tierInfo.hours}</td>
             <td class="p-3 text-center font-mono">${tierInfo.emails === 9999 ? '∞' : tierInfo.emails}</td>
             <td class="p-3 text-center font-mono">${tierInfo.proposals === 9999 ? '∞' : tierInfo.proposals}</td>
-            <td class="p-3 text-right font-bold text-emerald-400">${fmtNaira(tierInfo.price)}</td>
+           <td class="p-3 text-right font-bold text-emerald-400">${tierInfo.price === null ? '<span class="text-amber-400">Custom Quote</span>' : fmtNaira(tierInfo.price)}</td>
             <td class="p-3 text-center text-xs">${fmtDate(endDate)}<br>${expiryBadge}</td>
             <td class="p-3 text-center">${badge(c.Status || 'Active')}</td>
             <td class="p-3 text-center flex gap-1 justify-center">
@@ -7040,13 +7082,38 @@
             tbody.innerHTML = rows.map(({ client: c, quota: q }) => {
                 if (!q) {
                     return `<tr><td class="p-3 font-mono text-slate-500">${escapeHtml(c.ClientID)}</td>
-                <td class="p-3 text-slate-300">${escapeHtml(c.CompanyName)}</td>
-                <td colspan="7" class="p-3 text-slate-500">Quota unavailable${q?.expired ? ' (expired)' : ''}</td></tr>`;
+            <td class="p-3 text-slate-300">${escapeHtml(c.CompanyName)}</td>
+            <td colspan="7" class="p-3 text-slate-500">Quota unavailable${q?.expired ? ' (expired)' : ''}</td></tr>`;
                 }
+
+                // Marketing-tier clients return a different shape — branch here.
+                if (q.tierLabel) {
+                    const chUsed = q.used.contentReviewHours ?? 0, chLimit = q.limits.contentReviewHours === 999 ? '∞' : q.limits.contentReviewHours;
+                    const saUsed = q.used.socialAssets ?? 0, saLimit = q.limits.socialAssets === 999 ? '∞' : q.limits.socialAssets;
+                    const chPct = q.limits.contentReviewHours === 999 ? 0 : (chUsed / (q.limits.contentReviewHours || 1)) * 100;
+                    const chColor = chPct > 80 ? 'bg-red-500' : chPct > 60 ? 'bg-amber-500' : 'bg-emerald-500';
+                    return `
+        <tr>
+            <td class="p-3 font-mono text-slate-500">${escapeHtml(c.ClientID)}</td>
+            <td class="p-3 text-slate-300">${escapeHtml(c.CompanyName)} <span class="text-[10px] text-blue-400">(${escapeHtml(q.tierLabel)})</span></td>
+            <td class="p-3 text-center font-mono text-xs">${chUsed} / ${chLimit} hrs</td>
+            <td class="p-3"><div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                <div class="${chColor} h-full" style="width:${Math.min(chPct, 100)}%"></div></div></td>
+            <td class="p-3 text-center font-mono text-xs">${saUsed} / ${saLimit} assets</td>
+            <td class="p-3"><span class="text-[10px] text-slate-500">social assets</span></td>
+            <td class="p-3 text-center font-mono text-xs">—</td>
+            <td class="p-3 text-center">${badge(chPct > 95 ? 'EXCEEDED' : chPct > 80 ? 'WARNING' : 'OK')}</td>
+            <td class="p-3 text-center">
+                <button onclick="openAgentEnforceQuotaModal('${escapeHtml(c.ClientID)}', '${escapeHtml(c.CompanyName)}')"
+                    class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Reset</button>
+            </td>
+        </tr>`;
+                }
+
+                // Ops-tier (unchanged, existing logic)
                 const hoursUsed = q.used.hours, hoursLimit = q.limits.hours === 999 ? '∞' : q.limits.hours;
                 const emailsUsed = q.used.emails, emailsLimit = q.limits.emails === 999 ? '∞' : q.limits.emails;
                 const propUsed = q.used.proposals, propLimit = q.limits.proposals === 999 ? '∞' : q.limits.proposals;
-
                 const hoursPct = q.limits.hours === 999 ? 0 : (hoursUsed / (q.limits.hours || 1)) * 100;
                 const emailsPct = q.limits.emails === 999 ? 0 : (emailsUsed / (q.limits.emails || 1)) * 100;
                 const hoursColor = hoursPct > 80 ? 'bg-red-500' : hoursPct > 60 ? 'bg-amber-500' : 'bg-emerald-500';
@@ -7054,22 +7121,22 @@
                 const status = hoursPct > 95 || emailsPct > 95 ? 'EXCEEDED' : (hoursPct > 80 || emailsPct > 80) ? 'WARNING' : 'OK';
 
                 return `
-        <tr>
-            <td class="p-3 font-mono text-slate-500">${escapeHtml(c.ClientID)}</td>
-            <td class="p-3 text-slate-300">${escapeHtml(c.CompanyName)}</td>
-            <td class="p-3 text-center font-mono text-xs">${hoursUsed} / ${hoursLimit}</td>
-            <td class="p-3"><div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                <div class="${hoursColor} h-full" style="width:${Math.min(hoursPct, 100)}%"></div></div></td>
-            <td class="p-3 text-center font-mono text-xs">${emailsUsed} / ${emailsLimit}</td>
-            <td class="p-3"><div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                <div class="${emailsColor} h-full" style="width:${Math.min(emailsPct, 100)}%"></div></div></td>
-            <td class="p-3 text-center font-mono text-xs">${propUsed} / ${propLimit}</td>
-            <td class="p-3 text-center">${badge(status)}</td>
-            <td class="p-3 text-center">
-                <button onclick="openAgentEnforceQuotaModal('${escapeHtml(c.ClientID)}', '${escapeHtml(c.CompanyName)}')"
-                    class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Reset</button>
-            </td>
-        </tr>`;
+    <tr>
+        <td class="p-3 font-mono text-slate-500">${escapeHtml(c.ClientID)}</td>
+        <td class="p-3 text-slate-300">${escapeHtml(c.CompanyName)}</td>
+        <td class="p-3 text-center font-mono text-xs">${hoursUsed} / ${hoursLimit}</td>
+        <td class="p-3"><div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+            <div class="${hoursColor} h-full" style="width:${Math.min(hoursPct, 100)}%"></div></div></td>
+        <td class="p-3 text-center font-mono text-xs">${emailsUsed} / ${emailsLimit}</td>
+        <td class="p-3"><div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+            <div class="${emailsColor} h-full" style="width:${Math.min(emailsPct, 100)}%"></div></div></td>
+        <td class="p-3 text-center font-mono text-xs">${propUsed} / ${propLimit}</td>
+        <td class="p-3 text-center">${badge(status)}</td>
+        <td class="p-3 text-center">
+            <button onclick="openAgentEnforceQuotaModal('${escapeHtml(c.ClientID)}', '${escapeHtml(c.CompanyName)}')"
+                class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Reset</button>
+        </td>
+    </tr>`;
             }).join('');
         }
 
@@ -7538,6 +7605,55 @@
     `).join('');
         }
 
+        function renderIntegFields() {
+            const type = document.getElementById('integType').value;
+            const container = document.getElementById('integDynamicFields');
+            const fields = INTEG_FIELD_SCHEMAS[type] || [];
+            container.innerHTML = fields.map(f => `
+        <div>
+            <label class="block text-[10px] text-slate-400 mb-0.5">${escapeHtml(f.label)}</label>
+            <input type="text" id="integField_${f.key}" placeholder="${escapeHtml(f.placeholder || '')}"
+                class="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-xs text-white" />
+        </div>
+    `).join('');
+
+            const zohoBlock = document.getElementById('zohoOAuthBlock');
+            const linkedinBlock = document.getElementById('linkedinOAuthBlock');
+            const manualWrapper = document.getElementById('manualFieldsWrapper');
+            const manualSummary = document.getElementById('manualFieldsSummary');
+
+            zohoBlock.classList.toggle('hidden', type !== 'zoho');
+            linkedinBlock.classList.toggle('hidden', type !== 'linkedin');
+
+            if (type === 'zoho' || type === 'linkedin') {
+                manualWrapper.open = false;
+                manualSummary.textContent = type === 'zoho'
+                    ? 'Advanced: connect manually with a self-generated refresh token instead'
+                    : 'LinkedIn has no manual/API-key path — OAuth only.';
+                manualWrapper.classList.toggle('hidden', type === 'linkedin');
+            } else {
+                manualWrapper.classList.remove('hidden');
+                manualWrapper.open = true;
+                manualSummary.textContent = 'Manual credential entry';
+            }
+        }
+
+        async function generateLinkedInOAuthLink() {
+            const clientId = document.getElementById('integrationsClientSelector')?.value;
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+
+            const res = await executeSecureBridgeCall('agent', 'agent-start-linkedin-auth', { clientId });
+            const box = document.getElementById('linkedinOAuthLinkResult');
+            if (!res.success) { showToast(res.message || 'Failed to generate link.', 'error'); return; }
+
+            box.classList.remove('hidden');
+            box.innerHTML = `
+    <p class="text-amber-400">⚠ Not sent yet — copy this and send it to ${escapeHtml(res.clientName || clientId)} yourself. They must open it logged into their own LinkedIn.</p>
+    <p class="font-mono">${escapeHtml(res.authUrl)}</p>
+    <button type="button" onclick="navigator.clipboard.writeText('${res.authUrl}').then(()=>showToast('Copied — now send it to the client','success'))"
+        class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Copy Link</button>`;
+        }
+
         function verifyAgentComplianceDoc(fileName) {
             const clientId = document.getElementById('docsClientSelector')?.value;
             if (!clientId) return;
@@ -7971,7 +8087,16 @@
       <button onclick="navigator.clipboard.writeText('${res.authUrl}').then(()=>showToast('Copied!','success'))"
         class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Copy Link</button>
       <a href="${res.authUrl}" target="_blank" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Open</a>
-    </div>`;
+    </div>
+    <div id="linkedinOAuthBlock" class="hidden border border-blue-900/40 bg-blue-950/10 rounded p-3 space-y-2">
+    <p class="text-[11px] text-blue-400 font-medium">Client authorizes themselves</p>
+    <p class="text-[10px] text-slate-400">Generates a link. The client logs into their own LinkedIn and grants posting access — nothing is typed here.</p>
+    <button type="button" onclick="generateLinkedInOAuthLink()"
+        class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium py-2 rounded">
+        Generate LinkedIn Authorization Link
+    </button>
+    <div id="linkedinOAuthLinkResult" class="hidden bg-slate-950 border border-slate-800 rounded p-2 text-[10px] text-slate-300 break-all space-y-2"></div>
+</div>`;
         }
 
         // Add to Mailboxes view loader — show connection status alongside mailboxes
@@ -8046,7 +8171,7 @@
         function disconnectSocialAccount(clientId, platform) {
             if (!confirm(`Disconnect ${platform} for this client?`)) return;
             executeSecureBridgeCall('publish', 'agent-disconnect-social-account', { clientId, platform }).then(res => {
-                showToast(res.success ? 'Disconnected.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+                showToast(res.success ? 'Disconnect  ed.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
                 if (res.success) loadSocialConnections();
             });
         }
@@ -8054,10 +8179,9 @@
         async function openConnectSocialAccountModal() {
             const modal = document.getElementById('modalConnectSocialAccount');
             if (!modal) return;
-            await populateAgentClientSelector('connectSocialClientId');
+            await populateAllClientsSelector('connectSocialClientId');
             modal.classList.remove('hidden');
         }
-
         function closeConnectSocialAccountModal() {
             const modal = document.getElementById('modalConnectSocialAccount');
             if (modal) modal.classList.add('hidden');
@@ -8279,7 +8403,6 @@
         // ============ AI Actions Console ============
         const AI_ACTION_CATALOG = {
             "Email Intelligence": [
-                ["agent-connect-email", '{"gmailLabel":"INBOX","emailProvider":"Gmail"}'],
                 ["agent-read-emails", '{"maxResults":10}'],
                 ["agent-draft-reply", '{"subject":"","from":"","bodySnippet":"","tone":"professional"}'],
                 ["agent-send-email", '{"to":"","subject":"","body":""}'],
@@ -8526,139 +8649,34 @@
             });
         }
 
-        const INTEG_FIELD_SCHEMAS = {
-            hubspot: [
-                { key: 'accessToken', label: 'Private App Access Token', placeholder: 'pat-na1-xxxxxxxx' }
-            ],
-            zoho: [
-                { key: 'clientId', label: 'Zoho Client ID' },
-                { key: 'clientSecret', label: 'Zoho Client Secret' },
-                { key: 'refreshToken', label: 'Zoho Refresh Token (from Self Client setup)' },
-                { key: 'apiDomain', label: 'API Domain', placeholder: 'https://www.zohoapis.com' },
-                { key: 'accountsDomain', label: 'Accounts Domain', placeholder: 'https://accounts.zoho.com' }
-            ],
-            google_sheets: [
-                { key: 'sheetId', label: 'Google Sheet ID (from its URL)' },
-                { key: 'sheetName', label: 'Tab Name', placeholder: 'Contacts' },
-                { key: 'columnMap_name', label: 'Column header for Name', placeholder: 'Full Name' },
-                { key: 'columnMap_email', label: 'Column header for Email', placeholder: 'Email' },
-                { key: 'columnMap_phone', label: 'Column header for Phone', placeholder: 'Phone' },
-                { key: 'columnMap_company', label: 'Column header for Company', placeholder: 'Company' }
-            ],
-            generic_rest: [
-                { key: 'baseUrl', label: 'Base URL', placeholder: 'https://api.theirsystem.com' },
-                { key: 'authHeaderName', label: 'Auth Header Name', placeholder: 'Authorization' },
-                { key: 'authHeaderValue', label: 'Auth Header Value', placeholder: 'Bearer xxxx' },
-                { key: 'contactsEndpoint', label: 'Contacts Endpoint', placeholder: '/v1/contacts' },
-                { key: 'contactsArrayPath', label: 'Path to contacts array in response', placeholder: 'data.contacts' },
-                { key: 'contactFieldMap_name', label: 'Field name for contact name', placeholder: 'full_name' },
-                { key: 'contactFieldMap_email', label: 'Field name for contact email', placeholder: 'email' },
-                { key: 'contactFieldMap_phone', label: 'Field name for contact phone', placeholder: 'phone' },
-                { key: 'contactFieldMap_company', label: 'Field name for contact company', placeholder: 'company_name' }
-            ],
-            email: [
-                { key: 'provider', label: 'Provider (sendgrid / mailgun / webhook)', placeholder: 'sendgrid' },
-                { key: 'apiKey', label: 'API Key' },
-                { key: 'fromAddress', label: 'From Address (SendGrid/Mailgun)', placeholder: 'no-reply@client.com' },
-                { key: 'domain', label: 'Domain (Mailgun only)', placeholder: 'mg.client.com' },
-                { key: 'url', label: 'Webhook URL (webhook only)' }
-            ]
-        };
-
-        function renderIntegFields() {
-            const type = document.getElementById('integType').value;
-            const container = document.getElementById('integDynamicFields');
-            const fields = INTEG_FIELD_SCHEMAS[type] || [];
-            container.innerHTML = fields.map(f => `
-        <div>
-            <label class="block text-[10px] text-slate-400 mb-0.5">${escapeHtml(f.label)}</label>
-            <input type="text" id="integField_${f.key}" placeholder="${escapeHtml(f.placeholder || '')}"
-                class="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-xs text-white" />
-        </div>
-    `).join('');
-        }
-
-        function submitConnectIntegration(event) {
-            event.preventDefault();
-            const clientId = document.getElementById('integrationsClientSelector')?.value;
-            const type = document.getElementById('integType').value;
-            const label = document.getElementById('integLabel').value.trim();
-            if (!clientId) { showToast('Select a client first.', 'error'); return; }
-
-            const fields = INTEG_FIELD_SCHEMAS[type] || [];
-            const credentials = {};
-            fields.forEach(f => {
-                const val = document.getElementById(`integField_${f.key}`)?.value?.trim();
-                if (!val) return;
-                if (f.key.includes('_')) {
-                    // nested keys like columnMap_name -> columnMap: {name: val}
-                    const [parent, child] = f.key.split('_');
-                    credentials[parent] = credentials[parent] || {};
-                    credentials[parent][child] = val;
-                } else {
-                    credentials[f.key] = val;
-                }
-            });
-            if (type !== 'email' && type !== 'generic_rest') credentials.provider = type;
-
-            executeSecureBridgeCall('agent', 'agent-connect-integration', { clientId, type, label, credentials }).then(res => {
-                showToast(res.success ? 'Integration connected.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
-                if (res.success) { document.getElementById('modalConnectIntegration').classList.add('hidden'); loadIntegrationsUI(); }
-            });
-        }
-
-        // Init default fields when modal opens
-        function openConnectIntegrationModal() {
-            if (!document.getElementById('integrationsClientSelector')?.value) { showToast('Select a client first.', 'error'); return; }
-            document.getElementById('integType').value = 'hubspot';
-            renderIntegFields();
-            document.getElementById('modalConnectIntegration').classList.remove('hidden');
-        }
-
         // ============ integrations ============
         async function loadIntegrationsUI() {
             const clientId = document.getElementById('integrationsClientSelector')?.value;
             const tbody = document.getElementById('agentIntegrationsTableBody');
-            if (!clientId) { tbody.innerHTML = emptyRow('Select a client.', 6); return; }
-            showTableSkeleton('agentIntegrationsTableBody', 6);
-
-            const [listRes, syncRes] = await Promise.all([
-                executeSecureBridgeCall('agent', 'agent-list-integrations', { clientId }),
-                executeSecureBridgeCall('agent', 'agent-get-crm-sync-status', { clientId })
-            ]);
-            if (!listRes.success || !listRes.integrations?.length) { tbody.innerHTML = emptyRow('No integrations connected.', 6); return; }
-
-            const syncMap = {};
-            (syncRes.integrations || []).forEach(s => { syncMap[s.provider] = s; });
-            const CRM_TYPES = ['hubspot', 'zoho', 'google_sheets', 'generic_rest'];
-
-            tbody.innerHTML = listRes.integrations.map(i => {
-                const isCrm = CRM_TYPES.indexOf(i.type) !== -1;
-                const sync = syncMap[i.type];
-                const syncInfo = isCrm
-                    ? (sync?.lastSyncedAt ? `Last synced: ${fmtDate(sync.lastSyncedAt)} (${sync.lastSyncCount} records)` : 'Never synced')
-                    : '—';
-                return `
-    <tr><td class="p-3">${badge(i.type)}</td>
-    <td class="p-3">${escapeHtml(i.label || i.type)}</td>
-    <td class="p-3 text-slate-500 text-[10px]">${escapeHtml(syncInfo)}</td>
-    <td class="p-3 text-center">${badge(i.status || 'Connected')}</td>
+            if (!clientId) { tbody.innerHTML = emptyRow('Select a client.', 5); return; }
+            showTableSkeleton('agentIntegrationsTableBody', 5);
+            const res = await executeSecureBridgeCall('agent', 'agent-list-integrations', { clientId });
+            if (!res.success || !res.data?.length) { tbody.innerHTML = emptyRow('No integrations connected.', 5); return; }
+            tbody.innerHTML = res.data.map(i => `
+    <tr><td class="p-3">${badge(i.Type || i.type)}</td>
+    <td class="p-3">${escapeHtml(i.Label || i.label || '—')}</td>
+    <td class="p-3 font-mono text-slate-500">${escapeHtml(i.MaskedCredential || i.masked || '••••')}</td>
+    <td class="p-3 text-center">${badge(i.Status || 'Connected')}</td>
     <td class="p-3 text-center flex gap-1 justify-center">
-      <button onclick="testIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.type)}')" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Test</button>
-      ${isCrm ? `<button onclick="syncCrmNow('${escapeHtml(clientId)}','${escapeHtml(i.type)}')" class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Sync Now</button>` : ''}
-      <button onclick="disconnectIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.type)}')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Disconnect</button>
-    </td></tr>`;
-            }).join('');
+      <button onclick="testIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.Type || i.type)}')" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Test</button>
+      <button onclick="disconnectIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.Type || i.type)}')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Disconnect</button>
+      ${i.type === 'linkedin' ? `<button onclick="postToLinkedInPrompt('${escapeHtml(clientId)}')" class="text-xs px-2 py-1 bg-blue-700 hover:bg-blue-600 rounded text-white">Post</button>` : ''}
+      ${i.type !== 'gmail_oauth' ? `<button onclick="testIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.type)}')" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Test</button>` : ''}
+    </td></tr>`).join('');
         }
 
-        function syncCrmNow(clientId, provider) {
-            showToast('Syncing ' + provider + '…', 'info');
-            executeSecureBridgeCall('agent', 'agent-sync-crm-data', { clientId, provider }).then(res => {
-                showToast(res.success ? res.message : (res.message || 'Sync failed.'), res.success ? 'success' : 'error');
-                if (res.success) loadIntegrationsUI();
+        function postToLinkedInPrompt(clientId) {
+            const text = prompt('Post text (max ~3000 chars):');
+            if (!text) return;
+            executeSecureBridgeCall('agent', 'agent-linkedin-post', { clientId, text }).then(res => {
+                showToast(res.success ? 'Posted to LinkedIn.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
             });
         }
-
         function openConnectIntegrationModal() {
             if (!document.getElementById('integrationsClientSelector')?.value) { showToast('Select a client first.', 'error'); return; }
             document.getElementById('modalConnectIntegration').classList.remove('hidden');
