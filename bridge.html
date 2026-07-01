@@ -3769,22 +3769,27 @@
         class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full space-y-4">
             <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                <h3 class="text-sm font-bold text-white">Connect Integration</h3><button
-                    onclick="document.getElementById('modalConnectIntegration').classList.add('hidden')"
+                <h3 class="text-sm font-bold text-white">Connect Integration</h3>
+                <button onclick="document.getElementById('modalConnectIntegration').classList.add('hidden')"
                     class="text-slate-400 hover:text-white">&times;</button>
             </div>
             <form onsubmit="submitConnectIntegration(event)" class="space-y-3">
-                <select id="integType"
+                <select id="integType" onchange="updateIntegCredentialsPlaceholder()"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
-                    <option value="email">Email</option>
+                    <option value="email">Email (SendGrid / Mailgun / Webhook)</option>
                     <option value="crm">CRM</option>
                     <option value="database">Database</option>
                     <option value="api">Generic API</option>
                 </select>
-                <input type="text" id="integLabel" placeholder="Label e.g. Their HubSpot"
+                <input type="text" id="integLabel" placeholder="Label e.g. Their SendGrid Key"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
-                <textarea id="integCredentials" required placeholder='Credentials JSON e.g. {"apiKey":"..."}'
-                    class="w-full h-20 bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white"></textarea>
+                <textarea id="integCredentials" required rows="4"
+                    placeholder='{"provider":"sendgrid","apiKey":"SG.xxx","fromAddress":"no-reply@client.com"}'
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white"></textarea>
+                <p id="integCredentialsHint" class="text-[10px] text-slate-500">
+                    For Email type, include a "provider" field: sendgrid, mailgun, or webhook — each needs different
+                    fields (see docs).
+                </p>
                 <button type="submit"
                     class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 rounded">Connect
                     & Encrypt</button>
@@ -8642,6 +8647,22 @@
             if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
             showToast(res.success ? 'Client info updated.' : (res.message || 'Update failed.'), res.success ? 'success' : 'error');
             if (res.success) { closeAgentEditClientInfoModal(); loadAgentClients(); }
+        }
+
+        function updateIntegCredentialsPlaceholder() {
+            const type = document.getElementById('integType').value;
+            const ta = document.getElementById('integCredentials');
+            const hint = document.getElementById('integCredentialsHint');
+            const examples = {
+                email: '{"provider":"sendgrid","apiKey":"SG.xxx","fromAddress":"no-reply@client.com"}',
+                crm: '{"apiKey":"...","baseUrl":"https://api.theircrm.com"}',
+                database: '{"connectionString":"..."}',
+                api: '{"apiKey":"...","baseUrl":"..."}'
+            };
+            ta.placeholder = examples[type] || '{"apiKey":"..."}';
+            hint.textContent = type === 'email'
+                ? 'Include a "provider" field: sendgrid, mailgun, or webhook — each needs different fields.'
+                : 'This integration type is stored but has no automated consumer yet.';
         }
 
         // ============ wire new views into existing loaders ============
