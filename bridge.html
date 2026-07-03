@@ -1836,6 +1836,9 @@
                     <button class="agent-subview-link" data-target-view="agent-va-clients">VA Clients</button>
                     <button class="agent-subview-link" data-target-view="agent-crmsync">CRM Sync</button>
                     <button class="agent-subview-link" data-target-view="agent-invoices">Invoices</button>
+                    <button class="agent-subview-link" data-target-view="agent-crmsync">CRM Sync</button>
+                    <button class="agent-subview-link" data-target-view="agent-integrations">Integrations</button>
+                    <button class="agent-subview-link" data-target-view="agent-invoices">Invoices</button>
                 </div>
 
                 <!-- Agent Views Wrapper — matches pattern of other hubs -->
@@ -3225,8 +3228,24 @@
                         <select id="agentIndustry" required
                             class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
                             <option value="">Select Industry</option>
-                            ${INDUSTRY_OPTIONS.map(opt => `<option value="${opt.value}">${opt.label}</option>
-                            `).join('')}
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Contact Phone</label>
+                        <input type="text" id="agentContactPhone" placeholder="+234 803 000 0000"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Country</label>
+                        <select id="agentCountry"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                            <option value="NG" selected>Nigeria</option>
+                            <option value="US">United States</option>
+                            <option value="UK">United Kingdom</option>
+                            <option value="EU">European Union</option>
+                            <option value="GLOBAL">Other / Global</option>
                         </select>
                     </div>
                 </div>
@@ -3235,15 +3254,15 @@
                     <select id="agentTier" required
                         class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
                         <option value="starter_ops">Starter Ops (₦350K/mo: 20hrs, 50 emails, 1 proposal)</option>
-                        <option value="growth_ops">Growth Ops (₦900K/mo: 40hrs, 200 emails, 3 proposals)</option>
-                        <option value="enterprise_ops">Enterprise Ops (₦1.5M/mo: Unlimited)</option>
+                        <option value="growth_ops">Growth Ops (₦950K/mo: 40hrs, 200 emails, 3 proposals)</option>
+                        <option value="enterprise_ops">Enterprise Ops (Admin-Priced — set limits below)</option>
                         <option value="digital_launch">Digital Launch (₦500K/mo: content review, 12 social assets,
                             weekly LinkedIn)</option>
-                        <option value="digital_accelerate">Digital Accelerate ($800–1,100/mo — custom quote required)
-                        </option>
-                        <option value="digital_scale">Digital Scale ($2,538+/mo — custom quote required)</option>
+                        <option value="digital_accelerate">Digital Accelerate (Fixed — $948/mo)</option>
+                        <option value="digital_scale">Digital Scale (Admin-Priced — set limits below)</option>
                         <option value="custom">Custom Tier (Bespoke)</option>
                     </select>
+                    <p id="quotedTierNote" class="hidden text-[10px] text-amber-400 mt-1"></p>
                 </div>
                 <div id="customTierFields" class="hidden space-y-3 pt-3 border-t border-slate-800">
                     <h4 class="text-xs font-bold text-emerald-400">Custom Tier Details</h4>
@@ -3270,6 +3289,28 @@
                             <input type="number" id="agentCustomPrice" placeholder="1000000"
                                 class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
                         </div>
+                    </div>
+                </div>
+                <div id="enterpriseTierFields" class="hidden space-y-3 pt-3 border-t border-slate-800">
+                    <h4 class="text-xs font-bold text-amber-400">Enterprise Service Limits (optional — can also be set
+                        later from Subscriptions)</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="number" id="entHours" placeholder="Hours/mo"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        <input type="number" id="entEmails" placeholder="Emails/mo"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        <input type="number" id="entProposals" placeholder="Proposals/mo"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        <input type="number" id="entMailboxes" placeholder="Mailboxes"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        <input type="number" id="entCrmSyncs" placeholder="CRM syncs/mo"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        <input type="number" id="entComplianceChecks" placeholder="Compliance checks/mo"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        <input type="number" id="entDocsPerMonth" placeholder="Docs/mo"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        <input type="number" id="entPriceNgn" placeholder="Price (₦/mo)"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
                     </div>
                 </div>
                 <button type="submit"
@@ -3311,6 +3352,24 @@
                     <select id="editClientIndustry"
                         class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></select>
                 </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Phone</label>
+                        <input type="text" id="editClientPhone"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Country</label>
+                        <select id="editClientCountry"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
+                            <option value="NG">Nigeria</option>
+                            <option value="US">United States</option>
+                            <option value="UK">United Kingdom</option>
+                            <option value="EU">European Union</option>
+                            <option value="GLOBAL">Other / Global</option>
+                        </select>
+                    </div>
+                </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Notes</label>
                     <textarea id="editClientNotes" rows="3"
@@ -3344,11 +3403,11 @@
                     <select id="updateTierValue" onchange="toggleUpdateTierCustomFields()" required
                         class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
                         <option value="starter_ops">Starter Ops (₦350K/mo)</option>
-                        <option value="growth_ops">Growth Ops (₦900K/mo)</option>
-                        <option value="enterprise_ops">Enterprise Ops (₦1.5M/mo)</option>
+                        <option value="growth_ops">Growth Ops (₦950K/mo)</option>
+                        <option value="enterprise_ops">Enterprise Ops (Admin-Priced — use Limits button)</option>
                         <option value="digital_launch">Digital Launch (₦500K/mo)</option>
-                        <option value="digital_accelerate">Digital Accelerate (Custom Quote — $800–1,100/mo)</option>
-                        <option value="digital_scale">Digital Scale (Custom Quote — $2,538+/mo)</option>
+                        <option value="digital_accelerate">Digital Accelerate (Fixed — $948/mo)</option>
+                        <option value="digital_scale">Digital Scale (Admin-Priced — use Limits button)</option>
                         <option value="custom">Custom / Bespoke Package</option>
                     </select>
                     <div id="updateTierCustomFields" class="hidden space-y-2 pt-2 border-t border-slate-800">
@@ -3419,6 +3478,44 @@
                     class="w-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium py-2.5 rounded transition-colors shadow">
                     Apply Quota Override
                 </button>
+            </form>
+        </div>
+    </div>
+    <div id="modalAgentEnterpriseLimits"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full flex flex-col space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white">Enterprise Service Limits</h3>
+                <button onclick="closeAgentEnterpriseLimitsModal()"
+                    class="text-slate-400 hover:text-white text-sm font-bold">&times;</button>
+            </div>
+            <form id="agentEnterpriseLimitsForm" onsubmit="submitAgentEnterpriseLimits(event)" class="space-y-3">
+                <input type="hidden" id="entLimitsClientId" />
+                <label class="block text-xs text-slate-400 mb-1">Client</label>
+                <input type="text" id="entLimitsClientName" readonly
+                    class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-400" />
+                <div class="grid grid-cols-2 gap-3 pt-2">
+                    <input type="number" id="entLimitsHours" placeholder="Hours/mo"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    <input type="number" id="entLimitsEmails" placeholder="Emails/mo"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    <input type="number" id="entLimitsProposals" placeholder="Proposals/mo"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    <input type="number" id="entLimitsMailboxes" placeholder="Mailboxes"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    <input type="number" id="entLimitsCrmSyncs" placeholder="CRM syncs/mo"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    <input type="number" id="entLimitsComplianceChecks" placeholder="Compliance checks/mo"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    <input type="number" id="entLimitsDocsPerMonth" placeholder="Docs/mo"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    <input type="number" id="entLimitsPriceNgn" placeholder="Price (₦/mo)"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                </div>
+                <button type="submit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded shadow">Apply
+                    Limits</button>
             </form>
         </div>
     </div>
@@ -7084,11 +7181,11 @@
 
                 const tierPricing = {
                     'starter_ops': { hours: 20, emails: 50, proposals: 1, price: 350000 },
-                    'growth_ops': { hours: 40, emails: 200, proposals: 3, price: 900000 },
-                    'enterprise_ops': { hours: 9999, emails: 9999, proposals: 9999, price: 1500000 },
+                    'growth_ops': { hours: 40, emails: 200, proposals: 3, price: 950000 },
+                    'enterprise_ops': { hours: c.CustomHours || 9999, emails: c.CustomEmails || 9999, proposals: c.CustomProposals || 9999, price: c.CustomPriceNGN || null },
                     'digital_launch': { hours: 10, emails: 30, proposals: 1, price: 500000 },
-                    'digital_accelerate': { hours: 20, emails: 100, proposals: 2, price: null },   // was 1300000
-                    'digital_scale': { hours: 9999, emails: 9999, proposals: 9999, price: null }, // was 3500000
+                    'digital_accelerate': { hours: 20, emails: 100, proposals: 2, price: 948, isUsd: true },
+                    'digital_scale': { hours: c.CustomHours || 9999, emails: c.CustomEmails || 9999, proposals: c.CustomProposals || 9999, price: c.CustomPriceNGN || null },
                     'custom': {
                         hours: c.CustomHours || 0, emails: c.CustomEmails || 0,
                         proposals: c.CustomProposals || 0, price: c.CustomPriceNGN || 0
@@ -7114,15 +7211,16 @@
             <td class="p-3 text-center font-mono">${tierInfo.hours === 9999 ? '∞' : tierInfo.hours}</td>
             <td class="p-3 text-center font-mono">${tierInfo.emails === 9999 ? '∞' : tierInfo.emails}</td>
             <td class="p-3 text-center font-mono">${tierInfo.proposals === 9999 ? '∞' : tierInfo.proposals}</td>
-           <td class="p-3 text-right font-bold text-emerald-400">${tierInfo.price === null ? '<span class="text-amber-400">Custom Quote</span>' : fmtNaira(tierInfo.price)}</td>
-            <td class="p-3 text-center text-xs">${fmtDate(endDate)}<br>${expiryBadge}</td>
-            <td class="p-3 text-center">${badge(c.Status || 'Active')}</td>
-            <td class="p-3 text-center flex gap-1 justify-center">
-                <button onclick="openAgentUpdateTierModal('${escapeHtml(c.ClientID || '')}', '${escapeHtml(c.CompanyName || '')}')"
-                    class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Upgrade</button>
-                <button onclick="openAgentRenewModal('${escapeHtml(c.ClientID || '')}', '${escapeHtml(c.CompanyName || '')}')"
-                    class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Renew</button>
-            </td>
+           <td class="p-3 text-right font-bold text-emerald-400">${tierInfo.isUsd ? '<span class="text-blue-400">$' + tierInfo.price + '/mo</span>' : (tierInfo.price === null ? '<span class="text-amber-400">Custom Quote</span>' : fmtNaira(tierInfo.price))}</td>
+<td class="p-3 text-center text-xs">${fmtDate(endDate)}<br>${expiryBadge}</td>
+<td class="p-3 text-center">${badge(c.Status || 'Active')}</td>
+<td class="p-3 text-center flex gap-1 justify-center">
+    <button onclick="openAgentUpdateTierModal('${escapeHtml(c.ClientID || '')}', '${escapeHtml(c.CompanyName || '')}')"
+        class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Upgrade</button>
+    <button onclick="openAgentRenewModal('${escapeHtml(c.ClientID || '')}', '${escapeHtml(c.CompanyName || '')}')"
+        class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Renew</button>
+    ${(c.Tier === 'enterprise_ops' || c.Tier === 'digital_scale') ? `<button onclick="openAgentEnterpriseLimitsModal('${escapeHtml(c.ClientID || '')}', '${escapeHtml(c.CompanyName || '')}')" class="text-xs px-2 py-1 bg-amber-700 hover:bg-amber-600 rounded text-white">Limits</button>` : ''}
+</td>
         </tr>`;
             }).join('');
         }
@@ -7316,27 +7414,154 @@
 
         // === MODAL HANDLERS ===
 
+        // REPLACE openAgentClientRegisterModal()
         function openAgentClientRegisterModal() {
             const modal = document.getElementById('modalAgentClientRegister');
             if (!modal) return;
 
-            // Wire custom tier toggle
             document.getElementById('agentTier').onchange = function () {
                 const customFields = document.getElementById('customTierFields');
-                const quotedNote = document.getElementById('quotedTierNote'); // new <p> element to add near the select
+                const enterpriseFields = document.getElementById('enterpriseTierFields');
+                const quotedNote = document.getElementById('quotedTierNote');
+                customFields.classList.add('hidden');
+                enterpriseFields.classList.add('hidden');
+                quotedNote.classList.add('hidden');
+
                 if (this.value === 'custom') {
                     customFields.classList.remove('hidden');
-                    quotedNote?.classList.add('hidden');
-                } else if (this.value === 'digital_accelerate' || this.value === 'digital_scale') {
-                    customFields.classList.add('hidden');
-                    quotedNote?.classList.remove('hidden'); // shows: "This tier has no fixed price — confirm quote with client before registering."
-                } else {
-                    customFields.classList.add('hidden');
-                    quotedNote?.classList.add('hidden');
+                } else if (this.value === 'enterprise_ops' || this.value === 'digital_scale') {
+                    enterpriseFields.classList.remove('hidden');
+                    quotedNote.classList.remove('hidden');
+                    quotedNote.textContent = 'No fixed price — set limits above, or leave blank and configure later from Subscriptions.';
+                } else if (this.value === 'digital_accelerate') {
+                    quotedNote.classList.remove('hidden');
+                    quotedNote.textContent = 'Digital Accelerate is fixed at $948/mo, billed in ₦ at the current exchange rate.';
                 }
             };
+            document.getElementById('agentTier').dispatchEvent(new Event('change'));
 
             modal.classList.remove('hidden');
+        }
+
+        // REPLACE submitAgentClientRegister()
+        async function submitAgentClientRegister(event) {
+            event.preventDefault();
+
+            const companyName = document.getElementById('agentCompanyName').value.trim();
+            const contactEmail = document.getElementById('agentContactEmail').value.trim();
+            const phone = document.getElementById('agentContactPhone').value.trim();
+            const country = document.getElementById('agentCountry').value;
+            const industry = document.getElementById('agentIndustry').value;
+            const tier = document.getElementById('agentTier').value;
+
+            if (!industry) { showToast('Industry is required.', 'error'); return; }
+
+            let payload = { companyName, contactEmail, phone, country, industry, tier };
+
+            if (tier === 'custom') {
+                payload.customLabel = companyName + ' Custom';
+                payload.customHours = parseInt(document.getElementById('agentCustomHours').value) || 0;
+                payload.customEmails = parseInt(document.getElementById('agentCustomEmails').value) || 0;
+                payload.customProposals = parseInt(document.getElementById('agentCustomProposals').value) || 0;
+                payload.customPriceNgn = parseFloat(document.getElementById('agentCustomPrice').value) || 0;
+            }
+
+            if (tier === 'enterprise_ops' || tier === 'digital_scale') {
+                const num = id => parseInt(document.getElementById(id).value) || undefined;
+                payload.customHours = num('entHours');
+                payload.customEmails = num('entEmails');
+                payload.customProposals = num('entProposals');
+                payload.customMailboxes = num('entMailboxes');
+                payload.customCrmSyncs = num('entCrmSyncs');
+                payload.customComplianceChecks = num('entComplianceChecks');
+                payload.customDocsPerMonth = num('entDocsPerMonth');
+                payload.customPriceNgn = parseFloat(document.getElementById('entPriceNgn').value) || undefined;
+            }
+
+            const btn = event.target.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Registering…'; }
+
+            const res = await executeSecureBridgeCall('agent', 'agent-register-client', payload);
+
+            if (btn) { btn.disabled = false; btn.textContent = 'Register Client & Activate Subscription'; }
+
+            if (res.success) {
+                showToast(`Client ${companyName} registered successfully!`, 'success');
+                closeAgentClientRegisterModal();
+                loadAgentClients();
+            } else {
+                showToast(res.message || 'Registration failed', 'error');
+            }
+        }
+
+        // REPLACE openAgentEditClientInfoModal() + submitAgentEditClientInfo()
+        function openAgentEditClientInfoModal(clientId, c) {
+            document.getElementById('editClientInfoId').value = clientId;
+            document.getElementById('editClientCompanyName').value = c.CompanyName || '';
+            document.getElementById('editClientContactName').value = c.ContactName || '';
+            document.getElementById('editClientContactEmail').value = c.ContactEmail || '';
+            document.getElementById('editClientPhone').value = c.Phone || '';
+            document.getElementById('editClientCountry').value = c.Country || 'NG';
+            document.getElementById('editClientNotes').value = c.Notes || '';
+
+            const indSel = document.getElementById('editClientIndustry');
+            indSel.innerHTML = INDUSTRY_OPTIONS.map(opt =>
+                `<option value="${opt.value}" ${opt.value === c.Industry ? 'selected' : ''}>${opt.label}</option>`).join('');
+
+            document.getElementById('modalAgentEditClientInfo').classList.remove('hidden');
+        }
+
+        async function submitAgentEditClientInfo(event) {
+            event.preventDefault();
+            const payload = {
+                clientId: document.getElementById('editClientInfoId').value,
+                companyName: document.getElementById('editClientCompanyName').value.trim(),
+                contactName: document.getElementById('editClientContactName').value.trim(),
+                contactEmail: document.getElementById('editClientContactEmail').value.trim(),
+                phone: document.getElementById('editClientPhone').value.trim(),
+                country: document.getElementById('editClientCountry').value,
+                industry: document.getElementById('editClientIndustry').value,
+                notes: document.getElementById('editClientNotes').value.trim()
+            };
+            const btn = event.target.querySelector('button[type=submit]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+            const res = await executeSecureBridgeCall('agent', 'agent-update-client-info', payload);
+            if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
+            showToast(res.success ? 'Client info updated.' : (res.message || 'Update failed.'), res.success ? 'success' : 'error');
+            if (res.success) { closeAgentEditClientInfoModal(); loadAgentClients(); }
+        }
+
+        // NEW — Enterprise Limits modal handlers
+        function openAgentEnterpriseLimitsModal(clientId, companyName) {
+            document.getElementById('entLimitsClientId').value = clientId;
+            document.getElementById('entLimitsClientName').value = companyName;
+            document.getElementById('modalAgentEnterpriseLimits').classList.remove('hidden');
+        }
+        function closeAgentEnterpriseLimitsModal() {
+            document.getElementById('modalAgentEnterpriseLimits').classList.add('hidden');
+            document.getElementById('agentEnterpriseLimitsForm')?.reset();
+        }
+        async function submitAgentEnterpriseLimits(event) {
+            event.preventDefault();
+            const clientId = document.getElementById('entLimitsClientId').value;
+            const num = id => parseInt(document.getElementById(id).value) || undefined;
+            const payload = {
+                clientId,
+                hours: num('entLimitsHours'),
+                emails: num('entLimitsEmails'),
+                proposals: num('entLimitsProposals'),
+                mailboxes: num('entLimitsMailboxes'),
+                crmSyncs: num('entLimitsCrmSyncs'),
+                complianceChecks: num('entLimitsComplianceChecks'),
+                docsPerMonth: num('entLimitsDocsPerMonth'),
+                priceNgn: parseFloat(document.getElementById('entLimitsPriceNgn').value) || undefined
+            };
+            const btn = event.target.querySelector('button[type=submit]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Applying…'; }
+            const res = await executeSecureBridgeCall('agent', 'agent-set-enterprise-limits', payload);
+            if (btn) { btn.disabled = false; btn.textContent = 'Apply Limits'; }
+            showToast(res.success ? 'Enterprise limits updated.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+            if (res.success) { closeAgentEnterpriseLimitsModal(); loadAgentSubscriptions(); }
         }
 
         function closeAgentClientRegisterModal() {
