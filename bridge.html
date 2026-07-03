@@ -1835,6 +1835,7 @@
                     <button class="agent-subview-link" data-target-view="agent-scheduling">Scheduling</button>
                     <button class="agent-subview-link" data-target-view="agent-va-clients">VA Clients</button>
                     <button class="agent-subview-link" data-target-view="agent-crmsync">CRM Sync</button>
+                    <button class="agent-subview-link" data-target-view="agent-addons">Add-ons &amp; Extras</button>
                     <button class="agent-subview-link" data-target-view="agent-invoices">Invoices</button>
                     <button class="agent-subview-link" data-target-view="agent-crmsync">CRM Sync</button>
                     <button class="agent-subview-link" data-target-view="agent-integrations">Integrations</button>
@@ -2192,6 +2193,113 @@
                                 <tbody id="agentDocsTableBody" class="divide-y divide-slate-800/50 text-slate-300">
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                    <!-- ADD-ONS VIEW -->
+                    <div id="view-agent-addons"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Add-ons &amp; Extra Services</h3>
+                                <p class="text-xs text-slate-400">Manage one-time or recurring add-ons per client (extra
+                                    mailboxes, compliance packages, premium AI hours, etc).</p>
+                            </div>
+                            <button onclick="openAddAddonModal()"
+                                class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded transition-colors shadow flex items-center gap-1">
+                                <i class="fa-solid fa-plus"></i> Add New Add-on
+                            </button>
+                        </div>
+
+                        <div
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead
+                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                    <tr>
+                                        <th class="p-3">Client</th>
+                                        <th class="p-3">Add-on Name</th>
+                                        <th class="p-3">Type</th>
+                                        <th class="p-3 text-right">Price (₦)</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3">Expiry</th>
+                                        <th class="p-3 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="agentAddonsTableBody" class="divide-y divide-slate-800/50 text-slate-300">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- MODAL: Add/Edit Add-on -->
+                    <div id="modalAddAddon"
+                        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div
+                            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full flex flex-col space-y-4">
+                            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                                <h3 class="text-sm font-bold text-white">Add-on / Extra Service</h3>
+                                <button onclick="closeAddAddonModal()"
+                                    class="text-slate-400 hover:text-white text-sm font-bold">&times;</button>
+                            </div>
+                            <form id="addAddonForm" onsubmit="submitAddAddon(event)" class="space-y-3">
+                                <input type="hidden" id="addonEditIndex" value="" />
+                                <div>
+                                    <label class="block text-xs text-slate-400 mb-1">Client</label>
+                                    <select id="addonClientId" required
+                                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                                        <option value="">Loading clients…</option>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs text-slate-400 mb-1">Add-on Name</label>
+                                        <input type="text" id="addonName" required placeholder="Extra Mailbox"
+                                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-slate-400 mb-1">Type</label>
+                                        <select id="addonType"
+                                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                                            <option value="Mailbox">Mailbox</option>
+                                            <option value="Compliance Package">Compliance Package</option>
+                                            <option value="Premium AI Hours">Premium AI Hours</option>
+                                            <option value="Content/Social">Content / Social</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs text-slate-400 mb-1">Price (₦)</label>
+                                        <input type="number" id="addonPrice" required placeholder="50000"
+                                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-slate-400 mb-1">Status</label>
+                                        <select id="addonStatus"
+                                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                                            <option value="Active">Active</option>
+                                            <option value="Pending">Pending</option>
+                                            <option value="Expired">Expired</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-400 mb-1">Expiry Date (optional — leave blank
+                                        for recurring)</label>
+                                    <input type="date" id="addonExpiry"
+                                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-400 mb-1">Notes</label>
+                                    <textarea id="addonNotes" rows="2"
+                                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500 resize-none"></textarea>
+                                </div>
+                                <button type="submit"
+                                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded transition-colors shadow">
+                                    Save Add-on
+                                </button>
+                            </form>
                         </div>
                     </div>
 
@@ -4570,6 +4678,7 @@
                 'agent-quotas': loadAgentQuotas,
                 'agent-usage': loadAgentUsageReports,
                 'agent-tasks': loadAgentTasks,
+                'agent-addons': loadAgentAddonsUI,
                 'agent-compliance': loadAgentComplianceLogs,
                 'agent-violations': loadAgentViolations,   // NEW
                 'agent-docs': loadAgentDocsView,            // NEW
@@ -7073,6 +7182,7 @@
                         'agent-violations': loadAgentViolations,   // NEW
                         'agent-docs': loadAgentDocsView,            // NEW
                         'agent-invoices': loadAgentInvoices,        // NEW
+                        'agent-addons': loadAgentAddonsUI,
                     };
                     if (loaderMap[targetView]) loaderMap[targetView]();
                 });
@@ -8512,6 +8622,230 @@
                 showToast(res.success ? (res.message || 'Batch complete.') : (res.message || 'Failed.'), res.success ? 'success' : 'error');
                 if (res.success && res.ran) loadPublishQueue();
             });
+        }
+
+        // ================================================================
+        // AGENT HUB: ADD-ONS & EXTRAS
+        // Backend stores addons as a JSON array in the "Addons" column on
+        // AgentClients (ops) or VAClients (VA). agent-set-addons REPLACES the
+        // whole array, so every add/edit/delete here re-reads current addons,
+        // mutates the array client-side, then writes the full array back.
+        // ================================================================
+
+        // clientId -> { kind: 'ops'|'va', displayName, raw }  (raw includes Addons JSON)
+        const ADDON_CLIENT_CACHE = {};
+
+        async function _addonFetchAllClientsWithAddons() {
+            const [opsRes, vaRes] = await Promise.all([
+                executeSecureBridgeCall('agent', 'agent-get-clients', {}),
+                executeSecureBridgeCall('agent', 'agent-get-va-clients', {})
+            ]);
+
+            const rows = [];
+
+            if (opsRes.success && opsRes.data) {
+                opsRes.data.forEach(c => {
+                    ADDON_CLIENT_CACHE[c.ClientID] = { kind: 'ops', displayName: c.CompanyName, raw: c };
+                    rows.push({ clientId: c.ClientID, displayName: c.CompanyName, kind: 'ops', addonsRaw: c.Addons });
+                });
+            }
+            if (vaRes.success && vaRes.data) {
+                vaRes.data.forEach(v => {
+                    ADDON_CLIENT_CACHE[v.VAClientID] = { kind: 'va', displayName: v.FullName + ' (VA)', raw: v };
+                    rows.push({ clientId: v.VAClientID, displayName: v.FullName + ' (VA)', kind: 'va', addonsRaw: v.Addons });
+                });
+            }
+            return rows;
+        }
+
+        function _parseAddonsJson(raw) {
+            if (!raw) return [];
+            try {
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        async function loadAgentAddonsUI() {
+            const tbodyId = 'agentAddonsTableBody';
+            showTableSkeleton(tbodyId, 7);
+
+            const clientRows = await _addonFetchAllClientsWithAddons();
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+
+            // Flatten: one row per addon, tagged with its parent client + index
+            const flat = [];
+            clientRows.forEach(c => {
+                const addons = _parseAddonsJson(c.addonsRaw);
+                addons.forEach((a, idx) => {
+                    flat.push({
+                        clientId: c.clientId,
+                        kind: c.kind,
+                        displayName: c.displayName,
+                        index: idx,
+                        addon: a
+                    });
+                });
+            });
+
+            if (!flat.length) {
+                tbody.innerHTML = emptyRow('No add-ons configured yet.', 7);
+                return;
+            }
+
+            tbody.innerHTML = flat.map(r => {
+                const a = r.addon;
+                const statusVal = a.status || 'Active';
+                return `
+        <tr>
+            <td class="p-3 text-slate-300">${escapeHtml(r.displayName)}</td>
+            <td class="p-3 font-medium text-slate-200">${escapeHtml(a.name || '—')}</td>
+            <td class="p-3 text-slate-400">${escapeHtml(a.type || 'Other')}</td>
+            <td class="p-3 text-right font-mono text-emerald-400">${fmtNaira(a.priceNgn || 0)}</td>
+            <td class="p-3 text-center">${badge(statusVal)}</td>
+            <td class="p-3 text-slate-500">${a.expiryDate ? fmtDate(a.expiryDate) : '—'}</td>
+            <td class="p-3 text-center flex gap-1 justify-center">
+                <button onclick='openAddAddonModal("${escapeHtml(r.clientId)}", ${r.index})'
+                    class="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white">Edit</button>
+                <button onclick="deleteAgentAddon('${escapeHtml(r.clientId)}', ${r.index})"
+                    class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Delete</button>
+            </td>
+        </tr>`;
+            }).join('');
+        }
+
+        /**
+         * Opens the modal. If clientId + index are provided, pre-fills for editing
+         * an existing add-on; otherwise opens blank for a new one.
+         */
+        async function openAddAddonModal(clientId, index) {
+            const modal = document.getElementById('modalAddAddon');
+            if (!modal) return;
+
+            // Populate client dropdown (ops + VA combined)
+            const select = document.getElementById('addonClientId');
+            select.innerHTML = '<option value="">Loading…</option>';
+            const clientRows = await _addonFetchAllClientsWithAddons();
+            select.innerHTML = '<option value="">Select…</option>' + clientRows.map(c =>
+                `<option value="${escapeHtml(c.clientId)}">${escapeHtml(c.displayName)}</option>`
+            ).join('');
+
+            document.getElementById('addonEditIndex').value = (index !== undefined) ? index : '';
+            document.getElementById('addonName').value = '';
+            document.getElementById('addonType').value = 'Mailbox';
+            document.getElementById('addonPrice').value = '';
+            document.getElementById('addonStatus').value = 'Active';
+            document.getElementById('addonExpiry').value = '';
+            document.getElementById('addonNotes').value = '';
+
+            if (clientId) {
+                select.value = clientId;
+                if (index !== undefined) {
+                    const cached = ADDON_CLIENT_CACHE[clientId];
+                    const addons = _parseAddonsJson(cached?.raw?.Addons);
+                    const a = addons[index];
+                    if (a) {
+                        document.getElementById('addonName').value = a.name || '';
+                        document.getElementById('addonType').value = a.type || 'Other';
+                        document.getElementById('addonPrice').value = a.priceNgn || '';
+                        document.getElementById('addonStatus').value = a.status || 'Active';
+                        document.getElementById('addonExpiry').value = a.expiryDate || '';
+                        document.getElementById('addonNotes').value = a.notes || '';
+                    }
+                }
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeAddAddonModal() {
+            const modal = document.getElementById('modalAddAddon');
+            if (modal) modal.classList.add('hidden');
+            document.getElementById('addAddonForm')?.reset();
+        }
+
+        async function submitAddAddon(event) {
+            event.preventDefault();
+
+            const clientId = document.getElementById('addonClientId').value;
+            if (!clientId) { showToast('Select a client.', 'error'); return; }
+
+            const editIndexRaw = document.getElementById('addonEditIndex').value;
+            const editIndex = editIndexRaw === '' ? null : parseInt(editIndexRaw, 10);
+
+            const newAddon = {
+                name: document.getElementById('addonName').value.trim(),
+                type: document.getElementById('addonType').value,
+                priceNgn: parseFloat(document.getElementById('addonPrice').value) || 0,
+                status: document.getElementById('addonStatus').value,
+                expiryDate: document.getElementById('addonExpiry').value || '',
+                notes: document.getElementById('addonNotes').value.trim()
+            };
+
+            if (!newAddon.name) { showToast('Add-on name is required.', 'error'); return; }
+
+            // Re-fetch current addons fresh (avoid stale cache overwriting concurrent edits)
+            const cached = ADDON_CLIENT_CACHE[clientId];
+            const kind = cached?.kind || 'ops';
+            let currentAddons = [];
+
+            if (kind === 'ops') {
+                const res = await executeSecureBridgeCall('agent', 'agent-get-client', { clientId });
+                currentAddons = res.success ? _parseAddonsJson(res.client.Addons) : [];
+            } else {
+                const res = await executeSecureBridgeCall('agent', 'agent-get-va-clients', {});
+                const match = res.success ? (res.data || []).find(v => v.VAClientID === clientId) : null;
+                currentAddons = match ? _parseAddonsJson(match.Addons) : [];
+            }
+
+            if (editIndex !== null && currentAddons[editIndex]) {
+                currentAddons[editIndex] = newAddon;
+            } else {
+                currentAddons.push(newAddon);
+            }
+
+            const btn = event.target.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+            const res = await executeSecureBridgeCall('agent', 'agent-set-addons', {
+                clientId, addons: currentAddons
+            });
+
+            if (btn) { btn.disabled = false; btn.textContent = 'Save Add-on'; }
+
+            if (res.success) {
+                showToast('Add-on saved.', 'success');
+                closeAddAddonModal();
+                loadAgentAddonsUI();
+            } else {
+                showToast(res.message || 'Failed to save add-on.', 'error');
+            }
+        }
+
+        async function deleteAgentAddon(clientId, index) {
+            if (!confirm('Remove this add-on?')) return;
+
+            const cached = ADDON_CLIENT_CACHE[clientId];
+            const kind = cached?.kind || 'ops';
+            let currentAddons = [];
+
+            if (kind === 'ops') {
+                const res = await executeSecureBridgeCall('agent', 'agent-get-client', { clientId });
+                currentAddons = res.success ? _parseAddonsJson(res.client.Addons) : [];
+            } else {
+                const res = await executeSecureBridgeCall('agent', 'agent-get-va-clients', {});
+                const match = res.success ? (res.data || []).find(v => v.VAClientID === clientId) : null;
+                currentAddons = match ? _parseAddonsJson(match.Addons) : [];
+            }
+
+            currentAddons.splice(index, 1);
+
+            const res = await executeSecureBridgeCall('agent', 'agent-set-addons', { clientId, addons: currentAddons });
+            showToast(res.success ? 'Add-on removed.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+            if (res.success) loadAgentAddonsUI();
         }
 
         function initializeModule() {
