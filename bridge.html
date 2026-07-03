@@ -8903,19 +8903,21 @@
             const tbody = document.getElementById('agentApprovalsTableBody');
             if (!res.success || !res.data?.length) { tbody.innerHTML = emptyRow('No approvals found.', 7); return; }
             tbody.innerHTML = res.data.map(a => `
-    <tr><td class="p-3 font-mono text-slate-500">${escapeHtml(a.ApprovalID)}</td>
-    <td class="p-3 font-mono">${escapeHtml(a.ClientID)}</td>
-    <td class="p-3">${badge(a.DeliverableType)}</td>
-    <td class="p-3">${escapeHtml(a.Title)}${a.DocURL && a.DocURL.startsWith('http')
-                    ? ` — <a href="${escapeHtml(a.DocURL)}" target="_blank" class="text-blue-400 underline">view</a>`
-                    : ''}</td>
-    <td class="p-3 text-slate-500">${fmtDate(a.CreatedAt)}</td>
-    <td class="p-3 text-center">${badge(a.Status)}</td>
-    <td class="p-3 text-center flex gap-1 justify-center">
-  ${a.Status === 'Pending Review' ? `
-  <button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Approved')" class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Approve & Send</button>
-  <button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Rejected')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Reject</button>` : ''}
-  <button onclick="repairApprovalDelivery('${escapeHtml(a.ApprovalID)}')" class="text-xs px-2 py-1 bg-amber-700 hover:bg-amber-600 rounded text-white">Repair & Resend</button>
+  <tr><td class="p-3 font-mono text-slate-500">${escapeHtml(a.ApprovalID)}</td>
+  <td class="p-3 font-mono">${escapeHtml(a.ClientID)}</td>
+  <td class="p-3">${badge(a.DeliverableType)}</td>
+  <td class="p-3">${escapeHtml(a.Title)}
+    ${a.DocURL && a.DocURL.startsWith('http') ? ` — <a href="${escapeHtml(a.DocURL)}" target="_blank" class="text-blue-400 underline">download</a>` : ''}
+    ${a.GoogleDocURL && a.GoogleDocURL.startsWith('http') ? ` — <a href="${escapeHtml(a.GoogleDocURL)}" target="_blank" class="text-amber-400 underline">edit</a>` : ''}
+    ${a.FiledCorrectly === 'Yes' ? '' : (a.FiledCorrectly ? ` <span class="text-red-400 text-[10px]">⚠ ${escapeHtml(a.FiledCorrectly)}</span>` : '')}
+  </td>
+  <td class="p-3 text-slate-500">${fmtDate(a.CreatedAt)}</td>
+  <td class="p-3 text-center">${badge(a.Status)}</td>
+  <td class="p-3 text-center flex gap-1 justify-center">
+${a.Status === 'Pending Review' ? `
+<button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Approved')" class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Approve & Send</button>
+<button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Rejected')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Reject</button>` : ''}
+<button onclick="repairApprovalDelivery('${escapeHtml(a.ApprovalID)}')" class="text-xs px-2 py-1 bg-amber-700 hover:bg-amber-600 rounded text-white">Repair & Resend</button>
 </td></tr>`).join('');
         }
 
@@ -9473,16 +9475,16 @@
             let docCardHtml = '';
             if (res.docUrl) {
                 docCardHtml = `
-        <div class="bg-slate-900 border border-emerald-700 rounded-xl p-4 mb-4 flex items-center justify-between">
-            <div>
-                <div class="text-emerald-400 font-bold text-sm mb-1">📄 Document Generated</div>
-                <div class="text-xs text-slate-400">${res.approvalId ? 'Queued for approval — approve it in Pending Approvals to file & send.' : 'Ready to view.'}</div>
-            </div>
-            <a href="${escapeHtml(res.docUrl)}" target="_blank" rel="noopener"
-                class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 px-4 rounded transition-colors shrink-0">
-                Open Document ↗
-            </a>
-        </div>`;
+  <div class="bg-slate-900 border border-emerald-700 rounded-xl p-4 mb-4 flex items-center justify-between">
+      <div>
+          <div class="text-emerald-400 font-bold text-sm mb-1">📄 Document Generated</div>
+          <div class="text-xs text-slate-400">${res.approvalId ? 'Queued for approval — approve it in Pending Approvals to file & send.' : 'Ready to view.'}</div>
+      </div>
+      <div class="flex gap-2 shrink-0">
+        ${res.googleDocUrl ? `<a href="${escapeHtml(res.googleDocUrl)}" target="_blank" rel="noopener" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium py-2 px-4 rounded">Edit Doc ↗</a>` : ''}
+        <a href="${escapeHtml(res.docUrl)}" target="_blank" rel="noopener" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 px-4 rounded">Download .docx ↗</a>
+      </div>
+  </div>`;
             }
 
             resultEl.innerHTML = docCardHtml + `<pre class="text-xs text-slate-300 whitespace-pre-wrap">${escapeHtml(JSON.stringify(res, null, 2))}</pre>`;
