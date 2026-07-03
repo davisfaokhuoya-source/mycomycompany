@@ -1061,10 +1061,9 @@
                             one accountable team in Abuja, so you stop juggling multiple vendors.
                         </p>
                         <div class="d-flex flex-wrap gap-3 hero-btns">
-                            <a onclick="goToAppointment('Business Consultation')" class="btn-brand"
-                                style="cursor:pointer;">
-                                <i class="fas fa-rocket"></i> Book a Consultation
-                            </a>
+                            <button onclick="runDemo()" class="btn-brand">
+                                <i class="fas fa-play"></i> Watch Live Demo
+                            </button>
                             <a href="#readpracticalarea" class="btn-outline-ghost">See Our Services →</a>
                         </div>
                         <div class="hero-trust mt-4">
@@ -2516,6 +2515,137 @@
 
             setTimeout(() => map.invalidateSize(), 500);
         });
+
+        function runDemo() {
+            const btn = event?.target?.closest('button');
+            if (btn) { btn.disabled = true; btn.dataset.origText = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading demo…'; }
+
+            fetch("https://script.google.com/macros/s/AKfycby4t4JZVuVD3uMB0BIbwB_NTh8zNXcmz68CKKuKL3fYNmUhWMEgpLDObNASLdd38nQH/exec", {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ system: "agent", action: "agent-demo-simulate" })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (btn) { btn.disabled = false; btn.innerHTML = btn.dataset.origText; }
+                    if (data.success) {
+                        showDemoModal(data.steps);
+                    } else {
+                        console.error('Demo failed:', data.message);
+                    }
+                })
+                .catch(err => {
+                    if (btn) { btn.disabled = false; btn.innerHTML = btn.dataset.origText; }
+                    console.error('Demo request error:', err);
+                });
+        }
+
+        const DEMO_ICONS = {
+            inbox: 'fa-envelope-open-text', draft: 'fa-pen-nib', shield: 'fa-shield-halved',
+            sync: 'fa-rotate', report: 'fa-file-lines'
+        };
+
+        function showDemoModal(steps) {
+            const existing = document.getElementById('liveDemoModal');
+            if (existing) existing.remove();
+            if (!steps || !steps.length) return;
+
+            const modal = document.createElement('div');
+            modal.id = 'liveDemoModal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.88);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
+
+            modal.innerHTML = `
+        <div style="background:#0f172a;border:1px solid rgba(204,85,0,0.3);border-radius:16px;max-width:560px;width:100%;padding:2rem;max-height:85vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                <h3 style="color:#fff;font-family:'Space Grotesk',sans-serif;margin:0;font-size:1.15rem;">
+                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:8px;animation:pulseDot 1.5s ease-in-out infinite;"></span>
+                    AI Agent — Live Session
+                </h3>
+                <button onclick="document.getElementById('liveDemoModal').remove()" style="background:none;border:none;color:#94a3b8;font-size:1.5rem;cursor:pointer;line-height:1;">&times;</button>
+            </div>
+            <p style="color:#64748b;font-size:11px;margin:0 0 1.5rem;">Sample data only — no real client account or CRM is touched.</p>
+            <div id="demoStepsContainer" style="display:flex;flex-direction:column;gap:0.4rem;"></div>
+        </div>
+    `;
+            document.body.appendChild(modal);
+
+            const container = document.getElementById('demoStepsContainer');
+            steps.forEach(s => {
+                const row = document.createElement('div');
+                row.id = `demoStep${s.step}`;
+                row.style.cssText = 'opacity:0;transform:translateY(8px);transition:all 0.4s ease;';
+                row.innerHTML = `
+            <div style="display:flex;gap:0.75rem;padding:0.85rem;background:rgba(30,41,59,0.5);border:1px solid rgba(51,65,85,0.5);border-radius:10px;">
+                <div id="demoIcon${s.step}" style="background:rgba(100,116,139,0.15);color:#64748b;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.3s;">
+                    <i class="fas ${DEMO_ICONS[s.icon] || 'fa-circle'}"></i>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                        <span style="color:#fff;font-weight:600;font-size:0.88rem;">${s.label}</span>
+                        <span id="demoStatus${s.step}" style="color:#64748b;font-size:10px;font-family:monospace;">queued</span>
+                    </div>
+                    <div style="color:#94a3b8;font-size:0.78rem;margin-top:2px;">${s.detail}</div>
+                    <div id="demoMoving${s.step}" style="display:none;align-items:center;gap:6px;margin-top:8px;font-size:11px;font-family:monospace;color:#f59e0b;">
+                        <span style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.fromPath || ''}</span>
+                        <i class="fas fa-arrow-right-long" style="color:#475569;"></i>
+                        <span style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.toPath || ''}</span>
+                    </div>
+                    <div id="demoBar${s.step}" style="display:none;height:3px;background:#1e293b;border-radius:2px;margin-top:8px;overflow:hidden;">
+                        <div style="height:100%;width:0%;background:linear-gradient(90deg,#e07410,#f59e0b);border-radius:2px;transition:width 0.9s ease;"></div>
+                    </div>
+                    <div id="demoResult${s.step}" style="display:none;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(51,65,85,0.6);"></div>
+                </div>
+            </div>
+        `;
+                container.appendChild(row);
+            });
+
+            runDemoSequence(steps, 0);
+        }
+
+        function runDemoSequence(steps, idx) {
+            if (idx >= steps.length) return;
+            const s = steps[idx];
+            const row = document.getElementById(`demoStep${s.step}`);
+            const icon = document.getElementById(`demoIcon${s.step}`);
+            const status = document.getElementById(`demoStatus${s.step}`);
+            const moving = document.getElementById(`demoMoving${s.step}`);
+            const bar = document.getElementById(`demoBar${s.step}`);
+            const barFill = bar.querySelector('div');
+            const result = document.getElementById(`demoResult${s.step}`);
+
+            // Fade the row in
+            requestAnimationFrame(() => { row.style.opacity = '1'; row.style.transform = 'translateY(0)'; });
+
+            // Mark running
+            icon.style.background = 'rgba(245,158,11,0.15)';
+            icon.style.color = '#f59e0b';
+            icon.querySelector('i').className = 'fas fa-spinner fa-spin';
+            status.textContent = 'running…';
+            status.style.color = '#f59e0b';
+            moving.style.display = 'flex';
+            bar.style.display = 'block';
+            requestAnimationFrame(() => { barFill.style.width = '100%'; });
+
+            setTimeout(() => {
+                // Mark complete
+                icon.style.background = 'rgba(34,197,94,0.15)';
+                icon.style.color = '#22c55e';
+                icon.querySelector('i').className = 'fas fa-check';
+                status.textContent = 'done';
+                status.style.color = '#22c55e';
+
+                result.style.display = 'block';
+                result.innerHTML = `
+            <div style="color:#e2e8f0;font-size:11px;font-family:monospace;margin-bottom:4px;">
+                <i class="fas fa-file" style="color:#64748b;margin-right:5px;"></i>${s.artifact || ''}
+            </div>
+            ${(s.subitems || []).map(t => `<div style="color:#64748b;font-size:11px;padding-left:16px;">↳ ${t}</div>`).join('')}
+        `;
+
+                runDemoSequence(steps, idx + 1);
+            }, 1100);
+        }
 
         // ========== HELPER FUNCTION ==========
         function goToAppointment(service) {
