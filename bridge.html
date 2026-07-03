@@ -8912,11 +8912,21 @@
     <td class="p-3 text-slate-500">${fmtDate(a.CreatedAt)}</td>
     <td class="p-3 text-center">${badge(a.Status)}</td>
     <td class="p-3 text-center flex gap-1 justify-center">
-      ${a.Status === 'Pending Review' ? `
-      <button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Approved')" class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Approve & Send</button>
-      <button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Rejected')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Reject</button>` : '—'}
-    </td></tr>`).join('');
+  ${a.Status === 'Pending Review' ? `
+  <button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Approved')" class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Approve & Send</button>
+  <button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Rejected')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Reject</button>` : ''}
+  <button onclick="repairApprovalDelivery('${escapeHtml(a.ApprovalID)}')" class="text-xs px-2 py-1 bg-amber-700 hover:bg-amber-600 rounded text-white">Repair & Resend</button>
+</td></tr>`).join('');
         }
+
+        function repairApprovalDelivery(approvalId) {
+            if (!confirm('Re-file this deliverable into the client\'s folder and resend the email? Use this if it previously failed to file or send.')) return;
+            executeSecureBridgeCall('agent', 'agent-repair-approval', { approvalId }).then(res => {
+                showToast(res.success ? res.message : (res.message || 'Repair failed.'), res.success ? 'success' : 'error');
+                if (res.success) loadAgentApprovals();
+            });
+        }
+
         function resolveApproval(approvalId, decision) {
             const reviewNotes = decision === 'Rejected' ? (prompt('Reason for rejection (optional):') || '') : '';
             executeSecureBridgeCall('agent', 'agent-approve-and-send', { approvalId, decision, reviewedBy: CURRENT_ADMIN_IDENTITY, reviewNotes }).then(res => {
