@@ -1834,7 +1834,7 @@
                     <button class="agent-subview-link" data-target-view="agent-mailboxes">Mailboxes</button>
                     <button class="agent-subview-link" data-target-view="agent-scheduling">Scheduling</button>
                     <button class="agent-subview-link" data-target-view="agent-va-clients">VA Clients</button>
-                    <button class="agent-subview-link" data-target-view="agent-integrations">Integrations</button>
+                    <button class="agent-subview-link" data-target-view="agent-crmsync">CRM Sync</button>
                     <button class="agent-subview-link" data-target-view="agent-invoices">Invoices</button>
                 </div>
 
@@ -2495,6 +2495,45 @@
                                 </thead>
                                 <tbody id="agentIntegrationsTableBody"
                                     class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- CRM SYNC -->
+                    <div id="view-agent-crmsync"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">CRM Connections &amp; Sync</h3>
+                                <p class="text-xs text-slate-400">Pulls contacts/deals from a client's own CRM into
+                                    their CRMData sheet. Read-only — never writes back to the source system.</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <select id="crmSyncClientSelector" onchange="loadCrmSyncUI()"
+                                    class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white min-w-[200px]">
+                                    <option value="">Select a client…</option>
+                                </select>
+                                <button onclick="openConnectCrmModal()"
+                                    class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded shadow flex items-center gap-1">
+                                    <i class="fa-solid fa-plug"></i> Connect CRM
+                                </button>
+                            </div>
+                        </div>
+                        <div
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead
+                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                    <tr>
+                                        <th class="p-3">Provider</th>
+                                        <th class="p-3">Label</th>
+                                        <th class="p-3 text-center">Status</th>
+                                        <th class="p-3">Last Synced</th>
+                                        <th class="p-3 text-center">Last Sync Count</th>
+                                        <th class="p-3 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="crmSyncTableBody" class="divide-y divide-slate-800/50 text-slate-300">
+                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -3362,17 +3401,17 @@
                 <div class="grid grid-cols-3 gap-3">
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">Reset Hours</label>
-                        <input type="number" id="enforceQuotaHours" placeholder="40"
+                        <input type="number" id="enforceQuotaHours" placeholder="0"
                             class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
                     </div>
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">Reset Emails</label>
-                        <input type="number" id="enforceQuotaEmails" placeholder="200"
+                        <input type="number" id="enforceQuotaEmails" placeholder="0"
                             class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
                     </div>
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">Reset Proposals</label>
-                        <input type="number" id="enforceQuotaProposals" placeholder="3"
+                        <input type="number" id="enforceQuotaProposals" placeholder="0"
                             class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
                     </div>
                 </div>
@@ -3785,7 +3824,6 @@
                     <option value="crm">CRM</option>
                     <option value="database">Database</option>
                     <option value="api">Generic API</option>
-                    <option value="linkedin">LinkedIn (post on client's behalf)</option>
                 </select>
                 <input type="text" id="integLabel" placeholder="Label e.g. Their SendGrid Key"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
@@ -3800,6 +3838,51 @@
                     class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 rounded">Connect
                     & Encrypt</button>
             </form>
+        </div>
+    </div>
+    <div id="modalConnectCrm"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white">Connect CRM</h3>
+                <button onclick="document.getElementById('modalConnectCrm').classList.add('hidden')"
+                    class="text-slate-400 hover:text-white">&times;</button>
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Provider</label>
+                <select id="crmProviderSelect" onchange="updateCrmConnectFields()"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
+                    <option value="zoho">Zoho CRM — client authorizes (OAuth)</option>
+                    <option value="salesforce">Salesforce — client authorizes (OAuth)</option>
+                    <option value="hubspot">HubSpot — paste Private App token</option>
+                    <option value="google_sheets">Google Sheets — client's own sheet</option>
+                    <option value="generic_rest">Generic REST API</option>
+                </select>
+            </div>
+
+            <div id="crmOAuthPanel" class="space-y-2">
+                <p class="text-[11px] text-slate-500">Generates a link the client opens to authorize their own CRM
+                    account. Nothing is typed here.</p>
+                <button onclick="startCrmOAuth()"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 rounded">
+                    Generate Authorization Link
+                </button>
+                <div id="crmOAuthLinkResult"
+                    class="hidden bg-slate-950 border border-slate-800 rounded p-3 text-xs text-slate-300 break-all space-y-2">
+                </div>
+            </div>
+
+            <div id="crmManualPanel" class="hidden space-y-2">
+                <input type="text" id="crmManualLabel" placeholder="Label e.g. Client's HubSpot"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                <textarea id="crmManualCredentials" rows="4"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white"></textarea>
+                <p id="crmManualHint" class="text-[10px] text-slate-500"></p>
+                <button onclick="submitConnectCrmManual()"
+                    class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium py-2 rounded">
+                    Connect &amp; Encrypt
+                </button>
+            </div>
         </div>
     </div>
     <div id="modalConnectSocialAccount"
@@ -4397,6 +4480,25 @@
                 'publish-connections': loadSocialConnections,
                 'publish-queue': loadPublishQueue,
                 'publish-settings': loadPublishGlobalSwitch,
+                'v5-linkedin': loadV5LinkedInHistory,
+                'v5-trends': loadV5TrendsHistory,
+                'v5-content': loadV5ContentHistory,
+                'v5-calendar-content': loadV5CalendarHistory,
+                'v5-drip': loadV5DripHistory,
+                'v5-whatsapp': loadV5WhatsAppHistory,
+                'v5-competitors': loadV5CompetitorsHistory,
+                'agent-approvals': loadAgentApprovals,
+                'agent-compliance-frameworks': () => { populateAgentClientSelector('compFrameworksClientSelector'); },
+                'agent-ai-console': () => {
+                    populateAllClientsSelector('aiConsoleClientSelector');
+                    document.getElementById('aiConsoleCategory').innerHTML = Object.keys(AI_ACTION_CATALOG).map(c => `<option value="${c}">${c}</option>`).join('');
+                    populateAIConsoleActions();
+                },
+                'agent-mailboxes': () => { populateAllClientsSelector('mailboxesClientSelector'); },
+                'agent-scheduling': () => { populateAllClientsSelector('schedulingClientSelector'); },
+                'agent-va-clients': loadVAClientsUI,
+                'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector'); },
+                'agent-crmsync': () => { populateAgentClientSelector('crmSyncClientSelector').then(loadCrmSyncUI); },
             };
 
             const initFn = initMap[action];
@@ -4408,15 +4510,14 @@
                 link.addEventListener('click', function (event) {
                     event.preventDefault();
                     event.stopPropagation();
-
                     const subTabId = this.getAttribute('data-target-view');
                     if (!subTabId) return;
-
                     const systemName = subTabId.split('-')[0];
 
                     document.querySelectorAll(
-                        '.career-subview-link, .assessment-subview-link, .leads-subview-link, .client-subview-link, .agent-subview-link, [data-target-view]'
+                        '.career-subview-link, .assessment-subview-link, .leads-subview-link, .client-subview-link, .agent-subview-link, .v5-subview-link, [data-target-view]'
                     ).forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');   // fix
 
                     switchSubSection(systemName, subTabId);
                 });
@@ -6516,50 +6617,6 @@
             });
         });
 
-        const _origSwitchMasterHub = switchMasterHub;
-        window.switchMasterHub = function (hubId) {
-            _origSwitchMasterHub(hubId);
-            if (hubId === 'v5') {
-                // Wire v5 sub-nav clicks (they share the leads-subview-link class)
-                setTimeout(() => {
-                    const firstV5Btn = document.querySelector('#hub-v5 [data-target-view]');
-                    if (firstV5Btn && !firstV5Btn.dataset.v5wired) {
-                        initV5SubNav();
-                    }
-                }, 50);
-            }
-        };
-
-        function initV5SubNav() {
-            document.querySelectorAll('#hub-v5 [data-target-view]').forEach(btn => {
-                if (btn.dataset.v5wired) return;
-                btn.dataset.v5wired = "1";
-                btn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const targetId = this.getAttribute('data-target-view');
-                    document.querySelectorAll('#hub-v5 .v5-view').forEach(v => v.classList.add('hidden'));
-                    const targetView = document.getElementById('view-' + targetId);
-                    if (targetView) targetView.classList.remove('hidden');
-
-                    document.querySelectorAll('#hub-v5 [data-target-view]').forEach(l => l.classList.remove('active'));
-                    this.classList.add('active');
-
-                    // Auto-load history tables when switching views
-                    const loaderMap = {
-                        'v5-linkedin': loadV5LinkedInHistory,
-                        'v5-trends': loadV5TrendsHistory,
-                        'v5-content': loadV5ContentHistory,
-                        'v5-calendar-content': loadV5CalendarHistory,
-                        'v5-drip': loadV5DripHistory,
-                        'v5-whatsapp': loadV5WhatsAppHistory,
-                        'v5-competitors': loadV5CompetitorsHistory
-                    };
-                    if (loaderMap[targetId]) loaderMap[targetId]();
-                });
-            });
-        }
-
         // ---- HELPER: get industry/location from sidebar quick-run inputs ----
         function v5GetIndustry(overrideId) {
             const el = overrideId ? document.getElementById(overrideId) : null;
@@ -6968,11 +7025,20 @@
         class="text-xs px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Files</button>
      <button onclick="toggleClientAutoPublish('${escapeHtml(c.ClientID || '')}', ${!(c.AutoPublishEnabled === true || c.AutoPublishEnabled === 'TRUE')})"
     class="text-xs px-3 py-1 ${c.AutoPublishEnabled === true || c.AutoPublishEnabled === 'TRUE' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'} rounded text-white">AutoPub</button>   
-    <button onclick="openAgentDeactivateModal('${escapeHtml(c.ClientID || '')}')"
-        class="text-xs px-3 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Deactivate</button>
+   ${(c.Status === 'Active')
+                    ? `<button onclick="openAgentDeactivateModal('${escapeHtml(c.ClientID || '')}')" class="text-xs px-3 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Deactivate</button>`
+                    : `<button onclick="activateAgentClient('${escapeHtml(c.ClientID || '')}')" class="text-xs px-3 py-1 bg-emerald-700 hover:bg-emerald-600 rounded text-emerald-100">Activate</button>`}
 </td>
         </tr>
     `).join('');
+        }
+
+        function activateAgentClient(clientId) {
+            if (!confirm('Reactivate this client? Services will resume.')) return;
+            executeSecureBridgeCall('agent', 'agent-activate-client', { clientId }).then(res => {
+                showToast(res.success ? 'Client reactivated.' : (res.message || 'Reactivation failed.'), res.success ? 'success' : 'error');
+                if (res.success) loadAgentClients();
+            });
         }
 
         function toggleClientAutoPublish(clientId, enabled) {
@@ -7402,30 +7468,22 @@
 
         async function submitAgentEnforceQuota(event) {
             event.preventDefault();
-
             const clientId = document.getElementById('enforceQuotaClientId').value;
-            const hours = parseInt(document.getElementById('enforceQuotaHours').value) || 0;
-            const emails = parseInt(document.getElementById('enforceQuotaEmails').value) || 0;
-            const proposals = parseInt(document.getElementById('enforceQuotaProposals').value) || 0;
+            const hours = document.getElementById('enforceQuotaHours').value;
+            const emails = document.getElementById('enforceQuotaEmails').value;
+            const proposals = document.getElementById('enforceQuotaProposals').value;
 
             const btn = event.target.querySelector('button[type="submit"]');
             if (btn) { btn.disabled = true; btn.textContent = 'Applying…'; }
 
-            const res = await executeSecureBridgeCall('agent', 'agent-enforce-limits', {
-                clientId, hoursLimit: hours, emailsLimit: emails, proposalsLimit: proposals
+            const res = await executeSecureBridgeCall('agent', 'agent-reset-quota-usage', {
+                clientId, hoursUsed: hours, emailsUsed: emails, proposalsUsed: proposals
             });
 
             if (btn) { btn.disabled = false; btn.textContent = 'Apply Quota Override'; }
-
-            if (res.success) {
-                showToast('Quota limits reset successfully', 'success');
-                closeAgentEnforceQuotaModal();
-                loadAgentQuotas();
-            } else {
-                showToast(res.message || 'Quota update failed', 'error');
-            }
+            if (res.success) { showToast('Quota usage updated.', 'success'); closeAgentEnforceQuotaModal(); loadAgentQuotas(); }
+            else showToast(res.message || 'Quota update failed', 'error');
         }
-
         function openAgentDeactivateModal(clientId) {
             if (!confirm('Are you sure you want to deactivate this client? All services will be halted.')) return;
 
@@ -7605,55 +7663,6 @@
     `).join('');
         }
 
-        function renderIntegFields() {
-            const type = document.getElementById('integType').value;
-            const container = document.getElementById('integDynamicFields');
-            const fields = INTEG_FIELD_SCHEMAS[type] || [];
-            container.innerHTML = fields.map(f => `
-        <div>
-            <label class="block text-[10px] text-slate-400 mb-0.5">${escapeHtml(f.label)}</label>
-            <input type="text" id="integField_${f.key}" placeholder="${escapeHtml(f.placeholder || '')}"
-                class="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-xs text-white" />
-        </div>
-    `).join('');
-
-            const zohoBlock = document.getElementById('zohoOAuthBlock');
-            const linkedinBlock = document.getElementById('linkedinOAuthBlock');
-            const manualWrapper = document.getElementById('manualFieldsWrapper');
-            const manualSummary = document.getElementById('manualFieldsSummary');
-
-            zohoBlock.classList.toggle('hidden', type !== 'zoho');
-            linkedinBlock.classList.toggle('hidden', type !== 'linkedin');
-
-            if (type === 'zoho' || type === 'linkedin') {
-                manualWrapper.open = false;
-                manualSummary.textContent = type === 'zoho'
-                    ? 'Advanced: connect manually with a self-generated refresh token instead'
-                    : 'LinkedIn has no manual/API-key path — OAuth only.';
-                manualWrapper.classList.toggle('hidden', type === 'linkedin');
-            } else {
-                manualWrapper.classList.remove('hidden');
-                manualWrapper.open = true;
-                manualSummary.textContent = 'Manual credential entry';
-            }
-        }
-
-        async function generateLinkedInOAuthLink() {
-            const clientId = document.getElementById('integrationsClientSelector')?.value;
-            if (!clientId) { showToast('Select a client first.', 'error'); return; }
-
-            const res = await executeSecureBridgeCall('agent', 'agent-start-linkedin-auth', { clientId });
-            const box = document.getElementById('linkedinOAuthLinkResult');
-            if (!res.success) { showToast(res.message || 'Failed to generate link.', 'error'); return; }
-
-            box.classList.remove('hidden');
-            box.innerHTML = `
-    <p class="text-amber-400">⚠ Not sent yet — copy this and send it to ${escapeHtml(res.clientName || clientId)} yourself. They must open it logged into their own LinkedIn.</p>
-    <p class="font-mono">${escapeHtml(res.authUrl)}</p>
-    <button type="button" onclick="navigator.clipboard.writeText('${res.authUrl}').then(()=>showToast('Copied — now send it to the client','success'))"
-        class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Copy Link</button>`;
-        }
-
         function verifyAgentComplianceDoc(fileName) {
             const clientId = document.getElementById('docsClientSelector')?.value;
             if (!clientId) return;
@@ -7815,10 +7824,6 @@
         }
 
         // Initialize on sidebar navigation
-        window.addEventListener('load', () => {
-            setTimeout(() => { initializeAgentHub(); }, 500);
-        });
-
         let agentTaskPollingInterval = null;
 
         function startAgentTaskMonitor(taskId) {
@@ -8088,15 +8093,7 @@
         class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Copy Link</button>
       <a href="${res.authUrl}" target="_blank" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Open</a>
     </div>
-    <div id="linkedinOAuthBlock" class="hidden border border-blue-900/40 bg-blue-950/10 rounded p-3 space-y-2">
-    <p class="text-[11px] text-blue-400 font-medium">Client authorizes themselves</p>
-    <p class="text-[10px] text-slate-400">Generates a link. The client logs into their own LinkedIn and grants posting access — nothing is typed here.</p>
-    <button type="button" onclick="generateLinkedInOAuthLink()"
-        class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium py-2 rounded">
-        Generate LinkedIn Authorization Link
-    </button>
-    <div id="linkedinOAuthLinkResult" class="hidden bg-slate-950 border border-slate-800 rounded p-2 text-[10px] text-slate-300 break-all space-y-2"></div>
-</div>`;
+    `;
         }
 
         // Add to Mailboxes view loader — show connection status alongside mailboxes
@@ -8142,23 +8139,25 @@
             }
 
             tbody.innerHTML = res.connections.map(c => `
-        <tr>
-            <td class="p-3">${badge(c.platform)}</td>
-            <td class="p-3 text-slate-300">${escapeHtml(c.pageName || '—')}</td>
-            <td class="p-3 text-center">${badge(c.status || 'Connected')}</td>
-            <td class="p-3 text-slate-500">${c.tokenExpiry ? fmtDate(c.tokenExpiry) : 'No expiry'}</td>
-            <td class="p-3 text-center">
-                <button onclick="togglePlatformPublish('${escapeHtml(c.clientId)}', '${escapeHtml(c.platform)}', ${!c.platformPublishEnabled})"
-                    class="text-xs px-3 py-1 rounded ${c.platformPublishEnabled ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'} text-white">
-                    ${c.platformPublishEnabled ? 'ON' : 'OFF'}
-                </button>
-            </td>
-            <td class="p-3 text-center">
-                <button onclick="disconnectSocialAccount('${escapeHtml(c.clientId)}', '${escapeHtml(c.platform)}')"
-                    class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Disconnect</button>
-            </td>
-        </tr>
-    `).join('');
+    <tr>
+        <td class="p-3">${badge(c.platform)}</td>
+        <td class="p-3 text-slate-300">${escapeHtml(c.pageName || '—')}</td>
+        <td class="p-3 text-center">${badge(c.status || 'Connected')}</td>
+        <td class="p-3 text-slate-500">${c.tokenExpiry ? fmtDate(c.tokenExpiry) : 'No expiry'}</td>
+        <td class="p-3 text-center">
+            <button onclick="togglePlatformPublish('${escapeHtml(c.clientId)}', '${escapeHtml(c.platform)}', ${!c.platformPublishEnabled})"
+                class="text-xs px-3 py-1 rounded ${c.platformPublishEnabled ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'} text-white">
+                ${c.platformPublishEnabled ? 'ON' : 'OFF'}
+            </button>
+        </td>
+        <td class="p-3 text-center">
+            ${c.status === 'Connected' ? `<button onclick="postAdHocToSocial('${escapeHtml(c.clientId)}','${escapeHtml(c.platform)}')"
+                class="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white">Post Now</button>` : ''}
+            <button onclick="disconnectSocialAccount('${escapeHtml(c.clientId)}', '${escapeHtml(c.platform)}')"
+                class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Disconnect</button>
+        </td>
+    </tr>
+`).join('');
         }
 
         function togglePlatformPublish(clientId, platform, enabled) {
@@ -8171,8 +8170,17 @@
         function disconnectSocialAccount(clientId, platform) {
             if (!confirm(`Disconnect ${platform} for this client?`)) return;
             executeSecureBridgeCall('publish', 'agent-disconnect-social-account', { clientId, platform }).then(res => {
-                showToast(res.success ? 'Disconnect  ed.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+                showToast(res.success ? 'Disconnected.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
                 if (res.success) loadSocialConnections();
+            });
+        }
+
+        function postAdHocToSocial(clientId, platform) {
+            const text = prompt('Post text for ' + platform + ' (max ~3000 chars):');
+            if (!text || !text.trim()) return;
+            executeSecureBridgeCall('publish', 'agent-publish-adhoc', { clientId, platform, content: text.trim() }).then(res => {
+                showToast(res.success ? ('Posted to ' + platform + '.') : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+                if (res.success) loadPublishQueue(); // harmless if not on that tab
             });
         }
 
@@ -8658,27 +8666,19 @@
             if (!clientId) { tbody.innerHTML = emptyRow('Select a client.', 5); return; }
             showTableSkeleton('agentIntegrationsTableBody', 5);
             const res = await executeSecureBridgeCall('agent', 'agent-list-integrations', { clientId });
-            if (!res.success || !res.data?.length) { tbody.innerHTML = emptyRow('No integrations connected.', 5); return; }
-            tbody.innerHTML = res.data.map(i => `
-    <tr><td class="p-3">${badge(i.Type || i.type)}</td>
-    <td class="p-3">${escapeHtml(i.Label || i.label || '—')}</td>
-    <td class="p-3 font-mono text-slate-500">${escapeHtml(i.MaskedCredential || i.masked || '••••')}</td>
-    <td class="p-3 text-center">${badge(i.Status || 'Connected')}</td>
+            // AgentLib's _listIntegrations returns { integrations: [...] }, not { data: [...] }
+            if (!res.success || !res.integrations?.length) { tbody.innerHTML = emptyRow('No integrations connected.', 5); return; }
+            tbody.innerHTML = res.integrations.map(i => `
+    <tr><td class="p-3">${badge(i.type)}</td>
+    <td class="p-3">${escapeHtml(i.label || '—')}</td>
+    <td class="p-3 font-mono text-slate-500">••••</td>
+    <td class="p-3 text-center">${badge(i.status || 'Connected')}</td>
     <td class="p-3 text-center flex gap-1 justify-center">
-      <button onclick="testIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.Type || i.type)}')" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Test</button>
-      <button onclick="disconnectIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.Type || i.type)}')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Disconnect</button>
-      ${i.type === 'linkedin' ? `<button onclick="postToLinkedInPrompt('${escapeHtml(clientId)}')" class="text-xs px-2 py-1 bg-blue-700 hover:bg-blue-600 rounded text-white">Post</button>` : ''}
-      ${i.type !== 'gmail_oauth' ? `<button onclick="testIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.type)}')" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Test</button>` : ''}
-    </td></tr>`).join('');
+  <button onclick="testIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.type)}')" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Test</button>
+  <button onclick="disconnectIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.type)}')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Disconnect</button>
+</td></tr>`).join('');
         }
 
-        function postToLinkedInPrompt(clientId) {
-            const text = prompt('Post text (max ~3000 chars):');
-            if (!text) return;
-            executeSecureBridgeCall('agent', 'agent-linkedin-post', { clientId, text }).then(res => {
-                showToast(res.success ? 'Posted to LinkedIn.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
-            });
-        }
         function openConnectIntegrationModal() {
             if (!document.getElementById('integrationsClientSelector')?.value) { showToast('Select a client first.', 'error'); return; }
             document.getElementById('modalConnectIntegration').classList.remove('hidden');
@@ -8705,6 +8705,99 @@
             executeSecureBridgeCall('agent', 'agent-disconnect-integration', { clientId, type }).then(res => {
                 showToast(res.success ? 'Disconnected.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
                 if (res.success) loadIntegrationsUI();
+            });
+        }
+
+        // ============ CRM Sync ============
+        const CRM_CREDENTIAL_HINTS = {
+            hubspot: '{"accessToken":"pat-xxx"}  — HubSpot Private App access token',
+            google_sheets: '{"sheetId":"...","sheetName":"Contacts","columnMap":{"name":"Full Name","email":"Email","phone":"Phone","company":"Company"}}  — client must share the sheet with the agency email',
+            generic_rest: '{"baseUrl":"https://api.x.com","authHeaderName":"Authorization","authHeaderValue":"Bearer xxx","contactsEndpoint":"/contacts","contactsArrayPath":"data.contacts","contactFieldMap":{"name":"full_name","email":"email","phone":"phone","company":"company_name"}}'
+        };
+
+        function updateCrmConnectFields() {
+            const provider = document.getElementById('crmProviderSelect').value;
+            const isOAuth = provider === 'zoho' || provider === 'salesforce';
+            document.getElementById('crmOAuthPanel').classList.toggle('hidden', !isOAuth);
+            document.getElementById('crmManualPanel').classList.toggle('hidden', isOAuth);
+            document.getElementById('crmOAuthLinkResult').classList.add('hidden');
+            if (!isOAuth) {
+                document.getElementById('crmManualCredentials').placeholder = CRM_CREDENTIAL_HINTS[provider] || '';
+                document.getElementById('crmManualHint').textContent = CRM_CREDENTIAL_HINTS[provider] || '';
+            }
+        }
+
+        function openConnectCrmModal() {
+            const clientId = document.getElementById('crmSyncClientSelector')?.value;
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            document.getElementById('crmProviderSelect').value = 'zoho';
+            updateCrmConnectFields();
+            document.getElementById('modalConnectCrm').classList.remove('hidden');
+        }
+
+        async function startCrmOAuth() {
+            const clientId = document.getElementById('crmSyncClientSelector')?.value;
+            const provider = document.getElementById('crmProviderSelect').value;
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            const action = provider === 'zoho' ? 'agent-start-zoho-auth' : 'agent-start-salesforce-auth';
+            const res = await executeSecureBridgeCall('agent', action, { clientId });
+            const box = document.getElementById('crmOAuthLinkResult');
+            if (!res.success) { showToast(res.message || 'Failed to generate link.', 'error'); return; }
+            box.classList.remove('hidden');
+            box.innerHTML = `
+    <p class="text-emerald-400">Send this to ${escapeHtml(res.clientName || clientId)} to authorize ${escapeHtml(provider)}:</p>
+    <p class="font-mono text-[10px]">${escapeHtml(res.authUrl)}</p>
+    <div class="flex gap-2">
+      <button onclick="navigator.clipboard.writeText('${res.authUrl}').then(()=>showToast('Copied!','success'))"
+        class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Copy Link</button>
+      <a href="${res.authUrl}" target="_blank" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Open</a>
+    </div>`;
+        }
+
+        async function submitConnectCrmManual() {
+            const clientId = document.getElementById('crmSyncClientSelector')?.value;
+            const provider = document.getElementById('crmProviderSelect').value;
+            const label = document.getElementById('crmManualLabel').value.trim();
+            let credentials;
+            try { credentials = JSON.parse(document.getElementById('crmManualCredentials').value); }
+            catch (e) { showToast('Credentials must be valid JSON.', 'error'); return; }
+            const res = await executeSecureBridgeCall('agent', 'agent-connect-integration', {
+                clientId, type: provider, label, credentials
+            });
+            showToast(res.success ? 'CRM connected.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+            if (res.success) { document.getElementById('modalConnectCrm').classList.add('hidden'); loadCrmSyncUI(); }
+        }
+
+        async function loadCrmSyncUI() {
+            const clientId = document.getElementById('crmSyncClientSelector')?.value;
+            const tbody = document.getElementById('crmSyncTableBody');
+            if (!clientId) { tbody.innerHTML = emptyRow('Select a client.', 6); return; }
+            showTableSkeleton('crmSyncTableBody', 6);
+            const res = await executeSecureBridgeCall('agent', 'agent-get-crm-sync-status', { clientId });
+            if (!res.success || !res.integrations?.length) { tbody.innerHTML = emptyRow('No CRM connected yet.', 6); return; }
+            tbody.innerHTML = res.integrations.map(i => `
+    <tr>
+        <td class="p-3">${badge(i.provider)}</td>
+        <td class="p-3">${escapeHtml(i.label || i.provider)}</td>
+        <td class="p-3 text-center">${badge(i.status || 'Active')}</td>
+        <td class="p-3 text-slate-500">${i.lastSyncedAt ? fmtDate(i.lastSyncedAt) : 'Never'}</td>
+        <td class="p-3 text-center font-mono">${i.lastSyncCount ?? 0}</td>
+        <td class="p-3 text-center flex gap-1 justify-center">
+            <button onclick="syncCrmNow('${escapeHtml(clientId)}','${escapeHtml(i.provider)}')"
+                class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Sync Now</button>
+            <button onclick="testIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.provider)}')"
+                class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Test</button>
+            <button onclick="disconnectIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.provider)}')"
+                class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Disconnect</button>
+        </td>
+    </tr>`).join('');
+        }
+
+        function syncCrmNow(clientId, provider) {
+            showToast('Syncing ' + provider + '…', 'info');
+            executeSecureBridgeCall('agent', 'agent-sync-crm-data', { clientId, provider }).then(res => {
+                showToast(res.success ? res.message : (res.message || 'Sync failed.'), res.success ? 'success' : 'error');
+                if (res.success) loadCrmSyncUI();
             });
         }
 
@@ -8735,7 +8828,7 @@
                     endDate: effectiveDate
                 });
             } else {
-                res = await executeSecureBridgeCall('agent', 'agent-update-subscription', { clientId, tier: newTier, effectiveDate });
+                res = await executeSecureBridgeCall('agent', 'agent-update-subscription', { clientId, tier: newTier, endDate: effectiveDate });
             }
 
             if (btn) { btn.disabled = false; btn.textContent = 'Update Subscription Tier'; }
@@ -8782,7 +8875,37 @@
             showToast(res.success ? 'Client info updated.' : (res.message || 'Update failed.'), res.success ? 'success' : 'error');
             if (res.success) { closeAgentEditClientInfoModal(); loadAgentClients(); }
         }
+        async function runAIConsoleAction() {
+            const clientId = document.getElementById('aiConsoleClientSelector').value;
+            const action = document.getElementById('aiConsoleAction').value;
+            if (!clientId || !action) { showToast('Select a client and an action.', 'error'); return; }
+            let params = {};
+            try { params = JSON.parse(document.getElementById('aiConsoleParams').value || '{}'); }
+            catch (e) { showToast('Params must be valid JSON.', 'error'); return; }
+            showToast('Running ' + action + '…', 'info');
+            const res = await executeSecureBridgeCall('agent', action, { clientId, ...params });
 
+            const resultEl = document.getElementById('aiConsoleResult');
+
+            // Build the document link card if a docUrl came back
+            let docCardHtml = '';
+            if (res.docUrl) {
+                docCardHtml = `
+        <div class="bg-slate-900 border border-emerald-700 rounded-xl p-4 mb-4 flex items-center justify-between">
+            <div>
+                <div class="text-emerald-400 font-bold text-sm mb-1">📄 Document Generated</div>
+                <div class="text-xs text-slate-400">${res.approvalId ? 'Queued for approval — approve it in Pending Approvals to file & send.' : 'Ready to view.'}</div>
+            </div>
+            <a href="${escapeHtml(res.docUrl)}" target="_blank" rel="noopener"
+                class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 px-4 rounded transition-colors shrink-0">
+                Open Document ↗
+            </a>
+        </div>`;
+            }
+
+            resultEl.innerHTML = docCardHtml + `<pre class="text-xs text-slate-300 whitespace-pre-wrap">${escapeHtml(JSON.stringify(res, null, 2))}</pre>`;
+            showToast(res.success ? 'Done.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+        }
         function updateIntegCredentialsPlaceholder() {
             const type = document.getElementById('integType').value;
             const ta = document.getElementById('integCredentials');
@@ -8814,14 +8937,6 @@
             'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector'); }
         };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.agent-subview-link').forEach(link => {
-                link.addEventListener('click', function () {
-                    const target = this.getAttribute('data-target-view');
-                    if (_origInitMap[target]) setTimeout(_origInitMap[target], 60);
-                });
-            });
-        });
         document.addEventListener("DOMContentLoaded", initializeModule);
     </script>
 </body>

@@ -34,10 +34,8 @@ function navbar() {
                     <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Services</a>
                     <div class="dropdown-menu m-0">
                         <a href="doc-dev.html" class="dropdown-item">Document Development</a>
-                        <a href="social-media-management.html" class="dropdown-item">Social Media Management</a>
                         <a href="compliance.html" class="dropdown-item">Corporate Compliance</a>
                         <a href="localsupport.html" class="dropdown-item">Corporate Local Entry Support</a>
-                        <a href="web-graphics-branding.html" class="dropdown-item">Web, Graphics & Branding</a>
                         <a href="trainings.html" class="dropdown-item">Career Programmes</a>
                         <div class="dropdown-divider"></div>
                         <a href="value.html" class="dropdown-item">Custom Services</a>
