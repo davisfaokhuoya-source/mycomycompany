@@ -1834,13 +1834,12 @@
                     <button class="agent-subview-link" data-target-view="agent-mailboxes">Mailboxes</button>
                     <button class="agent-subview-link" data-target-view="agent-scheduling">Scheduling</button>
                     <button class="agent-subview-link" data-target-view="agent-va-clients">VA Clients</button>
-                    <button class="agent-subview-link" data-target-view="agent-crmsync">CRM Sync</button>
                     <button class="agent-subview-link" data-target-view="agent-addons">Add-ons &amp; Extras</button>
                     <button class="agent-subview-link" data-target-view="agent-invoices">Invoices</button>
                     <button class="agent-subview-link" data-target-view="agent-crmsync">CRM Sync</button>
-                    <button class="agent-subview-link" data-target-view="agent-integrations">Integrations</button>
-                    <button class="agent-subview-link" data-target-view="agent-invoices">Invoices</button>
-                    <button onclick="repairClientFolders()"
+                    <button class="agent-subview-link"
+                        data-target-view="agent-integrations">Integrations</button><button
+                        onclick="repairClientFolders()"
                         class="text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded text-white">
                         Repair Folder Registry
                     </button>
@@ -2196,6 +2195,54 @@
                                 </thead>
                                 <tbody id="agentDocsTableBody" class="divide-y divide-slate-800/50 text-slate-300">
                                 </tbody>
+                            </table>
+                        </div>
+                        <div class="mb-6 bg-slate-900 border border-slate-700 rounded-xl p-4">
+                            <h3 class="text-white font-semibold mb-3">Upload Compliance Document</h3>
+                            <div class="grid grid-cols-2 gap-3 mb-3">
+                                <select id="compDocClientId"
+                                    class="bg-slate-800 text-white text-sm p-2 rounded border border-slate-700"></select>
+                                <select id="compDocType"
+                                    class="bg-slate-800 text-white text-sm p-2 rounded border border-slate-700">
+                                    <option value="CAC Registration Certificate">CAC Registration Certificate</option>
+                                    <option value="Tax Identification Document">Tax Identification Document</option>
+                                    <option value="NDPA Privacy Policy">NDPA Privacy Policy</option>
+                                    <option value="Terms of Service">Terms of Service</option>
+                                    <option value="Data Processing Agreement">Data Processing Agreement</option>
+                                    <option value="Insurance Certificate">Insurance Certificate</option>
+                                    <option value="Regulatory Compliance Agreement">Regulatory Compliance Agreement
+                                    </option>
+                                    <option value="Custom Document">Custom Document</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3 mb-3">
+                                <input type="file" id="compDocFile"
+                                    class="bg-slate-800 text-white text-sm p-2 rounded border border-slate-700" />
+                                <input type="date" id="compDocExpiry" placeholder="Expiry date (optional)"
+                                    class="bg-slate-800 text-white text-sm p-2 rounded border border-slate-700" />
+                            </div>
+                            <textarea id="compDocNotes" placeholder="Notes (optional)"
+                                class="w-full bg-slate-800 text-white text-sm p-2 rounded border border-slate-700 mb-3"
+                                rows="2"></textarea>
+                            <button onclick="uploadComplianceDocument()"
+                                class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium py-2 px-4 rounded">Upload
+                                Document</button>
+                        </div>
+
+                        <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
+                            <h3 class="text-white font-semibold mb-3">Documents on File</h3>
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="text-slate-400 text-left border-b border-slate-700">
+                                        <th class="p-2">Type</th>
+                                        <th class="p-2">File</th>
+                                        <th class="p-2">Status</th>
+                                        <th class="p-2">Expiry</th>
+                                        <th class="p-2">Uploaded</th>
+                                        <th class="p-2">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="compDocsTableBody"></tbody>
                             </table>
                         </div>
                     </div>
@@ -3629,6 +3676,30 @@
                     class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded shadow">Apply
                     Limits</button>
             </form>
+        </div>
+        <div class="mb-6 bg-slate-900 border border-slate-700 rounded-xl p-4">
+            <h3 class="text-white font-semibold mb-3">CRM Connection & Sync</h3>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <select id="crmSyncClientId"
+                    class="bg-slate-800 text-white text-sm p-2 rounded border border-slate-700"></select>
+                <select id="crmSyncProvider"
+                    class="bg-slate-800 text-white text-sm p-2 rounded border border-slate-700">
+                    <option value="zoho">Zoho CRM</option>
+                    <option value="hubspot">HubSpot</option>
+                    <option value="salesforce">Salesforce</option>
+                    <option value="google_sheets">Google Sheets</option>
+                    <option value="generic_rest">Generic REST API</option>
+                </select>
+            </div>
+            <div class="flex gap-2 mb-3">
+                <button onclick="checkCrmSyncStatus()"
+                    class="bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium py-2 px-4 rounded">Check
+                    Connections</button>
+                <button onclick="syncCrmDataNow()"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium py-2 px-4 rounded">Sync
+                    Now</button>
+            </div>
+            <div id="crmSyncStatusDisplay" class="text-sm text-slate-400"></div>
         </div>
     </div>
     <!-- MODAL: Agent Lead Generation Portal -->
@@ -7621,6 +7692,81 @@
             }
         }
 
+        async function populateComplianceClientSelect() {
+            const sel = document.getElementById('compDocClientId');
+            const res = await executeSecureBridgeCall('agent', 'agent-get-all-clients', {});
+            if (res.success && res.data) {
+                sel.innerHTML = res.data.map(c => `<option value="${escapeHtml(c.ClientID)}">${escapeHtml(c.CompanyName)} (${escapeHtml(c.ClientID)})</option>`).join('');
+                loadComplianceDocsList();
+            }
+        }
+        document.getElementById('compDocClientId')?.addEventListener('change', loadComplianceDocsList);
+
+        async function uploadComplianceDocument() {
+            const clientId = document.getElementById('compDocClientId').value;
+            const docType = document.getElementById('compDocType').value;
+            const expiryDate = document.getElementById('compDocExpiry').value;
+            const notes = document.getElementById('compDocNotes').value;
+            const fileInput = document.getElementById('compDocFile');
+            const file = fileInput.files[0];
+
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            if (!file) { showToast('Choose a file to upload.', 'error'); return; }
+
+            const base64Data = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
+            const res = await executeSecureBridgeCall('agent', 'agent-upload-compliance-doc', {
+                clientId, docType, fileName: file.name, mimeType: file.type, base64Data, expiryDate, notes
+            });
+
+            if (res.success) {
+                showToast(res.message || 'Document uploaded.', 'success');
+                fileInput.value = '';
+                document.getElementById('compDocNotes').value = '';
+                loadComplianceDocsList();
+            } else {
+                showToast(res.message || 'Upload failed.', 'error');
+            }
+        }
+
+        async function loadComplianceDocsList() {
+            const clientId = document.getElementById('compDocClientId').value;
+            const tbody = document.getElementById('compDocsTableBody');
+            if (!clientId) return;
+            showTableSkeleton('compDocsTableBody', 4);
+
+            const res = await executeSecureBridgeCall('agent', 'agent-get-compliance-docs', { clientId });
+            if (!res.success || !res.data?.documents?.length) {
+                tbody.innerHTML = emptyRow('No documents on file for this client.', 6);
+                return;
+            }
+
+            tbody.innerHTML = res.data.documents.map(d => `
+    <tr class="border-b border-slate-800">
+      <td class="p-2 text-slate-300">${escapeHtml(d.docType)}</td>
+      <td class="p-2"><a href="${escapeHtml(d.fileUrl)}" target="_blank" class="text-blue-400 hover:underline">${escapeHtml(d.fileName)}</a></td>
+      <td class="p-2"><span style="color:${escapeHtml(d.badgeColor || '#94a3b8')}">${escapeHtml(d.badge || d.status)}</span></td>
+      <td class="p-2 text-slate-500">${d.expiryDate ? fmtDate(d.expiryDate) : '—'}</td>
+      <td class="p-2 text-slate-500">${fmtDate(d.uploadedDate)}</td>
+      <td class="p-2">
+        ${d.status !== 'Verified' ? `<button onclick="verifyComplianceDoc('${escapeHtml(clientId)}','${escapeHtml(d.fileName)}')" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Verify</button>` : '<span class="text-emerald-400 text-xs">✓ Verified</span>'}
+      </td>
+    </tr>`).join('');
+        }
+
+        async function verifyComplianceDoc(clientId, fileName) {
+            const res = await executeSecureBridgeCall('agent', 'agent-verify-compliance-doc', { clientId, fileName, verifiedBy: 'Admin' });
+            showToast(res.success ? 'Document verified.' : (res.message || 'Verify failed.'), res.success ? 'success' : 'error');
+            if (res.success) loadComplianceDocsList();
+        }
+
+        populateComplianceClientSelect();
+
         // REPLACE openAgentEditClientInfoModal() + submitAgentEditClientInfo()
         function openAgentEditClientInfoModal(clientId, c) {
             document.getElementById('editClientInfoId').value = clientId;
@@ -8362,7 +8508,7 @@
         <td class="p-3 text-slate-500">Folder</td>
         <td class="p-3 text-slate-500">—</td>
         <td class="p-3 text-slate-500">—</td>
-        <td class="p-3 text-center"><a href="${escapeHtml(f.url)}" target="_blank" class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Open in Drive</a></td>
+        <td class="p-3 text-center"><a href="${escapeHtml(f.url)}" target="_blank" class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">OpenDrive</a></td>
     </tr>`);
             files.forEach(f => rows += `
     <tr>
@@ -9419,6 +9565,46 @@ ${a.Status === 'Pending Review' ? `
                 showToast(res.message || 'Update failed', 'error');
             }
         }
+
+        async function populateCrmSyncClientSelect() {
+            const sel = document.getElementById('crmSyncClientId');
+            const res = await executeSecureBridgeCall('agent', 'agent-get-all-clients', {});
+            if (res.success && res.data) {
+                sel.innerHTML = res.data.map(c => `<option value="${escapeHtml(c.ClientID)}">${escapeHtml(c.CompanyName)} (${escapeHtml(c.ClientID)})</option>`).join('');
+            }
+        }
+
+        async function checkCrmSyncStatus() {
+            const clientId = document.getElementById('crmSyncClientId').value;
+            const display = document.getElementById('crmSyncStatusDisplay');
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            display.innerHTML = 'Checking…';
+
+            const res = await executeSecureBridgeCall('agent', 'agent-get-crm-sync-status', { clientId });
+            if (!res.success || !res.data?.integrations?.length) {
+                display.innerHTML = 'No CRM integrations connected for this client yet.';
+                return;
+            }
+            display.innerHTML = res.data.integrations.map(i =>
+                `<div class="mb-1">• <strong>${escapeHtml(i.provider)}</strong> — ${escapeHtml(i.status)}` +
+                (i.lastSyncedAt ? ` — last synced ${fmtDate(i.lastSyncedAt)} (${i.lastSyncCount} records)` : ' — never synced') +
+                `</div>`
+            ).join('');
+        }
+
+        async function syncCrmDataNow() {
+            const clientId = document.getElementById('crmSyncClientId').value;
+            const provider = document.getElementById('crmSyncProvider').value;
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+
+            showToast('Syncing…', 'info');
+            const res = await executeSecureBridgeCall('agent', 'agent-sync-crm-data', { clientId, provider });
+            showToast(res.success ? (res.message || 'Sync complete.') : (res.message || 'Sync failed — check the client has this provider connected.'),
+                res.success ? 'success' : 'error');
+            if (res.success) checkCrmSyncStatus();
+        }
+
+        populateCrmSyncClientSelect();
 
         function repairClientFolders() {
             if (!confirm('Scan all Ops and VA clients and backfill the ClientFolders sheet for any missing entries?')) return;
