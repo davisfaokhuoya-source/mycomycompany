@@ -1840,6 +1840,10 @@
                     <button class="agent-subview-link" data-target-view="agent-crmsync">CRM Sync</button>
                     <button class="agent-subview-link" data-target-view="agent-integrations">Integrations</button>
                     <button class="agent-subview-link" data-target-view="agent-invoices">Invoices</button>
+                    <button onclick="repairClientFolders()"
+                        class="text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded text-white">
+                        Repair Folder Registry
+                    </button>
                 </div>
 
                 <!-- Agent Views Wrapper — matches pattern of other hubs -->
@@ -8327,7 +8331,6 @@
         }
 
         async function agentBrowseFolder(folderType) {
-
             const tbodyId = 'agentDriveFilesTableBody';
             showTableSkeleton(tbodyId, 5);
 
@@ -8336,54 +8339,46 @@
                 'industry': 'Industry Reports', 'progress': 'Progress Reports'
             };
             const subfolder = folderMap[folderType];
-            const clientId = document.getElementById('driveBrowserClientId').value; // FIXED
-
+            const clientId = document.getElementById('driveBrowserClientId').value;
             if (!clientId) { showToast('Please select a client first.', 'error'); return; }
 
-            if (!clientId) {
-                showToast('Please select a client first.', 'error');
-                return;
-            }
-
-            let res;
-            if (subfolder) {
-                res = await executeSecureBridgeCall('agent', 'agent-list-subfolder', {
-                    clientId,
-                    subfolder
-                });
-            } else {
-                res = await executeSecureBridgeCall('agent', 'agent-list-folder-contents', {
-                    clientId
-                });
-            }
+            const res = subfolder
+                ? await executeSecureBridgeCall('agent', 'agent-list-subfolder', { clientId, subfolder })
+                : await executeSecureBridgeCall('agent', 'agent-list-folder-contents', { clientId });
 
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
 
-            if (!res.success || !res.data?.files?.length) {
-                tbody.innerHTML = emptyRow('No files found in this folder.', 5);
-                return;
-            }
+            if (!res.success) { tbody.innerHTML = emptyRow(res.message || 'Failed to load folder.', 5); return; }
 
-            tbody.innerHTML = res.data.files.map(f => `
-        <tr>
-            <td class="p-3 text-slate-300">
-                <a href="${escapeHtml(f.url)}" target="_blank" class="text-blue-400 hover:underline">
-                    ${escapeHtml(f.name)}
-                </a>
-            </td>
-            <td class="p-3 text-slate-500">${escapeHtml(f.mimeType || 'File')}</td>
-            <td class="p-3 text-slate-500">${escapeHtml(f.createdBy || '—')}</td>
-            <td class="p-3 text-slate-500">${fmtDate(f.dateCreated)}</td>
-            <td class="p-3 text-center flex gap-1 justify-center">
-                <a href="${escapeHtml(f.url)}" target="_blank"
-                    class="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">View</a>
-                ${f.downloadUrl ? `<a href="${escapeHtml(f.downloadUrl)}" target="_blank"
-                    class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Download</a>` : ''}
-            </td>
-        </tr>
-    `).join('');
+            const files = res.data?.files || [];
+            const subfolders = res.data?.subfolders || [];
+            if (!files.length && !subfolders.length) { tbody.innerHTML = emptyRow('No files found in this folder.', 5); return; }
+
+            let rows = '';
+            subfolders.forEach(f => rows += `
+    <tr class="bg-slate-900/40">
+        <td class="p-3 text-amber-300">📁 <a href="${escapeHtml(f.url)}" target="_blank" class="hover:underline">${escapeHtml(f.name)}</a></td>
+        <td class="p-3 text-slate-500">Folder</td>
+        <td class="p-3 text-slate-500">—</td>
+        <td class="p-3 text-slate-500">—</td>
+        <td class="p-3 text-center"><a href="${escapeHtml(f.url)}" target="_blank" class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Open in Drive</a></td>
+    </tr>`);
+            files.forEach(f => rows += `
+    <tr>
+        <td class="p-3 text-slate-300"><a href="${escapeHtml(f.url)}" target="_blank" class="text-blue-400 hover:underline">${escapeHtml(f.name)}</a></td>
+        <td class="p-3 text-slate-500">${escapeHtml(f.mimeType || 'File')}</td>
+        <td class="p-3 text-slate-500">${escapeHtml(f.createdBy || '—')}</td>
+        <td class="p-3 text-slate-500">${fmtDate(f.dateCreated)}</td>
+        <td class="p-3 text-center flex gap-1 justify-center">
+            <a href="${escapeHtml(f.url)}" target="_blank" class="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">View</a>
+            ${f.downloadUrl ? `<a href="${escapeHtml(f.downloadUrl)}" target="_blank" class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Download</a>` : ''}
+        </td>
+    </tr>`);
+
+            tbody.innerHTML = rows;
         }
+
 
         function submitConnectEmail(event) {
             event.preventDefault();
@@ -9423,6 +9418,13 @@ ${a.Status === 'Pending Review' ? `
             } else {
                 showToast(res.message || 'Update failed', 'error');
             }
+        }
+
+        function repairClientFolders() {
+            if (!confirm('Scan all Ops and VA clients and backfill the ClientFolders sheet for any missing entries?')) return;
+            executeSecureBridgeCall('agent', 'agent-repair-client-folders', {}).then(res => {
+                showToast(res.success ? `Checked ${res.checked} client(s), ${res.failed.length} failed.` : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+            });
         }
 
         function openAgentEditClientInfoModal(clientId, c) {
