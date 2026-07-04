@@ -2197,37 +2197,6 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="mb-6 bg-slate-900 border border-slate-700 rounded-xl p-4">
-                            <h3 class="text-white font-semibold mb-3">Upload Compliance Document</h3>
-                            <div class="grid grid-cols-2 gap-3 mb-3">
-                                <select id="compDocClientId"
-                                    class="bg-slate-800 text-white text-sm p-2 rounded border border-slate-700"></select>
-                                <select id="compDocType"
-                                    class="bg-slate-800 text-white text-sm p-2 rounded border border-slate-700">
-                                    <option value="CAC Registration Certificate">CAC Registration Certificate</option>
-                                    <option value="Tax Identification Document">Tax Identification Document</option>
-                                    <option value="NDPA Privacy Policy">NDPA Privacy Policy</option>
-                                    <option value="Terms of Service">Terms of Service</option>
-                                    <option value="Data Processing Agreement">Data Processing Agreement</option>
-                                    <option value="Insurance Certificate">Insurance Certificate</option>
-                                    <option value="Regulatory Compliance Agreement">Regulatory Compliance Agreement
-                                    </option>
-                                    <option value="Custom Document">Custom Document</option>
-                                </select>
-                            </div>
-                            <div class="grid grid-cols-2 gap-3 mb-3">
-                                <input type="file" id="compDocFile"
-                                    class="bg-slate-800 text-white text-sm p-2 rounded border border-slate-700" />
-                                <input type="date" id="compDocExpiry" placeholder="Expiry date (optional)"
-                                    class="bg-slate-800 text-white text-sm p-2 rounded border border-slate-700" />
-                            </div>
-                            <textarea id="compDocNotes" placeholder="Notes (optional)"
-                                class="w-full bg-slate-800 text-white text-sm p-2 rounded border border-slate-700 mb-3"
-                                rows="2"></textarea>
-                            <button onclick="uploadComplianceDocument()"
-                                class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium py-2 px-4 rounded">Upload
-                                Document</button>
-                        </div>
 
                         <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
                             <h3 class="text-white font-semibold mb-3">Documents on File</h3>
@@ -3848,31 +3817,38 @@
                 <button onclick="closeUploadComplianceDocModal()"
                     class="text-slate-400 hover:text-white text-sm font-bold">&times;</button>
             </div>
+            <!-- MODAL: Upload Compliance Document (single source of truth) -->
             <form id="uploadComplianceDocForm" onsubmit="submitUploadComplianceDoc(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Client</label>
                     <select id="uploadDocClientId" required onchange="refreshUploadDocTypeOptions()"
-                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500"></select>
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></select>
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Document Type</label>
                     <select id="uploadDocType" required
-                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500"></select>
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Document Name / Reference (RC number, license
+                        number, registered entity name — used to check public records)</label>
+                    <input type="text" id="uploadDocName" required placeholder="e.g. RC1234567 or NAFDAC-A4-1234"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">File</label>
                     <input type="file" id="uploadDocFile" required
-                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Expiry Date (optional — AI will attempt extraction
                         if blank)</label>
                     <input type="date" id="uploadDocExpiry"
-                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
                 </div>
                 <button type="submit"
-                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded transition-colors shadow">
-                    Upload Document
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded">
+                    Upload &amp; Verify Document
                 </button>
             </form>
         </div>
@@ -4208,6 +4184,27 @@
                     Get Authorization Link
                 </button>
             </form>
+        </div>
+    </div>
+    <div id="modalSendViaIntegration"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white">Send Email via Client's Integration</h3>
+                <button onclick="document.getElementById('modalSendViaIntegration').classList.add('hidden')"
+                    class="text-slate-400 hover:text-white">&times;</button>
+            </div>
+            <p class="text-[11px] text-slate-500">Sends through the client's own connected email integration. Logged as
+                1 outgoing email and 20 minutes against their usage.</p>
+            <input type="hidden" id="sviClientId" />
+            <input type="email" id="sviTo" placeholder="Recipient email"
+                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+            <input type="text" id="sviSubject" placeholder="Subject"
+                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+            <textarea id="sviBody" rows="5" placeholder="Message (HTML allowed)"
+                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></textarea>
+            <button onclick="submitSendViaIntegration()"
+                class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 rounded">Send</button>
         </div>
     </div>
     <script>
@@ -4818,32 +4815,6 @@
             });
         }
 
-        function updateKPIs() {
-            executeSecureBridgeCall('career', 'career-earnings', {}).then(data => {
-                if (!data.success || !data.data) return;
-                let filtered = filterTableByState(data.data, UNI_FILTER_STATE);
-
-                const gross = filtered
-                    .filter(r => (r.PayoutStatus || r['Payout Status'] || '') === 'Paid')
-                    .reduce((s, r) => s + parseFloat(r.AmountToCharge || r.EarningsNaira || 0), 0);
-                const el = document.getElementById('kpi-gross');
-                if (el) el.textContent = fmtNaira(gross);
-
-                const active = filtered
-                    .filter(r => (r.PayoutStatus || r['Payout Status'] || '') === 'Approved')
-                    .reduce((s, r) => s + parseFloat(r.AmountToCharge || r.EarningsNaira || 0), 0);
-                const payoutEl = document.getElementById('kpi-payout');
-                if (payoutEl) payoutEl.textContent = fmtNaira(active);
-            });
-
-            executeSecureBridgeCall('client', 'client-onboarded', {}).then(data => {
-                if (!data.success || !data.data) return;
-                const filtered = filterTableByState(data.data, UNI_FILTER_STATE);
-                const count = filtered.filter(r => r.Status === 'Completed').length;
-                const el = document.getElementById('kpi-projects');
-                if (el) el.textContent = count + ' Units';
-            });
-        }
 
         const paginationState = {
             'career-users': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
@@ -6373,25 +6344,6 @@
         </tr>`;
             }).join('');
         }
-        function openLeadEmailModal(clientEmail, clientName) {
-            const modal = document.getElementById('modalSendClientEmail');
-            if (!modal) {
-                console.error("Email modal not found");
-                return;
-            }
-
-            // Prefill the form
-            document.getElementById('emailClientToAddress').value = clientEmail || '';
-            document.getElementById('emailClientToDisplay').value = clientEmail || '';
-
-            // Optional: Set default subject
-            const subjectEl = document.getElementById('emailClientSubject');
-            if (subjectEl) {
-                subjectEl.value = `Follow-up: ${clientName || 'Prospect'}`;
-            }
-
-            modal.classList.remove('hidden');
-        }
 
         function openLeadEmailModal(clientEmail, clientName) {
             const modal = document.getElementById('modalSendClientEmail');
@@ -7005,6 +6957,8 @@
             }
         }
 
+
+
         async function runV5Calendar() {
             const topic = document.getElementById('v5CalendarTopic')?.value?.trim();
             if (!topic) { showToast('Enter a topic.', 'error'); return; }
@@ -7120,6 +7074,24 @@
             <td class="p-3 text-[10px]"><span class="text-emerald-400 font-mono">${escapeHtml((r.Hashtags || '').substring(0, 40))}</span></td>
             <td class="p-3 text-center font-bold text-amber-400">${parseFloat(r.RelevanceScore || 0).toFixed(0)}</td>
         </tr>`).join('');
+        }
+
+        function openSendViaIntegrationModal(clientId) {
+            document.getElementById('sviClientId').value = clientId;
+            document.getElementById('sviTo').value = '';
+            document.getElementById('sviSubject').value = '';
+            document.getElementById('sviBody').value = '';
+            document.getElementById('modalSendViaIntegration').classList.remove('hidden');
+        }
+        async function submitSendViaIntegration() {
+            const clientId = document.getElementById('sviClientId').value;
+            const to = document.getElementById('sviTo').value.trim();
+            const subject = document.getElementById('sviSubject').value.trim();
+            const body = document.getElementById('sviBody').value.trim();
+            if (!to || !subject || !body) { showToast('To, subject, and body required.', 'error'); return; }
+            const res = await executeSecureBridgeCall('agent', 'agent-send-email-via-integration', { clientId, to, subject, body });
+            showToast(res.success ? res.message : (res.message || 'Send failed.'), res.success ? 'success' : 'error');
+            if (res.success) document.getElementById('modalSendViaIntegration').classList.add('hidden');
         }
 
         async function loadV5ContentHistory() {
@@ -7641,169 +7613,6 @@
             modal.classList.remove('hidden');
         }
 
-        // REPLACE submitAgentClientRegister()
-        async function submitAgentClientRegister(event) {
-            event.preventDefault();
-
-            const companyName = document.getElementById('agentCompanyName').value.trim();
-            const contactEmail = document.getElementById('agentContactEmail').value.trim();
-            const phone = document.getElementById('agentContactPhone').value.trim();
-            const country = document.getElementById('agentCountry').value;
-            const industry = document.getElementById('agentIndustry').value;
-            const tier = document.getElementById('agentTier').value;
-
-            if (!industry) { showToast('Industry is required.', 'error'); return; }
-
-            let payload = { companyName, contactEmail, phone, country, industry, tier };
-
-            if (tier === 'custom') {
-                payload.customLabel = companyName + ' Custom';
-                payload.customHours = parseInt(document.getElementById('agentCustomHours').value) || 0;
-                payload.customEmails = parseInt(document.getElementById('agentCustomEmails').value) || 0;
-                payload.customProposals = parseInt(document.getElementById('agentCustomProposals').value) || 0;
-                payload.customPriceNgn = parseFloat(document.getElementById('agentCustomPrice').value) || 0;
-            }
-
-            if (tier === 'enterprise_ops' || tier === 'digital_scale') {
-                const num = id => parseInt(document.getElementById(id).value) || undefined;
-                payload.customHours = num('entHours');
-                payload.customEmails = num('entEmails');
-                payload.customProposals = num('entProposals');
-                payload.customMailboxes = num('entMailboxes');
-                payload.customCrmSyncs = num('entCrmSyncs');
-                payload.customComplianceChecks = num('entComplianceChecks');
-                payload.customDocsPerMonth = num('entDocsPerMonth');
-                payload.customPriceNgn = parseFloat(document.getElementById('entPriceNgn').value) || undefined;
-            }
-
-            const btn = event.target.querySelector('button[type="submit"]');
-            if (btn) { btn.disabled = true; btn.textContent = 'Registering…'; }
-
-            const res = await executeSecureBridgeCall('agent', 'agent-register-client', payload);
-
-            if (btn) { btn.disabled = false; btn.textContent = 'Register Client & Activate Subscription'; }
-
-            if (res.success) {
-                showToast(`Client ${companyName} registered successfully!`, 'success');
-                closeAgentClientRegisterModal();
-                loadAgentClients();
-            } else {
-                showToast(res.message || 'Registration failed', 'error');
-            }
-        }
-
-        async function populateComplianceClientSelect() {
-            const sel = document.getElementById('compDocClientId');
-            const res = await executeSecureBridgeCall('agent', 'agent-get-all-clients', {});
-            if (res.success && res.data) {
-                sel.innerHTML = res.data.map(c => `<option value="${escapeHtml(c.ClientID)}">${escapeHtml(c.CompanyName)} (${escapeHtml(c.ClientID)})</option>`).join('');
-                loadComplianceDocsList();
-            }
-        }
-        document.getElementById('compDocClientId')?.addEventListener('change', loadComplianceDocsList);
-
-        async function uploadComplianceDocument() {
-            const clientId = document.getElementById('compDocClientId').value;
-            const docType = document.getElementById('compDocType').value;
-            const expiryDate = document.getElementById('compDocExpiry').value;
-            const notes = document.getElementById('compDocNotes').value;
-            const fileInput = document.getElementById('compDocFile');
-            const file = fileInput.files[0];
-
-            if (!clientId) { showToast('Select a client first.', 'error'); return; }
-            if (!file) { showToast('Choose a file to upload.', 'error'); return; }
-
-            const base64Data = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result.split(',')[1]);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-
-            const res = await executeSecureBridgeCall('agent', 'agent-upload-compliance-doc', {
-                clientId, docType, fileName: file.name, mimeType: file.type, base64Data, expiryDate, notes
-            });
-
-            if (res.success) {
-                showToast(res.message || 'Document uploaded.', 'success');
-                fileInput.value = '';
-                document.getElementById('compDocNotes').value = '';
-                loadComplianceDocsList();
-            } else {
-                showToast(res.message || 'Upload failed.', 'error');
-            }
-        }
-
-        async function loadComplianceDocsList() {
-            const clientId = document.getElementById('compDocClientId').value;
-            const tbody = document.getElementById('compDocsTableBody');
-            if (!clientId) return;
-            showTableSkeleton('compDocsTableBody', 4);
-
-            const res = await executeSecureBridgeCall('agent', 'agent-get-compliance-docs', { clientId });
-            if (!res.success || !res.data?.documents?.length) {
-                tbody.innerHTML = emptyRow('No documents on file for this client.', 6);
-                return;
-            }
-
-            tbody.innerHTML = res.data.documents.map(d => `
-    <tr class="border-b border-slate-800">
-      <td class="p-2 text-slate-300">${escapeHtml(d.docType)}</td>
-      <td class="p-2"><a href="${escapeHtml(d.fileUrl)}" target="_blank" class="text-blue-400 hover:underline">${escapeHtml(d.fileName)}</a></td>
-      <td class="p-2"><span style="color:${escapeHtml(d.badgeColor || '#94a3b8')}">${escapeHtml(d.badge || d.status)}</span></td>
-      <td class="p-2 text-slate-500">${d.expiryDate ? fmtDate(d.expiryDate) : '—'}</td>
-      <td class="p-2 text-slate-500">${fmtDate(d.uploadedDate)}</td>
-      <td class="p-2">
-        ${d.status !== 'Verified' ? `<button onclick="verifyComplianceDoc('${escapeHtml(clientId)}','${escapeHtml(d.fileName)}')" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Verify</button>` : '<span class="text-emerald-400 text-xs">✓ Verified</span>'}
-      </td>
-    </tr>`).join('');
-        }
-
-        async function verifyComplianceDoc(clientId, fileName) {
-            const res = await executeSecureBridgeCall('agent', 'agent-verify-compliance-doc', { clientId, fileName, verifiedBy: 'Admin' });
-            showToast(res.success ? 'Document verified.' : (res.message || 'Verify failed.'), res.success ? 'success' : 'error');
-            if (res.success) loadComplianceDocsList();
-        }
-
-        populateComplianceClientSelect();
-
-        // REPLACE openAgentEditClientInfoModal() + submitAgentEditClientInfo()
-        function openAgentEditClientInfoModal(clientId, c) {
-            document.getElementById('editClientInfoId').value = clientId;
-            document.getElementById('editClientCompanyName').value = c.CompanyName || '';
-            document.getElementById('editClientContactName').value = c.ContactName || '';
-            document.getElementById('editClientContactEmail').value = c.ContactEmail || '';
-            document.getElementById('editClientPhone').value = c.Phone || '';
-            document.getElementById('editClientCountry').value = c.Country || 'NG';
-            document.getElementById('editClientNotes').value = c.Notes || '';
-
-            const indSel = document.getElementById('editClientIndustry');
-            indSel.innerHTML = INDUSTRY_OPTIONS.map(opt =>
-                `<option value="${opt.value}" ${opt.value === c.Industry ? 'selected' : ''}>${opt.label}</option>`).join('');
-
-            document.getElementById('modalAgentEditClientInfo').classList.remove('hidden');
-        }
-
-        async function submitAgentEditClientInfo(event) {
-            event.preventDefault();
-            const payload = {
-                clientId: document.getElementById('editClientInfoId').value,
-                companyName: document.getElementById('editClientCompanyName').value.trim(),
-                contactName: document.getElementById('editClientContactName').value.trim(),
-                contactEmail: document.getElementById('editClientContactEmail').value.trim(),
-                phone: document.getElementById('editClientPhone').value.trim(),
-                country: document.getElementById('editClientCountry').value,
-                industry: document.getElementById('editClientIndustry').value,
-                notes: document.getElementById('editClientNotes').value.trim()
-            };
-            const btn = event.target.querySelector('button[type=submit]');
-            if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
-            const res = await executeSecureBridgeCall('agent', 'agent-update-client-info', payload);
-            if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
-            showToast(res.success ? 'Client info updated.' : (res.message || 'Update failed.'), res.success ? 'success' : 'error');
-            if (res.success) { closeAgentEditClientInfoModal(); loadAgentClients(); }
-        }
-
         // NEW — Enterprise Limits modal handlers
         function openAgentEnterpriseLimitsModal(clientId, companyName) {
             document.getElementById('entLimitsClientId').value = clientId;
@@ -7849,19 +7658,33 @@
 
             const companyName = document.getElementById('agentCompanyName').value.trim();
             const contactEmail = document.getElementById('agentContactEmail').value.trim();
-            const industry = document.getElementById('agentIndustry').value; // NOW DROPDOWN
+            const phone = document.getElementById('agentContactPhone').value.trim();
+            const country = document.getElementById('agentCountry').value;
+            const industry = document.getElementById('agentIndustry').value;
             const tier = document.getElementById('agentTier').value;
 
             if (!industry) { showToast('Industry is required.', 'error'); return; }
 
-            let payload = { companyName, contactEmail, industry, tier };
+            let payload = { companyName, contactEmail, phone, country, industry, tier };
 
             if (tier === 'custom') {
-                payload.customTierLabel = companyName + ' Custom';
+                payload.customLabel = companyName + ' Custom';
                 payload.customHours = parseInt(document.getElementById('agentCustomHours').value) || 0;
                 payload.customEmails = parseInt(document.getElementById('agentCustomEmails').value) || 0;
                 payload.customProposals = parseInt(document.getElementById('agentCustomProposals').value) || 0;
-                payload.customPriceNGN = parseFloat(document.getElementById('agentCustomPrice').value) || 0;
+                payload.customPriceNgn = parseFloat(document.getElementById('agentCustomPrice').value) || 0;
+            }
+
+            if (tier === 'enterprise_ops' || tier === 'digital_scale') {
+                const num = id => parseInt(document.getElementById(id).value) || undefined;
+                payload.customHours = num('entHours');
+                payload.customEmails = num('entEmails');
+                payload.customProposals = num('entProposals');
+                payload.customMailboxes = num('entMailboxes');
+                payload.customCrmSyncs = num('entCrmSyncs');
+                payload.customComplianceChecks = num('entComplianceChecks');
+                payload.customDocsPerMonth = num('entDocsPerMonth');
+                payload.customPriceNgn = parseFloat(document.getElementById('entPriceNgn').value) || undefined;
             }
 
             const btn = event.target.querySelector('button[type="submit"]');
@@ -7920,31 +7743,6 @@
                 );
                 if (res.success) loadAgentSubscriptions();
             });
-        }
-
-        async function submitAgentUpdateTier(event) {
-            event.preventDefault();
-
-            const clientId = document.getElementById('updateTierClientId').value;
-            const newTier = document.getElementById('updateTierValue').value;
-            const effectiveDate = document.getElementById('updateTierEffectiveDate').value;
-
-            const btn = event.target.querySelector('button[type="submit"]');
-            if (btn) { btn.disabled = true; btn.textContent = 'Updating…'; }
-
-            const res = await executeSecureBridgeCall('agent', 'agent-update-subscription', {
-                clientId, tier: newTier, effectiveDate
-            });
-
-            if (btn) { btn.disabled = false; btn.textContent = 'Update Subscription Tier'; }
-
-            if (res.success) {
-                showToast('Subscription tier updated successfully', 'success');
-                closeAgentUpdateTierModal();
-                loadAgentSubscriptions();
-            } else {
-                showToast(res.message || 'Update failed', 'error');
-            }
         }
 
         function openAgentEnforceQuotaModal(clientId, companyName) {
@@ -8117,18 +7915,52 @@
             await populateAgentClientSelector('docsClientSelector');
         }
 
+        async function submitUploadComplianceDoc(event) {
+            event.preventDefault();
+            const clientId = document.getElementById('uploadDocClientId').value;
+            const docType = document.getElementById('uploadDocType').value;
+            const documentName = document.getElementById('uploadDocName').value.trim();
+            const expiryDate = document.getElementById('uploadDocExpiry').value;
+            const fileInput = document.getElementById('uploadDocFile');
+            const file = fileInput.files[0];
+            if (!clientId || !docType || !documentName || !file) {
+                showToast('Client, doc type, document name, and file are all required.', 'error'); return;
+            }
+            const btn = event.target.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Uploading & Verifying…'; }
+            try {
+                const base64Data = await fileToBase64(file);
+                const res = await executeSecureBridgeCall('agent', 'agent-upload-compliance-doc', {
+                    clientId, docType, documentName, fileName: file.name, mimeType: file.type,
+                    base64Data, expiryDate: expiryDate || undefined,
+                    uploadedBy: CURRENT_ADMIN_IDENTITY || 'admin'
+                });
+                if (btn) { btn.disabled = false; btn.textContent = 'Upload & Verify Document'; }
+                if (res.success) {
+                    showToast('Uploaded — public-record status: ' + (res.publicVerification?.status || 'checked'), 'success');
+                    closeUploadComplianceDocModal();
+                    document.getElementById('docsClientSelector').value = clientId;   // keep selector in sync
+                    loadAgentComplianceDocs();                                        // one table, refreshed correctly
+                } else {
+                    showToast(res.message || 'Upload failed.', 'error');
+                }
+            } catch (e) {
+                if (btn) { btn.disabled = false; btn.textContent = 'Upload & Verify Document'; }
+                showToast('File read error: ' + e.toString(), 'error');
+            }
+        }
+
+        // Extend the single results table with the new columns
         async function loadAgentComplianceDocs() {
             const clientId = document.getElementById('docsClientSelector')?.value;
             const tbody = document.getElementById('agentDocsTableBody');
             if (!tbody) return;
-            if (!clientId) { tbody.innerHTML = emptyRow('Select a client to view documents.', 7); return; }
-            showTableSkeleton('agentDocsTableBody', 7);
-
+            if (!clientId) { tbody.innerHTML = emptyRow('Select a client to view documents.', 8); return; }
+            showTableSkeleton('agentDocsTableBody', 8);
             const [docsRes, healthRes] = await Promise.all([
                 executeSecureBridgeCall('agent', 'agent-get-compliance-docs', { clientId }),
                 executeSecureBridgeCall('agent', 'agent-compliance-health', { clientId })
             ]);
-
             if (healthRes.success) {
                 document.getElementById('agentDocsHealthPanel').classList.remove('hidden');
                 document.getElementById('docsHealthScore').textContent = healthRes.healthScore ?? '—';
@@ -8136,29 +7968,39 @@
                 document.getElementById('docsHighSeverity').textContent = healthRes.highSeverityCount ?? '—';
                 document.getElementById('docsMedSeverity').textContent = healthRes.mediumSeverityCount ?? '—';
             }
-
-            if (!docsRes.success || !docsRes.documents?.length) {
-                tbody.innerHTML = emptyRow('No documents uploaded for this client.', 7);
+            if (!docsRes.success || !docsRes.data?.documents?.length) {
+                tbody.innerHTML = emptyRow('No documents uploaded for this client.', 8);
                 return;
             }
-
             const badgeColorMap = { Valid: 'emerald', 'Expiring Soon': 'amber', Expired: 'red', Unknown: 'slate' };
-            tbody.innerHTML = docsRes.documents.map(d => `
+            const verifColorMap = { Compliant: 'emerald', 'Not Found': 'red', 'Possibly Non-Compliant': 'amber', 'Unable to Verify': 'slate', 'Checking…': 'blue', 'Not Checked': 'slate' };
+            tbody.innerHTML = docsRes.data.documents.map(d => `
         <tr>
-            <td class="p-3 text-slate-300">${escapeHtml(d.docType)}</td>
+            <td class="p-3 text-slate-300">${escapeHtml(d.docType)}<div class="text-[10px] text-slate-500">${escapeHtml(d.documentName || '')}</div></td>
             <td class="p-3"><a href="${escapeHtml(d.fileUrl)}" target="_blank" class="text-blue-400 hover:underline">${escapeHtml(d.fileName)}</a></td>
             <td class="p-3 text-slate-500">${fmtDate(d.uploadedDate)}</td>
             <td class="p-3 text-slate-500">${d.verifiedDate ? fmtDate(d.verifiedDate) : '—'}</td>
             <td class="p-3 text-slate-400">${d.expiryDate ? fmtDate(d.expiryDate) : '—'}</td>
             <td class="p-3 text-center"><span class="text-${badgeColorMap[d.badge] || 'slate'}-400 font-medium">${escapeHtml(d.badge)}</span></td>
+            <td class="p-3 text-center" title="${escapeHtml(d.publicVerificationNotes || '')}">
+                <span class="text-${verifColorMap[d.publicVerificationStatus] || 'slate'}-400 font-medium">${escapeHtml(d.publicVerificationStatus)}</span>
+            </td>
             <td class="p-3 text-center flex gap-1 justify-center">
-                ${d.status !== 'Verified' ? `<button onclick="verifyAgentComplianceDoc('${escapeHtml(d.fileName)}')"
-                    class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Verify</button>` : ''}
-                <button onclick="deleteAgentComplianceDoc('${escapeHtml(d.fileName)}')"
-                    class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Delete</button>
+                ${d.status !== 'Verified' ? `<button onclick="verifyAgentComplianceDoc('${escapeHtml(d.fileName)}')" class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Verify</button>` : ''}
+                <button onclick="recheckAgentDocPublicVerification('${escapeHtml(d.fileName)}','${escapeHtml(d.docType)}','${escapeHtml(d.documentName)}')" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Recheck</button>
+                <button onclick="deleteAgentComplianceDoc('${escapeHtml(d.fileName)}')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Delete</button>
             </td>
         </tr>
     `).join('');
+        }
+
+        function recheckAgentDocPublicVerification(fileName, docType, documentName) {
+            const clientId = document.getElementById('docsClientSelector')?.value;
+            if (!clientId) return;
+            executeSecureBridgeCall('agent', 'agent-recheck-doc-verification', { clientId, fileName, docType, documentName }).then(res => {
+                showToast(res.success ? ('Rechecked: ' + res.verification.status) : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+                if (res.success) loadAgentComplianceDocs();
+            });
         }
 
         function verifyAgentComplianceDoc(fileName) {
@@ -8203,44 +8045,6 @@
                 reader.onerror = reject;
                 reader.readAsDataURL(file);
             });
-        }
-
-        async function submitUploadComplianceDoc(event) {
-            event.preventDefault();
-            const clientId = document.getElementById('uploadDocClientId').value;
-            const docType = document.getElementById('uploadDocType').value;
-            const expiryDate = document.getElementById('uploadDocExpiry').value;
-            const fileInput = document.getElementById('uploadDocFile');
-            const file = fileInput.files[0];
-
-            if (!clientId || !docType || !file) { showToast('Client, doc type, and file are required.', 'error'); return; }
-
-            const btn = event.target.querySelector('button[type="submit"]');
-            if (btn) { btn.disabled = true; btn.textContent = 'Uploading…'; }
-
-            try {
-                const base64Data = await fileToBase64(file);
-                const res = await executeSecureBridgeCall('agent', 'agent-upload-compliance-doc', {
-                    clientId, docType, fileName: file.name, mimeType: file.type,
-                    base64Data, expiryDate: expiryDate || undefined,
-                    uploadedBy: CURRENT_ADMIN_IDENTITY || 'admin'
-                });
-
-                if (btn) { btn.disabled = false; btn.textContent = 'Upload Document'; }
-
-                if (res.success) {
-                    showToast('Document uploaded successfully.', 'success');
-                    closeUploadComplianceDocModal();
-                    const selector = document.getElementById('docsClientSelector');
-                    if (selector) selector.value = clientId;
-                    loadAgentComplianceDocs();
-                } else {
-                    showToast(res.message || 'Upload failed.', 'error');
-                }
-            } catch (e) {
-                if (btn) { btn.disabled = false; btn.textContent = 'Upload Document'; }
-                showToast('File read error: ' + e.toString(), 'error');
-            }
         }
 
         // ================================================================
@@ -9192,18 +8996,6 @@ ${a.Status === 'Pending Review' ? `
             const found = (AI_ACTION_CATALOG[cat] || []).find(([a]) => a === action);
             document.getElementById('aiConsoleParams').value = found ? found[1] : '{}';
         }
-        async function runAIConsoleAction() {
-            const clientId = document.getElementById('aiConsoleClientSelector').value;
-            const action = document.getElementById('aiConsoleAction').value;
-            if (!clientId || !action) { showToast('Select a client and an action.', 'error'); return; }
-            let params = {};
-            try { params = JSON.parse(document.getElementById('aiConsoleParams').value || '{}'); }
-            catch (e) { showToast('Params must be valid JSON.', 'error'); return; }
-            showToast('Running ' + action + '…', 'info');
-            const res = await executeSecureBridgeCall('agent', action, { clientId, ...params });
-            document.getElementById('aiConsoleResult').textContent = JSON.stringify(res, null, 2);
-            showToast(res.success ? 'Done.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
-        }
 
         // ============ mailboxes ============
         async function loadAgentMailboxesUI() {
@@ -9400,6 +9192,8 @@ ${a.Status === 'Pending Review' ? `
     <td class="p-3 text-center">${badge(i.status || 'Connected')}</td>
     <td class="p-3 text-center flex gap-1 justify-center">
   <button onclick="testIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.type)}')" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Test</button>
+  // In loadIntegrationsUI(), add this button inside the action cell for i.type === 'email' rows:
+${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHtml(clientId)}')" class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Send Email</button>` : ''}
   <button onclick="disconnectIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.type)}')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Disconnect</button>
 </td></tr>`).join('');
         }
@@ -9612,11 +9406,18 @@ ${a.Status === 'Pending Review' ? `
             });
         }
 
+        function closeAgentEditClientInfoModal() {
+            document.getElementById('modalAgentEditClientInfo').classList.add('hidden');
+            document.getElementById('agentEditClientInfoForm')?.reset();
+        }
+
         function openAgentEditClientInfoModal(clientId, c) {
             document.getElementById('editClientInfoId').value = clientId;
             document.getElementById('editClientCompanyName').value = c.CompanyName || '';
             document.getElementById('editClientContactName').value = c.ContactName || '';
             document.getElementById('editClientContactEmail').value = c.ContactEmail || '';
+            document.getElementById('editClientPhone').value = c.Phone || '';
+            document.getElementById('editClientCountry').value = c.Country || 'NG';
             document.getElementById('editClientNotes').value = c.Notes || '';
 
             const indSel = document.getElementById('editClientIndustry');
@@ -9625,10 +9426,7 @@ ${a.Status === 'Pending Review' ? `
 
             document.getElementById('modalAgentEditClientInfo').classList.remove('hidden');
         }
-        function closeAgentEditClientInfoModal() {
-            document.getElementById('modalAgentEditClientInfo').classList.add('hidden');
-            document.getElementById('agentEditClientInfoForm')?.reset();
-        }
+
         async function submitAgentEditClientInfo(event) {
             event.preventDefault();
             const payload = {
@@ -9636,6 +9434,8 @@ ${a.Status === 'Pending Review' ? `
                 companyName: document.getElementById('editClientCompanyName').value.trim(),
                 contactName: document.getElementById('editClientContactName').value.trim(),
                 contactEmail: document.getElementById('editClientContactEmail').value.trim(),
+                phone: document.getElementById('editClientPhone').value.trim(),
+                country: document.getElementById('editClientCountry').value,
                 industry: document.getElementById('editClientIndustry').value,
                 notes: document.getElementById('editClientNotes').value.trim()
             };
@@ -9646,6 +9446,7 @@ ${a.Status === 'Pending Review' ? `
             showToast(res.success ? 'Client info updated.' : (res.message || 'Update failed.'), res.success ? 'success' : 'error');
             if (res.success) { closeAgentEditClientInfoModal(); loadAgentClients(); }
         }
+
         async function runAIConsoleAction() {
             const clientId = document.getElementById('aiConsoleClientSelector').value;
             const action = document.getElementById('aiConsoleAction').value;
