@@ -255,6 +255,7 @@
                     <a href="#" data-target-view="career-complaints" class="career-subview-link">
                         Complaint Tickets
                     </a>
+                    <a href="#" class="career-subview-link" data-target-view="career-admin-tools">Admin Tools</a>
                     <div class="mt-4 border-t border-slate-800 pt-3 px-1">
                         <span
                             class="text-[10px] font-mono tracking-wider text-slate-500 uppercase px-2 mb-2 block">Universal
@@ -602,6 +603,86 @@
                             <div class="text-xs text-slate-400">
                                 Showing <span id="recordsShowing-career-complaints">0</span> of
                                 <span id="totalRecords-career-complaints">0</span> records
+                            </div>
+                        </div>
+                    </div>
+                    <div id="view-career-admin-tools"
+                        class="career-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <h3 class="text-lg font-bold text-white">Career Hub Admin Tools</h3>
+
+                        <div class="grid grid-cols-2 gap-6 flex-1 overflow-hidden">
+                            <!-- Signup Codes -->
+                            <div class="flex flex-col overflow-hidden space-y-3">
+                                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0">
+                                    <h4 class="text-xs font-bold text-emerald-400 mb-2">Generate Signup Codes</h4>
+                                    <div class="flex gap-2">
+                                        <input type="number" id="sigCodeCount" value="10" min="1" max="200"
+                                            class="w-24 bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white" />
+                                        <input type="text" id="sigCodeNote" placeholder="Note (e.g. Lagos batch)"
+                                            class="flex-1 bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white" />
+                                        <button onclick="generateSignupCodesUI()"
+                                            class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium px-3 rounded">Generate</button>
+                                    </div>
+                                </div>
+                                <div
+                                    class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
+                                    <table class="w-full text-left border-collapse text-xs">
+                                        <thead
+                                            class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                            <tr>
+                                                <th class="p-3">Code</th>
+                                                <th class="p-3">Status</th>
+                                                <th class="p-3">Used By</th>
+                                                <th class="p-3">Note</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="signupCodesTableBody"
+                                            class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Teams -->
+                            <div class="flex flex-col overflow-hidden space-y-3">
+                                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 space-y-2">
+                                    <h4 class="text-xs font-bold text-emerald-400">Create Team</h4>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <input type="text" id="teamName" placeholder="Team name"
+                                            class="bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white" />
+                                        <input type="text" id="teamState" placeholder="State"
+                                            class="bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white" />
+                                        <input type="email" id="teamLeadEmail" placeholder="Lead email"
+                                            class="bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white" />
+                                        <input type="email" id="teamBackupLeadEmail"
+                                            placeholder="Backup lead (optional)"
+                                            class="bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white" />
+                                    </div>
+                                    <button onclick="createTeamUI()"
+                                        class="w-full bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 rounded">Create
+                                        Team</button>
+                                </div>
+                                <div class="bg-slate-950 border border-amber-800/40 rounded-xl p-3 shrink-0">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-[10px] font-mono uppercase text-amber-400">Stale Leads (7+
+                                            days inactive)</span>
+                                        <button onclick="loadStaleLeadTeams()"
+                                            class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-white">Refresh</button>
+                                    </div>
+                                    <div id="staleLeadTeamsList" class="space-y-1 text-xs text-slate-300"></div>
+                                </div>
+                                <div
+                                    class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar p-3">
+                                    <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">Reassign
+                                        Team Lead</span>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="reassignTeamId" placeholder="Team ID"
+                                            class="w-28 bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white" />
+                                        <input type="email" id="reassignNewLead" placeholder="New lead email"
+                                            class="flex-1 bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white" />
+                                        <button onclick="reassignTeamLeadUI()"
+                                            class="bg-amber-700 hover:bg-amber-600 text-xs text-white font-medium px-3 rounded">Reassign</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -5165,6 +5246,12 @@
                 <option value="edit">✏️ Edit</option>
                 <option value="email">✉️ Email</option>
                 <option value="message">💬 Message</option>
+                
+                // In the <select> options list for each row:
+<option value="block">🚫 Block</option>
+<option value="unblock">✅ Unblock</option>
+<option value="reset-nin">🔄 Reset NIN</option>
+<option value="reset-passport">🔄 Reset Passport</option>
             </select>
         </td>
     </tr>
@@ -5230,6 +5317,11 @@
                 <option value="edit">✏️ Edit</option>
                 <option value="email">✉️ Email</option>
                 <option value="message">💬 Message</option>
+                // In the <select> options list for each row:
+<option value="block">🚫 Block</option>
+<option value="unblock">✅ Unblock</option>
+<option value="reset-nin">🔄 Reset NIN</option>
+<option value="reset-passport">🔄 Reset Passport</option>
             </select>
         </td>
     </tr>
@@ -8806,6 +8898,40 @@
             if (res.success) loadAgentAddonsUI();
         }
 
+        function handleUserAction(userId, action, userData) {
+            if (!action) return;
+            const email = userData.Email || userData.email;
+            if (action === 'edit') { openEditModal(userId, userData, 'career-users'); }
+            else if (action === 'email') { openSendClientEmailModal(email, userData.Name || userData.name); }
+            else if (action === 'message') { /* existing message logic unchanged */ }
+            else if (action === 'block') {
+                const duration = prompt('Block duration — enter 24h, 48h, or 1w:', '24h');
+                if (!duration) return;
+                executeSecureBridgeCall('career', 'blockUser', { email, duration }).then(res => {
+                    showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+                    if (res.success) initializeModule_career_users();
+                });
+            }
+            else if (action === 'unblock') {
+                executeSecureBridgeCall('career', 'unblockUser', { email }).then(res => {
+                    showToast(res.success ? 'User unblocked.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+                    if (res.success) initializeModule_career_users();
+                });
+            }
+            else if (action === 'reset-nin') {
+                if (!confirm(`Clear NIN for ${email}? They'll be able to resubmit.`)) return;
+                executeSecureBridgeCall('career', 'adminResetNIN', { email }).then(res => {
+                    showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+                });
+            }
+            else if (action === 'reset-passport') {
+                if (!confirm(`Clear passport for ${email}? They'll be able to re-upload.`)) return;
+                executeSecureBridgeCall('career', 'adminResetPassport', { email }).then(res => {
+                    showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+                });
+            }
+        }
+
         function initializeModule() {
             if (!document.getElementById("vh-pulse-style")) {
                 const style = document.createElement("style");
@@ -8840,6 +8966,55 @@
                 }
             }, 800);
         }
+
+        async function generateSignupCodesUI() {
+            const count = document.getElementById('sigCodeCount').value;
+            const note = document.getElementById('sigCodeNote').value.trim();
+            const res = await executeSecureBridgeCall('career', 'generateSignupCodes', { count, note, createdBy: CURRENT_ADMIN_IDENTITY });
+            if (res.success) {
+                showToast(`${res.codes.length} code(s) generated.`, 'success');
+                loadSignupCodes();
+            } else {
+                showToast(res.message || 'Failed.', 'error');
+            }
+        }
+        async function loadSignupCodes() {
+            showTableSkeleton('signupCodesTableBody', 4);
+            const res = await executeSecureBridgeCall('career', 'listSignupCodes', {});
+            const tbody = document.getElementById('signupCodesTableBody');
+            if (!res.success || !res.codes?.length) { tbody.innerHTML = emptyRow('No signup codes yet.', 4); return; }
+            tbody.innerHTML = res.codes.map(c => `
+        <tr><td class="p-3 font-mono text-emerald-400">${escapeHtml(c.code)}</td>
+        <td class="p-3 text-center">${badge(c.status)}</td>
+        <td class="p-3 text-slate-400">${escapeHtml(c.usedBy || '—')}</td>
+        <td class="p-3 text-slate-500">${escapeHtml(c.note || '—')}</td></tr>
+    `).join('');
+        }
+        async function createTeamUI() {
+            const teamName = document.getElementById('teamName').value.trim();
+            const state = document.getElementById('teamState').value.trim();
+            const leadEmail = document.getElementById('teamLeadEmail').value.trim();
+            const backupLeadEmail = document.getElementById('teamBackupLeadEmail').value.trim();
+            if (!teamName || !leadEmail) { showToast('Team name and lead email required.', 'error'); return; }
+            const res = await executeSecureBridgeCall('career', 'createTeam', { teamName, state, leadEmail, backupLeadEmail });
+            showToast(res.success ? `Team created: ${res.teamId}` : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+        }
+        async function loadStaleLeadTeams() {
+            const res = await executeSecureBridgeCall('career', 'getStaleLeadTeams', {});
+            const el = document.getElementById('staleLeadTeamsList');
+            if (!res.success || !res.teams?.length) { el.innerHTML = '<span class="text-slate-500">No stale leads.</span>'; return; }
+            el.innerHTML = res.teams.map(t => `<div>⚠ ${escapeHtml(t.teamName)} (${escapeHtml(t.teamId)}) — lead ${escapeHtml(t.leadEmail)} inactive since ${fmtDate(t.lastActivity)}</div>`).join('');
+        }
+        function reassignTeamLeadUI() {
+            const teamId = document.getElementById('reassignTeamId').value.trim();
+            const newLeadEmail = document.getElementById('reassignNewLead').value.trim();
+            if (!teamId || !newLeadEmail) { showToast('Team ID and new lead email required.', 'error'); return; }
+            executeSecureBridgeCall('career', 'reassignTeamLead', { teamId, newLeadEmail }).then(res => {
+                showToast(res.success ? 'Lead reassigned.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+                if (res.success) loadStaleLeadTeams();
+            });
+        }
+
         // ============ approvals ============
         async function loadAgentApprovals() {
             showTableSkeleton('agentApprovalsTableBody', 7);
