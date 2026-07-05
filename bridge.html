@@ -1918,9 +1918,14 @@
                     <button class="agent-subview-link" data-target-view="agent-addons">Add-ons &amp; Extras</button>
                     <button class="agent-subview-link" data-target-view="agent-invoices">Invoices</button>
                     <button class="agent-subview-link" data-target-view="agent-crmsync">CRM Sync</button>
-                    <button class="agent-subview-link"
-                        data-target-view="agent-integrations">Integrations</button><button
-                        onclick="repairClientFolders()"
+                    <button class="agent-subview-link" data-target-view="agent-integrations">Integrations</button> //
+                    Frontend — add a button anywhere convenient, e.g. next to "Repair Folder Registry"
+                    <button onclick="testDocCreation()"
+                        class="text-xs px-3 py-1.5 bg-blue-800 hover:bg-blue-700 rounded text-white">Test Doc
+                        Creation</button>
+                    <button class="agent-subview-link" data-target-view="agent-access-control">Access &
+                        Credentials</button>
+                    <button onclick="repairClientFolders()"
                         class="text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded text-white">
                         Repair Folder Registry
                     </button>
@@ -2353,9 +2358,9 @@
                                 </div>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label class="block text-xs text-slate-400 mb-1">Add-on Name</label>
-                                        <input type="text" id="addonName" required placeholder="Extra Mailbox"
-                                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                                        <label class="block text-xs text-slate-400 mb-1">Add-on</label>
+                                        <select id="addonCatalogKey" required onchange="prefillAddonFromCatalog()"
+                                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></select>
                                     </div>
                                     <div>
                                         <label class="block text-xs text-slate-400 mb-1">Type</label>
@@ -4288,6 +4293,74 @@
                 class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 rounded">Send</button>
         </div>
     </div>
+    <div id="view-agent-access-control" class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+        <div class="flex justify-between items-center shrink-0">
+            <div>
+                <h3 class="text-lg font-bold text-white">Access & Credentials</h3>
+                <p class="text-xs text-slate-400">Every API key, OAuth connection, mailbox, CRM link, and social account
+                    for this client — revoke anything the client wants changed.</p>
+            </div>
+            <select id="accessControlClientSelector" onchange="loadAccessControlPanel()"
+                class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white min-w-[220px]"></select>
+        </div>
+        <div class="flex-1 overflow-auto custom-scrollbar space-y-4">
+            <div>
+                <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">Integrations
+                    (Email/CRM/DB/API)</span>
+                <table class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
+                    <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
+                        <tr>
+                            <th class="p-3">Type</th>
+                            <th class="p-3">Label</th>
+                            <th class="p-3 text-center">Status</th>
+                            <th class="p-3 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="accessIntegrationsBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                </table>
+            </div>
+            <div>
+                <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">Mailboxes</span>
+                <table class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
+                    <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
+                        <tr>
+                            <th class="p-3">Label</th>
+                            <th class="p-3 text-center">Status</th>
+                            <th class="p-3 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="accessMailboxesBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                </table>
+            </div>
+            <div>
+                <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">CRM Connections</span>
+                <table class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
+                    <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
+                        <tr>
+                            <th class="p-3">Provider</th>
+                            <th class="p-3 text-center">Status</th>
+                            <th class="p-3 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="accessCrmBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                </table>
+            </div>
+            <div>
+                <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">Social Accounts</span>
+                <table class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
+                    <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
+                        <tr>
+                            <th class="p-3">Platform</th>
+                            <th class="p-3">Page</th>
+                            <th class="p-3 text-center">Status</th>
+                            <th class="p-3 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="accessSocialBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
     <script>
         let WEBAPP_URL = localStorage.getItem('VIC_WEBAPP_URL') || "https://script.google.com/macros/s/AKfycby4t4JZVuVD3uMB0BIbwB_NTh8zNXcmz68CKKuKL3fYNmUhWMEgpLDObNASLdd38nQH/exec";
         let SESSION_MASTER_TOKEN = localStorage.getItem('VIC_MASTER_TOKEN') || "";
@@ -4866,6 +4939,7 @@
                     document.getElementById('aiConsoleCategory').innerHTML = Object.keys(AI_ACTION_CATALOG).map(c => `<option value="${c}">${c}</option>`).join('');
                     populateAIConsoleActions();
                 },
+                'agent-access-control': () => { populateAllClientsSelector('accessControlClientSelector') },
                 'agent-mailboxes': () => { populateAllClientsSelector('mailboxesClientSelector'); },
                 'agent-scheduling': () => { populateAllClientsSelector('schedulingClientSelector'); },
                 'agent-va-clients': loadVAClientsUI,
@@ -6845,6 +6919,31 @@
             if (f) f.reset();
         }
 
+        function populateAddonCatalogSelect() {
+            const sel = document.getElementById('addonCatalogKey');
+            sel.innerHTML = Object.entries(ADDON_CATALOG_FRONTEND).map(([key, a]) =>
+                `<option value="${key}">${a.label} — ₦${a.priceNgn.toLocaleString()}</option>`).join('');
+            prefillAddonFromCatalog();
+        }
+        function prefillAddonFromCatalog() {
+            const key = document.getElementById('addonCatalogKey').value;
+            const a = ADDON_CATALOG_FRONTEND[key];
+            if (!a) return;
+            document.getElementById('addonPrice').value = a.priceNgn;
+        }
+        // Mirror the backend catalog so labels/prices match exactly — keep in sync manually if you edit ADDON_CATALOG
+        const ADDON_CATALOG_FRONTEND = {
+            extra_mailbox: { label: "Extra Mailbox", priceNgn: 45000 },
+            extra_50_emails: { label: "Extra 50 Emails/mo", priceNgn: 60000 },
+            extra_proposal: { label: "Extra Proposal/mo", priceNgn: 90000 },
+            extra_10_ai_hours: { label: "Extra 10 AI Hours/mo", priceNgn: 70000 },
+            compliance_doc_tracking: { label: "Compliance Doc Tracking", priceNgn: 4500 },
+            extra_crm_sync: { label: "Extra CRM Sync/mo", priceNgn: 25000 },
+            extra_compliance_check: { label: "Extra Compliance Check/mo", priceNgn: 20000 },
+            social_asset_pack_12: { label: "12 Social Assets Pack", priceNgn: 80000 },
+            premium_ai_hours_5: { label: "5 Premium AI Hours", priceNgn: 60000 }
+        };
+
         async function submitNewCalendarEvent(event) {
             event.preventDefault();
             const title = document.getElementById('evtTitle')?.value?.trim();
@@ -8039,6 +8138,97 @@
             }
         }
 
+        // Inside submitAddAddon's backend handler (wherever agent-set-addons is processed),
+        // AFTER successfully writing the addons array, apply the effect for any NEWLY added
+        // or newly-Active addon:
+        function _setClientAddonsWithEffects(payload) {
+            const { clientId, addons } = payload;
+            // Load the previous state to diff against (so we only apply effects once, not on every save).
+            const client = _getClient({ clientId });
+            const previousAddons = client.success ? _parseAddonsJson(client.client.Addons) : [];
+            const previousKeys = new Set(previousAddons.filter(a => a.status === "Active").map(a => a.catalogKey));
+            const newKeys = new Set(addons.filter(a => a.status === "Active").map(a => a.catalogKey));
+
+            newKeys.forEach(key => { if (!previousKeys.has(key)) _applyAddonEffect(clientId, key, "add"); });
+            previousKeys.forEach(key => { if (!newKeys.has(key)) _applyAddonEffect(clientId, key, "remove"); });
+
+            return _setClientAddons(payload); // your existing raw-write function, unchanged
+        }
+
+        async function loadSignupCodes() {
+            showTableSkeleton('signupCodesTableBody', 5);
+            const res = await executeSecureBridgeCall('career', 'listSignupCodes', {});
+            const tbody = document.getElementById('signupCodesTableBody');
+            if (!res.success || !res.codes?.length) { tbody.innerHTML = emptyRow('No signup codes yet.', 5); return; }
+            tbody.innerHTML = res.codes.map(c => `
+        <tr><td class="p-3 font-mono text-emerald-400">${escapeHtml(c.code)}</td>
+        <td class="p-3 text-center">${badge(c.status)}</td>
+        <td class="p-3 text-slate-400">${escapeHtml(c.usedBy || '—')}</td>
+        <td class="p-3 text-slate-500">${escapeHtml(c.note || '—')}</td>
+        <td class="p-3 text-center">
+            ${c.status === 'Unused' ? `<button onclick="openInviteCodeModal('${escapeHtml(c.code)}')" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">✉ Invite</button>` : '—'}
+        </td></tr>
+    `).join('');
+        }
+        // Update the <thead> in signupCodesTableBody's table to add an "Invite" column.
+
+        function openInviteCodeModal(code) {
+            const email = prompt(`Send signup code ${code} to which email?`);
+            if (!email) return;
+            const name = prompt('Recipient name (optional):') || '';
+            executeSecureBridgeCall('career', 'sendSignupCodeInvite', { code, email, name }).then(res => {
+                showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+            });
+        }
+
+        async function loadAccessControlPanel() {
+            const clientId = document.getElementById('accessControlClientSelector')?.value;
+            if (!clientId) return;
+            const [integ, mbx, crm, soc] = await Promise.all([
+                executeSecureBridgeCall('agent', 'agent-list-integrations', { clientId }),
+                executeSecureBridgeCall('agent', 'agent-get-mailboxes', { clientId }),
+                executeSecureBridgeCall('agent', 'agent-get-crm-sync-status', { clientId }),
+                executeSecureBridgeCall('publish', 'agent-list-social-connections', { clientId })
+            ]);
+
+            document.getElementById('accessIntegrationsBody').innerHTML = (integ.integrations || []).map(i => `
+        <tr><td class="p-3">${badge(i.type)}</td><td class="p-3">${escapeHtml(i.label || '—')}</td>
+        <td class="p-3 text-center">${badge(i.status || 'Connected')}</td>
+        <td class="p-3 text-center"><button onclick="revokeAccess('integration','${escapeHtml(clientId)}','${escapeHtml(i.type)}')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Revoke</button></td></tr>
+    `).join('') || emptyRow('None connected.', 4);
+
+            document.getElementById('accessMailboxesBody').innerHTML = (mbx.data || []).map(m => `
+        <tr><td class="p-3">${escapeHtml(m.Label)}</td><td class="p-3 text-center">${badge(m.Status)}</td>
+        <td class="p-3 text-center"><button onclick="revokeAccess('mailbox','${escapeHtml(clientId)}','${escapeHtml(m.MailboxID)}')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Revoke</button></td></tr>
+    `).join('') || emptyRow('No mailboxes.', 3);
+
+            document.getElementById('accessCrmBody').innerHTML = (crm.integrations || []).map(c => `
+        <tr><td class="p-3">${badge(c.provider)}</td><td class="p-3 text-center">${badge(c.status)}</td>
+        <td class="p-3 text-center"><button onclick="revokeAccess('crm','${escapeHtml(clientId)}','${escapeHtml(c.provider)}')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Revoke</button></td></tr>
+    `).join('') || emptyRow('No CRM connected.', 3);
+
+            document.getElementById('accessSocialBody').innerHTML = (soc.connections || []).map(s => `
+        <tr><td class="p-3">${badge(s.platform)}</td><td class="p-3">${escapeHtml(s.pageName || '—')}</td>
+        <td class="p-3 text-center">${badge(s.status)}</td>
+        <td class="p-3 text-center"><button onclick="revokeAccess('social','${escapeHtml(clientId)}','${escapeHtml(s.platform)}')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Revoke</button></td></tr>
+    `).join('') || emptyRow('No social accounts.', 4);
+        }
+
+        function revokeAccess(kind, clientId, identifier) {
+            if (!confirm(`Revoke this ${kind} connection? The client will need to reconnect if they want it back.`)) return;
+            const actionMap = {
+                integration: ['agent', 'agent-disconnect-integration', { clientId, type: identifier }],
+                mailbox: ['agent', 'agent-remove-mailbox', { clientId, mailboxId: identifier }],
+                crm: ['agent', 'agent-disconnect-integration', { clientId, type: identifier }],
+                social: ['publish', 'agent-disconnect-social-account', { clientId, platform: identifier }]
+            };
+            const [system, action, payload] = actionMap[kind];
+            executeSecureBridgeCall(system, action, payload).then(res => {
+                showToast(res.success ? 'Revoked.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+                if (res.success) loadAccessControlPanel();
+            });
+        }
+
         // Extend the single results table with the new columns
         async function loadAgentComplianceDocs() {
             const clientId = document.getElementById('docsClientSelector')?.value;
@@ -8046,41 +8236,65 @@
             if (!tbody) return;
             if (!clientId) { tbody.innerHTML = emptyRow('Select a client to view documents.', 8); return; }
             showTableSkeleton('agentDocsTableBody', 8);
-            const [docsRes, healthRes] = await Promise.all([
-                executeSecureBridgeCall('agent', 'agent-get-compliance-docs', { clientId }),
-                executeSecureBridgeCall('agent', 'agent-compliance-health', { clientId })
-            ]);
-            if (healthRes.success) {
-                document.getElementById('agentDocsHealthPanel').classList.remove('hidden');
-                document.getElementById('docsHealthScore').textContent = healthRes.healthScore ?? '—';
-                document.getElementById('docsActiveViolations').textContent = healthRes.activeViolations ?? '—';
-                document.getElementById('docsHighSeverity').textContent = healthRes.highSeverityCount ?? '—';
-                document.getElementById('docsMedSeverity').textContent = healthRes.mediumSeverityCount ?? '—';
+
+            try {
+                const [docsRes, healthRes] = await Promise.all([
+                    executeSecureBridgeCall('agent', 'agent-get-compliance-docs', { clientId }),
+                    executeSecureBridgeCall('agent', 'agent-compliance-health', { clientId })
+                ]);
+
+                if (healthRes?.success) {
+                    document.getElementById('agentDocsHealthPanel').classList.remove('hidden');
+                    document.getElementById('docsHealthScore').textContent = healthRes.healthScore ?? '—';
+                    document.getElementById('docsActiveViolations').textContent = healthRes.activeViolations ?? '—';
+                    document.getElementById('docsHighSeverity').textContent = healthRes.highSeverityCount ?? '—';
+                    document.getElementById('docsMedSeverity').textContent = healthRes.mediumSeverityCount ?? '—';
+                }
+
+                if (!docsRes?.success || !docsRes.data?.documents?.length) {
+                    tbody.innerHTML = emptyRow(docsRes?.message || 'No documents uploaded for this client.', 8);
+                    return;
+                }
+
+                const badgeColorMap = { Valid: 'emerald', 'Expiring Soon': 'amber', Expired: 'red', Unknown: 'slate' };
+                const verifColorMap = { Compliant: 'emerald', 'Not Found': 'red', 'Possibly Non-Compliant': 'amber', 'Unable to Verify': 'slate', 'Checking…': 'blue', 'Not Checked': 'slate' };
+
+                tbody.innerHTML = docsRes.data.documents.map(d => `
+    <tr>
+        <td class="p-3 text-slate-300">${escapeHtml(d.docType)}<div class="text-[10px] text-slate-500">${escapeHtml(d.documentName || '')}</div></td>
+        <td class="p-3"><a href="${escapeHtml(d.fileUrl)}" target="_blank" class="text-blue-400 hover:underline">${escapeHtml(d.fileName)}</a></td>
+        <td class="p-3 text-slate-500">${fmtDate(d.uploadedDate)}</td>
+        <td class="p-3 text-slate-500">${d.verifiedDate ? fmtDate(d.verifiedDate) : '—'}</td>
+        <td class="p-3 text-slate-400">${d.expiryDate ? fmtDate(d.expiryDate) : '—'}</td>
+        <td class="p-3 text-center"><span class="text-${badgeColorMap[d.badge] || 'slate'}-400 font-medium">${escapeHtml(d.badge)}</span></td>
+        <td class="p-3 text-center" title="${escapeHtml(d.publicVerificationNotes || '')}">
+            <span class="text-${verifColorMap[d.publicVerificationStatus] || 'slate'}-400 font-medium">${escapeHtml(d.publicVerificationStatus)}</span>
+        </td>
+        <td class="p-3 text-center flex gap-1 justify-center">
+            ${d.status !== 'Verified' ? `<button onclick="verifyAgentComplianceDoc('${escapeHtml(d.fileName)}')" class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Verify</button>` : ''}
+            <button onclick="recheckAgentDocPublicVerification('${escapeHtml(d.fileName)}','${escapeHtml(d.docType)}','${escapeHtml(d.documentName)}')" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Recheck</button>
+            <button onclick="deleteAgentComplianceDoc('${escapeHtml(d.fileName)}')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Delete</button>
+        </td>
+    </tr>
+`).join('');
+            } catch (e) {
+                console.error('loadAgentComplianceDocs failed:', e);
+                tbody.innerHTML = emptyRow('Failed to load documents: ' + e.toString(), 8);
+                showToast('Error loading compliance documents.', 'error');
             }
-            if (!docsRes.success || !docsRes.data?.documents?.length) {
-                tbody.innerHTML = emptyRow('No documents uploaded for this client.', 8);
-                return;
+        }
+
+        async function testDocCreation() {
+            const clientId = document.getElementById('aiConsoleClientSelector')?.value || prompt('Client ID to test:');
+            if (!clientId) return;
+            showToast('Testing document creation…', 'info');
+            const res = await executeSecureBridgeCall('agent', 'agent-test-doc-creation', { clientId });
+            if (res.success) {
+                showToast('Doc created successfully.', 'success');
+                window.open(res.docUrl, '_blank');
+            } else {
+                showToast('FAILED: ' + res.error, 'error');
             }
-            const badgeColorMap = { Valid: 'emerald', 'Expiring Soon': 'amber', Expired: 'red', Unknown: 'slate' };
-            const verifColorMap = { Compliant: 'emerald', 'Not Found': 'red', 'Possibly Non-Compliant': 'amber', 'Unable to Verify': 'slate', 'Checking…': 'blue', 'Not Checked': 'slate' };
-            tbody.innerHTML = docsRes.data.documents.map(d => `
-        <tr>
-            <td class="p-3 text-slate-300">${escapeHtml(d.docType)}<div class="text-[10px] text-slate-500">${escapeHtml(d.documentName || '')}</div></td>
-            <td class="p-3"><a href="${escapeHtml(d.fileUrl)}" target="_blank" class="text-blue-400 hover:underline">${escapeHtml(d.fileName)}</a></td>
-            <td class="p-3 text-slate-500">${fmtDate(d.uploadedDate)}</td>
-            <td class="p-3 text-slate-500">${d.verifiedDate ? fmtDate(d.verifiedDate) : '—'}</td>
-            <td class="p-3 text-slate-400">${d.expiryDate ? fmtDate(d.expiryDate) : '—'}</td>
-            <td class="p-3 text-center"><span class="text-${badgeColorMap[d.badge] || 'slate'}-400 font-medium">${escapeHtml(d.badge)}</span></td>
-            <td class="p-3 text-center" title="${escapeHtml(d.publicVerificationNotes || '')}">
-                <span class="text-${verifColorMap[d.publicVerificationStatus] || 'slate'}-400 font-medium">${escapeHtml(d.publicVerificationStatus)}</span>
-            </td>
-            <td class="p-3 text-center flex gap-1 justify-center">
-                ${d.status !== 'Verified' ? `<button onclick="verifyAgentComplianceDoc('${escapeHtml(d.fileName)}')" class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Verify</button>` : ''}
-                <button onclick="recheckAgentDocPublicVerification('${escapeHtml(d.fileName)}','${escapeHtml(d.docType)}','${escapeHtml(d.documentName)}')" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Recheck</button>
-                <button onclick="deleteAgentComplianceDoc('${escapeHtml(d.fileName)}')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Delete</button>
-            </td>
-        </tr>
-    `).join('');
         }
 
         function recheckAgentDocPublicVerification(fileName, docType, documentName) {
@@ -8804,7 +9018,7 @@
                     }
                 }
             }
-
+            populateAddonCatalogSelect();
             modal.classList.remove('hidden');
         }
 
@@ -8829,6 +9043,7 @@
                 priceNgn: parseFloat(document.getElementById('addonPrice').value) || 0,
                 status: document.getElementById('addonStatus').value,
                 expiryDate: document.getElementById('addonExpiry').value || '',
+                catalogKey: document.getElementById('addonCatalogKey').value,
                 notes: document.getElementById('addonNotes').value.trim()
             };
 
