@@ -123,7 +123,7 @@
                     <label for="webappUrl"
                         class="block text-xs font-mono tracking-wide uppercase text-slate-400 mb-1">Secure Gateway
                         Access URL</label>
-                    <input type="url" id="webappUrl" required placeholder="https://script.google.com/macros/s/.../exec"
+                    <input type="url" id="webappUrl" required placeholder="xxxxxxxxxxxxxxxxxxxx"
                         class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm font-mono text-emerald-400 focus:outline-none focus:border-emerald-500" />
                 </div>
                 <div class="grid grid-cols-2 gap-4">
@@ -1918,13 +1918,12 @@
                     <button class="agent-subview-link" data-target-view="agent-addons">Add-ons &amp; Extras</button>
                     <button class="agent-subview-link" data-target-view="agent-invoices">Invoices</button>
                     <button class="agent-subview-link" data-target-view="agent-crmsync">CRM Sync</button>
-                    <button class="agent-subview-link" data-target-view="agent-integrations">Integrations</button> //
-                    Frontend — add a button anywhere convenient, e.g. next to "Repair Folder Registry"
+                    <button class="agent-subview-link" data-target-view="agent-integrations">Integrations</button>
+                    <button class="agent-subview-link" data-target-view="agent-access-control">Access &
+                        Credentials</button>
                     <button onclick="testDocCreation()"
                         class="text-xs px-3 py-1.5 bg-blue-800 hover:bg-blue-700 rounded text-white">Test Doc
                         Creation</button>
-                    <button class="agent-subview-link" data-target-view="agent-access-control">Access &
-                        Credentials</button>
                     <button onclick="repairClientFolders()"
                         class="text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded text-white">
                         Repair Folder Registry
@@ -2349,6 +2348,7 @@
                             </div>
                             <form id="addAddonForm" onsubmit="submitAddAddon(event)" class="space-y-3">
                                 <input type="hidden" id="addonEditIndex" value="" />
+                                <input type="hidden" id="addonName" value="" />
                                 <div>
                                     <label class="block text-xs text-slate-400 mb-1">Client</label>
                                     <select id="addonClientId" required
@@ -4292,75 +4292,81 @@
             <button onclick="submitSendViaIntegration()"
                 class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 rounded">Send</button>
         </div>
-    </div>
-    <div id="view-agent-access-control" class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
-        <div class="flex justify-between items-center shrink-0">
-            <div>
-                <h3 class="text-lg font-bold text-white">Access & Credentials</h3>
-                <p class="text-xs text-slate-400">Every API key, OAuth connection, mailbox, CRM link, and social account
-                    for this client — revoke anything the client wants changed.</p>
+        <div id="view-agent-access-control" class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+            <div class="flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="text-lg font-bold text-white">Access & Credentials</h3>
+                    <p class="text-xs text-slate-400">Every API key, OAuth connection, mailbox, CRM link, and social
+                        account
+                        for this client — revoke anything the client wants changed.</p>
+                </div>
+                <select id="accessControlClientSelector" onchange="loadAccessControlPanel()"
+                    class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white min-w-[220px]"></select>
             </div>
-            <select id="accessControlClientSelector" onchange="loadAccessControlPanel()"
-                class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white min-w-[220px]"></select>
+            <div class="flex-1 overflow-auto custom-scrollbar space-y-4">
+                <div>
+                    <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">Integrations
+                        (Email/CRM/DB/API)</span>
+                    <table
+                        class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
+                        <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
+                            <tr>
+                                <th class="p-3">Type</th>
+                                <th class="p-3">Label</th>
+                                <th class="p-3 text-center">Status</th>
+                                <th class="p-3 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accessIntegrationsBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                    </table>
+                </div>
+                <div>
+                    <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">Mailboxes</span>
+                    <table
+                        class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
+                        <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
+                            <tr>
+                                <th class="p-3">Label</th>
+                                <th class="p-3 text-center">Status</th>
+                                <th class="p-3 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accessMailboxesBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                    </table>
+                </div>
+                <div>
+                    <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">CRM Connections</span>
+                    <table
+                        class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
+                        <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
+                            <tr>
+                                <th class="p-3">Provider</th>
+                                <th class="p-3 text-center">Status</th>
+                                <th class="p-3 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accessCrmBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                    </table>
+                </div>
+                <div>
+                    <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">Social Accounts</span>
+                    <table
+                        class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
+                        <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
+                            <tr>
+                                <th class="p-3">Platform</th>
+                                <th class="p-3">Page</th>
+                                <th class="p-3 text-center">Status</th>
+                                <th class="p-3 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accessSocialBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-        <div class="flex-1 overflow-auto custom-scrollbar space-y-4">
-            <div>
-                <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">Integrations
-                    (Email/CRM/DB/API)</span>
-                <table class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
-                    <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
-                        <tr>
-                            <th class="p-3">Type</th>
-                            <th class="p-3">Label</th>
-                            <th class="p-3 text-center">Status</th>
-                            <th class="p-3 text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="accessIntegrationsBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
-                </table>
-            </div>
-            <div>
-                <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">Mailboxes</span>
-                <table class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
-                    <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
-                        <tr>
-                            <th class="p-3">Label</th>
-                            <th class="p-3 text-center">Status</th>
-                            <th class="p-3 text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="accessMailboxesBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
-                </table>
-            </div>
-            <div>
-                <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">CRM Connections</span>
-                <table class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
-                    <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
-                        <tr>
-                            <th class="p-3">Provider</th>
-                            <th class="p-3 text-center">Status</th>
-                            <th class="p-3 text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="accessCrmBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
-                </table>
-            </div>
-            <div>
-                <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">Social Accounts</span>
-                <table class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
-                    <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
-                        <tr>
-                            <th class="p-3">Platform</th>
-                            <th class="p-3">Page</th>
-                            <th class="p-3 text-center">Status</th>
-                            <th class="p-3 text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="accessSocialBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
-                </table>
-            </div>
-        </div>
     </div>
+
     <script>
         let WEBAPP_URL = localStorage.getItem('VIC_WEBAPP_URL') || "https://script.google.com/macros/s/AKfycby4t4JZVuVD3uMB0BIbwB_NTh8zNXcmz68CKKuKL3fYNmUhWMEgpLDObNASLdd38nQH/exec";
         let SESSION_MASTER_TOKEN = localStorage.getItem('VIC_MASTER_TOKEN') || "";
@@ -4933,17 +4939,17 @@
                 'v5-whatsapp': loadV5WhatsAppHistory,
                 'v5-competitors': loadV5CompetitorsHistory,
                 'agent-approvals': loadAgentApprovals,
-                'agent-compliance-frameworks': () => { populateAgentClientSelector('compFrameworksClientSelector'); },
+                'agent-compliance-frameworks': () => { populateAgentClientSelector('compFrameworksClientSelector', loadComplianceFrameworksUI); },
                 'agent-ai-console': () => {
                     populateAllClientsSelector('aiConsoleClientSelector');
                     document.getElementById('aiConsoleCategory').innerHTML = Object.keys(AI_ACTION_CATALOG).map(c => `<option value="${c}">${c}</option>`).join('');
                     populateAIConsoleActions();
                 },
-                'agent-access-control': () => { populateAllClientsSelector('accessControlClientSelector') },
-                'agent-mailboxes': () => { populateAllClientsSelector('mailboxesClientSelector'); },
-                'agent-scheduling': () => { populateAllClientsSelector('schedulingClientSelector'); },
+                'agent-access-control': () => { populateAllClientsSelector('accessControlClientSelector', loadAccessControlPanel); },
+                'agent-mailboxes': () => { populateAllClientsSelector('mailboxesClientSelector', loadAgentMailboxesUI); },
+                'agent-scheduling': () => { populateAllClientsSelector('schedulingClientSelector', loadSchedulingMailboxes); },
                 'agent-va-clients': loadVAClientsUI,
-                'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector'); },
+                'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector').then(loadIntegrationsUI); },
                 'agent-crmsync': () => { populateAgentClientSelector('crmSyncClientSelector').then(loadCrmSyncUI); },
             };
 
@@ -6930,6 +6936,7 @@
             const a = ADDON_CATALOG_FRONTEND[key];
             if (!a) return;
             document.getElementById('addonPrice').value = a.priceNgn;
+            document.getElementById('addonName').value = a.label;
         }
         // Mirror the backend catalog so labels/prices match exactly — keep in sync manually if you edit ADDON_CATALOG
         const ADDON_CATALOG_FRONTEND = {
@@ -7524,6 +7531,7 @@
 
             const revenue = res.data.reduce((sum, c) => {
                 const fixedPricing = { 'starter_ops': 350000, 'growth_ops': 900000, 'enterprise_ops': 1500000, 'digital_launch': 500000 };
+                if (c.Tier === 'enterprise_ops' && parseFloat(c.CustomPriceNGN)) return sum + parseFloat(c.CustomPriceNGN);
                 if (fixedPricing[c.Tier] !== undefined) return sum + fixedPricing[c.Tier];
                 if (c.Tier === 'digital_accelerate' || c.Tier === 'digital_scale') {
                     // Quote-only tiers — only count if a real negotiated price was set via agent-set-custom-tier
@@ -7550,7 +7558,14 @@
                     }
                 };
 
-                const tierInfo = tierPricing[c.Tier] || tierPricing['starter_ops'];
+                const _baseTierInfo = tierPricing[c.Tier] || tierPricing['starter_ops'];
+                const tierInfo = {
+                    hours: (c.CustomHours !== undefined && c.CustomHours !== '' && c.CustomHours !== null) ? Number(c.CustomHours) : _baseTierInfo.hours,
+                    emails: (c.CustomEmails !== undefined && c.CustomEmails !== '' && c.CustomEmails !== null) ? Number(c.CustomEmails) : _baseTierInfo.emails,
+                    proposals: (c.CustomProposals !== undefined && c.CustomProposals !== '' && c.CustomProposals !== null) ? Number(c.CustomProposals) : _baseTierInfo.proposals,
+                    price: (c.CustomPriceNGN !== undefined && c.CustomPriceNGN !== '' && c.CustomPriceNGN !== null) ? Number(c.CustomPriceNGN) : _baseTierInfo.price,
+                    isUsd: _baseTierInfo.isUsd
+                };
                 const endDate = c.EndDate || c.endDate || '—';
                 const daysLeft = c.EndDate ? Math.floor((new Date(c.EndDate) - new Date()) / 86400000) : null;
                 const expiryBadge = daysLeft !== null
@@ -8046,7 +8061,7 @@
 
         const AGENT_CLIENTS_CACHE = {}; // clientId -> full client record, used for industry lookups
 
-        async function populateAgentClientSelector(selectId) {
+        async function populateAgentClientSelector(selectId, autoLoadFn) {
             const select = document.getElementById(selectId);
             if (!select) return;
             select.innerHTML = '<option value="">Loading…</option>';
@@ -8056,6 +8071,12 @@
                 select.innerHTML = '<option value="">Select…</option>' + res.data.map(c =>
                     `<option value="${escapeHtml(c.ClientID)}">${escapeHtml(c.CompanyName)}</option>`
                 ).join('');
+                if (autoLoadFn) {
+                    const preselect = select.dataset.preselect;
+                    if (preselect) { delete select.dataset.preselect; select.value = preselect; }
+                    else select.value = res.data[0].ClientID;
+                    autoLoadFn();
+                }
             } else {
                 select.innerHTML = '<option value="">No clients</option>';
             }
@@ -8649,7 +8670,7 @@
             });
         }
 
-        async function populateAllClientsSelector(selectId) {
+        async function populateAllClientsSelector(selectId, autoLoadFn) {
             const select = document.getElementById(selectId);
             if (!select) return;
             select.innerHTML = '<option value="">Loading…</option>';
@@ -8658,6 +8679,18 @@
                 select.innerHTML = '<option value="">Select…</option>' + res.data.map(c =>
                     `<option value="${escapeHtml(c.clientId)}">${escapeHtml(c.displayName)}</option>`
                 ).join('');
+                // BUGFIX: the previous "only if there's exactly one client" check almost
+                // never fired, because agent-get-all-clients merges AgentClients + VAClients
+                // into a single list — so the count is rarely exactly 1 even with a single
+                // real ops client, and the panel was left permanently blank waiting on an
+                // onchange event that never comes. When a caller wants an always-loaded
+                // panel (autoLoadFn provided), just select the first client by default.
+                if (autoLoadFn) {
+                    const preselect = select.dataset.preselect;
+                    if (preselect) { delete select.dataset.preselect; select.value = preselect; }
+                    else select.value = res.data[0].clientId;
+                    autoLoadFn();
+                }
             } else {
                 select.innerHTML = '<option value="">No clients</option>';
             }
@@ -9619,7 +9652,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         // ============ CRM Sync ============
         const CRM_CREDENTIAL_HINTS = {
             hubspot: '{"accessToken":"pat-xxx"}  — HubSpot Private App access token',
-            google_sheets: '{"sheetId":"...","sheetName":"Contacts","columnMap":{"name":"Full Name","email":"Email","phone":"Phone","company":"Company"}}  — client must share the sheet with the agency email',
+            google_sheets: '{"sheetId":"...","sheetName":"Contacts","columnMap":{"name":"Full Name","email":"Email","phone":"Phone","company":"Company"}}  — client must share the sheet (Editor access) with management@thevictorias.com.ng',
             generic_rest: '{"baseUrl":"https://api.x.com","authHeaderName":"Authorization","authHeaderValue":"Bearer xxx","contactsEndpoint":"/contacts","contactsArrayPath":"data.contacts","contactFieldMap":{"name":"full_name","email":"email","phone":"phone","company":"company_name"}}'
         };
 
