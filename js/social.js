@@ -26,7 +26,7 @@ function navbar() {
                     <div class="dropdown-menu m-0">
                         <a href="careerhub.html" class="dropdown-item">Career</a>
                         <a href="email.html" class="dropdown-item">Email</a>
-                        <a href="bridge.html" class="dropdown-item">Management</a>
+                        <a href="client-dashboard.html" class="dropdown-item">Management</a>
                     </div>
                 </div>
 

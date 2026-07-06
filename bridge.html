@@ -112,8 +112,9 @@
             class="bg-slate-900/80 border border-slate-800 p-8 rounded-2xl shadow-2xl max-w-lg w-full backdrop-blur-xl">
             <div class="text-center mb-6">
                 <div
-                    class="inline-flex p-3 bg-emerald-500/10 text-emerald-400 rounded-full mb-3 border border-emerald-500/20">
-                    <i class="fa-solid px-1 fa-shield-halved text-2xl"></i>
+                    class="inline-flex h-16 w-16 items-center justify-center bg-emerald-500/10 text-emerald-400 rounded-full mb-3 border border-emerald-500/20 overflow-hidden">
+                    <img src="/img/thevictoriaslogo.png" alt="The Victorias Ltd" class="h-full w-full object-cover"
+                        onerror="this.parentElement.innerHTML='<i class=\'fa-solid px-1 fa-shield-halved text-2xl\'></i>'" />
                 </div>
                 <h1 class="text-2xl font-bold tracking-tight text-white">Administrative Access Terminal</h1>
                 <p class="text-sm text-slate-400 mt-1">Provide credentials for zero-trust authorization.</p>
@@ -175,8 +176,10 @@
         <aside class="w-64 bg-slate-950 border-r border-slate-800 flex flex-col shrink-0">
             <div class="p-4 border-b border-slate-800 flex items-center gap-3">
                 <div
-                    class="h-8 w-8 bg-emerald-500 rounded-lg flex items-center justify-center text-slate-950 font-bold text-lg tracking-wider shadow-md">
-                    V</div>
+                    class="h-8 w-8 rounded-lg overflow-hidden bg-emerald-500 flex items-center justify-center shadow-md shrink-0">
+                    <img src="/img/thevictoriaslogo.png" alt="The Victorias Ltd" class="h-full w-full object-cover"
+                        onerror="this.parentElement.innerHTML='<span class=\'text-slate-950 font-bold text-lg tracking-wider\'>V</span>'" />
+                </div>
                 <div>
                     <h1 class="text-sm font-bold tracking-wide text-white">THE VICTORIAS LTD</h1>
                     <p class="text-[10px] font-mono tracking-wider text-emerald-400 uppercase">Master Engine v2026</p>
@@ -1896,38 +1899,63 @@
 ================================================================= -->
             <section id="hub-agent" class="hidden flex-1 flex overflow-hidden">
                 <div
-                    class="w-56 bg-slate-950/40 border-r border-slate-800/60 flex flex-col shrink-0 px-2 py-4 space-y-1">
+                    class="w-56 bg-slate-950/40 border-r border-slate-800/60 flex flex-col shrink-0 px-2 py-4 space-y-1 overflow-y-auto custom-scrollbar">
                     <span class="text-[10px] font-mono tracking-wider text-slate-500 uppercase px-3 mb-2 block">Agent
                         Management</span>
+
+                    <!-- PRIMARY: the handful of views used every day -->
                     <button class="agent-subview-link active" data-target-view="agent-clients">Client Registry</button>
-                    <button class="agent-subview-link" data-target-view="agent-subscriptions">Subscriptions</button>
-                    <button class="agent-subview-link" data-target-view="agent-quotas">Quota Monitor</button>
-                    <button class="agent-subview-link" data-target-view="agent-usage">Usage Reports</button>
+                    <button class="agent-subview-link" data-target-view="agent-online">Users Online &amp; Usage</button>
+                    <button class="agent-subview-link" data-target-view="agent-livechat">Live Chat</button>
                     <button class="agent-subview-link" data-target-view="agent-tasks">Active Tasks</button>
-                    <button class="agent-subview-link" data-target-view="agent-compliance">Compliance Logs</button>
-                    <button class="agent-subview-link" data-target-view="agent-violations">Compliance
-                        Violations</button>
-                    <button class="agent-subview-link" data-target-view="agent-docs">Compliance Documents</button>
                     <button class="agent-subview-link" data-target-view="agent-approvals">Pending Approvals</button>
-                    <button class="agent-subview-link" data-target-view="agent-compliance-frameworks">Compliance
-                        Frameworks</button>
-                    <button class="agent-subview-link" data-target-view="agent-ai-console">AI Actions Console</button>
-                    <button class="agent-subview-link" data-target-view="agent-mailboxes">Mailboxes</button>
-                    <button class="agent-subview-link" data-target-view="agent-scheduling">Scheduling</button>
-                    <button class="agent-subview-link" data-target-view="agent-va-clients">VA Clients</button>
-                    <button class="agent-subview-link" data-target-view="agent-addons">Add-ons &amp; Extras</button>
-                    <button class="agent-subview-link" data-target-view="agent-invoices">Invoices</button>
-                    <button class="agent-subview-link" data-target-view="agent-crmsync">CRM Sync</button>
-                    <button class="agent-subview-link" data-target-view="agent-integrations">Integrations</button>
-                    <button class="agent-subview-link" data-target-view="agent-access-control">Access &
+                    <button class="agent-subview-link" data-target-view="agent-access-control">Access &amp;
                         Credentials</button>
-                    <button onclick="testDocCreation()"
-                        class="text-xs px-3 py-1.5 bg-blue-800 hover:bg-blue-700 rounded text-white">Test Doc
-                        Creation</button>
-                    <button onclick="repairClientFolders()"
-                        class="text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded text-white">
-                        Repair Folder Registry
-                    </button>
+
+                    <!-- SECONDARY: collapsed into a dropdown to keep the primary list short -->
+                    <div class="pt-2">
+                        <button type="button" onclick="toggleAgentSecondaryMenu()" id="agentSecondaryToggle"
+                            class="w-full flex items-center justify-between text-left px-3 py-2 text-xs font-medium text-slate-300 bg-slate-900/60 hover:bg-slate-900 rounded-lg border border-slate-800/60">
+                            <span>More tools</span>
+                            <i class="fa-solid fa-chevron-down text-[10px] transition-transform"
+                                id="agentSecondaryChevron"></i>
+                        </button>
+                        <div id="agentSecondaryMenu"
+                            class="hidden mt-1 space-y-1 border-l border-slate-800/60 ml-2 pl-1">
+                            <button class="agent-subview-link"
+                                data-target-view="agent-subscriptions">Subscriptions</button>
+                            <button class="agent-subview-link" data-target-view="agent-quotas">Quota Monitor</button>
+                            <button class="agent-subview-link" data-target-view="agent-usage">Usage Reports</button>
+                            <button class="agent-subview-link" data-target-view="agent-compliance">Compliance
+                                Logs</button>
+                            <button class="agent-subview-link" data-target-view="agent-violations">Compliance
+                                Violations</button>
+                            <button class="agent-subview-link" data-target-view="agent-docs">Compliance
+                                Documents</button>
+                            <button class="agent-subview-link" data-target-view="agent-compliance-frameworks">Compliance
+                                Frameworks</button>
+                            <button class="agent-subview-link" data-target-view="agent-ai-console">AI Actions
+                                Console</button>
+                            <button class="agent-subview-link" data-target-view="agent-mailboxes">Mailboxes</button>
+                            <button class="agent-subview-link" data-target-view="agent-scheduling">Scheduling</button>
+                            <button class="agent-subview-link" data-target-view="agent-va-clients">VA Clients</button>
+                            <button class="agent-subview-link" data-target-view="agent-addons">Add-ons &amp;
+                                Extras</button>
+                            <button class="agent-subview-link" data-target-view="agent-invoices">Invoices</button>
+                            <button class="agent-subview-link" data-target-view="agent-crmsync">CRM Sync</button>
+                            <button class="agent-subview-link"
+                                data-target-view="agent-integrations">Integrations</button>
+                            <div class="pt-1 mt-1 border-t border-slate-800/60 space-y-1">
+                                <button onclick="testDocCreation()"
+                                    class="w-full text-left text-xs px-3 py-1.5 bg-blue-800 hover:bg-blue-700 rounded text-white">Test
+                                    Doc Creation</button>
+                                <button onclick="repairClientFolders()"
+                                    class="w-full text-left text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded text-white">
+                                    Repair Folder Registry
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Agent Views Wrapper — matches pattern of other hubs -->
@@ -2867,6 +2895,160 @@
                             class="max-w-md bg-blue-600 hover:bg-blue-500 text-xs text-white font-medium py-2 px-4 rounded transition-colors shadow flex items-center justify-center gap-1">
                             <i class="fa-solid fa-bolt"></i> Run Publish Batch Now
                         </button>
+                    </div>
+
+                    <!-- ACCESS & CREDENTIALS (moved here from inside a hidden modal — was never visible before) -->
+                    <div id="view-agent-access-control"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Access & Credentials</h3>
+                                <p class="text-xs text-slate-400">Every API key, OAuth connection, mailbox, CRM link,
+                                    and social account for this client — revoke anything the client wants changed.</p>
+                            </div>
+                            <select id="accessControlClientSelector" onchange="loadAccessControlPanel()"
+                                class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white min-w-[220px]"></select>
+                        </div>
+                        <div class="flex-1 overflow-auto custom-scrollbar space-y-4">
+                            <div>
+                                <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">Integrations
+                                    (Email/CRM/DB/API)</span>
+                                <table
+                                    class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
+                                    <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
+                                        <tr>
+                                            <th class="p-3">Type</th>
+                                            <th class="p-3">Label</th>
+                                            <th class="p-3 text-center">Status</th>
+                                            <th class="p-3 text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="accessIntegrationsBody"
+                                        class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                                </table>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">Mailboxes</span>
+                                <table
+                                    class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
+                                    <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
+                                        <tr>
+                                            <th class="p-3">Label</th>
+                                            <th class="p-3 text-center">Status</th>
+                                            <th class="p-3 text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="accessMailboxesBody" class="divide-y divide-slate-800/50 text-slate-300">
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">CRM
+                                    Connections</span>
+                                <table
+                                    class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
+                                    <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
+                                        <tr>
+                                            <th class="p-3">Provider</th>
+                                            <th class="p-3 text-center">Status</th>
+                                            <th class="p-3 text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="accessCrmBody" class="divide-y divide-slate-800/50 text-slate-300">
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">Social
+                                    Accounts</span>
+                                <table
+                                    class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
+                                    <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
+                                        <tr>
+                                            <th class="p-3">Platform</th>
+                                            <th class="p-3">Page</th>
+                                            <th class="p-3 text-center">Status</th>
+                                            <th class="p-3 text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="accessSocialBody" class="divide-y divide-slate-800/50 text-slate-300">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NEW: AGENT USERS ONLINE & USAGE -->
+                    <div id="view-agent-online"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">AI Agent Users — Online & Usage</h3>
+                                <p class="text-xs text-slate-400">Live presence (client dashboard heartbeat, refreshes
+                                    every 15s) plus current usage against each client's tier.</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span id="onlineCountBadge"
+                                    class="text-[10px] font-mono px-2 py-1 rounded bg-emerald-900/40 text-emerald-300 border border-emerald-800">0
+                                    online</span>
+                                <button onclick="loadAgentOnlineUsage()"
+                                    class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">
+                                    <i class="fa-solid fa-rotate"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead
+                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                    <tr>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3">Client</th>
+                                        <th class="p-3">Tier</th>
+                                        <th class="p-3">Hours Used</th>
+                                        <th class="p-3">Emails Used</th>
+                                        <th class="p-3">Proposals Used</th>
+                                        <th class="p-3">Docs Used</th>
+                                        <th class="p-3">Last Seen</th>
+                                        <th class="p-3 text-center">Chat</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="agentOnlineUsageTableBody"
+                                    class="divide-y divide-slate-800/50 text-slate-300">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- NEW: LIVE CHAT (not stored — in-memory / short-TTL cache only) -->
+                    <div id="view-agent-livechat"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Live Chat</h3>
+                                <p class="text-xs text-slate-400">Ephemeral — messages are held in short-lived cache
+                                    only, never written to a sheet. Use "Email copy" to send any message to the
+                                    client's inbox.</p>
+                            </div>
+                            <select id="chatClientSelector" onchange="openLiveChat()"
+                                class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white min-w-[220px]"></select>
+                        </div>
+                        <div
+                            class="flex-1 flex flex-col bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
+                            <div id="chatThread" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2 text-xs">
+                                <p class="text-slate-600 text-center mt-8">Select a client to start chatting.</p>
+                            </div>
+                            <div class="border-t border-slate-800 p-3 flex gap-2 shrink-0">
+                                <input id="chatInput" type="text" placeholder="Type a message…"
+                                    onkeydown="if(event.key==='Enter') sendLiveChatMessage();"
+                                    class="flex-1 bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                                <button onclick="sendLiveChatMessage()"
+                                    class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-4 py-2 rounded">
+                                    Send
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                 </div>
@@ -4292,80 +4474,12 @@
             <button onclick="submitSendViaIntegration()"
                 class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 rounded">Send</button>
         </div>
-        <div id="view-agent-access-control" class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
-            <div class="flex justify-between items-center shrink-0">
-                <div>
-                    <h3 class="text-lg font-bold text-white">Access & Credentials</h3>
-                    <p class="text-xs text-slate-400">Every API key, OAuth connection, mailbox, CRM link, and social
-                        account
-                        for this client — revoke anything the client wants changed.</p>
-                </div>
-                <select id="accessControlClientSelector" onchange="loadAccessControlPanel()"
-                    class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white min-w-[220px]"></select>
-            </div>
-            <div class="flex-1 overflow-auto custom-scrollbar space-y-4">
-                <div>
-                    <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">Integrations
-                        (Email/CRM/DB/API)</span>
-                    <table
-                        class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
-                        <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
-                            <tr>
-                                <th class="p-3">Type</th>
-                                <th class="p-3">Label</th>
-                                <th class="p-3 text-center">Status</th>
-                                <th class="p-3 text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="accessIntegrationsBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
-                    </table>
-                </div>
-                <div>
-                    <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">Mailboxes</span>
-                    <table
-                        class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
-                        <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
-                            <tr>
-                                <th class="p-3">Label</th>
-                                <th class="p-3 text-center">Status</th>
-                                <th class="p-3 text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="accessMailboxesBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
-                    </table>
-                </div>
-                <div>
-                    <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">CRM Connections</span>
-                    <table
-                        class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
-                        <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
-                            <tr>
-                                <th class="p-3">Provider</th>
-                                <th class="p-3 text-center">Status</th>
-                                <th class="p-3 text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="accessCrmBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
-                    </table>
-                </div>
-                <div>
-                    <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">Social Accounts</span>
-                    <table
-                        class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
-                        <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
-                            <tr>
-                                <th class="p-3">Platform</th>
-                                <th class="p-3">Page</th>
-                                <th class="p-3 text-center">Status</th>
-                                <th class="p-3 text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="accessSocialBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
     </div>
+    <!-- FIX: modalSendViaIntegration now closes properly above. The "Access & Credentials"
+         view used to be nested inside this hidden modal, which is why it never rendered
+         no matter what the nav click handler did. It has been moved to its correct home
+         alongside the other agent-view panels (see view-agent-access-control near
+         view-publish-settings). -->
 
     <script>
         let WEBAPP_URL = localStorage.getItem('VIC_WEBAPP_URL') || "https://script.google.com/macros/s/AKfycby4t4JZVuVD3uMB0BIbwB_NTh8zNXcmz68CKKuKL3fYNmUhWMEgpLDObNASLdd38nQH/exec";
@@ -4702,6 +4816,7 @@
                     document.getElementById('welcomeTitle').innerText = `Gateway Terminal Desk: Active | Admin: ${name}`;
 
                     switchMasterHub('career');
+                    startAgentLivePolling();
                 } else {
                     alert(`SECURITY RESPONSE: ${result.message || 'Verification Failed'}`);
                 }
@@ -4827,136 +4942,201 @@
         }
 
         function switchMasterHub(hubId) {
-            currentHub = hubId;
-            // Hide ALL views across every hub first (prevents ghost views from other hubs)
-            document.querySelectorAll('[id^="view-"]').forEach(v => {
-                v.classList.add('hidden');
-                v.style.display = 'none';
-            });
-            document.querySelectorAll('section[id^="hub-"]').forEach(s => s.classList.add('hidden'));
+            try {
+                currentHub = hubId;
 
-            const targetHub = document.getElementById(`hub-${hubId}`);
-            if (targetHub) targetHub.classList.remove('hidden');
+                // 1. Hide ALL hub sections
+                document.querySelectorAll('section[id^="hub-"]').forEach(s => s.classList.add('hidden'));
 
-            document.querySelectorAll('[id^="nav-"]').forEach(btn => {
-                const isActive = btn.id === `nav-${hubId}`;
-                btn.classList.toggle('bg-slate-900', isActive);
-                btn.classList.toggle('text-white', isActive);
-                btn.classList.toggle('text-slate-400', !isActive);
-                btn.classList.toggle('border-l-emerald-500', isActive);
-                btn.classList.toggle('border-transparent', !isActive);
-                if (isActive) btn.classList.add('active');
-                else btn.classList.remove('active');
-            });
+                // 2. Show the target hub
+                const targetHub = document.getElementById(`hub-${hubId}`);
+                if (targetHub) {
+                    targetHub.classList.remove('hidden');
+                } else {
+                    console.warn(`Hub section #hub-${hubId} not found.`);
+                    return;
+                }
 
-            if (hubId === 'publish') {
+                // 3. Update top‑level navigation buttons
+                document.querySelectorAll('[id^="nav-"]').forEach(btn => {
+                    const isActive = btn.id === `nav-${hubId}`;
+                    btn.classList.toggle('active', isActive);
+                    btn.classList.toggle('bg-slate-900', isActive);
+                    btn.classList.toggle('text-white', isActive);
+                    btn.classList.toggle('text-slate-400', !isActive);
+                    btn.classList.toggle('border-l-emerald-500', isActive);
+                });
+
+                // 4. Select the first sub‑view and load its data
+                //    We use setTimeout to ensure the DOM is ready.
                 setTimeout(() => {
-                    document.querySelectorAll('#hub-publish .agent-view').forEach(v => v.classList.add('hidden'));
-                    const connView = document.getElementById('view-publish-connections');
-                    if (connView) { connView.classList.remove('hidden'); connView.style.display = 'flex'; }
-                    document.querySelectorAll('#hub-publish .agent-subview-link').forEach(l => l.classList.remove('active'));
-                    const firstBtn = document.querySelector('#hub-publish [data-target-view="publish-connections"]');
-                    if (firstBtn) firstBtn.classList.add('active');
-                    loadSocialConnections();
-                }, 100);
-            }
+                    // Find the first sub‑navigation button inside the target hub
+                    const firstSubBtn = targetHub?.querySelector('[data-target-view]');
+                    if (firstSubBtn) {
+                        // Simulate a click to trigger switchSubSection
+                        firstSubBtn.click();
+                    } else {
+                        // If no sub‑nav exists (shouldn't happen), fallback to a default view.
+                        // For agent hub, default to client registry.
+                        if (hubId === 'agent') {
+                            const clientsView = document.getElementById('view-agent-clients');
+                            if (clientsView) {
+                                clientsView.classList.remove('hidden');
+                                clientsView.style.display = 'flex';
+                            }
+                            loadAgentClients();
+                        } else {
+                            // Generic fallback: try to show the first view‑* element
+                            const firstView = targetHub?.querySelector('[id^="view-"]');
+                            if (firstView) {
+                                firstView.classList.remove('hidden');
+                                firstView.style.display = 'flex';
+                            }
+                        }
+                    }
+                }, 50);
 
-            if (hubId === 'career') {
-                setTimeout(() => initCareerHubUniversalFilter(), 100);
-            }
+                // 5. Special handling for Agent Hub (extra safety)
+                if (hubId === 'agent') {
+                    setTimeout(() => {
+                        // Hide all agent views first
+                        document.querySelectorAll('#hub-agent .agent-view').forEach(v => {
+                            v.classList.add('hidden');
+                            v.style.display = 'none';
+                        });
+                        // Ensure clients view is visible
+                        const clientsView = document.getElementById('view-agent-clients');
+                        if (clientsView) {
+                            clientsView.classList.remove('hidden');
+                            clientsView.style.display = 'flex';
+                        }
+                        // Mark the correct sub‑nav as active
+                        document.querySelectorAll('#hub-agent .agent-subview-link').forEach(l => l.classList.remove('active'));
+                        const clientBtn = document.querySelector('#hub-agent [data-target-view="agent-clients"]');
+                        if (clientBtn) clientBtn.classList.add('active');
+                        loadAgentClients();
+                    }, 100);
+                }
 
-            const firstSubBtn = targetHub?.querySelector('[data-target-view]');
-            if (firstSubBtn) firstSubBtn.click();
+                // 6. Initialize the universal filter if in Career Hub
+                if (hubId === 'career') {
+                    setTimeout(() => initCareerHubUniversalFilter(), 100);
+                }
 
-            if (hubId === 'agent') {
-                setTimeout(() => {
-                    // Hide all agent views first
-                    document.querySelectorAll('.agent-view').forEach(v => v.classList.add('hidden'));
-                    // Show only clients view
-                    const clientsView = document.getElementById('view-agent-clients');
-                    if (clientsView) { clientsView.classList.remove('hidden'); clientsView.style.display = 'flex'; }
-                    // Set active nav
-                    document.querySelectorAll('.agent-subview-link').forEach(l => l.classList.remove('active'));
-                    const firstBtn = document.querySelector('[data-target-view="agent-clients"]');
-                    if (firstBtn) firstBtn.classList.add('active');
-                    // Load data
-                    loadAgentClients();
-                }, 100);
+            } catch (e) {
+                console.error('switchMasterHub error:', e);
+                showToast('Error loading dashboard section. Please refresh.', 'error');
             }
         }
-
         function switchSubSection(system, action) {
-            document.querySelectorAll('[id^="view-"]').forEach(view => {
-                view.classList.add('hidden');
-                view.style.display = 'none';
-            });
-            const targetViewEl = document.getElementById(`view-${action}`);
-            if (targetViewEl) {
-                targetViewEl.classList.remove('hidden');
-                targetViewEl.style.display = 'flex';
-            } else {
-                console.error(`DOM container "#view-${action}" does not exist!`);
-                return;
+            try {
+                // 1. Hide ALL views globally
+                document.querySelectorAll('[id^="view-"]').forEach(view => {
+                    view.classList.add('hidden');
+                    view.style.display = 'none';
+                });
+
+                // 2. Show the target view
+                const targetViewEl = document.getElementById(`view-${action}`);
+                if (targetViewEl) {
+                    targetViewEl.classList.remove('hidden');
+                    targetViewEl.style.display = 'flex';
+                } else {
+                    console.error(`DOM container "#view-${action}" does not exist!`);
+                    showToast(`View "${action}" not found.`, 'error');
+                    return;
+                }
+
+                // 3. Load data for the view (if a loader exists)
+                const initMap = {
+                    // Career
+                    'career-users': initializeModule_career_users,
+                    'career-earnings': initializeModule_career_earnings,
+                    'career-settlements': initializeModule_career_settlements,
+                    'career-messages': initializeModule_career_messages,
+                    'career-elevation': initializeModule_career_elevation,
+                    'career-complaints': initializeModule_career_complaints,
+
+                    // Assessment
+                    'assessment-students': initializeModule_assess_submissions,
+                    'assessment-certificates': loadCertificateData,
+                    'assessment-courses': initializeModule_assessment_courses,
+                    'assessment-questions': initializeModule_assessment_questions,
+                    'assessment-messages': loadAcademicSupportMessages,
+                    'assessment-applications': initializeModule_assessment_applications,
+
+                    // Client
+                    'client-submitted': loadClientSubmittedProjects,
+                    'client-onboarded': loadProductionFulfillment,
+
+                    // Leads
+                    'leads-matrix': loadLeadsMatrix,
+                    'leads-broadcast': loadBroadcastQueue,
+                    'leads-drive': loadMailDriveReports,
+                    'leads-calendar': loadCalendarEvents,
+
+                    // Agent (primary)
+                    'agent-clients': loadAgentClients,
+                    'agent-online': loadAgentOnlineUsage,
+                    'agent-livechat': () => { populateAllClientsSelector('chatClientSelector'); startChatPolling(); },
+                    'agent-tasks': loadAgentTasks,
+                    'agent-approvals': loadAgentApprovals,
+                    'agent-access-control': () => { populateAllClientsSelector('accessControlClientSelector', loadAccessControlPanel); },
+
+                    // Agent (secondary – more tools)
+                    'agent-subscriptions': loadAgentSubscriptions,
+                    'agent-quotas': loadAgentQuotas,
+                    'agent-usage': loadAgentUsageReports,
+                    'agent-compliance': loadAgentComplianceLogs,
+                    'agent-violations': loadAgentViolations,
+                    'agent-docs': loadAgentDocsView,
+                    'agent-compliance-frameworks': () => { populateAgentClientSelector('compFrameworksClientSelector', loadComplianceFrameworksUI); },
+                    'agent-ai-console': () => {
+                        populateAllClientsSelector('aiConsoleClientSelector');
+                        document.getElementById('aiConsoleCategory').innerHTML = Object.keys(AI_ACTION_CATALOG).map(c => `<option value="${c}">${c}</option>`).join('');
+                        populateAIConsoleActions();
+                    },
+                    'agent-mailboxes': () => { populateAllClientsSelector('mailboxesClientSelector', loadAgentMailboxesUI); },
+                    'agent-scheduling': () => { populateAllClientsSelector('schedulingClientSelector', loadSchedulingMailboxes); },
+                    'agent-va-clients': loadVAClientsUI,
+                    'agent-addons': loadAgentAddonsUI,
+                    'agent-invoices': loadAgentInvoices,
+                    'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector').then(loadIntegrationsUI); },
+                    'agent-crmsync': () => { populateAgentClientSelector('crmSyncClientSelector').then(loadCrmSyncUI); },
+
+                    // Publish
+                    'publish-connections': loadSocialConnections,
+                    'publish-queue': loadPublishQueue,
+                    'publish-settings': loadPublishGlobalSwitch,
+
+                    // V5
+                    'v5-linkedin': loadV5LinkedInHistory,
+                    'v5-trends': loadV5TrendsHistory,
+                    'v5-content': loadV5ContentHistory,
+                    'v5-calendar-content': loadV5CalendarHistory,
+                    'v5-drip': loadV5DripHistory,
+                    'v5-whatsapp': loadV5WhatsAppHistory,
+                    'v5-competitors': loadV5CompetitorsHistory,
+                };
+
+                const initFn = initMap[action];
+                if (initFn) {
+                    // Some loaders are async, but we call them without await – they'll show skeletons.
+                    initFn();
+                } else {
+                    // If no loader is defined, show a placeholder message.
+                    const tbody = targetViewEl.querySelector('tbody');
+                    if (tbody) {
+                        tbody.innerHTML = `<tr><td colspan="10" class="p-3 text-center text-slate-500">Select a view to load data.</td></tr>`;
+                    }
+                    console.warn(`No loader defined for action: ${action}`);
+                }
+
+            } catch (e) {
+                console.error('switchSubSection error:', e);
+                showToast('Error loading data. Please refresh.', 'error');
             }
-
-            const initMap = {
-                'career-users': initializeModule_career_users,
-                'career-earnings': initializeModule_career_earnings,
-                'career-settlements': initializeModule_career_settlements,
-                'career-messages': initializeModule_career_messages,
-                'career-elevation': initializeModule_career_elevation,
-                'assessment-students': initializeModule_assess_submissions,
-                'assessment-courses': initializeModule_assessment_courses,
-                'assessment-questions': initializeModule_assessment_questions,
-                'assessment-certificates': loadCertificateData,
-                'assessment-messages': loadAcademicSupportMessages,
-                'assessment-applications': initializeModule_assessment_applications,
-                'client-submitted': loadClientSubmittedProjects,
-                'client-onboarded': loadProductionFulfillment,
-                'leads-matrix': loadLeadsMatrix,
-                'leads-broadcast': loadBroadcastQueue,
-                'leads-drive': loadMailDriveReports,
-                'career-complaints': initializeModule_career_complaints,
-                'leads-calendar': loadCalendarEvents,
-                'agent-clients': loadAgentClients,
-                'agent-subscriptions': loadAgentSubscriptions,
-                'agent-quotas': loadAgentQuotas,
-                'agent-usage': loadAgentUsageReports,
-                'agent-tasks': loadAgentTasks,
-                'agent-addons': loadAgentAddonsUI,
-                'agent-compliance': loadAgentComplianceLogs,
-                'agent-violations': loadAgentViolations,   // NEW
-                'agent-docs': loadAgentDocsView,            // NEW
-                'agent-invoices': loadAgentInvoices,        // NEW
-                'publish-connections': loadSocialConnections,
-                'publish-queue': loadPublishQueue,
-                'publish-settings': loadPublishGlobalSwitch,
-                'v5-linkedin': loadV5LinkedInHistory,
-                'v5-trends': loadV5TrendsHistory,
-                'v5-content': loadV5ContentHistory,
-                'v5-calendar-content': loadV5CalendarHistory,
-                'v5-drip': loadV5DripHistory,
-                'v5-whatsapp': loadV5WhatsAppHistory,
-                'v5-competitors': loadV5CompetitorsHistory,
-                'agent-approvals': loadAgentApprovals,
-                'agent-compliance-frameworks': () => { populateAgentClientSelector('compFrameworksClientSelector', loadComplianceFrameworksUI); },
-                'agent-ai-console': () => {
-                    populateAllClientsSelector('aiConsoleClientSelector');
-                    document.getElementById('aiConsoleCategory').innerHTML = Object.keys(AI_ACTION_CATALOG).map(c => `<option value="${c}">${c}</option>`).join('');
-                    populateAIConsoleActions();
-                },
-                'agent-access-control': () => { populateAllClientsSelector('accessControlClientSelector', loadAccessControlPanel); },
-                'agent-mailboxes': () => { populateAllClientsSelector('mailboxesClientSelector', loadAgentMailboxesUI); },
-                'agent-scheduling': () => { populateAllClientsSelector('schedulingClientSelector', loadSchedulingMailboxes); },
-                'agent-va-clients': loadVAClientsUI,
-                'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector').then(loadIntegrationsUI); },
-                'agent-crmsync': () => { populateAgentClientSelector('crmSyncClientSelector').then(loadCrmSyncUI); },
-            };
-
-            const initFn = initMap[action];
-            if (initFn) initFn();
         }
-
         function initializeNavigation() {
             document.querySelectorAll('[data-target-view]').forEach(link => {
                 link.addEventListener('click', function (event) {
@@ -8250,6 +8430,173 @@
             });
         }
 
+        // ================================================================
+        // NEW: SIDEBAR "MORE TOOLS" DROPDOWN (secondary agent nav)
+        // ================================================================
+        function toggleAgentSecondaryMenu() {
+            const menu = document.getElementById('agentSecondaryMenu');
+            const chevron = document.getElementById('agentSecondaryChevron');
+            if (!menu) return;
+            menu.classList.toggle('hidden');
+            if (chevron) chevron.classList.toggle('rotate-180');
+        }
+        // Keep the dropdown open if the currently active view lives inside it
+        // (e.g. after a refresh or a deep link into a secondary view).
+        function syncAgentSecondaryMenuOpenState() {
+            const menu = document.getElementById('agentSecondaryMenu');
+            if (!menu) return;
+            const hasActiveInside = !!menu.querySelector('.agent-subview-link.active');
+            if (hasActiveInside) menu.classList.remove('hidden');
+        }
+
+        // ================================================================
+        // NEW: AGENT USERS — ONLINE PRESENCE & USAGE
+        // ================================================================
+        async function loadAgentOnlineUsage() {
+            const tbody = document.getElementById('agentOnlineUsageTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = emptyRow('Loading…', 9);
+
+            const clientsRes = await executeSecureBridgeCall('agent', 'agent-get-clients', {});
+            const clients = clientsRes.data || [];
+            const ids = clients.map(c => c.ClientID).filter(Boolean);
+
+            const presRes = ids.length
+                ? await executeSecureBridgeCall('agent', 'agent-presence-list', { clientIds: ids })
+                : { presence: {} };
+            const presence = presRes.presence || {};
+
+            let onlineCount = 0;
+            tbody.innerHTML = clients.map(c => {
+                const p = presence[c.ClientID];
+                const isOnline = !!p;
+                if (isOnline) onlineCount++;
+                return `<tr>
+                    <td class="p-3">${isOnline
+                        ? '<span class="inline-flex items-center gap-1.5 text-emerald-400"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>Online</span>'
+                        : '<span class="text-slate-600">Offline</span>'}</td>
+                    <td class="p-3 text-white font-medium">${escapeHtml(c.CompanyName || c.ClientID)}</td>
+                    <td class="p-3">${badge(c.Tier || '—')}</td>
+                    <td class="p-3">${c.HoursUsed || 0}</td>
+                    <td class="p-3">${c.EmailsUsed || 0}</td>
+                    <td class="p-3">${c.ProposalsUsed || 0}</td>
+                    <td class="p-3">${c.DocumentsUsed || 0}</td>
+                    <td class="p-3 text-slate-500">${p ? fmtDate(p.ts) : '—'}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="openChatForClient('${escapeHtml(c.ClientID)}')"
+                            class="text-xs px-2 py-1 bg-emerald-900 hover:bg-emerald-800 rounded text-emerald-200">Chat</button>
+                    </td>
+                </tr>`;
+            }).join('') || emptyRow('No clients yet.', 9);
+
+            const badgeEl = document.getElementById('onlineCountBadge');
+            if (badgeEl) badgeEl.textContent = onlineCount + ' online';
+        }
+
+        function openChatForClient(clientId) {
+            const navBtn = document.querySelector('[data-target-view="agent-livechat"]');
+            if (navBtn) navBtn.click();
+            setTimeout(() => {
+                const sel = document.getElementById('chatClientSelector');
+                if (sel) {
+                    sel.dataset.preselect = clientId;
+                    if ([...sel.options].some(o => o.value === clientId)) sel.value = clientId;
+                    openLiveChat();
+                }
+            }, 250);
+        }
+
+        // ================================================================
+        // NEW: LIVE CHAT (ephemeral — server holds messages in short-TTL
+        // cache only, nothing is written to a sheet)
+        // ================================================================
+        let LIVE_CHAT_CLIENT = null;
+        let LIVE_CHAT_TIMER = null;
+
+        function startChatPolling() {
+            if (LIVE_CHAT_TIMER) clearInterval(LIVE_CHAT_TIMER);
+            LIVE_CHAT_TIMER = setInterval(() => {
+                const view = document.getElementById('view-agent-livechat');
+                if (view && !view.classList.contains('hidden') && LIVE_CHAT_CLIENT) pollLiveChat();
+            }, 3000);
+        }
+
+        function openLiveChat() {
+            const sel = document.getElementById('chatClientSelector');
+            const clientId = sel ? sel.value : '';
+            LIVE_CHAT_CLIENT = clientId || null;
+            const thread = document.getElementById('chatThread');
+            if (!clientId) {
+                thread.innerHTML = '<p class="text-slate-600 text-center mt-8">Select a client to start chatting.</p>';
+                return;
+            }
+            thread.innerHTML = '<p class="text-slate-600 text-center mt-8">Loading…</p>';
+            pollLiveChat();
+        }
+
+        async function pollLiveChat() {
+            if (!LIVE_CHAT_CLIENT) return;
+            const res = await executeSecureBridgeCall('agent', 'agent-chat-poll', { clientId: LIVE_CHAT_CLIENT });
+            if (!res.success) return;
+            renderChatThread(res.messages || []);
+        }
+
+        function renderChatThread(messages) {
+            const el = document.getElementById('chatThread');
+            if (!el) return;
+            if (!messages.length) {
+                el.innerHTML = '<p class="text-slate-600 text-center mt-8">No messages yet. Say hello 👋</p>';
+                return;
+            }
+            const wasNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+            el.innerHTML = messages.map(m => `
+                <div class="flex ${m.sender === 'admin' ? 'justify-end' : 'justify-start'}">
+                    <div class="max-w-[75%] ${m.sender === 'admin' ? 'bg-emerald-700/20 border-emerald-800' : 'bg-slate-800 border-slate-700'} border rounded-lg px-3 py-2">
+                        <p class="text-slate-100 whitespace-pre-wrap break-words">${escapeHtml(m.text)}</p>
+                        <div class="flex items-center justify-between gap-3 mt-1">
+                            <span class="text-[9px] text-slate-500">${fmtDate(m.ts)} · ${escapeHtml(m.sender)}</span>
+                            <button onclick='emailChatMessage(${JSON.stringify(m.id)}, ${JSON.stringify(m.text)})'
+                                class="text-[9px] text-blue-400 hover:text-blue-300 shrink-0">
+                                <i class="fa-solid fa-envelope"></i> Email copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            if (wasNearBottom) el.scrollTop = el.scrollHeight;
+        }
+
+        async function sendLiveChatMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+            if (!LIVE_CHAT_CLIENT) { showToast('Select a client first.', 'error'); return; }
+            input.value = '';
+            const res = await executeSecureBridgeCall('agent', 'agent-chat-send',
+                { clientId: LIVE_CHAT_CLIENT, sender: 'admin', text });
+            if (!res.success) showToast(res.message || 'Failed to send.', 'error');
+            pollLiveChat();
+        }
+
+        async function emailChatMessage(messageId, text) {
+            if (!LIVE_CHAT_CLIENT) return;
+            if (!confirm("Send a copy of this message to the client's email on file?")) return;
+            const res = await executeSecureBridgeCall('agent', 'agent-chat-email-copy',
+                { clientId: LIVE_CHAT_CLIENT, messageId, text });
+            showToast(res.success ? (res.message || 'Emailed.') : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+        }
+
+        // Single lightweight heartbeat: refreshes the Online/Usage table and
+        // the active chat thread only while their respective views are visible.
+        let AGENT_LIVE_POLL_TIMER = null;
+        function startAgentLivePolling() {
+            if (AGENT_LIVE_POLL_TIMER) return;
+            AGENT_LIVE_POLL_TIMER = setInterval(() => {
+                const onlineView = document.getElementById('view-agent-online');
+                if (onlineView && !onlineView.classList.contains('hidden')) loadAgentOnlineUsage();
+            }, 15000);
+        }
+
         // Extend the single results table with the new columns
         async function loadAgentComplianceDocs() {
             const clientId = document.getElementById('docsClientSelector')?.value;
@@ -9210,6 +9557,7 @@
                     if (welcomeEl) welcomeEl.innerText = `Terminal Access Desk: Locked On - ${currentIdentity}`;
 
                     switchMasterHub('career');
+                    startAgentLivePolling();
                 }
             }, 800);
         }

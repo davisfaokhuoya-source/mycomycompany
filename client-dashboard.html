@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Victorias — Client Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <style>
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e2937;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            width: 100%;
+            text-align: left;
+            padding: .6rem .9rem;
+            font-size: .8rem;
+            color: #94a3b8;
+            border-radius: .5rem;
+            border-left: 2px solid transparent;
+            transition: all .15s ease;
+        }
+
+        .nav-link:hover {
+            background: #1e293b;
+            color: #f1f5f9;
+        }
+
+        .nav-link.active {
+            background: #1e293b;
+            color: #34d399;
+            border-left-color: #34d399;
+            font-weight: 600;
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: flex;
+        }
+
+        .ring-track {
+            stroke: #1e293b;
+        }
+
+        .ring-fill {
+            stroke: #34d399;
+            transition: stroke-dashoffset .6s ease;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-950 text-slate-200 min-h-screen">
+
+    <!-- =====================================================================
+         LOGIN VIEW
+    ====================================================================== -->
+    <div id="loginView" class="min-h-screen flex items-center justify-center p-6">
+        <div
+            class="bg-slate-900/80 border border-slate-800 p-8 rounded-2xl shadow-2xl max-w-md w-full backdrop-blur-xl">
+            <div class="text-center mb-6">
+                <div
+                    class="inline-flex h-16 w-16 items-center justify-center bg-emerald-500/10 rounded-full mb-3 border border-emerald-500/20 overflow-hidden">
+                    <img src="/img/thevictoriaslogo.png" alt="The Victorias Ltd" class="h-full w-full object-cover"
+                        onerror="this.parentElement.innerHTML='<i class=\'fa-solid fa-building-shield text-2xl text-emerald-400\'></i>'" />
+                </div>
+                <h1 class="text-xl font-bold tracking-tight text-white">Client Dashboard</h1>
+                <p class="text-sm text-slate-400 mt-1">Sign in with the Client ID and access code your account manager
+                    gave you.</p>
+            </div>
+            <form id="clientLoginForm" onsubmit="handleClientLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-mono uppercase text-slate-400 mb-1">Gateway URL</label>
+                    <input type="url" id="gwUrl" required placeholder="https://script.google.com/macros/s/.../exec"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm font-mono text-emerald-400 focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                    <label class="block text-xs font-mono uppercase text-slate-400 mb-1">Client ID</label>
+                    <input type="text" id="loginClientId" required placeholder="e.g. CLT-00042"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                    <label class="block text-xs font-mono uppercase text-slate-400 mb-1">Access Code</label>
+                    <input type="password" id="loginAccessCode" required placeholder="............"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+                <button type="submit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 rounded-lg text-sm transition-all shadow-lg flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket text-xs"></i> Sign In
+                </button>
+                <p id="loginError" class="hidden text-xs text-red-400 text-center"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         MAIN DASHBOARD VIEW
+    ====================================================================== -->
+    <div id="mainView" class="hidden flex-1 flex overflow-hidden h-screen">
+        <aside class="w-60 bg-slate-950 border-r border-slate-800 flex flex-col shrink-0">
+            <div class="p-4 border-b border-slate-800 flex items-center gap-3">
+                <div
+                    class="h-8 w-8 rounded-lg overflow-hidden bg-emerald-500 flex items-center justify-center shadow-md shrink-0">
+                    <img src="/img/thevictoriaslogo.png" alt="logo" class="h-full w-full object-cover"
+                        onerror="this.parentElement.innerHTML='<span class=\'text-slate-950 font-bold text-lg\'>V</span>'" />
+                </div>
+                <div class="truncate">
+                    <h1 class="text-sm font-bold tracking-wide text-white truncate" id="companyNameLabel">Client</h1>
+                    <p class="text-[10px] font-mono tracking-wider text-emerald-400 uppercase" id="tierLabel">—</p>
+                </div>
+            </div>
+
+            <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
+                <button class="nav-link active" data-view="overview" onclick="showView('overview', this)">
+                    <i class="fa-solid fa-gauge-high w-4"></i> Overview
+                </button>
+                <button class="nav-link" data-view="documents" onclick="showView('documents', this)">
+                    <i class="fa-solid fa-file-lines w-4"></i> My Documents
+                </button>
+                <button class="nav-link" data-view="generate" onclick="showView('generate', this)">
+                    <i class="fa-solid fa-wand-magic-sparkles w-4"></i> Generate a Document
+                </button>
+                <button class="nav-link" data-view="chat" onclick="showView('chat', this)">
+                    <i class="fa-solid fa-comments w-4"></i> Live Chat
+                </button>
+            </nav>
+
+            <div class="p-3 border-t border-slate-800">
+                <button onclick="logoutClient()"
+                    class="w-full text-xs px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg text-slate-300 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col overflow-hidden">
+            <header class="h-14 border-b border-slate-800 flex items-center justify-between px-6 shrink-0">
+                <h2 id="pageTitle" class="text-sm font-semibold text-white">Overview</h2>
+                <div class="flex items-center gap-2 text-[10px] font-mono text-emerald-400">
+                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                    Session Active
+                </div>
+            </header>
+
+            <div class="flex-1 overflow-hidden p-6">
+
+                <!-- OVERVIEW -->
+                <section id="view-overview"
+                    class="view active flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center gap-4">
+                            <svg width="64" height="64" viewBox="0 0 64 64">
+                                <circle cx="32" cy="32" r="28" fill="none" stroke-width="6" class="ring-track"></circle>
+                                <circle id="ringHours" cx="32" cy="32" r="28" fill="none" stroke-width="6"
+                                    stroke-dasharray="175.9" stroke-dashoffset="175.9" stroke-linecap="round"
+                                    class="ring-fill" transform="rotate(-90 32 32)"></circle>
+                            </svg>
+                            <div>
+                                <p class="text-[10px] font-mono uppercase text-slate-500">Hours Used</p>
+                                <p id="statHours" class="text-lg font-bold text-white">0 / 0</p>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                            <p class="text-[10px] font-mono uppercase text-slate-500">Emails Sent</p>
+                            <p id="statEmails" class="text-2xl font-bold text-white mt-1">0 / 0</p>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                            <p class="text-[10px] font-mono uppercase text-slate-500">Proposals Drafted</p>
+                            <p id="statProposals" class="text-2xl font-bold text-white mt-1">0 / 0</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                        <div class="flex justify-between items-center mb-3">
+                            <p class="text-xs font-mono uppercase text-slate-500">Self-Service Documents</p>
+                            <span id="portalDocsBadge"
+                                class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-300">0 / 10 used</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div id="portalDocsBar" class="h-2 bg-emerald-500 rounded-full" style="width:0%"></div>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-2">This is separate from admin-generated deliverables —
+                            it's the quota for documents you generate yourself from the "Generate a Document" tab.</p>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                        <p class="text-xs font-mono uppercase text-slate-500 mb-3">Recent Documents</p>
+                        <div id="recentDocsList" class="space-y-2 text-xs text-slate-400">Loading…</div>
+                    </div>
+                </section>
+
+                <!-- DOCUMENTS -->
+                <section id="view-documents" class="view flex-1 h-full flex-col overflow-hidden space-y-4">
+                    <div class="flex justify-between items-center shrink-0">
+                        <p class="text-xs text-slate-400">Everything approved and delivered to you, plus anything you
+                            generated yourself.</p>
+                        <button onclick="loadDocuments()"
+                            class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">
+                            <i class="fa-solid fa-rotate"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead
+                                class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                <tr>
+                                    <th class="p-3">Title</th>
+                                    <th class="p-3">Type</th>
+                                    <th class="p-3">Created</th>
+                                    <th class="p-3">Source</th>
+                                    <th class="p-3 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="documentsTableBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- GENERATE -->
+                <section id="view-generate"
+                    class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
+                    <p class="text-xs text-slate-400 max-w-2xl">Generate a document on demand from your own data. Each
+                        one counts against your self-service document quota shown on the Overview tab.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
+                        <button onclick="generateDocument('pitch-deck')"
+                            class="text-left bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-5 transition-colors">
+                            <i class="fa-solid fa-display text-emerald-400 mb-2"></i>
+                            <p class="font-semibold text-white text-sm">Pitch Deck</p>
+                            <p class="text-[11px] text-slate-500 mt-1">A ready-to-send investor/partner deck built from
+                                your company data.</p>
+                        </button>
+                        <button onclick="generateDocument('financial-report')"
+                            class="text-left bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-5 transition-colors">
+                            <i class="fa-solid fa-chart-line text-emerald-400 mb-2"></i>
+                            <p class="font-semibold text-white text-sm">Financial Report</p>
+                            <p class="text-[11px] text-slate-500 mt-1">A snapshot report summarizing your financial
+                                position.</p>
+                        </button>
+                        <button onclick="generateDocument('infographic-brief')"
+                            class="text-left bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-5 transition-colors">
+                            <i class="fa-solid fa-chart-pie text-emerald-400 mb-2"></i>
+                            <p class="font-semibold text-white text-sm">Infographic Brief</p>
+                            <p class="text-[11px] text-slate-500 mt-1">A brief laying out key data points for a designer
+                                to visualize.</p>
+                        </button>
+                        <button onclick="generateDocument('proposal')"
+                            class="text-left bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-5 transition-colors">
+                            <i class="fa-solid fa-file-signature text-emerald-400 mb-2"></i>
+                            <p class="font-semibold text-white text-sm">Proposal</p>
+                            <p class="text-[11px] text-slate-500 mt-1">A client-ready proposal draft based on your
+                                brief.</p>
+                        </button>
+                    </div>
+                    <div id="generateStatus" class="max-w-3xl"></div>
+                </section>
+
+                <!-- LIVE CHAT -->
+                <section id="view-chat" class="view flex-1 h-full flex-col overflow-hidden">
+                    <div class="flex-1 flex flex-col bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
+                        <div class="px-4 py-3 border-b border-slate-800 shrink-0">
+                            <p class="text-sm font-semibold text-white">Chat with your account team</p>
+                            <p class="text-[11px] text-slate-500">This chat is ephemeral and isn't saved permanently —
+                                if you need a written copy, ask the team to email you one.</p>
+                        </div>
+                        <div id="chatThread" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2 text-xs">
+                            <p class="text-slate-600 text-center mt-8">Say hello 👋</p>
+                        </div>
+                        <div class="border-t border-slate-800 p-3 flex gap-2 shrink-0">
+                            <input id="chatInput" type="text" placeholder="Type a message…"
+                                onkeydown="if(event.key==='Enter') sendChatMessage();"
+                                class="flex-1 bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                            <button onclick="sendChatMessage()"
+                                class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-4 py-2 rounded">Send</button>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // =====================================================================
+        // STATE
+        // =====================================================================
+        let GW_URL = localStorage.getItem('VIC_CLIENT_GW_URL') || "";
+        let CLIENT_ID = localStorage.getItem('VIC_CLIENT_ID') || "";
+        let SESSION_TOKEN = localStorage.getItem('VIC_CLIENT_TOKEN') || "";
+        let PRESENCE_TIMER = null;
+        let CHAT_TIMER = null;
+
+        // =====================================================================
+        // BRIDGE CALL — same wire format the admin dashboard uses, just against
+        // the "clientportal" system with the client's own session token.
+        // =====================================================================
+        async function callGateway(system, action, extra = {}) {
+            if (!GW_URL) { showLoginError('Missing Gateway URL.'); return { success: false }; }
+            try {
+                const body = { system, action, token: SESSION_TOKEN, clientId: CLIENT_ID, ...extra };
+                const res = await fetch(GW_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(body),
+                    redirect: 'follow'
+                });
+                const text = await res.text();
+                const jsonStart = text.indexOf('{');
+                return JSON.parse(jsonStart !== -1 ? text.substring(jsonStart) : text || '{}');
+            } catch (e) {
+                console.error(e);
+                return { success: false, message: 'Connection error: ' + e.toString() };
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+        }
+        function fmtDate(val) {
+            if (!val) return '—';
+            const d = new Date(val);
+            return isNaN(d) ? String(val) : d.toLocaleString();
+        }
+
+        // =====================================================================
+        // LOGIN / LOGOUT
+        // =====================================================================
+        function showLoginError(msg) {
+            const el = document.getElementById('loginError');
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
+
+        async function handleClientLogin(e) {
+            e.preventDefault();
+            document.getElementById('loginError').classList.add('hidden');
+
+            GW_URL = document.getElementById('gwUrl').value.trim();
+            const clientId = document.getElementById('loginClientId').value.trim();
+            const accessCode = document.getElementById('loginAccessCode').value.trim();
+            if (!GW_URL || !clientId || !accessCode) return;
+
+            CLIENT_ID = clientId;
+            const res = await callGateway('clientportal', 'clientPortalLogin', { accessCode });
+
+            if (res.success && res.token) {
+                SESSION_TOKEN = res.token;
+                localStorage.setItem('VIC_CLIENT_GW_URL', GW_URL);
+                localStorage.setItem('VIC_CLIENT_ID', CLIENT_ID);
+                localStorage.setItem('VIC_CLIENT_TOKEN', SESSION_TOKEN);
+                document.getElementById('companyNameLabel').textContent = res.displayName || CLIENT_ID;
+                enterDashboard();
+            } else {
+                showLoginError(res.message || 'Invalid Client ID or access code.');
+            }
+        }
+
+        function logoutClient() {
+            clearInterval(PRESENCE_TIMER);
+            clearInterval(CHAT_TIMER);
+            localStorage.removeItem('VIC_CLIENT_TOKEN');
+            SESSION_TOKEN = '';
+            document.getElementById('mainView').classList.add('hidden');
+            document.getElementById('loginView').classList.remove('hidden');
+        }
+
+        function enterDashboard() {
+            document.getElementById('loginView').classList.add('hidden');
+            document.getElementById('mainView').classList.remove('hidden');
+            document.getElementById('gwUrl').value = GW_URL;
+            loadOverview();
+            startPresencePing();
+        }
+
+        // Restore a saved session on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('gwUrl').value = GW_URL;
+            document.getElementById('loginClientId').value = CLIENT_ID;
+            if (GW_URL && CLIENT_ID && SESSION_TOKEN) enterDashboard();
+        });
+
+        // =====================================================================
+        // NAVIGATION
+        // =====================================================================
+        function showView(name, btn) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById('view-' + name).classList.add('active');
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            const titles = { overview: 'Overview', documents: 'My Documents', generate: 'Generate a Document', chat: 'Live Chat' };
+            document.getElementById('pageTitle').textContent = titles[name] || name;
+
+            if (name === 'documents') loadDocuments();
+            if (name === 'chat') { loadChat(); startChatPolling(); }
+            else clearInterval(CHAT_TIMER);
+        }
+
+        // =====================================================================
+        // OVERVIEW
+        // =====================================================================
+        async function loadOverview() {
+            const res = await callGateway('clientportal', 'clientPortalDashboard');
+            if (!res.success) { showLoginError(res.message || 'Session expired.'); logoutClient(); return; }
+
+            document.getElementById('companyNameLabel').textContent = res.companyName || CLIENT_ID;
+            document.getElementById('tierLabel').textContent = (res.tier || '').replace(/_/g, ' ');
+
+            const u = res.usage || {};
+            document.getElementById('statHours').textContent = `${u.hoursUsed || 0}`;
+            document.getElementById('statEmails').textContent = `${u.emailsUsed || 0}`;
+            document.getElementById('statProposals').textContent = `${u.proposalsUsed || 0}`;
+
+            // Hours ring (visual only — tier hour ceilings vary/are effectively
+            // unlimited on some tiers, so this ring shows activity, not a hard cap)
+            const ring = document.getElementById('ringHours');
+            const circumference = 175.9;
+            const pct = Math.min(100, (parseFloat(u.hoursUsed) || 0) > 0 ? Math.min(95, (parseFloat(u.hoursUsed) || 0)) : 4);
+            ring.style.strokeDashoffset = circumference - (circumference * pct / 100);
+
+            const pd = res.portalDocs || { used: 0, limit: 10 };
+            const limitLabel = pd.limit >= 999 ? 'Unlimited' : `${pd.used} / ${pd.limit} used`;
+            document.getElementById('portalDocsBadge').textContent = limitLabel;
+            const pdPct = pd.limit >= 999 ? 8 : Math.min(100, (pd.used / Math.max(1, pd.limit)) * 100);
+            document.getElementById('portalDocsBar').style.width = pdPct + '%';
+
+            const list = document.getElementById('recentDocsList');
+            const docs = res.recentDocuments || [];
+            list.innerHTML = docs.length ? docs.map(d => `
+            <div class="flex justify-between items-center bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+                <span class="text-slate-200">${escapeHtml(d.title || d.type)}</span>
+                <span class="text-slate-500 text-[10px]">${fmtDate(d.createdAt)}</span>
+            </div>
+        `).join('') : '<p class="text-slate-600">No documents yet.</p>';
+        }
+
+        // =====================================================================
+        // DOCUMENTS
+        // =====================================================================
+        async function loadDocuments() {
+            const tbody = document.getElementById('documentsTableBody');
+            tbody.innerHTML = '<tr><td class="p-3 text-slate-500" colspan="5">Loading…</td></tr>';
+            const res = await callGateway('clientportal', 'clientPortalListDocuments');
+            if (!res.success) { tbody.innerHTML = `<tr><td class="p-3 text-red-400" colspan="5">${escapeHtml(res.message || 'Failed to load.')}</td></tr>`; return; }
+            const docs = res.documents || [];
+            tbody.innerHTML = docs.length ? docs.map(d => `
+            <tr>
+                <td class="p-3 text-white">${escapeHtml(d.title || '—')}</td>
+                <td class="p-3">${escapeHtml(d.type || '—')}</td>
+                <td class="p-3 text-slate-500">${fmtDate(d.createdAt)}</td>
+                <td class="p-3">${d.generatedBy === 'Client' ? '<span class="text-emerald-400">Self-generated</span>' : '<span class="text-blue-400">Delivered by team</span>'}</td>
+                <td class="p-3 text-center">
+                    <button onclick="downloadDocument('${escapeHtml(d.docId)}')"
+                        class="text-xs px-2 py-1 bg-emerald-900 hover:bg-emerald-800 rounded text-emerald-200">
+                        <i class="fa-solid fa-download"></i> Open
+                    </button>
+                </td>
+            </tr>
+        `).join('') : '<tr><td class="p-3 text-slate-600" colspan="5">No documents yet.</td></tr>';
+        }
+
+        async function downloadDocument(docId) {
+            const res = await callGateway('clientportal', 'clientPortalDownloadDocument', { docId });
+            if (res.success && res.docUrl) window.open(res.docUrl, '_blank');
+            else alert(res.message || 'Could not open this document.');
+        }
+
+        // =====================================================================
+        // GENERATE
+        // =====================================================================
+        async function generateDocument(docType) {
+            const statusEl = document.getElementById('generateStatus');
+            statusEl.innerHTML = `<p class="text-xs text-slate-400 mt-2"><i class="fa-solid fa-spinner fa-spin"></i> Generating your ${docType.replace('-', ' ')}…</p>`;
+            const res = await callGateway('clientportal', 'clientPortalGenerateDocument', { docType });
+            if (res.success) {
+                statusEl.innerHTML = `<p class="text-xs text-emerald-400 mt-2"><i class="fa-solid fa-circle-check"></i> Done — check "My Documents" for your file.</p>`;
+                loadOverview();
+            } else if (res.quotaExceeded) {
+                statusEl.innerHTML = `<p class="text-xs text-amber-400 mt-2"><i class="fa-solid fa-triangle-exclamation"></i> ${escapeHtml(res.message)}</p>`;
+            } else {
+                statusEl.innerHTML = `<p class="text-xs text-red-400 mt-2"><i class="fa-solid fa-circle-xmark"></i> ${escapeHtml(res.message || 'Failed to generate.')}</p>`;
+            }
+        }
+
+        // =====================================================================
+        // LIVE CHAT (ephemeral — mirrors the admin side's cache-only thread)
+        // =====================================================================
+        async function loadChat() {
+            const res = await callGateway('clientportal', 'clientPortalChatPoll');
+            if (res.success) renderChat(res.messages || []);
+        }
+
+        function startChatPolling() {
+            clearInterval(CHAT_TIMER);
+            CHAT_TIMER = setInterval(loadChat, 3000);
+        }
+
+        function renderChat(messages) {
+            const el = document.getElementById('chatThread');
+            if (!messages.length) {
+                el.innerHTML = '<p class="text-slate-600 text-center mt-8">Say hello 👋</p>';
+                return;
+            }
+            const wasNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+            el.innerHTML = messages.map(m => `
+            <div class="flex ${m.sender === 'client' ? 'justify-end' : 'justify-start'}">
+                <div class="max-w-[75%] ${m.sender === 'client' ? 'bg-emerald-700/20 border-emerald-800' : 'bg-slate-800 border-slate-700'} border rounded-lg px-3 py-2">
+                    <p class="text-slate-100 whitespace-pre-wrap break-words">${escapeHtml(m.text)}</p>
+                    <span class="text-[9px] text-slate-500 block mt-1">${fmtDate(m.ts)} · ${m.sender === 'client' ? 'You' : 'Team'}</span>
+                </div>
+            </div>
+        `).join('');
+            if (wasNearBottom) el.scrollTop = el.scrollHeight;
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            await callGateway('clientportal', 'clientPortalChatSend', { text });
+            loadChat();
+        }
+
+        // =====================================================================
+        // PRESENCE HEARTBEAT — lets the admin dashboard show you as "online"
+        // =====================================================================
+        function startPresencePing() {
+            clearInterval(PRESENCE_TIMER);
+            callGateway('clientportal', 'clientPortalPresencePing');
+            PRESENCE_TIMER = setInterval(() => callGateway('clientportal', 'clientPortalPresencePing'), 60000);
+        }
+    </script>
+</body>
+
+</html>
