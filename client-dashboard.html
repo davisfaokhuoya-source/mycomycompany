@@ -72,6 +72,70 @@
             stroke: #34d399;
             transition: stroke-dashoffset .6s ease;
         }
+
+        /* =====================================================================
+           [NEW] "AI agent working" animation for the Generate cards — shown on
+           the specific card while its document is being generated, instead of
+           blocking the whole page.
+        ====================================================================== */
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes ai-pulse-glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45);
+            }
+
+            50% {
+                box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+            }
+        }
+
+        @keyframes ai-sweep {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .ai-working {
+            border-color: #10b981 !important;
+            background-image: linear-gradient(110deg, transparent 30%, rgba(16, 185, 129, 0.15) 50%, transparent 70%);
+            background-size: 200% 100%;
+            animation: ai-pulse-glow 1.4s ease-out infinite, ai-sweep 1.6s linear infinite;
+        }
+
+        .ai-spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            border-top-color: #34d399;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin-right: 5px;
+            vertical-align: -2px;
+        }
+
+        .directive-panel {
+            display: none;
+        }
+
+        .directive-panel.open {
+            display: block;
+        }
     </style>
 </head>
 
@@ -96,7 +160,7 @@
             <form id="clientLoginForm" onsubmit="handleClientLogin(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-mono uppercase text-slate-400 mb-1">Gateway URL</label>
-                    <input type="url" id="gwUrl" required placeholder="https://script.google.com/macros/s/.../exec"
+                    <input type="url" id="gwUrl" required placeholder="xxxxxxxxxx"
                         class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm font-mono text-emerald-400 focus:outline-none focus:border-emerald-500" />
                 </div>
                 <div>
@@ -245,36 +309,119 @@
                 <section id="view-generate"
                     class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
                     <p class="text-xs text-slate-400 max-w-2xl">Generate a document on demand from your own data. Each
-                        one counts against your self-service document quota shown on the Overview tab.</p>
+                        one counts against your self-service document quota shown on the Overview tab. Click a card
+                        to add instructions, then hit Send.</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
-                        <button onclick="generateDocument('pitch-deck')"
-                            class="text-left bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-5 transition-colors">
-                            <i class="fa-solid fa-display text-emerald-400 mb-2"></i>
-                            <p class="font-semibold text-white text-sm">Pitch Deck</p>
-                            <p class="text-[11px] text-slate-500 mt-1">A ready-to-send investor/partner deck built from
-                                your company data.</p>
-                        </button>
-                        <button onclick="generateDocument('financial-report')"
-                            class="text-left bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-5 transition-colors">
-                            <i class="fa-solid fa-chart-line text-emerald-400 mb-2"></i>
-                            <p class="font-semibold text-white text-sm">Financial Report</p>
-                            <p class="text-[11px] text-slate-500 mt-1">A snapshot report summarizing your financial
-                                position.</p>
-                        </button>
-                        <button onclick="generateDocument('infographic-brief')"
-                            class="text-left bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-5 transition-colors">
-                            <i class="fa-solid fa-chart-pie text-emerald-400 mb-2"></i>
-                            <p class="font-semibold text-white text-sm">Infographic Brief</p>
-                            <p class="text-[11px] text-slate-500 mt-1">A brief laying out key data points for a designer
-                                to visualize.</p>
-                        </button>
-                        <button onclick="generateDocument('proposal')"
-                            class="text-left bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-5 transition-colors">
-                            <i class="fa-solid fa-file-signature text-emerald-400 mb-2"></i>
-                            <p class="font-semibold text-white text-sm">Proposal</p>
-                            <p class="text-[11px] text-slate-500 mt-1">A client-ready proposal draft based on your
-                                brief.</p>
-                        </button>
+
+                        <!-- PITCH DECK -->
+                        <div id="genCard-pitch-deck"
+                            class="bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-5 transition-colors">
+                            <button onclick="toggleGenerateCard('pitch-deck')" class="w-full text-left">
+                                <i class="fa-solid fa-display text-emerald-400 mb-2"></i>
+                                <p class="font-semibold text-white text-sm">Pitch Deck</p>
+                                <p class="text-[11px] text-slate-500 mt-1">A ready-to-send investor/partner deck built
+                                    from your company data.</p>
+                            </button>
+                            <div id="genPanel-pitch-deck"
+                                class="directive-panel mt-3 pt-3 border-t border-slate-800 space-y-2">
+                                <label class="block text-[10px] text-slate-400">Instructions (optional)</label>
+                                <textarea id="genInput-pitch-deck-purpose"
+                                    placeholder="e.g. Investor pitch to Dangote Group"
+                                    class="w-full h-16 bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></textarea>
+                                <div class="flex gap-2 justify-end">
+                                    <button onclick="toggleGenerateCard('pitch-deck')"
+                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Cancel</button>
+                                    <button id="genSendBtn-pitch-deck" onclick="submitGenerateDocument('pitch-deck')"
+                                        class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white"><i
+                                            class="fa-solid fa-paper-plane"></i> Send</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FINANCIAL REPORT -->
+                        <div id="genCard-financial-report"
+                            class="bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-5 transition-colors">
+                            <button onclick="toggleGenerateCard('financial-report')" class="w-full text-left">
+                                <i class="fa-solid fa-chart-line text-emerald-400 mb-2"></i>
+                                <p class="font-semibold text-white text-sm">Financial Report</p>
+                                <p class="text-[11px] text-slate-500 mt-1">A snapshot report summarizing your financial
+                                    position.</p>
+                            </button>
+                            <div id="genPanel-financial-report"
+                                class="directive-panel mt-3 pt-3 border-t border-slate-800 space-y-2">
+                                <label class="block text-[10px] text-slate-400">Instructions (optional)</label>
+                                <input type="text" id="genInput-financial-report-period"
+                                    placeholder="e.g. Monthly report for the last 2 months"
+                                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                                <div class="flex gap-2 justify-end">
+                                    <button onclick="toggleGenerateCard('financial-report')"
+                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Cancel</button>
+                                    <button id="genSendBtn-financial-report"
+                                        onclick="submitGenerateDocument('financial-report')"
+                                        class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white"><i
+                                            class="fa-solid fa-paper-plane"></i> Send</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- INFOGRAPHIC BRIEF -->
+                        <div id="genCard-infographic-brief"
+                            class="bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-5 transition-colors">
+                            <button onclick="toggleGenerateCard('infographic-brief')" class="w-full text-left">
+                                <i class="fa-solid fa-chart-pie text-emerald-400 mb-2"></i>
+                                <p class="font-semibold text-white text-sm">Infographic Brief</p>
+                                <p class="text-[11px] text-slate-500 mt-1">A brief laying out key data points for a
+                                    designer to visualize.</p>
+                            </button>
+                            <div id="genPanel-infographic-brief"
+                                class="directive-panel mt-3 pt-3 border-t border-slate-800 space-y-2">
+                                <label class="block text-[10px] text-slate-400">Topic <span
+                                        class="text-red-400">*</span></label>
+                                <input type="text" id="genInput-infographic-brief-topic"
+                                    placeholder="e.g. Customer growth trends, Q1 2026"
+                                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                                <div class="flex gap-2 justify-end">
+                                    <button onclick="toggleGenerateCard('infographic-brief')"
+                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Cancel</button>
+                                    <button id="genSendBtn-infographic-brief"
+                                        onclick="submitGenerateDocument('infographic-brief')"
+                                        class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white"><i
+                                            class="fa-solid fa-paper-plane"></i> Send</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PROPOSAL -->
+                        <div id="genCard-proposal"
+                            class="bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-5 transition-colors">
+                            <button onclick="toggleGenerateCard('proposal')" class="w-full text-left">
+                                <i class="fa-solid fa-file-signature text-emerald-400 mb-2"></i>
+                                <p class="font-semibold text-white text-sm">Proposal</p>
+                                <p class="text-[11px] text-slate-500 mt-1">A client-ready proposal draft based on your
+                                    brief.</p>
+                            </button>
+                            <div id="genPanel-proposal"
+                                class="directive-panel mt-3 pt-3 border-t border-slate-800 space-y-2">
+                                <label class="block text-[10px] text-slate-400">Service to Propose <span
+                                        class="text-red-400">*</span></label>
+                                <input type="text" id="genInput-proposal-service"
+                                    placeholder="e.g. Digital marketing retainer"
+                                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                                <label class="block text-[10px] text-slate-400">Additional instructions
+                                    (optional)</label>
+                                <textarea id="genInput-proposal-requirements"
+                                    placeholder="e.g. Focus on lead-gen for our Lagos office, budget around ₦2m"
+                                    class="w-full h-16 bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></textarea>
+                                <div class="flex gap-2 justify-end">
+                                    <button onclick="toggleGenerateCard('proposal')"
+                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Cancel</button>
+                                    <button id="genSendBtn-proposal" onclick="submitGenerateDocument('proposal')"
+                                        class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white"><i
+                                            class="fa-solid fa-paper-plane"></i> Send</button>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                     <div id="generateStatus" class="max-w-3xl"></div>
                 </section>
@@ -308,9 +455,9 @@
         // =====================================================================
         // STATE
         // =====================================================================
-        let GW_URL = localStorage.getItem('VIC_CLIENT_GW_URL') || "";
+        let GW_URL = localStorage.getItem('https://script.google.com/macros/s/AKfycbyAI3UQCSTV_KhAEmnT958vbJiD3ZZZMlnRrTs5vzgMBPeqs7kPvZjSGDHjtxw8yg8c/exec') || "";
         let CLIENT_ID = localStorage.getItem('VIC_CLIENT_ID') || "";
-        let SESSION_TOKEN = localStorage.getItem('VIC_CLIENT_TOKEN') || "";
+        let SESSION_TOKEN = localStorage.getItem('VIC_CLIENT_TOKEN') || "jsier*ens!jTYa)8_k1uwo)Y9-38_+0e}[IOjh";
         let PRESENCE_TIMER = null;
         let CHAT_TIMER = null;
 
@@ -491,13 +638,76 @@
 
         // =====================================================================
         // GENERATE
+        // [CHANGED] Cards now expand to an instruction panel on click instead of
+        // firing immediately — the client can add a directive (e.g. "pitch to
+        // Dangote", "monthly report for the last 2 months") before sending.
         // =====================================================================
-        async function generateDocument(docType) {
+        const GENERATE_FIELD_MAP = {
+            "pitch-deck": [{ inputId: "genInput-pitch-deck-purpose", payloadKey: "purpose" }],
+            "financial-report": [{ inputId: "genInput-financial-report-period", payloadKey: "period" }],
+            "infographic-brief": [{ inputId: "genInput-infographic-brief-topic", payloadKey: "topic", required: true }],
+            "proposal": [
+                { inputId: "genInput-proposal-service", payloadKey: "service", required: true },
+                { inputId: "genInput-proposal-requirements", payloadKey: "requirements" }
+            ]
+        };
+
+        function toggleGenerateCard(docType) {
+            const panel = document.getElementById('genPanel-' + docType);
+            if (!panel) return;
+            const isOpen = panel.classList.contains('open');
+            // Only one panel open at a time keeps this simple on mobile.
+            document.querySelectorAll('.directive-panel.open').forEach(p => p.classList.remove('open'));
+            if (!isOpen) panel.classList.add('open');
+        }
+
+        function setBtnBusy(el, busy, opts = {}) {
+            if (!el) return;
+            if (busy) {
+                if (el.dataset.origHtml === undefined) el.dataset.origHtml = el.innerHTML;
+                el.disabled = true;
+                el.innerHTML = `<span class="ai-spinner"></span>${escapeHtml(opts.busyLabel || 'Working…')}`;
+            } else {
+                el.disabled = false;
+                if (el.dataset.origHtml !== undefined) { el.innerHTML = el.dataset.origHtml; delete el.dataset.origHtml; }
+            }
+        }
+
+        async function submitGenerateDocument(docType) {
+            const fields = GENERATE_FIELD_MAP[docType] || [];
+            const payload = { docType };
             const statusEl = document.getElementById('generateStatus');
-            statusEl.innerHTML = `<p class="text-xs text-slate-400 mt-2"><i class="fa-solid fa-spinner fa-spin"></i> Generating your ${docType.replace('-', ' ')}…</p>`;
-            const res = await callGateway('clientportal', 'clientPortalGenerateDocument', { docType });
+            for (const f of fields) {
+                const el = document.getElementById(f.inputId);
+                const val = el ? el.value.trim() : '';
+                if (f.required && !val) {
+                    statusEl.innerHTML = `<p class="text-xs text-amber-400 mt-2"><i class="fa-solid fa-triangle-exclamation"></i> Please fill in the required field before sending.</p>`;
+                    if (el) el.focus();
+                    return;
+                }
+                if (val) payload[f.payloadKey] = val;
+            }
+
+            const cardEl = document.getElementById('genCard-' + docType);
+            const sendBtn = document.getElementById('genSendBtn-' + docType);
+
+            // [NEW] Card-level "AI working" animation — replaces a page-wide block;
+            // the rest of the dashboard (nav, other cards) stays fully usable.
+            if (cardEl) cardEl.classList.add('ai-working');
+            setBtnBusy(sendBtn, true, { busyLabel: 'Generating…' });
+            statusEl.innerHTML = `<p class="text-xs text-slate-400 mt-2"><span class="ai-spinner"></span>Generating your ${docType.replace('-', ' ')}…</p>`;
+
+            let res;
+            try {
+                res = await callGateway('clientportal', 'clientPortalGenerateDocument', payload);
+            } finally {
+                if (cardEl) cardEl.classList.remove('ai-working');
+                setBtnBusy(sendBtn, false);
+            }
+
             if (res.success) {
                 statusEl.innerHTML = `<p class="text-xs text-emerald-400 mt-2"><i class="fa-solid fa-circle-check"></i> Done — check "My Documents" for your file.</p>`;
+                toggleGenerateCard(docType); // collapse the panel back down
                 loadOverview();
             } else if (res.quotaExceeded) {
                 statusEl.innerHTML = `<p class="text-xs text-amber-400 mt-2"><i class="fa-solid fa-triangle-exclamation"></i> ${escapeHtml(res.message)}</p>`;

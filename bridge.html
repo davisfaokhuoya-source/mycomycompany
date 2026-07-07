@@ -101,6 +101,116 @@
             border-left-color: #34d399;
             font-weight: 600;
         }
+
+        /* =====================================================================
+           [NEW] "AI agent working" animation + row/button-level busy states.
+           Replaces the old full-page blocking overlay for long-running AI
+           actions (document generation, AI console runs, etc.) — the spinner
+           now lives on the specific button/row that triggered the work, so
+           the rest of the dashboard stays fully interactive.
+        ====================================================================== */
+        @keyframes ai-pulse-glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45);
+            }
+
+            50% {
+                box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+            }
+        }
+
+        @keyframes ai-sweep {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* Applied to a button while its request is in-flight */
+        .ai-working {
+            position: relative;
+            pointer-events: none;
+            opacity: 0.9;
+            background-image: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.18) 50%, transparent 70%);
+            background-size: 200% 100%;
+            animation: ai-pulse-glow 1.4s ease-out infinite, ai-sweep 1.6s linear infinite;
+        }
+
+        /* Applied to a whole <tr> while a row-scoped action is running */
+        tr.ai-working-row {
+            position: relative;
+            animation: ai-pulse-glow 1.4s ease-out infinite;
+        }
+
+        tr.ai-working-row td:first-child {
+            border-left: 2px solid #10b981;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .ai-spinner {
+            display: inline-block;
+            width: 11px;
+            height: 11px;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin-right: 4px;
+            vertical-align: -1px;
+        }
+
+        /* Reusable click-toggle dropdown (replaces hover-only dropdowns that
+           don't work reliably on click/touch) */
+        .vh-dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            margin-top: 4px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+            z-index: 60;
+            min-width: 180px;
+            padding: 4px 0;
+            font-size: 0.75rem;
+        }
+
+        .vh-dropdown-menu.open {
+            display: block;
+        }
+
+        .vh-dropdown-menu button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            text-align: left;
+            padding: 0.5rem 0.9rem;
+            color: #cbd5e1;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+        }
+
+        .vh-dropdown-menu button:hover {
+            background: #1e293b;
+            color: #f1f5f9;
+        }
     </style>
 </head>
 
@@ -1992,7 +2102,7 @@
                                         <th class="p-3">Industry</th>
                                         <th class="p-3">Subscription Tier</th>
                                         <th class="p-3">Status</th>
-                                        <th class="p-3 text-center">Action</th>
+                                        <th class="p-3 text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="agentClientsTableBody" class="divide-y divide-slate-800/50 text-slate-300">
@@ -2000,6 +2110,7 @@
                             </table>
                         </div>
                     </div>
+
 
                     <!-- SUBSCRIPTIONS -->
                     <div id="view-agent-subscriptions"
@@ -2550,7 +2661,7 @@
                         <div>
                             <h3 class="text-lg font-bold text-white">AI Actions Console</h3>
                             <p class="text-xs text-slate-400">Run any client AI action — email, proposals, research,
-                                revenue, CRM, audits, data rights, task logging.</p>
+                                revenue, CRM, audits, data rights, task logging, and document generation.</p>
                         </div>
                         <div
                             class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 grid grid-cols-4 gap-3">
@@ -2572,12 +2683,24 @@
                                     class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white"></select>
                             </div>
                             <div class="flex items-end">
-                                <button onclick="runAIConsoleAction()"
+                                <button id="aiConsoleRunBtn" onclick="runAIConsoleAction()"
                                     class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-1.5 px-3 rounded shadow"><i
                                         class="fa-solid fa-bolt"></i> Run</button>
                             </div>
                         </div>
-                        <div>
+
+                        <!-- [NEW] Friendly directive panel — shown for actions with a known
+                             field schema (Pitch Deck, Financial Report, Infographic Brief,
+                             Proposal, Market Research, Monthly Report) instead of raw JSON.
+                             e.g. "I want to pitch to Dangote", "monthly report for last 2 months". -->
+                        <div id="aiConsoleDirectiveWrap"
+                            class="hidden bg-slate-950 border border-emerald-900/60 rounded-xl p-4 space-y-3">
+                            <p class="text-[10px] uppercase tracking-wider text-emerald-500 font-mono">Directive Input
+                            </p>
+                            <div id="aiConsoleDirectiveFields" class="grid grid-cols-2 gap-3"></div>
+                        </div>
+
+                        <div id="aiConsoleJsonWrap">
                             <label class="block text-[10px] text-slate-400 mb-1">Params (JSON — clientId is added
                                 automatically)</label>
                             <textarea id="aiConsoleParams"
@@ -2782,120 +2905,6 @@
                             </table>
                         </div>
                     </div>
-                </div><!-- end agent views wrapper -->
-            </section>
-            <section id="hub-publish" class="hidden flex-1 flex overflow-hidden">
-                <div
-                    class="w-56 bg-slate-950/40 border-r border-slate-800/60 flex flex-col shrink-0 px-2 py-4 space-y-1">
-                    <span
-                        class="text-[10px] font-mono tracking-wider text-slate-500 uppercase px-3 mb-2 block">Publishing</span>
-                    <button class="agent-subview-link active" data-target-view="publish-connections">Social
-                        Connections</button>
-                    <button class="agent-subview-link" data-target-view="publish-queue">Publish Queue</button>
-                    <button class="agent-subview-link" data-target-view="publish-settings">Global Settings</button>
-                </div>
-
-                <div class="flex-1 flex flex-col overflow-hidden p-6 relative">
-
-                    <!-- SOCIAL CONNECTIONS -->
-                    <div id="view-publish-connections"
-                        class="agent-view flex-1 flex flex-col overflow-hidden space-y-4">
-                        <div class="flex justify-between items-center shrink-0">
-                            <div>
-                                <h3 class="text-lg font-bold text-white">Social Connections</h3>
-                                <p class="text-xs text-slate-400">Connect Facebook Pages, Instagram Business accounts,
-                                    and LinkedIn Company Pages per client.</p>
-                            </div>
-                            <div class="flex gap-2">
-                                <select id="connectionsClientSelector" onchange="loadSocialConnections()"
-                                    class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 min-w-[200px]">
-                                    <option value="">Select a client…</option>
-                                </select>
-                                <button onclick="openConnectSocialAccountModal()"
-                                    class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded transition-colors shadow flex items-center gap-1">
-                                    <i class="fa-solid fa-plug"></i> Connect Account
-                                </button>
-                            </div>
-                        </div>
-                        <div
-                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
-                            <table class="w-full text-left border-collapse text-xs">
-                                <thead
-                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
-                                    <tr>
-                                        <th class="p-3">Platform</th>
-                                        <th class="p-3">Page Name</th>
-                                        <th class="p-3">Status</th>
-                                        <th class="p-3">Token Expiry</th>
-                                        <th class="p-3 text-center">Platform Publish</th>
-                                        <th class="p-3 text-center">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="socialConnectionsTableBody"
-                                    class="divide-y divide-slate-800/50 text-slate-300"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- PUBLISH QUEUE -->
-                    <div id="view-publish-queue"
-                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
-                        <div class="flex justify-between items-center shrink-0">
-                            <div>
-                                <h3 class="text-lg font-bold text-white">Publish Queue</h3>
-                                <p class="text-xs text-slate-400">Queued, posted, and failed content from V5_SocialQueue
-                                    across all clients.</p>
-                            </div>
-                            <button onclick="loadPublishQueue()"
-                                class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700 transition-colors flex items-center gap-1">
-                                <i class="fa-solid fa-arrows-rotate"></i> Refresh
-                            </button>
-                        </div>
-                        <div
-                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
-                            <table class="w-full text-left border-collapse text-xs">
-                                <thead
-                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
-                                    <tr>
-                                        <th class="p-3">Timestamp</th>
-                                        <th class="p-3">Client</th>
-                                        <th class="p-3">Platform</th>
-                                        <th class="p-3 w-1/3">Content</th>
-                                        <th class="p-3">Status</th>
-                                        <th class="p-3">Post URL / Notes</th>
-                                        <th class="p-3 text-center">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="publishQueueTableBody" class="divide-y divide-slate-800/50 text-slate-300">
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- GLOBAL SETTINGS -->
-                    <div id="view-publish-settings"
-                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
-                        <div>
-                            <h3 class="text-lg font-bold text-white">Global Auto-Publishing Switch</h3>
-                            <p class="text-xs text-slate-400">Master kill switch. When off, queued posts accumulate with
-                                zero behavior change — nothing publishes anywhere, for any client.</p>
-                        </div>
-                        <div
-                            class="bg-slate-950 border border-slate-800 rounded-xl p-6 max-w-md flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-bold text-white">Auto-Publishing Enabled</p>
-                                <p id="publishGlobalSwitchStatus" class="text-xs text-slate-500 mt-1">Loading…</p>
-                            </div>
-                            <button id="publishGlobalSwitchToggle" onclick="togglePublishGlobalSwitch()"
-                                class="px-4 py-2 rounded text-xs font-bold transition-colors bg-slate-800 text-slate-400 border border-slate-700">
-                                Toggle
-                            </button>
-                        </div>
-                        <button onclick="runPublishBatchNow()"
-                            class="max-w-md bg-blue-600 hover:bg-blue-500 text-xs text-white font-medium py-2 px-4 rounded transition-colors shadow flex items-center justify-center gap-1">
-                            <i class="fa-solid fa-bolt"></i> Run Publish Batch Now
-                        </button>
-                    </div>
 
                     <!-- ACCESS & CREDENTIALS (moved here from inside a hidden modal — was never visible before) -->
                     <div id="view-agent-access-control"
@@ -3049,6 +3058,120 @@
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div><!-- end agent views wrapper -->
+            </section>
+            <section id="hub-publish" class="hidden flex-1 flex overflow-hidden">
+                <div
+                    class="w-56 bg-slate-950/40 border-r border-slate-800/60 flex flex-col shrink-0 px-2 py-4 space-y-1">
+                    <span
+                        class="text-[10px] font-mono tracking-wider text-slate-500 uppercase px-3 mb-2 block">Publishing</span>
+                    <button class="agent-subview-link active" data-target-view="publish-connections">Social
+                        Connections</button>
+                    <button class="agent-subview-link" data-target-view="publish-queue">Publish Queue</button>
+                    <button class="agent-subview-link" data-target-view="publish-settings">Global Settings</button>
+                </div>
+
+                <div class="flex-1 flex flex-col overflow-hidden p-6 relative">
+
+                    <!-- SOCIAL CONNECTIONS -->
+                    <div id="view-publish-connections"
+                        class="agent-view flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Social Connections</h3>
+                                <p class="text-xs text-slate-400">Connect Facebook Pages, Instagram Business accounts,
+                                    and LinkedIn Company Pages per client.</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <select id="connectionsClientSelector" onchange="loadSocialConnections()"
+                                    class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 min-w-[200px]">
+                                    <option value="">Select a client…</option>
+                                </select>
+                                <button onclick="openConnectSocialAccountModal()"
+                                    class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded transition-colors shadow flex items-center gap-1">
+                                    <i class="fa-solid fa-plug"></i> Connect Account
+                                </button>
+                            </div>
+                        </div>
+                        <div
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead
+                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                    <tr>
+                                        <th class="p-3">Platform</th>
+                                        <th class="p-3">Page Name</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3">Token Expiry</th>
+                                        <th class="p-3 text-center">Platform Publish</th>
+                                        <th class="p-3 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="socialConnectionsTableBody"
+                                    class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- PUBLISH QUEUE -->
+                    <div id="view-publish-queue"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Publish Queue</h3>
+                                <p class="text-xs text-slate-400">Queued, posted, and failed content from V5_SocialQueue
+                                    across all clients.</p>
+                            </div>
+                            <button onclick="loadPublishQueue()"
+                                class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700 transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                            </button>
+                        </div>
+                        <div
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead
+                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                    <tr>
+                                        <th class="p-3">Timestamp</th>
+                                        <th class="p-3">Client</th>
+                                        <th class="p-3">Platform</th>
+                                        <th class="p-3 w-1/3">Content</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3">Post URL / Notes</th>
+                                        <th class="p-3 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="publishQueueTableBody" class="divide-y divide-slate-800/50 text-slate-300">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- GLOBAL SETTINGS -->
+                    <div id="view-publish-settings"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-white">Global Auto-Publishing Switch</h3>
+                            <p class="text-xs text-slate-400">Master kill switch. When off, queued posts accumulate with
+                                zero behavior change — nothing publishes anywhere, for any client.</p>
+                        </div>
+                        <div
+                            class="bg-slate-950 border border-slate-800 rounded-xl p-6 max-w-md flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-bold text-white">Auto-Publishing Enabled</p>
+                                <p id="publishGlobalSwitchStatus" class="text-xs text-slate-500 mt-1">Loading…</p>
+                            </div>
+                            <button id="publishGlobalSwitchToggle" onclick="togglePublishGlobalSwitch()"
+                                class="px-4 py-2 rounded text-xs font-bold transition-colors bg-slate-800 text-slate-400 border border-slate-700">
+                                Toggle
+                            </button>
+                        </div>
+                        <button onclick="runPublishBatchNow()"
+                            class="max-w-md bg-blue-600 hover:bg-blue-500 text-xs text-white font-medium py-2 px-4 rounded transition-colors shadow flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-bolt"></i> Run Publish Batch Now
+                        </button>
                     </div>
 
                 </div>
@@ -3716,6 +3839,63 @@
             </form>
         </div>
     </div>
+    <!-- ===================================================================
+         CLIENT PORTAL LOGIN MANAGEMENT MODAL (NEW)
+         Lets admin enable/reset/revoke the client's dashboard login and set
+         their self-service document quota. Wired to:
+           agent-create-client-portal / agent-revoke-client-portal /
+           agent-set-client-docs-limit / agent-get-client-portal-status
+    ==================================================================== -->
+    <div id="modalClientPortal"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white">Client Dashboard Login — <span id="cpClientName"
+                        class="text-sky-400"></span></h3>
+                <button onclick="closeClientPortalModal()"
+                    class="text-slate-400 hover:text-white text-sm font-bold">&times;</button>
+            </div>
+
+            <div id="cpStatusBox" class="text-xs text-slate-400">Loading status…</div>
+
+            <div id="cpCredentialsBox" class="hidden bg-slate-950 border border-emerald-800 rounded-lg p-3 space-y-1">
+                <p class="text-[10px] uppercase tracking-wide text-emerald-400 font-mono">Share these with the client —
+                    never the admin token</p>
+                <p class="text-xs text-slate-300">Client ID: <span id="cpShareClientId"
+                        class="font-mono text-white"></span></p>
+                <p class="text-xs text-slate-300">Access Code: <span id="cpShareAccessCode"
+                        class="font-mono text-white"></span></p>
+                <p class="text-xs text-slate-300">Dashboard URL: <span id="cpSharePortalUrl"
+                        class="font-mono text-sky-400 break-all"></span></p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Self-Service Document Limit</label>
+                    <input type="number" id="cpDocsLimit" min="0" value="10"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                </div>
+                <div class="flex items-end">
+                    <button onclick="saveClientDocsLimit()"
+                        class="w-full text-xs px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded text-white">Update
+                        Limit</button>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-800">
+                <button onclick="enableClientPortal(false)"
+                    class="text-xs px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded text-white flex-1">Enable /
+                    Show Login</button>
+                <button onclick="enableClientPortal(true)"
+                    class="text-xs px-3 py-2 bg-amber-700 hover:bg-amber-600 rounded text-white flex-1">Reset Access
+                    Code</button>
+                <button onclick="revokeClientPortal()"
+                    class="text-xs px-3 py-2 bg-red-900 hover:bg-red-800 rounded text-red-200 flex-1">Revoke
+                    Access</button>
+            </div>
+        </div>
+    </div>
+
     <div id="modalAgentEditClientInfo"
         class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full space-y-4">
@@ -4482,7 +4662,7 @@
          view-publish-settings). -->
 
     <script>
-        let WEBAPP_URL = localStorage.getItem('VIC_WEBAPP_URL') || "https://script.google.com/macros/s/AKfycby4t4JZVuVD3uMB0BIbwB_NTh8zNXcmz68CKKuKL3fYNmUhWMEgpLDObNASLdd38nQH/exec";
+        let WEBAPP_URL = localStorage.getItem('VIC_WEBAPP_URL') || "https://script.google.com/macros/s/AKfycbxrqKfDD15fGMIwJDlk2nPcnxfMltf0cCAIR4covswtmljrXUk-J7Z5wpu-3c4jZJe5/exec";
         let SESSION_MASTER_TOKEN = localStorage.getItem('VIC_MASTER_TOKEN') || "";
         let CURRENT_ADMIN_IDENTITY = localStorage.getItem('VIC_ADMIN_EMAIL') || "Unauthenticated Session";
 
@@ -4722,8 +4902,12 @@
         const NICHE_OPTIONS = INDUSTRY_OPTIONS;
         const SECTOR_OPTIONS = INDUSTRY_OPTIONS;
 
-        async function executeSecureBridgeCall(systemTarget, actionTarget, analyticalPayload = {}) {
-            const url = "https://script.google.com/macros/s/AKfycby4t4JZVuVD3uMB0BIbwB_NTh8zNXcmz68CKKuKL3fYNmUhWMEgpLDObNASLdd38nQH/exec";
+        // [CHANGED] Added optional 4th `opts` param. opts.silent === true skips the
+        // full-page blocking loader entirely — used by any call that already shows
+        // its own inline/row/button-level busy state (see setBtnBusy/setRowBusy
+        // below), so long-running AI actions no longer freeze the whole dashboard.
+        async function executeSecureBridgeCall(systemTarget, actionTarget, analyticalPayload = {}, opts = {}) {
+            const url = "https://script.google.com/macros/s/AKfycbyAI3UQCSTV_KhAEmnT958vbJiD3ZZZMlnRrTs5vzgMBPeqs7kPvZjSGDHjtxw8yg8c/exec";
             if (!url) {
                 alert("Please enter your Web App URL in the login screen.");
                 return { success: false, message: "No endpoint URL" };
@@ -4735,7 +4919,8 @@
                 return { success: false, message: "No token" };
             }
 
-            toggleSystemLoader(true);
+            const useGlobalLoader = !opts.silent;
+            if (useGlobalLoader) toggleSystemLoader(true);
 
             try {
                 const payload = {
@@ -4758,15 +4943,66 @@
                 const jsonStart = text.indexOf('{');
                 const result = JSON.parse(jsonStart !== -1 ? text.substring(jsonStart) : text || "{}");
 
-                toggleSystemLoader(false);
+                if (useGlobalLoader) toggleSystemLoader(false);
                 return result;
 
             } catch (error) {
-                toggleSystemLoader(false);
+                if (useGlobalLoader) toggleSystemLoader(false);
                 console.error("Fetch Error:", error);
                 return { success: false, message: error.toString() };
             }
         }
+
+        // =====================================================================
+        // [NEW] Row/button-scoped busy indicators — the replacement for the
+        // full-page loader on long-running AI actions. Call setBtnBusy(el, true,
+        // {busyLabel}) right before an executeSecureBridgeCall({silent:true}),
+        // then setBtnBusy(el, false) in a finally block. The button gets a
+        // pulsing/sweeping "AI working" animation and an inline spinner instead
+        // of blocking the rest of the page.
+        // =====================================================================
+        function setBtnBusy(el, busy, opts = {}) {
+            if (!el) return;
+            if (busy) {
+                if (el.dataset.origHtml === undefined) el.dataset.origHtml = el.innerHTML;
+                el.disabled = true;
+                el.classList.add('ai-working');
+                el.innerHTML = `<span class="ai-spinner"></span>${escapeHtml(opts.busyLabel || 'Working…')}`;
+            } else {
+                el.disabled = false;
+                el.classList.remove('ai-working');
+                if (el.dataset.origHtml !== undefined) {
+                    el.innerHTML = el.dataset.origHtml;
+                    delete el.dataset.origHtml;
+                }
+            }
+        }
+
+        // Marks/unmarks an entire table row as "AI agent working on this row"
+        // without touching any individual button inside it.
+        function setRowBusy(rowEl, busy) {
+            if (!rowEl) return;
+            rowEl.classList.toggle('ai-working-row', !!busy);
+        }
+
+        // =====================================================================
+        // [NEW] Reusable click-toggle dropdown (replaces hover-only .group
+        // dropdowns, which don't work reliably on click/touch and can't be
+        // scoped per-row without duplicate IDs). Usage:
+        //   <button onclick="toggleRowDropdown(event, 'dd-CLIENT123')">Actions ▾</button>
+        //   <div id="dd-CLIENT123" class="vh-dropdown-menu"> ...buttons... </div>
+        // =====================================================================
+        function toggleRowDropdown(evt, menuId) {
+            evt.stopPropagation();
+            const menu = document.getElementById(menuId);
+            if (!menu) return;
+            const isOpen = menu.classList.contains('open');
+            document.querySelectorAll('.vh-dropdown-menu.open').forEach(m => m.classList.remove('open'));
+            if (!isOpen) menu.classList.add('open');
+        }
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.vh-dropdown-menu.open').forEach(m => m.classList.remove('open'));
+        });
 
 
         async function executeMultiFactorLogin(event) {
@@ -4942,201 +5178,138 @@
         }
 
         function switchMasterHub(hubId) {
-            try {
-                currentHub = hubId;
+            currentHub = hubId;
+            // Hide ALL views across every hub first (prevents ghost views from other hubs)
+            document.querySelectorAll('[id^="view-"]').forEach(v => {
+                v.classList.add('hidden');
+                v.style.display = 'none';
+            });
+            document.querySelectorAll('section[id^="hub-"]').forEach(s => s.classList.add('hidden'));
 
-                // 1. Hide ALL hub sections
-                document.querySelectorAll('section[id^="hub-"]').forEach(s => s.classList.add('hidden'));
+            const targetHub = document.getElementById(`hub-${hubId}`);
+            if (targetHub) targetHub.classList.remove('hidden');
 
-                // 2. Show the target hub
-                const targetHub = document.getElementById(`hub-${hubId}`);
-                if (targetHub) {
-                    targetHub.classList.remove('hidden');
-                } else {
-                    console.warn(`Hub section #hub-${hubId} not found.`);
-                    return;
-                }
+            document.querySelectorAll('[id^="nav-"]').forEach(btn => {
+                const isActive = btn.id === `nav-${hubId}`;
+                btn.classList.toggle('bg-slate-900', isActive);
+                btn.classList.toggle('text-white', isActive);
+                btn.classList.toggle('text-slate-400', !isActive);
+                btn.classList.toggle('border-l-emerald-500', isActive);
+                btn.classList.toggle('border-transparent', !isActive);
+                if (isActive) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
 
-                // 3. Update top‑level navigation buttons
-                document.querySelectorAll('[id^="nav-"]').forEach(btn => {
-                    const isActive = btn.id === `nav-${hubId}`;
-                    btn.classList.toggle('active', isActive);
-                    btn.classList.toggle('bg-slate-900', isActive);
-                    btn.classList.toggle('text-white', isActive);
-                    btn.classList.toggle('text-slate-400', !isActive);
-                    btn.classList.toggle('border-l-emerald-500', isActive);
-                });
-
-                // 4. Select the first sub‑view and load its data
-                //    We use setTimeout to ensure the DOM is ready.
+            if (hubId === 'publish') {
                 setTimeout(() => {
-                    // Find the first sub‑navigation button inside the target hub
-                    const firstSubBtn = targetHub?.querySelector('[data-target-view]');
-                    if (firstSubBtn) {
-                        // Simulate a click to trigger switchSubSection
-                        firstSubBtn.click();
-                    } else {
-                        // If no sub‑nav exists (shouldn't happen), fallback to a default view.
-                        // For agent hub, default to client registry.
-                        if (hubId === 'agent') {
-                            const clientsView = document.getElementById('view-agent-clients');
-                            if (clientsView) {
-                                clientsView.classList.remove('hidden');
-                                clientsView.style.display = 'flex';
-                            }
-                            loadAgentClients();
-                        } else {
-                            // Generic fallback: try to show the first view‑* element
-                            const firstView = targetHub?.querySelector('[id^="view-"]');
-                            if (firstView) {
-                                firstView.classList.remove('hidden');
-                                firstView.style.display = 'flex';
-                            }
-                        }
-                    }
-                }, 50);
+                    document.querySelectorAll('#hub-publish .agent-view').forEach(v => v.classList.add('hidden'));
+                    const connView = document.getElementById('view-publish-connections');
+                    if (connView) { connView.classList.remove('hidden'); connView.style.display = 'flex'; }
+                    document.querySelectorAll('#hub-publish .agent-subview-link').forEach(l => l.classList.remove('active'));
+                    const firstBtn = document.querySelector('#hub-publish [data-target-view="publish-connections"]');
+                    if (firstBtn) firstBtn.classList.add('active');
+                    loadSocialConnections();
+                }, 100);
+            }
 
-                // 5. Special handling for Agent Hub (extra safety)
-                if (hubId === 'agent') {
-                    setTimeout(() => {
-                        // Hide all agent views first
-                        document.querySelectorAll('#hub-agent .agent-view').forEach(v => {
-                            v.classList.add('hidden');
-                            v.style.display = 'none';
-                        });
-                        // Ensure clients view is visible
-                        const clientsView = document.getElementById('view-agent-clients');
-                        if (clientsView) {
-                            clientsView.classList.remove('hidden');
-                            clientsView.style.display = 'flex';
-                        }
-                        // Mark the correct sub‑nav as active
-                        document.querySelectorAll('#hub-agent .agent-subview-link').forEach(l => l.classList.remove('active'));
-                        const clientBtn = document.querySelector('#hub-agent [data-target-view="agent-clients"]');
-                        if (clientBtn) clientBtn.classList.add('active');
-                        loadAgentClients();
-                    }, 100);
-                }
+            if (hubId === 'career') {
+                setTimeout(() => initCareerHubUniversalFilter(), 100);
+            }
 
-                // 6. Initialize the universal filter if in Career Hub
-                if (hubId === 'career') {
-                    setTimeout(() => initCareerHubUniversalFilter(), 100);
-                }
+            const firstSubBtn = targetHub?.querySelector('[data-target-view]');
+            if (firstSubBtn) firstSubBtn.click();
 
-            } catch (e) {
-                console.error('switchMasterHub error:', e);
-                showToast('Error loading dashboard section. Please refresh.', 'error');
+            if (hubId === 'agent') {
+                setTimeout(() => {
+                    // Hide all agent views first
+                    document.querySelectorAll('.agent-view').forEach(v => v.classList.add('hidden'));
+                    // Show only clients view
+                    const clientsView = document.getElementById('view-agent-clients');
+                    if (clientsView) { clientsView.classList.remove('hidden'); clientsView.style.display = 'flex'; }
+                    // Set active nav
+                    document.querySelectorAll('.agent-subview-link').forEach(l => l.classList.remove('active'));
+                    const firstBtn = document.querySelector('[data-target-view="agent-clients"]');
+                    if (firstBtn) firstBtn.classList.add('active');
+                    // Load data
+                    loadAgentClients();
+                }, 100);
             }
         }
+
         function switchSubSection(system, action) {
-            try {
-                // 1. Hide ALL views globally
-                document.querySelectorAll('[id^="view-"]').forEach(view => {
-                    view.classList.add('hidden');
-                    view.style.display = 'none';
-                });
-
-                // 2. Show the target view
-                const targetViewEl = document.getElementById(`view-${action}`);
-                if (targetViewEl) {
-                    targetViewEl.classList.remove('hidden');
-                    targetViewEl.style.display = 'flex';
-                } else {
-                    console.error(`DOM container "#view-${action}" does not exist!`);
-                    showToast(`View "${action}" not found.`, 'error');
-                    return;
-                }
-
-                // 3. Load data for the view (if a loader exists)
-                const initMap = {
-                    // Career
-                    'career-users': initializeModule_career_users,
-                    'career-earnings': initializeModule_career_earnings,
-                    'career-settlements': initializeModule_career_settlements,
-                    'career-messages': initializeModule_career_messages,
-                    'career-elevation': initializeModule_career_elevation,
-                    'career-complaints': initializeModule_career_complaints,
-
-                    // Assessment
-                    'assessment-students': initializeModule_assess_submissions,
-                    'assessment-certificates': loadCertificateData,
-                    'assessment-courses': initializeModule_assessment_courses,
-                    'assessment-questions': initializeModule_assessment_questions,
-                    'assessment-messages': loadAcademicSupportMessages,
-                    'assessment-applications': initializeModule_assessment_applications,
-
-                    // Client
-                    'client-submitted': loadClientSubmittedProjects,
-                    'client-onboarded': loadProductionFulfillment,
-
-                    // Leads
-                    'leads-matrix': loadLeadsMatrix,
-                    'leads-broadcast': loadBroadcastQueue,
-                    'leads-drive': loadMailDriveReports,
-                    'leads-calendar': loadCalendarEvents,
-
-                    // Agent (primary)
-                    'agent-clients': loadAgentClients,
-                    'agent-online': loadAgentOnlineUsage,
-                    'agent-livechat': () => { populateAllClientsSelector('chatClientSelector'); startChatPolling(); },
-                    'agent-tasks': loadAgentTasks,
-                    'agent-approvals': loadAgentApprovals,
-                    'agent-access-control': () => { populateAllClientsSelector('accessControlClientSelector', loadAccessControlPanel); },
-
-                    // Agent (secondary – more tools)
-                    'agent-subscriptions': loadAgentSubscriptions,
-                    'agent-quotas': loadAgentQuotas,
-                    'agent-usage': loadAgentUsageReports,
-                    'agent-compliance': loadAgentComplianceLogs,
-                    'agent-violations': loadAgentViolations,
-                    'agent-docs': loadAgentDocsView,
-                    'agent-compliance-frameworks': () => { populateAgentClientSelector('compFrameworksClientSelector', loadComplianceFrameworksUI); },
-                    'agent-ai-console': () => {
-                        populateAllClientsSelector('aiConsoleClientSelector');
-                        document.getElementById('aiConsoleCategory').innerHTML = Object.keys(AI_ACTION_CATALOG).map(c => `<option value="${c}">${c}</option>`).join('');
-                        populateAIConsoleActions();
-                    },
-                    'agent-mailboxes': () => { populateAllClientsSelector('mailboxesClientSelector', loadAgentMailboxesUI); },
-                    'agent-scheduling': () => { populateAllClientsSelector('schedulingClientSelector', loadSchedulingMailboxes); },
-                    'agent-va-clients': loadVAClientsUI,
-                    'agent-addons': loadAgentAddonsUI,
-                    'agent-invoices': loadAgentInvoices,
-                    'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector').then(loadIntegrationsUI); },
-                    'agent-crmsync': () => { populateAgentClientSelector('crmSyncClientSelector').then(loadCrmSyncUI); },
-
-                    // Publish
-                    'publish-connections': loadSocialConnections,
-                    'publish-queue': loadPublishQueue,
-                    'publish-settings': loadPublishGlobalSwitch,
-
-                    // V5
-                    'v5-linkedin': loadV5LinkedInHistory,
-                    'v5-trends': loadV5TrendsHistory,
-                    'v5-content': loadV5ContentHistory,
-                    'v5-calendar-content': loadV5CalendarHistory,
-                    'v5-drip': loadV5DripHistory,
-                    'v5-whatsapp': loadV5WhatsAppHistory,
-                    'v5-competitors': loadV5CompetitorsHistory,
-                };
-
-                const initFn = initMap[action];
-                if (initFn) {
-                    // Some loaders are async, but we call them without await – they'll show skeletons.
-                    initFn();
-                } else {
-                    // If no loader is defined, show a placeholder message.
-                    const tbody = targetViewEl.querySelector('tbody');
-                    if (tbody) {
-                        tbody.innerHTML = `<tr><td colspan="10" class="p-3 text-center text-slate-500">Select a view to load data.</td></tr>`;
-                    }
-                    console.warn(`No loader defined for action: ${action}`);
-                }
-
-            } catch (e) {
-                console.error('switchSubSection error:', e);
-                showToast('Error loading data. Please refresh.', 'error');
+            document.querySelectorAll('[id^="view-"]').forEach(view => {
+                view.classList.add('hidden');
+                view.style.display = 'none';
+            });
+            const targetViewEl = document.getElementById(`view-${action}`);
+            if (targetViewEl) {
+                targetViewEl.classList.remove('hidden');
+                targetViewEl.style.display = 'flex';
+            } else {
+                console.error(`DOM container "#view-${action}" does not exist!`);
+                return;
             }
+
+            const initMap = {
+                'career-users': initializeModule_career_users,
+                'career-earnings': initializeModule_career_earnings,
+                'career-settlements': initializeModule_career_settlements,
+                'career-messages': initializeModule_career_messages,
+                'career-elevation': initializeModule_career_elevation,
+                'assessment-students': initializeModule_assess_submissions,
+                'assessment-courses': initializeModule_assessment_courses,
+                'assessment-questions': initializeModule_assessment_questions,
+                'assessment-certificates': loadCertificateData,
+                'assessment-messages': loadAcademicSupportMessages,
+                'assessment-applications': initializeModule_assessment_applications,
+                'client-submitted': loadClientSubmittedProjects,
+                'client-onboarded': loadProductionFulfillment,
+                'leads-matrix': loadLeadsMatrix,
+                'leads-broadcast': loadBroadcastQueue,
+                'leads-drive': loadMailDriveReports,
+                'career-complaints': initializeModule_career_complaints,
+                'leads-calendar': loadCalendarEvents,
+                'agent-clients': loadAgentClients,
+                'agent-subscriptions': loadAgentSubscriptions,
+                'agent-quotas': loadAgentQuotas,
+                'agent-usage': loadAgentUsageReports,
+                'agent-tasks': loadAgentTasks,
+                'agent-addons': loadAgentAddonsUI,
+                'agent-compliance': loadAgentComplianceLogs,
+                'agent-violations': loadAgentViolations,   // NEW
+                'agent-docs': loadAgentDocsView,            // NEW
+                'agent-invoices': loadAgentInvoices,        // NEW
+                'publish-connections': loadSocialConnections,
+                'publish-queue': loadPublishQueue,
+                'publish-settings': loadPublishGlobalSwitch,
+                'v5-linkedin': loadV5LinkedInHistory,
+                'v5-trends': loadV5TrendsHistory,
+                'v5-content': loadV5ContentHistory,
+                'v5-calendar-content': loadV5CalendarHistory,
+                'v5-drip': loadV5DripHistory,
+                'v5-whatsapp': loadV5WhatsAppHistory,
+                'v5-competitors': loadV5CompetitorsHistory,
+                'agent-approvals': loadAgentApprovals,
+                'agent-compliance-frameworks': () => { populateAgentClientSelector('compFrameworksClientSelector', loadComplianceFrameworksUI); },
+                'agent-ai-console': () => {
+                    populateAllClientsSelector('aiConsoleClientSelector');
+                    document.getElementById('aiConsoleCategory').innerHTML = Object.keys(AI_ACTION_CATALOG).map(c => `<option value="${c}">${c}</option>`).join('');
+                    populateAIConsoleActions();
+                },
+                'agent-access-control': () => { populateAllClientsSelector('accessControlClientSelector', loadAccessControlPanel); },
+                'agent-mailboxes': () => { populateAllClientsSelector('mailboxesClientSelector', loadAgentMailboxesUI); },
+                'agent-scheduling': () => { populateAllClientsSelector('schedulingClientSelector', loadSchedulingMailboxes); },
+                'agent-va-clients': loadVAClientsUI,
+                'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector').then(loadIntegrationsUI); },
+                'agent-crmsync': () => { populateAgentClientSelector('crmSyncClientSelector').then(loadCrmSyncUI); },
+                'agent-online': loadAgentOnlineUsage,
+                'agent-livechat': () => { populateAllClientsSelector('chatClientSelector'); startChatPolling(); },
+            };
+
+            const initFn = initMap[action];
+            if (initFn) initFn();
         }
+
         function initializeNavigation() {
             document.querySelectorAll('[data-target-view]').forEach(link => {
                 link.addEventListener('click', function (event) {
@@ -5462,11 +5635,7 @@
             const careerUsersView = document.getElementById('view-career-users');
             if (!careerUsersView || careerUsersView.querySelector('#careerFilterLevel')) return;
 
-            const filterHtml = `
-    <div id="careerHubFilter" class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 grid grid-cols-4 gap-3">
-      
-    </div>
-  `;
+            const filterHtml = ``;
 
             const firstChild = careerUsersView.querySelector('div:first-child');
             if (firstChild) firstChild.insertAdjacentHTML('afterend', filterHtml);
@@ -7650,7 +7819,10 @@
                 return;
             }
 
-            tbody.innerHTML = res.data.map(c => `
+            tbody.innerHTML = res.data.map(c => {
+                const cid = escapeHtml(c.ClientID || '');
+                const ddId = 'dd-client-' + cid.replace(/[^a-zA-Z0-9_-]/g, '');
+                return `
         <tr>
             <td class="p-3 font-mono text-slate-500">${escapeHtml(c.ClientID || c.clientID || '—')}</td>
             <td class="p-3 font-medium text-slate-200">${escapeHtml(c.CompanyName || c.companyName || '—')}</td>
@@ -7658,21 +7830,39 @@
             <td class="p-3 text-slate-400">${escapeHtml(c.Industry || c.industry || '—')}</td>
             <td class="p-3">${badge(c.Tier || 'starter_ops')}</td>
             <td class="p-3 text-center">${badge(c.Status || 'Active')}</td>
-            <td class="p-3 text-center flex gap-1 justify-center">
-    <button onclick='openAgentEditClientInfoModal("${escapeHtml(c.ClientID || '')}", ${JSON.stringify(c).replace(/"/g, '&quot;')})'
+            <td class="p-3 text-center">
+    <div class="flex items-center gap-1 justify-center">
+    <button onclick='openAgentEditClientInfoModal("${cid}", ${JSON.stringify(c).replace(/"/g, '&quot;')})'
         class="text-xs px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white">Edit</button>
-    <button onclick="openAgentUpdateTierModal('${escapeHtml(c.ClientID || '')}', '${escapeHtml(c.CompanyName || '')}')"
-        class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Tier</button>
-    <button onclick="openAgentDriveBrowserForClient('${escapeHtml(c.ClientID || '')}', '${escapeHtml(c.CompanyName || '')}')"
+    <button onclick="openAgentDriveBrowserForClient('${cid}', '${escapeHtml(c.CompanyName || '')}')"
         class="text-xs px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Files</button>
-     <button onclick="toggleClientAutoPublish('${escapeHtml(c.ClientID || '')}', ${!(c.AutoPublishEnabled === true || c.AutoPublishEnabled === 'TRUE')})"
-    class="text-xs px-3 py-1 ${c.AutoPublishEnabled === true || c.AutoPublishEnabled === 'TRUE' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'} rounded text-white">AutoPub</button>   
-   ${(c.Status === 'Active')
-                    ? `<button onclick="openAgentDeactivateModal('${escapeHtml(c.ClientID || '')}')" class="text-xs px-3 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Deactivate</button>`
-                    : `<button onclick="activateAgentClient('${escapeHtml(c.ClientID || '')}')" class="text-xs px-3 py-1 bg-emerald-700 hover:bg-emerald-600 rounded text-emerald-100">Activate</button>`}
+    <div class="relative">
+        <button onclick="toggleRowDropdown(event, '${ddId}')"
+            class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white flex items-center gap-1">
+            More <i class="fa-solid fa-chevron-down text-[9px]"></i>
+        </button>
+        <div id="${ddId}" class="vh-dropdown-menu">
+            <button onclick="openAgentUpdateTierModal('${cid}', '${escapeHtml(c.CompanyName || '')}')">
+                <i class="fa-solid fa-layer-group text-slate-400 w-3"></i> Tier
+            </button>
+            <button onclick="toggleClientAutoPublish('${cid}', ${!(c.AutoPublishEnabled === true || c.AutoPublishEnabled === 'TRUE')})">
+                <i class="fa-solid fa-bullhorn ${c.AutoPublishEnabled === true || c.AutoPublishEnabled === 'TRUE' ? 'text-emerald-400' : 'text-slate-400'} w-3"></i>
+                AutoPub: ${(c.AutoPublishEnabled === true || c.AutoPublishEnabled === 'TRUE') ? 'On' : 'Off'}
+            </button>
+            <button onclick="openClientPortalModal('${cid}', '${escapeHtml(c.CompanyName || '')}')">
+                <i class="fa-solid fa-door-open text-sky-400 w-3"></i> Portal
+            </button>
+            <div class="border-t border-slate-800 my-1"></div>
+            ${(c.Status === 'Active')
+                        ? `<button onclick="openAgentDeactivateModal('${cid}')"><i class="fa-solid fa-ban text-red-400 w-3"></i> Deactivate</button>`
+                        : `<button onclick="activateAgentClient('${cid}')"><i class="fa-solid fa-check text-emerald-400 w-3"></i> Activate</button>`}
+        </div>
+    </div>
+    </div>
 </td>
         </tr>
-    `).join('');
+    `;
+            }).join('');
         }
 
         function activateAgentClient(clientId) {
@@ -7687,6 +7877,77 @@
             executeSecureBridgeCall('publish', 'agent-set-autopublish', { clientId, enabled }).then(res => {
                 showToast(res.success ? `AutoPublish ${enabled ? 'enabled' : 'disabled'}.` : (res.message || 'Failed.'), res.success ? 'success' : 'error');
                 if (res.success) loadAgentClients();
+            });
+        }
+
+        // =====================================================================
+        // CLIENT PORTAL LOGIN MANAGEMENT (NEW)
+        // Admin-side controls for creating/resetting/revoking the credentials a
+        // client uses to sign into client-dashboard.html. Wired to the four
+        // agent-*-client-portal* actions in AgentLib via the bridge gateway.
+        // =====================================================================
+        let CP_ACTIVE_CLIENT_ID = null;
+
+        function openClientPortalModal(clientId, companyName) {
+            CP_ACTIVE_CLIENT_ID = clientId;
+            document.getElementById('cpClientName').textContent = companyName || clientId;
+            document.getElementById('cpCredentialsBox').classList.add('hidden');
+            document.getElementById('cpStatusBox').textContent = 'Loading status…';
+            document.getElementById('modalClientPortal').classList.remove('hidden');
+            refreshClientPortalStatus();
+        }
+
+        function closeClientPortalModal() {
+            document.getElementById('modalClientPortal').classList.add('hidden');
+            CP_ACTIVE_CLIENT_ID = null;
+        }
+
+        async function refreshClientPortalStatus() {
+            const res = await executeSecureBridgeCall('agent', 'agent-get-client-portal-status', { clientId: CP_ACTIVE_CLIENT_ID });
+            const box = document.getElementById('cpStatusBox');
+            if (!res.success) { box.textContent = res.message || 'Could not load status.'; return; }
+            document.getElementById('cpDocsLimit').value = res.docsLimit;
+            box.innerHTML = res.portalEnabled
+                ? `<span class="text-emerald-400">Portal enabled.</span> Documents used: ${res.docsUsed} / ${res.docsLimit}`
+                : `<span class="text-slate-500">Portal not yet enabled for this client.</span>`;
+        }
+
+        async function enableClientPortal(resetAccessCode) {
+            if (!CP_ACTIVE_CLIENT_ID) return;
+            if (resetAccessCode && !confirm('Reset the access code? The client\'s current login will stop working until you share the new one.')) return;
+
+            const docsLimit = parseInt(document.getElementById('cpDocsLimit').value, 10) || 10;
+            const res = await executeSecureBridgeCall('agent', 'agent-create-client-portal', {
+                clientId: CP_ACTIVE_CLIENT_ID, docsLimit, resetAccessCode: !!resetAccessCode
+            });
+
+            if (!res.success) { showToast(res.message || 'Failed to enable portal.', 'error'); return; }
+
+            document.getElementById('cpShareClientId').textContent = res.clientId;
+            document.getElementById('cpShareAccessCode').textContent = res.accessCode;
+            document.getElementById('cpSharePortalUrl').textContent = res.portalUrl || '(configure CLIENT_PORTAL_URL in AGENT_CONFIG)';
+            document.getElementById('cpCredentialsBox').classList.remove('hidden');
+            showToast('Client portal login ready — share the credentials shown below.', 'success');
+            refreshClientPortalStatus();
+        }
+
+        function saveClientDocsLimit() {
+            if (!CP_ACTIVE_CLIENT_ID) return;
+            const docsLimit = parseInt(document.getElementById('cpDocsLimit').value, 10);
+            if (isNaN(docsLimit) || docsLimit < 0) { showToast('Enter a valid document limit.', 'error'); return; }
+            executeSecureBridgeCall('agent', 'agent-set-client-docs-limit', { clientId: CP_ACTIVE_CLIENT_ID, docsLimit }).then(res => {
+                showToast(res.success ? 'Document limit updated.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+                if (res.success) refreshClientPortalStatus();
+            });
+        }
+
+        function revokeClientPortal() {
+            if (!CP_ACTIVE_CLIENT_ID) return;
+            if (!confirm('Revoke this client\'s dashboard access? They will be signed out immediately and cannot log back in until you re-enable it.')) return;
+            executeSecureBridgeCall('agent', 'agent-revoke-client-portal', { clientId: CP_ACTIVE_CLIENT_ID }).then(res => {
+                showToast(res.success ? 'Portal access revoked.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+                document.getElementById('cpCredentialsBox').classList.add('hidden');
+                if (res.success) refreshClientPortalStatus();
             });
         }
 
@@ -9223,7 +9484,11 @@
         </tr>
     `).join('');
         }
-
+        // [REMOVED] generateDocument(clientId, type) — Pitch Deck / Financial Report /
+        // Infographic Brief generation moved into the AI Actions Console's
+        // "Document Generation" category (see AI_ACTION_CATALOG + runDocGenAction
+        // below), where the admin can type a directive (e.g. "pitch to Dangote",
+        // "monthly report for last 2 months") instead of firing with no input.
         function publishQueueRowNow(clientId, platform, rowNumber) {
             if (!confirm('Publish this post now, bypassing the batch schedule?')) return;
             executeSecureBridgeCall('publish', 'agent-publish-post', { clientId, platform, rowNumber }).then(res => {
@@ -9711,6 +9976,14 @@ ${a.Status === 'Pending Review' ? `
 
         // ============ AI Actions Console ============
         const AI_ACTION_CATALOG = {
+            // [NEW] Pitch Deck / Financial Report / Infographic Brief moved here from
+            // the per-client-row buttons — now driven by a directive input (see
+            // AI_DIRECTIVE_SCHEMAS) instead of firing with zero context.
+            "Document Generation": [
+                ["agent-generate-pitch-deck", '{"purpose":""}'],
+                ["agent-generate-financial-report", '{"period":""}'],
+                ["agent-generate-infographic-brief", '{"topic":""}']
+            ],
             "Email Intelligence": [
                 ["agent-read-emails", '{"maxResults":10}'],
                 ["agent-draft-reply", '{"subject":"","from":"","bodySnippet":"","tone":"professional"}'],
@@ -9754,17 +10027,68 @@ ${a.Status === 'Pending Review' ? `
                 ["agent-log-task", '{"taskType":"Custom Task","title":"","notes":""}']
             ]
         };
+        // [NEW] Field schemas for the friendly "Directive Input" panel. Any action
+        // NOT listed here falls back to the raw JSON params editor, unchanged.
+        const AI_DIRECTIVE_SCHEMAS = {
+            "agent-generate-pitch-deck": [
+                { key: "purpose", label: "Purpose / Directive", placeholder: "e.g. Investor pitch to Dangote Group", type: "text" }
+            ],
+            "agent-generate-financial-report": [
+                { key: "period", label: "Period / Directive", placeholder: "e.g. Monthly report for the last 2 months", type: "text" }
+            ],
+            "agent-generate-infographic-brief": [
+                { key: "topic", label: "Topic / Directive", placeholder: "e.g. Customer growth trends, Q1 2026", type: "text", required: true }
+            ],
+            "agent-draft-proposal": [
+                { key: "service", label: "Service to Propose", placeholder: "e.g. Digital marketing retainer", type: "text", required: true },
+                { key: "budget", label: "Budget (optional)", placeholder: "e.g. ₦2,000,000", type: "text" },
+                { key: "timeline", label: "Timeline (optional)", placeholder: "e.g. 6 weeks", type: "text" },
+                { key: "requirements", label: "Additional Directive", placeholder: "e.g. Focus on lead-gen for their Lagos office", type: "textarea", span: 2 }
+            ],
+            "agent-market-research": [
+                { key: "topic", label: "Research Topic / Directive", placeholder: "e.g. Fintech competitive landscape", type: "text", required: true },
+                { key: "targetMarket", label: "Target Market (optional)", placeholder: "e.g. Nigeria", type: "text" }
+            ],
+            "agent-generate-report": [
+                { key: "reportType", label: "Report Type", placeholder: "e.g. Monthly Progress", type: "text" },
+                { key: "period", label: "Period / Directive", placeholder: "e.g. Last 2 months", type: "text" }
+            ]
+        };
+
         function populateAIConsoleActions() {
             const cat = document.getElementById('aiConsoleCategory').value;
             const sel = document.getElementById('aiConsoleAction');
             sel.innerHTML = (AI_ACTION_CATALOG[cat] || []).map(([a]) => `<option value="${a}">${a}</option>`).join('');
             prefillAIConsoleParams();
         }
+
+        // [CHANGED] Now toggles between the friendly directive panel (for actions
+        // in AI_DIRECTIVE_SCHEMAS) and the raw JSON textarea (everything else),
+        // instead of always prefilling raw JSON.
         function prefillAIConsoleParams() {
             const cat = document.getElementById('aiConsoleCategory').value;
             const action = document.getElementById('aiConsoleAction').value;
             const found = (AI_ACTION_CATALOG[cat] || []).find(([a]) => a === action);
-            document.getElementById('aiConsoleParams').value = found ? found[1] : '{}';
+            const jsonWrap = document.getElementById('aiConsoleJsonWrap');
+            const directiveWrap = document.getElementById('aiConsoleDirectiveWrap');
+            const fieldsEl = document.getElementById('aiConsoleDirectiveFields');
+            const schema = AI_DIRECTIVE_SCHEMAS[action];
+
+            if (schema) {
+                jsonWrap.classList.add('hidden');
+                directiveWrap.classList.remove('hidden');
+                fieldsEl.innerHTML = schema.map(f => `
+          <div class="${f.span === 2 ? 'col-span-2' : ''}">
+              <label class="block text-[10px] text-slate-400 mb-1">${escapeHtml(f.label)}${f.required ? ' <span class="text-red-400">*</span>' : ''}</label>
+              ${f.type === 'textarea'
+                        ? `<textarea id="aiDirective_${f.key}" placeholder="${escapeHtml(f.placeholder || '')}" class="w-full h-16 bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white"></textarea>`
+                        : `<input type="text" id="aiDirective_${f.key}" placeholder="${escapeHtml(f.placeholder || '')}" class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white" />`}
+          </div>`).join('');
+            } else {
+                directiveWrap.classList.add('hidden');
+                jsonWrap.classList.remove('hidden');
+                document.getElementById('aiConsoleParams').value = found ? found[1] : '{}';
+            }
         }
 
         // ============ mailboxes ============
@@ -10221,13 +10545,38 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             const clientId = document.getElementById('aiConsoleClientSelector').value;
             const action = document.getElementById('aiConsoleAction').value;
             if (!clientId || !action) { showToast('Select a client and an action.', 'error'); return; }
-            let params = {};
-            try { params = JSON.parse(document.getElementById('aiConsoleParams').value || '{}'); }
-            catch (e) { showToast('Params must be valid JSON.', 'error'); return; }
-            showToast('Running ' + action + '…', 'info');
-            const res = await executeSecureBridgeCall('agent', action, { clientId, ...params });
 
+            let params = {};
+            const schema = AI_DIRECTIVE_SCHEMAS[action];
+            if (schema) {
+                // [NEW] Build params from the friendly directive fields instead of JSON.
+                for (const f of schema) {
+                    const el = document.getElementById('aiDirective_' + f.key);
+                    const val = el ? el.value.trim() : '';
+                    if (f.required && !val) {
+                        showToast(`"${f.label}" is required.`, 'error');
+                        return;
+                    }
+                    if (val) params[f.key] = val;
+                }
+            } else {
+                try { params = JSON.parse(document.getElementById('aiConsoleParams').value || '{}'); }
+                catch (e) { showToast('Params must be valid JSON.', 'error'); return; }
+            }
+
+            // [CHANGED] Button-level "AI working" animation instead of the full-page
+            // loader — the rest of the dashboard stays usable while this runs.
+            const runBtn = document.getElementById('aiConsoleRunBtn');
+            setBtnBusy(runBtn, true, { busyLabel: 'Working…' });
             const resultEl = document.getElementById('aiConsoleResult');
+            resultEl.innerHTML = `<p class="text-emerald-400"><span class="ai-spinner"></span>Running ${escapeHtml(action)}…</p>`;
+
+            let res;
+            try {
+                res = await executeSecureBridgeCall('agent', action, { clientId, ...params }, { silent: true });
+            } finally {
+                setBtnBusy(runBtn, false);
+            }
 
             // Build the document link card if a docUrl came back
             let docCardHtml = '';

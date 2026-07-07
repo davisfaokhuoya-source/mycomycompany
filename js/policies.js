@@ -2,10 +2,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // =========================================================================
     // THE VICTORIAS LTD — COMPREHENSIVE POLICY DOCUMENT
-    // Effective Date: January 1, 2026 | Version: 2.0 | Reviewed Annually
+    // Effective Date: January 1, 2026 | Version: 2.1 | Last Updated: July 7, 2026
+    // Reviewed Annually
     // Governing Law: Nigeria (NDPA 2023, NDPR 2019, FCCPA, CAMA 2020,
     //   Cybercrimes Act 2015, Consumer Protection Council Act, ISA 1999)
     //   + Global alignment: GDPR, ISO/IEC 27001, UN Guidelines for Business & HR
+    // [CHANGED v2.1] Added Section 12 (Professional Assessment & Certification
+    //   Portal — thevictorias.com.ng/trainings) and Section 13 (Nigerian Market
+    //   Entry & Local Support — thevictorias.com.ng/localsupport), which were
+    //   previously covered only in passing under Section 1.2 and Section 8.6.
     // =========================================================================
 
     const policiesData = [
@@ -101,11 +106,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 {
                     id: 'client-4',
                     title: '2.4 Payment, Refunds & Cancellations',
-                    content: `<strong>Payment:</strong> All service fees are payable in full or as agreed upfront, through our official payment link issued via Flutterwave. We do not accept cash payments, personal transfers to individual accounts, or any payment not processed through our official channels. Your payment receipt and Job Tracking Code are issued automatically upon successful payment.<br><br>
+                    content: `<strong>Payment:</strong> All service fees are payable in full or as agreed upfront, through our official payment link issued via Flutterwave and official corporate. We do not accept cash payments, personal transfers to individual accounts, or any payment not processed through our official channels. Your payment receipt and Job Tracking Code are issued automatically upon successful payment.<br><br>
                     <strong>Refund Policy:</strong><br>
                     — <em>Full Refund:</em> Available within 24 hours of payment, provided no work has commenced.<br>
                     — <em>Partial Refund:</em> Where work has commenced, a refund of up to 50% of the service fee may be issued, at our discretion, based on the proportion of work completed.<br>
-                    — <em>No Refund:</em> Where a service has been substantially completed, or where a government agency has processed the submission (e.g., CAC has received and reviewed your documents), no refund is available as costs have been incurred on your behalf.<br>
+                    — <em>No Refund:</em> Where a service has been substantially completed or where a government agency has processed the submission (e.g., CAC has received and reviewed your documents), no refund is available as costs have been incurred on your behalf.<br>
                     — <em>Service Failure:</em> If The Victorias Ltd. fails to deliver a paid service due to our own error or negligence, a service repeat will be offered at the client's discretion.<br><br>
                     <strong>Cancellation:</strong> Cancellations must be submitted in writing to management@thevictorias.com.ng. Verbal cancellations are not valid. Refund eligibility is assessed on the date of written notice receipt.`
                 },
@@ -274,6 +279,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     content: `We collect only the minimum data necessary for legitimate purposes:<br><br>
                     <strong>Clients:</strong> Full name, contact details (phone, email, address), government-issued ID details (for regulatory services), bank details (where required for filings), business information, and service-specific documentation.<br><br>
                     <strong>Portal Users / Partners:</strong> Full name, state of residence, phone number, email address, bank account details (for commission payments), platform activity logs, assessment results, and login/session data.<br><br>
+                    <strong>Trainees / Certification Portal Users (thevictorias.com.ng/trainings):</strong> Full name, email address, phone number, state of residence, payment confirmation records, assessment attempts, scores, and issued certificate records (which may be made publicly searchable for verification — see Section 12.5).<br><br>
+                    <strong>Market Entry / Local Support Clients (thevictorias.com.ng/localsupport):</strong> Brand company details, authorised contact information, and — where distributor sourcing is engaged — distributor candidate business information gathered during vetting (see Section 13.2).<br><br>
                     <strong>Website Visitors:</strong> IP address, browser type, pages visited, and session duration — collected through standard web analytics tools for performance improvement purposes only.<br><br>
                     <strong>Legal Basis for Processing (NDPA 2023, Article 25):</strong><br>
                     — <em>Contract Performance:</em> Processing necessary to deliver the service you engaged;<br>
@@ -580,6 +587,110 @@ document.addEventListener('DOMContentLoaded', () => {
                     <strong>Remote Work:</strong> All staff and contractors working remotely must use secured, private internet connections. Use of public Wi-Fi for accessing client data or internal systems is prohibited without an approved VPN solution.`
                 }
             ]
+        },
+
+        // =====================================================================
+        // SECTION 12: PROFESSIONAL ASSESSMENT & CERTIFICATION PORTAL POLICY
+        // (thevictorias.com.ng/trainings — public certification product,
+        //  distinct from the internal Career Hub tier-upgrade assessments
+        //  covered in Section 3.4)
+        // =====================================================================
+        {
+            id: 'topicTrainings',
+            title: '12. Professional Assessment & Certification Portal Policy (Trainings)',
+            subtopics: [
+                {
+                    id: 'train-1',
+                    title: '12.1 Nature & Scope of the Certification Portal',
+                    content: `The Professional Assessment Portal at <strong>thevictorias.com.ng/trainings</strong> is a paid, public certification product offered to individuals and professionals, and is a separate offering from the internal Career Hub Partner tier-upgrade assessments described in Section 3.4. Certificates issued through this Portal validate performance on a specific, timed assessment at the time it was taken.<br><br>
+                    <strong>What our certificates are not:</strong> a university degree, a statutorily-regulated professional licence, or a guarantee of employment, promotion, or business outcome. Where a specific programme is developed in partnership with, or accredited by, a named third-party body, that accreditation status will be stated explicitly on the relevant programme page and certificate.`
+                },
+                {
+                    id: 'train-2',
+                    title: '12.2 Registration & Eligibility',
+                    content: `To register for and take an assessment on the Portal, you must:<br><br>
+                    (a) Be at least 18 years of age;<br>
+                    (b) Provide accurate registration details — full name, email address, phone number, and state of residence — matching the identity that should appear on your certificate;<br>
+                    (c) Maintain one account per individual. Creating multiple accounts to obtain additional free attempts, bypass a cooldown period, or otherwise circumvent these terms is prohibited and may result in disqualification of all associated certificates;<br>
+                    (d) Keep your login credentials confidential. You are responsible for all activity on your account, including any assessment taken under it.<br><br>
+                    Names on issued certificates are taken exactly as entered at registration. We are not responsible for reprinting or reissuing a certificate where an error in your submitted name was not corrected before you completed the assessment; a reasonable administrative fee may apply to post-issuance name corrections.`
+                },
+                {
+                    id: 'train-3',
+                    title: '12.3 Assessment Integrity, Attempts & Proctoring',
+                    content: `Assessments on the Portal are timed and administered under integrity controls comparable to those described in Section 3.4 for Career Hub assessments:<br><br>
+                    (a) Questions are served and scored server-side; answer keys are never exposed to the client browser;<br>
+                    (b) Tab-switching, window minimisation, or leaving the assessment screen during an active session may be logged and, beyond a stated threshold of violations, will auto-submit the attempt;<br>
+                    (c) Use of unauthorised assistance, impersonation (having another person sit the assessment for you), screen-sharing the assessment, or automated/AI tools to answer questions is strictly prohibited;<br>
+                    (d) Each paid registration entitles you to the number of attempts stated on the programme page at the time of purchase (currently up to 4 unless otherwise stated). Additional attempts beyond this allowance require a new paid registration;<br>
+                    (e) A minimum score, stated on the programme page (currently 70% unless otherwise specified for a given certification), is required to pass and receive a certificate.<br><br>
+                    Violation of assessment integrity rules will result in disqualification of the relevant attempt, forfeiture of any certificate obtained through the violation, and may result in a permanent bar from future use of the Portal.`
+                },
+                {
+                    id: 'train-4',
+                    title: '12.4 Fees, Payment & Refund Policy',
+                    content: `<strong>Payment:</strong> Assessment and course fees are payable in full, upfront, through our official Flutterwave payment link. We do not accept payment through unofficial channels or directly to any individual.<br><br>
+                    <strong>Refunds:</strong><br>
+                    — <em>Full Refund:</em> Available where payment is confirmed but no assessment attempt has been started, requested in writing within 24 hours of payment;<br>
+                    — <em>No Refund:</em> Once an assessment attempt has been started (the timer has begun), the fee for that attempt is non-refundable, whether the attempt is passed, failed, or auto-submitted for an integrity violation, as access and grading resources have already been consumed;<br>
+                    — <em>Service Failure:</em> Where a technical fault on our part (not a violation under Section 12.3, and not an issue with your own device or internet connection) prevents you from completing a paid attempt, we will restore the consumed attempt or offer an equivalent remedy at your discretion.<br><br>
+                    Cancellations and refund requests must be submitted in writing to management@thevictorias.com.ng and are assessed against the attempt-consumption record on our system, which is treated as the authoritative record of attempt status.`
+                },
+                {
+                    id: 'train-5',
+                    title: '12.5 Certificates & Public Verification',
+                    content: `Upon passing an assessment, a digital certificate is issued bearing your registered name, the certification title, a unique certificate ID, and the issue date.<br><br>
+                    <strong>Public Verification:</strong> Certificate ID, credential title, and validity status may be made available through our public "Verify Certificate" tool so that third parties (e.g., prospective employers) can confirm authenticity. You may request that your name be withheld from the public-facing verification result (showing only the certificate ID and validity status) by writing to management@thevictorias.com.ng; this does not affect the certificate's validity.<br><br>
+                    <strong>Revocation:</strong> We reserve the right to revoke a certificate and mark it "invalid" on the public verification tool where it was obtained through a violation of Section 12.3, through fraudulent registration information, or through payment reversal/chargeback of the underlying fee.`
+                },
+                {
+                    id: 'train-6',
+                    title: '12.6 Intellectual Property in Course & Assessment Content',
+                    content: `All course videos, study materials, and assessment questions made available through the Portal are the intellectual property of The Victorias Ltd. or its licensors. You are granted a limited, personal, non-transferable licence to access this content for your own learning and assessment purposes only. You may not record, copy, redistribute, publish, or share course content or assessment questions/answers with any other person. Doing so is a breach of these terms and may result in certificate revocation and legal action for copyright infringement.`
+                }
+            ]
+        },
+
+        // =====================================================================
+        // SECTION 13: NIGERIAN MARKET ENTRY & LOCAL SUPPORT POLICY
+        // (thevictorias.com.ng/localsupport — proxy-model market entry and
+        //  distributor management services for brands entering Nigeria)
+        // =====================================================================
+        {
+            id: 'topicLocalSupport',
+            title: '13. Nigerian Market Entry & Local Support Policy',
+            subtopics: [
+                {
+                    id: 'local-1',
+                    title: '13.1 Scope of Market Entry & Proxy Services',
+                    content: `Our Nigerian Market Entry service, offered at <strong>thevictorias.com.ng/localsupport</strong>, provides proxy-model market entry support to brands and businesses seeking to enter or expand within the Nigerian market. Depending on the specific engagement proposal, this may include distributor sourcing and management, sector and competitor research, regulatory and stakeholder navigation, local representation ("boots on the ground"), and periodic performance reporting.<br><br>
+                    As with our other advisory services (Section 1.4), Market Entry services are delivered on a best-efforts, professional-standard basis. We do not act as a licensed customs agent, importer of record, or regulatory filing agent for NAFDAC, SON, or Nigeria Customs Service matters unless this is explicitly included as a distinct, separately scoped service in your engagement proposal.`
+                },
+                {
+                    id: 'local-2',
+                    title: '13.2 Confidentiality of Brand, Distributor & Commercial Data',
+                    content: `Market Entry engagements routinely involve highly sensitive commercial information — brand strategy documents, pricing structures, distributor performance data, and unreleased product plans. Such information is Confidential Information under Section 6 of these policies, and in addition:<br><br>
+                    (a) We will execute a mutual Non-Disclosure Agreement with you prior to the exchange of sensitive commercial documents, where one is not already in place;<br>
+                    (b) Access to your brand and distributor data is restricted to personnel and, where strictly necessary, vetted distributor partners directly involved in your engagement, each bound by confidentiality obligations appropriate to what is disclosed to them;<br>
+                    (c) We will not disclose your identity, brand strategy, or commercial terms to any competing brand or distributor candidate without your prior written consent.`
+                },
+                {
+                    id: 'local-3',
+                    title: '13.3 No Guarantee of Market Performance or ROI',
+                    content: `Any market size estimates, distributor coverage figures, return-on-investment percentages, or case-study outcomes referenced on our website or in proposals reflect <strong>past, aggregated client outcomes or illustrative modelling</strong> and are provided for general guidance only. Actual market entry outcomes depend on factors outside our control, including competitive dynamics, consumer demand, currency and macroeconomic conditions, regulatory changes, and the performance of independent distributor partners. We do not guarantee any specific sales volume, market share, distributor performance, or return on investment.`
+                },
+                {
+                    id: 'local-4',
+                    title: '13.4 Distributor Relationships & Third-Party Conduct',
+                    content: `Where our service includes distributor sourcing or management, distributors identified, vetted, or managed on your behalf are <strong>independent businesses</strong>, not employees or general agents of The Victorias Ltd. or of you as our client, beyond the specific oversight mandate agreed in your engagement proposal.<br><br>
+                    We apply reasonable, commercially standard vetting procedures (business registration checks, reference checks, and, where agreed, site visits) before recommending a distributor candidate. However, we are not liable for a distributor's independent business conduct, solvency, or performance outside the specific scope of the oversight mandate we have been engaged to perform, except to the extent such loss arises from our own negligence in the vetting or oversight process itself.`
+                },
+                {
+                    id: 'local-5',
+                    title: '13.5 Client Obligations for Market Entry Engagements',
+                    content: `You agree to provide accurate product, brand, and compliance documentation reasonably required for us to perform the engagement, and to obtain, at your own cost unless otherwise agreed in writing, any product-specific regulatory approvals (e.g., NAFDAC registration, SON certification, import permits) required for your goods to lawfully enter or be sold in the Nigerian market. We are not liable for delays, penalties, or seizure of goods arising from your failure to secure product-specific regulatory approvals that fall outside our agreed scope of work.`
+                }
+            ]
         }
 
     ]; // end policiesData
@@ -654,7 +765,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h1 class="display-5 mb-4">Company Policies & Terms</h1>
                         <p class="mb-1 text-muted">
                             <strong>Effective Date:</strong> January 1, 2026 &nbsp;|&nbsp;
-                            <strong>Version:</strong> 2.0 &nbsp;|&nbsp;
+                            <strong>Version:</strong> 2.1 &nbsp;|&nbsp;
+                            <strong>Last Updated:</strong> July 7, 2026 &nbsp;|&nbsp;
                             <strong>Reviewed Annually</strong>
                         </p>
                         <p class="mb-0 small text-muted">
@@ -665,6 +777,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="badge bg-primary me-1">Clients</span>
                             <span class="badge bg-success me-1">Partners &amp; Agents</span>
                             <span class="badge bg-warning text-dark me-1">Portal Users</span>
+                            <span class="badge bg-info text-dark me-1">Trainees</span>
+                            <span class="badge bg-dark me-1">Market Entry Clients</span>
                             <span class="badge bg-secondary">All Services</span>
                         </div>
                     </div>
@@ -687,6 +801,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <li>🚫 <strong>Section 9</strong> — Anti-Fraud &amp; Ethics</li>
                                     <li>⚖️ <strong>Section 10</strong> — Disputes &amp; Liability</li>
                                     <li>🛡️ <strong>Section 11</strong> — Safety &amp; Security</li>
+                                    <li>🎓 <strong>Section 12</strong> — Assessment &amp; Certification (Trainings)</li>
+                                    <li>🌍 <strong>Section 13</strong> — Market Entry &amp; Local Support</li>
                                 </ul>
                                 <hr class="border-light mt-3 mb-3">
                                 <p class="mb-1" style="font-size:0.82rem;">Questions or concerns?</p>

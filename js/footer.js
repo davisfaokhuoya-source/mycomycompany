@@ -17,12 +17,10 @@ const footerHTML = `<!-- Victoria AI Bubble Integration -->
                     <div class="col-md-6 col-lg-6 col-xl-2">
                         <div class="footer-item">
                             <h4 class="text-white mb-4">Home Links</h4>
-                            <a href="careerhub"><i class="fas fa-angle-right me-2"></i> Earn from Home</a>
+                            <a href="careerhub"><i class="fas fa-angle-right me-2"></i> Career</a>
                             <a href="appointment"><i class="fas fa-angle-right me-2"></i> Book Appointment</a>
-                            <a href="services"><i class="fas fa-angle-right me-2"></i> Our Services</a>
+                            <a href="services"><i class="fas fa-angle-right me-2"></i> Others</a>
                             <a href="contact"><i class="fas fa-angle-right me-2"></i>Contact Us</a>
-                            <a href="web-graphics-branding"><i class="fas fa-angle-right me-2"></i>Web, Graphics & Branding</a>
-                            <a href="value"><i class="fas fa-angle-right me-2"></i>Service Cost Calculator</a>
                         </div>
                     </div>
                     <div class="col-md-6 col-lg-6 col-xl-3">
