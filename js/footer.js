@@ -1,6 +1,23 @@
 // footer.js
 const footerHTML = `<!-- Victoria AI Bubble Integration -->
+<style>
+        /* [NEW] Brighter footer link colors — overrides whatever the
+           external stylesheet has for .footer-item a, since it wasn't
+           bright enough. Adjust the two hex values below to taste. */
+        .footer-item a {
+            color: #cacecf !important;   /* brighter base color for link text */
+            opacity: 1 !important;
+            transition: color .15s ease;
+        }
+        .footer-item a:hover {
+            color: #f0b617 !important;   /* bright accent on hover */
+        }
+        .copyright a {
+            color: #cacecf !important;
+        }
 
+        .txt {color: #d2deec !important;}
+    </style>
     <!-- Paste your full footer HTML here -->
     <div class="container-fluid footer py-5 wow fadeIn" data-wow-delay="0.2s">
             <div class="container py-5 border-start-0 border-end-0" style="border: 1px solid; border-color: rgb(255, 255, 255, 0.08);">
@@ -11,14 +28,14 @@ const footerHTML = `<!-- Victoria AI Bubble Integration -->
                                 <h4 class="text-white">
                                 <img src="img/thevictoriaslogo.png" style="height: 60px; width: 60px" alt="Logo"> <span class="dealyo">The Victorias Ltd </span></h4>
                             </a>
-                            <p class="mb-4"><strong>A partner you can trust...</strong><br/>At The Victorias Ltd., we are dedicated to fostering long-term partnerships with our clients by delivering exceptional value and measurable results.</p>
+                            <p class="mb-4 txt"><strong>A partner you can trust...</strong><br/>At The Victorias Ltd., we are dedicated to fostering long-term partnerships with our clients by delivering exceptional value and measurable results.</p>
                         </div>
                     </div>
                     <div class="col-md-6 col-lg-6 col-xl-2">
                         <div class="footer-item">
                             <h4 class="text-white mb-4">Home Links</h4>
                             <a href="careerhub"><i class="fas fa-angle-right me-2"></i> Career</a>
-                            <a href="appointment"><i class="fas fa-angle-right me-2"></i> Book Appointment</a>
+                            <a href="appointment"><i class ="fas fa-angle-right me-2"></i> Book Appointment</a>
                             <a href="services"><i class="fas fa-angle-right me-2"></i> Others</a>
                             <a href="contact"><i class="fas fa-angle-right me-2"></i>Contact Us</a>
                         </div>
@@ -36,13 +53,13 @@ const footerHTML = `<!-- Victoria AI Bubble Integration -->
                             <h4 class="text-white mb-4">Contact Info</h4>
                             <div class="d-flex align-items-center">
                                 <i class="fas fa-map-marker-alt text-primary me-3"></i>
-                                <p class="mb-0">Abuja, Nigeria</p>
+                                <p class="mb-0 txt">Abuja, Nigeria</p>
                             </div>
-                            <div class="d-flex align-items-center">
+                            <div class="d-flex align-items-center txt">
                                 <i class="fas fa-envelope text-primary me-3"></i>
                                 <p class="mb-0">@thevictorias.com.ng</p>
                             </div>
-                            <div class="d-flex align-items-center">
+                            <div class="d-flex align-items-center txt">
                                 <i class="fa fa-phone-alt text-primary me-3"></i>
                                 <p class=" mb-0">+2348055538518</p>
                             </div>

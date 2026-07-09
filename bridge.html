@@ -2441,16 +2441,113 @@
                     </div>
                     <!-- ADD-ONS VIEW -->
                     <div id="view-agent-addons"
-                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        class="agent-view hidden flex-1 flex flex-col overflow-auto custom-scrollbar space-y-4">
                         <div class="flex justify-between items-center shrink-0">
                             <div>
                                 <h3 class="text-lg font-bold text-white">Add-ons &amp; Extra Services</h3>
                                 <p class="text-xs text-slate-400">Manage one-time or recurring add-ons per client (extra
                                     mailboxes, compliance packages, premium AI hours, etc).</p>
                             </div>
+                        </div>
+
+                        <!-- =====================================================================
+                             [NEW] Purchase Add-on — quantity-capable, wired to _purchaseAddon.
+                             A client can now buy the SAME add-on multiple times in one go (e.g.
+                             "Extra 50 Emails" x3 = +150 emails), and/or several DIFFERENT add-ons
+                             together via the cart below — each cart line is submitted as its own
+                             agent-purchase-addon call (that's the shape the backend expects: one
+                             addonKey + one quantity per call), immediately bumping the right
+                             Extra* quota column and logging + notifying the client.
+                        ====================================================================== -->
+                        <div class="bg-slate-950 border border-emerald-900/60 rounded-xl p-4 shrink-0 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <p class="text-sm font-bold text-white"><i
+                                        class="fa-solid fa-cart-plus text-emerald-400"></i>
+                                    Purchase Add-on</p>
+                                <p class="text-[10px] text-slate-500">Quantities multiply both price and units — e.g.
+                                    "Extra 50 Emails" × 3 = +150 emails for ₦180,000.</p>
+                            </div>
+                            <div class="grid grid-cols-4 gap-3">
+                                <div>
+                                    <label class="block text-[10px] text-slate-400 mb-1">Client</label>
+                                    <select id="addonCartClientSelector"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white">
+                                        <option value="">Select…</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-slate-400 mb-1">Add-on</label>
+                                    <select id="addonCartKey" onchange="updateAddonCartLinePreview()"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white"></select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-slate-400 mb-1">Quantity</label>
+                                    <input type="number" id="addonCartQty" value="1" min="1" step="1"
+                                        onchange="updateAddonCartLinePreview()" oninput="updateAddonCartLinePreview()"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white" />
+                                </div>
+                                <div class="flex items-end">
+                                    <button onclick="addAddonCartLine()"
+                                        class="w-full bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium py-1.5 px-3 rounded">
+                                        <i class="fa-solid fa-plus"></i> Add to Cart
+                                    </button>
+                                </div>
+                            </div>
+                            <p id="addonCartLinePreview" class="text-[11px] text-emerald-400"></p>
+
+                            <div id="addonCartTableWrap" class="hidden border-t border-slate-800 pt-3">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="text-slate-500 uppercase text-[10px]">
+                                        <tr>
+                                            <th class="pb-1">Add-on</th>
+                                            <th class="pb-1 text-center">Qty</th>
+                                            <th class="pb-1 text-right">Unit Price</th>
+                                            <th class="pb-1 text-right">Line Total</th>
+                                            <th class="pb-1"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="addonCartTableBody" class="divide-y divide-slate-800/50 text-slate-300">
+                                    </tbody>
+                                </table>
+                                <div class="flex justify-between items-center pt-3">
+                                    <p class="text-xs text-slate-400">Cart Total: <span id="addonCartTotal"
+                                            class="text-emerald-400 font-mono font-bold"></span></p>
+                                    <button id="addonCartPurchaseBtn" onclick="purchaseAddonCart()"
+                                        class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 px-4 rounded shadow">
+                                        <i class="fa-solid fa-bolt"></i> Purchase All
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent purchases made via the flow above (pulled from the audit log) -->
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0">
+                            <div class="flex items-center justify-between mb-2">
+                                <p class="text-xs font-bold text-slate-300">Recent Add-on Purchases</p>
+                                <button onclick="loadRecentAddonPurchases()"
+                                    class="text-[10px] text-slate-500 hover:text-slate-300">
+                                    <i class="fa-solid fa-rotate"></i> Refresh
+                                </button>
+                            </div>
+                            <div id="recentAddonPurchasesList"
+                                class="text-xs text-slate-400 space-y-1 max-h-40 overflow-auto custom-scrollbar">
+                            </div>
+                        </div>
+
+                        <!-- Legacy manual ledger — free-text add-on records (name/type/price/expiry) that
+                             predate quantity-based purchasing above. Kept for viewing/editing older
+                             entries; new purchases should go through the panel above instead, since
+                             entries created here do NOT bump any quota column automatically unless
+                             their catalogKey happens to match one wired in _applyAddonEffect. -->
+                        <div class="flex justify-between items-center shrink-0 pt-2">
+                            <div>
+                                <p class="text-sm font-bold text-slate-300">Legacy / Manual Add-on Records</p>
+                                <p class="text-[10px] text-slate-500">Older free-text records. Prefer "Purchase Add-on"
+                                    above for anything that should affect quota.</p>
+                            </div>
                             <button onclick="openAddAddonModal()"
-                                class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded transition-colors shadow flex items-center gap-1">
-                                <i class="fa-solid fa-plus"></i> Add New Add-on
+                                class="bg-slate-700 hover:bg-slate-600 text-xs text-white font-medium py-1.5 px-3 rounded transition-colors shadow flex items-center gap-1">
+                                <i class="fa-solid fa-pen"></i> Add Manual Record
                             </button>
                         </div>
 
@@ -3772,12 +3869,12 @@
                     <label class="block text-xs text-slate-400 mb-1">Subscription Tier</label>
                     <select id="agentTier" required
                         class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
-                        <option value="starter_ops">Starter Ops (₦350K/mo: 20hrs, 50 emails, 1 proposal)</option>
-                        <option value="growth_ops">Growth Ops (₦950K/mo: 40hrs, 200 emails, 3 proposals)</option>
+                        <option value="starter_ops">Starter Ops (₦250K/mo: 20hrs, 50 emails, 1 proposal)</option>
+                        <option value="growth_ops">Growth Ops (₦650K/mo: 40hrs, 200 emails, 3 proposals)</option>
                         <option value="enterprise_ops">Enterprise Ops (Admin-Priced — set limits below)</option>
-                        <option value="digital_launch">Digital Launch (₦500K/mo: content review, 12 social assets,
+                        <option value="digital_launch">Digital Launch (₦400K/mo: content review, 12 social assets,
                             weekly LinkedIn)</option>
-                        <option value="digital_accelerate">Digital Accelerate (Fixed — $948/mo)</option>
+                        <option value="digital_accelerate">Digital Accelerate (₦800K/mo — $590/mo)</option>
                         <option value="digital_scale">Digital Scale (Admin-Priced — set limits below)</option>
                         <option value="custom">Custom Tier (Bespoke)</option>
                     </select>
@@ -4662,7 +4759,7 @@
          view-publish-settings). -->
 
     <script>
-        let WEBAPP_URL = localStorage.getItem('VIC_WEBAPP_URL') || "https://script.google.com/macros/s/AKfycbxrqKfDD15fGMIwJDlk2nPcnxfMltf0cCAIR4covswtmljrXUk-J7Z5wpu-3c4jZJe5/exec";
+        let WEBAPP_URL = localStorage.getItem('VIC_WEBAPP_URL') || "api.thevictorias.com.ng";
         let SESSION_MASTER_TOKEN = localStorage.getItem('VIC_MASTER_TOKEN') || "";
         let CURRENT_ADMIN_IDENTITY = localStorage.getItem('VIC_ADMIN_EMAIL') || "Unauthenticated Session";
 
@@ -4907,7 +5004,7 @@
         // its own inline/row/button-level busy state (see setBtnBusy/setRowBusy
         // below), so long-running AI actions no longer freeze the whole dashboard.
         async function executeSecureBridgeCall(systemTarget, actionTarget, analyticalPayload = {}, opts = {}) {
-            const url = "https://script.google.com/macros/s/AKfycbyAI3UQCSTV_KhAEmnT958vbJiD3ZZZMlnRrTs5vzgMBPeqs7kPvZjSGDHjtxw8yg8c/exec";
+            const url = "api.thevictorias.com.ng";
             if (!url) {
                 alert("Please enter your Web App URL in the login screen.");
                 return { success: false, message: "No endpoint URL" };
@@ -7288,16 +7385,20 @@
             document.getElementById('addonName').value = a.label;
         }
         // Mirror the backend catalog so labels/prices match exactly — keep in sync manually if you edit ADDON_CATALOG
+        // [CHANGED] Synced with the reduced pricing update: extra_mailbox ₦45,000→₦35,000,
+        // extra_proposal ₦90,000→₦70,000, compliance_doc_tracking ₦4,500→₦5,000/doc,
+        // plus the new extra_5_documents add-on (₦50,000, +5 docs/mo).
         const ADDON_CATALOG_FRONTEND = {
             extra_mailbox: { label: "Extra Mailbox", priceNgn: 45000 },
-            extra_50_emails: { label: "Extra 50 Emails/mo", priceNgn: 60000 },
-            extra_proposal: { label: "Extra Proposal/mo", priceNgn: 90000 },
+            extra_50_emails: { label: "Extra 50 Emails/mo", priceNgn: 40000 },
+            extra_proposal: { label: "Extra Proposal/mo", priceNgn: 50000 },
             extra_10_ai_hours: { label: "Extra 10 AI Hours/mo", priceNgn: 70000 },
-            compliance_doc_tracking: { label: "Compliance Doc Tracking", priceNgn: 4500 },
-            extra_crm_sync: { label: "Extra CRM Sync/mo", priceNgn: 25000 },
+            extra_5_documents: { label: "Extra Documents/mo", priceNgn: 30000 },
+            compliance_doc_tracking: { label: "Compliance Doc Tracking", priceNgn: 5000 },
+            extra_50_leads: { label: "Extra 50 Leads (email only)", priceNgn: 30000 },
+            advanced_50_leads: { label: "Advanced 50 Leads (with phone)", priceNgn: 80000 },
+            extra_crm_sync: { label: "Extra CRM Sync/mo", priceNgn: 50000 },
             extra_compliance_check: { label: "Extra Compliance Check/mo", priceNgn: 20000 },
-            social_asset_pack_12: { label: "12 Social Assets Pack", priceNgn: 80000 },
-            premium_ai_hours_5: { label: "5 Premium AI Hours", priceNgn: 60000 }
         };
 
         async function submitNewCalendarEvent(event) {
@@ -8768,8 +8869,9 @@
         }
 
         // ================================================================
-        // NEW: LIVE CHAT (ephemeral — server holds messages in short-TTL
-        // cache only, nothing is written to a sheet)
+        // LIVE CHAT — persisted server-side in the AgentChatLog sheet
+        // (source of truth); the script cache is used only as a speed
+        // layer so polling stays fast.
         // ================================================================
         let LIVE_CHAT_CLIENT = null;
         let LIVE_CHAT_TIMER = null;
@@ -9574,7 +9676,134 @@
             }
         }
 
+        // =====================================================================
+        // [NEW] Purchase Add-on (quantity-capable) — wired to the backend's
+        // ADDON_PRICING / _purchaseAddon (agent-purchase-addon), which already
+        // supports a `quantity` multiplier server-side. This is a SEPARATE,
+        // newer system from the legacy Addons-JSON ledger below (different
+        // catalog, different columns) — see the in-page note for why they're
+        // kept apart rather than merged.
+        // =====================================================================
+        const ADDON_PRICING_FRONTEND = {
+            extra_10_hours: { label: "Extra 10 hrs AI", price_ngn: 70000, unit: 10, appliesTo: "hours" },
+            extra_crm: { label: "Extra CRM connection", price_ngn: 150000, unit: 1, appliesTo: "crmAccounts" },
+            compliance_doc_tracking: { label: "Compliance document tracking", price_ngn: 20000, unit: 1, appliesTo: "complianceTracking" },
+            extra_mailbox: { label: "Extra mailbox", price_ngn: 45000, unit: 1, appliesTo: "mailboxes" },
+            extra_50_emails: { label: "Extra 50 emails", price_ngn: 60000, unit: 50, appliesTo: "emails" },
+            extra_proposal: { label: "Extra proposal", price_ngn: 90000, unit: 1, appliesTo: "proposals" },
+            extra_document: { label: "Extra document", price_ngn: 30000, unit: 1, appliesTo: "documents" },
+            extra_50_leads: { label: "Extra 50 leads (email only)", price_ngn: 30000, unit: 50, appliesTo: "leads" },
+            advanced_50_leads: { label: "Advanced 50 leads (with phone)", price_ngn: 80000, unit: 50, appliesTo: "advancedLeads" }
+        };
+
+        let ADDON_CART = [];
+
+        function populateAddonCartCatalog() {
+            const sel = document.getElementById('addonCartKey');
+            if (!sel) return;
+            sel.innerHTML = Object.entries(ADDON_PRICING_FRONTEND).map(([key, a]) =>
+                `<option value="${key}">${escapeHtml(a.label)} — ${fmtNaira(a.price_ngn)}</option>`).join('');
+            updateAddonCartLinePreview();
+        }
+
+        function updateAddonCartLinePreview() {
+            const key = document.getElementById('addonCartKey')?.value;
+            const qty = Math.max(1, parseInt(document.getElementById('addonCartQty')?.value, 10) || 1);
+            const a = ADDON_PRICING_FRONTEND[key];
+            const el = document.getElementById('addonCartLinePreview');
+            if (!a || !el) return;
+            el.textContent = `${qty} × ${a.label} = +${a.unit * qty} ${a.appliesTo} for ${fmtNaira(a.price_ngn * qty)}`;
+        }
+
+        function addAddonCartLine() {
+            const key = document.getElementById('addonCartKey').value;
+            const qty = Math.max(1, parseInt(document.getElementById('addonCartQty').value, 10) || 1);
+            const a = ADDON_PRICING_FRONTEND[key];
+            if (!a) { showToast('Pick an add-on first.', 'error'); return; }
+            ADDON_CART.push({ key, label: a.label, qty, unitPrice: a.price_ngn, lineTotal: a.price_ngn * qty });
+            document.getElementById('addonCartQty').value = 1;
+            updateAddonCartLinePreview();
+            renderAddonCartTable();
+        }
+
+        function removeAddonCartLine(idx) {
+            ADDON_CART.splice(idx, 1);
+            renderAddonCartTable();
+        }
+
+        function renderAddonCartTable() {
+            const wrap = document.getElementById('addonCartTableWrap');
+            const body = document.getElementById('addonCartTableBody');
+            if (!wrap || !body) return;
+            if (!ADDON_CART.length) { wrap.classList.add('hidden'); body.innerHTML = ''; return; }
+            wrap.classList.remove('hidden');
+            body.innerHTML = ADDON_CART.map((line, idx) => `
+        <tr>
+            <td class="py-1">${escapeHtml(line.label)}</td>
+            <td class="py-1 text-center">${line.qty}</td>
+            <td class="py-1 text-right font-mono">${fmtNaira(line.unitPrice)}</td>
+            <td class="py-1 text-right font-mono text-emerald-400">${fmtNaira(line.lineTotal)}</td>
+            <td class="py-1 text-right"><button onclick="removeAddonCartLine(${idx})" class="text-red-400 hover:text-red-300 text-[11px]"><i class="fa-solid fa-xmark"></i></button></td>
+        </tr>`).join('');
+            document.getElementById('addonCartTotal').textContent =
+                fmtNaira(ADDON_CART.reduce((s, l) => s + l.lineTotal, 0));
+        }
+
+        // Submits the whole cart — one agent-purchase-addon call per line, since
+        // that's the shape _purchaseAddon expects (single addonKey + quantity).
+        // This is what lets an admin buy several DIFFERENT add-ons at DIFFERENT
+        // quantities for the same client in one action.
+        async function purchaseAddonCart() {
+            const clientId = document.getElementById('addonCartClientSelector').value;
+            if (!clientId) { showToast('Select a client.', 'error'); return; }
+            if (!ADDON_CART.length) { showToast('Cart is empty — add at least one line.', 'error'); return; }
+
+            const btn = document.getElementById('addonCartPurchaseBtn');
+            setBtnBusy(btn, true, { busyLabel: 'Purchasing…' });
+
+            let okCount = 0;
+            const failMsgs = [];
+            for (const line of ADDON_CART) {
+                const res = await executeSecureBridgeCall('agent', 'agent-purchase-addon',
+                    { clientId, addonKey: line.key, quantity: line.qty }, { silent: true });
+                if (res.success) okCount++;
+                else failMsgs.push(`${line.label}: ${res.message || 'failed'}`);
+            }
+
+            setBtnBusy(btn, false);
+            if (okCount) showToast(`${okCount} add-on line(s) purchased for ${clientId}.`, 'success');
+            if (failMsgs.length) showToast(failMsgs.join(' | '), 'error');
+
+            ADDON_CART = [];
+            renderAddonCartTable();
+            loadRecentAddonPurchases();
+        }
+
+        // Pulls the last few ADDON_PURCHASED entries straight from the audit log
+        // (no dedicated "purchases" sheet needed — _purchaseAddon already logs
+        // every purchase there via _logAudit).
+        async function loadRecentAddonPurchases() {
+            const el = document.getElementById('recentAddonPurchasesList');
+            if (!el) return;
+            el.innerHTML = `<p class="text-slate-500"><span class="ai-spinner"></span>Loading…</p>`;
+            const res = await executeSecureBridgeCall('agent', 'agent-audit-log', {}, { silent: true });
+            const purchases = (res.success && res.data ? res.data : []).filter(r => r.Action === 'ADDON_PURCHASED').slice(0, 15);
+            if (!purchases.length) { el.innerHTML = '<p class="text-slate-500">No purchases yet.</p>'; return; }
+            el.innerHTML = purchases.map(r => `
+        <div class="flex justify-between border-b border-slate-800/50 pb-1">
+            <span>${escapeHtml(r.ClientID)} — ${escapeHtml(r.Summary)}</span>
+            <span class="text-slate-600 shrink-0 ml-2">${escapeHtml(fmtDate(r.Timestamp))}</span>
+        </div>`).join('');
+        }
+
         async function loadAgentAddonsUI() {
+            // [NEW] Initialize the quantity-purchase panel every time this view loads.
+            populateAllClientsSelector('addonCartClientSelector');
+            populateAddonCartCatalog();
+            ADDON_CART = [];
+            renderAddonCartTable();
+            loadRecentAddonPurchases();
+
             const tbodyId = 'agentAddonsTableBody';
             showTableSkeleton(tbodyId, 7);
 
