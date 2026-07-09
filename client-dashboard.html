@@ -236,7 +236,7 @@
                 <!-- OVERVIEW -->
                 <section id="view-overview"
                     class="view active flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center gap-4">
                             <svg width="64" height="64" viewBox="0 0 64 64">
                                 <circle cx="32" cy="32" r="28" fill="none" stroke-width="6" class="ring-track"></circle>
@@ -252,10 +252,23 @@
                         <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
                             <p class="text-[10px] font-mono uppercase text-slate-500">Emails Sent</p>
                             <p id="statEmails" class="text-2xl font-bold text-white mt-1">0 / 0</p>
+                            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-2">
+                                <div id="barEmails" class="h-1.5 bg-emerald-500 rounded-full" style="width:0%"></div>
+                            </div>
                         </div>
                         <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
                             <p class="text-[10px] font-mono uppercase text-slate-500">Proposals Drafted</p>
                             <p id="statProposals" class="text-2xl font-bold text-white mt-1">0 / 0</p>
+                            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-2">
+                                <div id="barProposals" class="h-1.5 bg-emerald-500 rounded-full" style="width:0%"></div>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                            <p class="text-[10px] font-mono uppercase text-slate-500">Documents (Team-Generated)</p>
+                            <p id="statDocuments" class="text-2xl font-bold text-white mt-1">0 / 0</p>
+                            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-2">
+                                <div id="barDocuments" class="h-1.5 bg-emerald-500 rounded-full" style="width:0%"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -431,8 +444,8 @@
                     <div class="flex-1 flex flex-col bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
                         <div class="px-4 py-3 border-b border-slate-800 shrink-0">
                             <p class="text-sm font-semibold text-white">Chat with your account team</p>
-                            <p class="text-[11px] text-slate-500">This chat is ephemeral and isn't saved permanently —
-                                if you need a written copy, ask the team to email you one.</p>
+                            <p class="text-[11px] text-slate-500">Messages here are saved to your account's chat
+                                history, so nothing is lost if you close this tab.</p>
                         </div>
                         <div id="chatThread" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2 text-xs">
                             <p class="text-slate-600 text-center mt-8">Say hello 👋</p>
@@ -455,9 +468,9 @@
         // =====================================================================
         // STATE
         // =====================================================================
-        let GW_URL = localStorage.getItem('https://script.google.com/macros/s/AKfycbyAI3UQCSTV_KhAEmnT958vbJiD3ZZZMlnRrTs5vzgMBPeqs7kPvZjSGDHjtxw8yg8c/exec') || "";
+        let GW_URL = localStorage.getItem('VIC_CLIENT_GW_URL') || "";
         let CLIENT_ID = localStorage.getItem('VIC_CLIENT_ID') || "";
-        let SESSION_TOKEN = localStorage.getItem('VIC_CLIENT_TOKEN') || "jsier*ens!jTYa)8_k1uwo)Y9-38_+0e}[IOjh";
+        let SESSION_TOKEN = localStorage.getItem('VIC_CLIENT_TOKEN') || "";
         let PRESENCE_TIMER = null;
         let CHAT_TIMER = null;
 
@@ -570,6 +583,23 @@
         // =====================================================================
         // OVERVIEW
         // =====================================================================
+        // Renders one "used / limit" stat + its progress bar. limitVal of 999 (or
+        // "Unlimited") is treated as unlimited — shows a small fixed sliver so the
+        // bar isn't empty, rather than a misleading 0%.
+        function renderQuotaStat(statElId, barElId, used, limitVal) {
+            const statEl = document.getElementById(statElId);
+            const barEl = document.getElementById(barElId);
+            const isUnlimited = limitVal === 'Unlimited' || limitVal === 999;
+            const isUnknown = limitVal === undefined || limitVal === null || limitVal === '—' || (typeof limitVal === 'number' && isNaN(limitVal));
+            if (statEl) statEl.textContent = isUnknown ? `${used} / —` : (isUnlimited ? `${used} / Unlimited` : `${used} / ${limitVal}`);
+            if (barEl) {
+                const pct = (isUnlimited || isUnknown) ? 6 : Math.min(100, (used / Math.max(1, limitVal)) * 100);
+                barEl.style.width = pct + '%';
+                barEl.classList.toggle('bg-amber-500', !isUnlimited && !isUnknown && pct >= 90);
+                barEl.classList.toggle('bg-emerald-500', isUnlimited || isUnknown || pct < 90);
+            }
+        }
+
         async function loadOverview() {
             const res = await callGateway('clientportal', 'clientPortalDashboard');
             if (!res.success) { showLoginError(res.message || 'Session expired.'); logoutClient(); return; }
@@ -578,15 +608,24 @@
             document.getElementById('tierLabel').textContent = (res.tier || '').replace(/_/g, ' ');
 
             const u = res.usage || {};
-            document.getElementById('statHours').textContent = `${u.hoursUsed || 0}`;
-            document.getElementById('statEmails').textContent = `${u.emailsUsed || 0}`;
-            document.getElementById('statProposals').textContent = `${u.proposalsUsed || 0}`;
+            // [CHANGED] limits now come from the backend's real _checkQuota (same
+            // source of truth the admin dashboard uses) instead of being absent —
+            // older gateway deployments without this field fall back gracefully.
+            const lim = res.limits || {};
 
-            // Hours ring (visual only — tier hour ceilings vary/are effectively
-            // unlimited on some tiers, so this ring shows activity, not a hard cap)
+            renderQuotaStat('statEmails', 'barEmails', u.emailsUsed || 0, lim.emails ?? '—');
+            renderQuotaStat('statProposals', 'barProposals', u.proposalsUsed || 0, lim.proposals ?? '—');
+            renderQuotaStat('statDocuments', 'barDocuments', u.documentsUsed || 0, lim.documents ?? '—');
+
+            // Hours ring — now reflects the real limit instead of an arbitrary
+            // "visual only" percentage.
+            const hoursUsed = parseFloat(u.hoursUsed) || 0;
+            const hoursLimit = lim.hours;
+            const hoursUnlimited = hoursLimit === 999 || hoursLimit === undefined;
+            document.getElementById('statHours').textContent = hoursUnlimited ? `${hoursUsed} / Unlimited` : `${hoursUsed} / ${hoursLimit}`;
             const ring = document.getElementById('ringHours');
             const circumference = 175.9;
-            const pct = Math.min(100, (parseFloat(u.hoursUsed) || 0) > 0 ? Math.min(95, (parseFloat(u.hoursUsed) || 0)) : 4);
+            const pct = hoursUnlimited ? 6 : Math.min(100, (hoursUsed / Math.max(1, hoursLimit)) * 100);
             ring.style.strokeDashoffset = circumference - (circumference * pct / 100);
 
             const pd = res.portalDocs || { used: 0, limit: 10 };
@@ -717,7 +756,8 @@
         }
 
         // =====================================================================
-        // LIVE CHAT (ephemeral — mirrors the admin side's cache-only thread)
+        // LIVE CHAT — persisted server-side in the AgentChatLog sheet (source
+        // of truth); cache is used only as a speed layer for polling.
         // =====================================================================
         async function loadChat() {
             const res = await callGateway('clientportal', 'clientPortalChatPoll');
