@@ -2046,6 +2046,8 @@
                                 Frameworks</button>
                             <button class="agent-subview-link" data-target-view="agent-ai-console">AI Actions
                                 Console</button>
+                            <button class="agent-subview-link" data-target-view="agent-social-calendar">Social
+                                Calendar</button>
                             <button class="agent-subview-link" data-target-view="agent-mailboxes">Mailboxes</button>
                             <button class="agent-subview-link" data-target-view="agent-scheduling">Scheduling</button>
                             <button class="agent-subview-link" data-target-view="agent-va-clients">VA Clients</button>
@@ -2805,6 +2807,80 @@
                         </div>
                         <div id="aiConsoleResult"
                             class="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-auto custom-scrollbar text-xs text-slate-300 whitespace-pre-wrap">
+                        </div>
+                    </div>
+
+                    <!-- SOCIAL CALENDAR -->
+                    <div id="view-agent-social-calendar"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-white">Social Media Content Calendar</h3>
+                            <p class="text-xs text-slate-400">Generate a month of social content for a client
+                                (volume follows their tier), review/edit every post, then approve individually or in
+                                bulk. Only approved posts are eligible for auto-publishing.</p>
+                        </div>
+
+                        <!-- Generate panel -->
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 space-y-3">
+                            <div class="grid grid-cols-4 gap-3">
+                                <div>
+                                    <label class="block text-[10px] text-slate-400 mb-1">Client</label>
+                                    <select id="socialClientSelector" onchange="fetchAdminSocialCalendar(this.value)"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white">
+                                        <option value="">Select…</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-slate-400 mb-1">Period</label>
+                                    <select id="socialMonthOffset"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white">
+                                        <option value="0">Next 30 days</option>
+                                        <option value="1">30–60 days out</option>
+                                        <option value="2">60–90 days out</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block text-[10px] text-slate-400 mb-1">Recommended Topics/Themes
+                                        (optional)</label>
+                                    <input type="text" id="socialTopics"
+                                        placeholder="e.g. Q1 client wins, Ramadan greetings, new service launch"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white" />
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <label class="text-[10px] text-slate-400">Custom posts/week (Enterprise
+                                        override):</label>
+                                    <input type="number" id="socialFreqOverride" min="1" placeholder="tier default"
+                                        class="w-20 bg-slate-900 border border-slate-800 rounded p-1 text-xs text-white" />
+                                    <button onclick="setSocialFrequencyOverride()"
+                                        class="text-[10px] px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Save</button>
+                                </div>
+                                <button id="socialGenerateBtn" onclick="generateSocialCalendarUI()"
+                                    class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-1.5 px-4 rounded shadow">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Calendar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Review panel -->
+                        <div class="flex items-center justify-between shrink-0 gap-3">
+                            <select id="socialAdminBatchSelector" onchange="renderAdminSocialCalendar()"
+                                class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white flex-1 max-w-md"></select>
+                            <div class="flex items-center gap-2">
+                                <button onclick="approveSocialBatchAdmin()"
+                                    class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white">
+                                    <i class="fa-solid fa-check-double"></i> Approve All
+                                </button>
+                                <button onclick="loadAdminSocialCalendar()"
+                                    class="text-xs px-2 py-1.5 text-slate-500 hover:text-slate-300">
+                                    <i class="fa-solid fa-rotate"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="adminSocialCalendarList" class="flex-1 overflow-y-auto custom-scrollbar space-y-2">
+                            <p class="text-slate-500 text-xs">Select a client above and generate or load a
+                                calendar.</p>
                         </div>
                     </div>
 
@@ -3869,12 +3945,12 @@
                     <label class="block text-xs text-slate-400 mb-1">Subscription Tier</label>
                     <select id="agentTier" required
                         class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
-                        <option value="starter_ops">Starter Ops (₦250K/mo: 20hrs, 50 emails, 1 proposal)</option>
-                        <option value="growth_ops">Growth Ops (₦650K/mo: 40hrs, 200 emails, 3 proposals)</option>
+                        <option value="starter_ops">Starter Ops (₦350K/mo: 20hrs, 50 emails, 1 proposal)</option>
+                        <option value="growth_ops">Growth Ops (₦950K/mo: 40hrs, 200 emails, 3 proposals)</option>
                         <option value="enterprise_ops">Enterprise Ops (Admin-Priced — set limits below)</option>
-                        <option value="digital_launch">Digital Launch (₦400K/mo: content review, 12 social assets,
+                        <option value="digital_launch">Digital Launch (₦500K/mo: content review, 12 social assets,
                             weekly LinkedIn)</option>
-                        <option value="digital_accelerate">Digital Accelerate (₦800K/mo — $590/mo)</option>
+                        <option value="digital_accelerate">Digital Accelerate (Fixed — $948/mo)</option>
                         <option value="digital_scale">Digital Scale (Admin-Priced — set limits below)</option>
                         <option value="custom">Custom Tier (Bespoke)</option>
                     </select>
@@ -4759,7 +4835,7 @@
          view-publish-settings). -->
 
     <script>
-        let WEBAPP_URL = localStorage.getItem('VIC_WEBAPP_URL') || "api.thevictorias.com.ng";
+        let WEBAPP_URL = localStorage.getItem('api.thevictorias.com.ng');
         let SESSION_MASTER_TOKEN = localStorage.getItem('VIC_MASTER_TOKEN') || "";
         let CURRENT_ADMIN_IDENTITY = localStorage.getItem('VIC_ADMIN_EMAIL') || "Unauthenticated Session";
 
@@ -5004,7 +5080,7 @@
         // its own inline/row/button-level busy state (see setBtnBusy/setRowBusy
         // below), so long-running AI actions no longer freeze the whole dashboard.
         async function executeSecureBridgeCall(systemTarget, actionTarget, analyticalPayload = {}, opts = {}) {
-            const url = "https://api.thevictorias.com.ng";
+            const url = "https://script.google.com/macros/s/AKfycbyAI3UQCSTV_KhAEmnT958vbJiD3ZZZMlnRrTs5vzgMBPeqs7kPvZjSGDHjtxw8yg8c/exec";
             if (!url) {
                 alert("Please enter your Web App URL in the login screen.");
                 return { success: false, message: "No endpoint URL" };
@@ -5372,6 +5448,7 @@
                 'agent-usage': loadAgentUsageReports,
                 'agent-tasks': loadAgentTasks,
                 'agent-addons': loadAgentAddonsUI,
+                'agent-social-calendar': loadAdminSocialCalendar,
                 'agent-compliance': loadAgentComplianceLogs,
                 'agent-violations': loadAgentViolations,   // NEW
                 'agent-docs': loadAgentDocsView,            // NEW
@@ -7389,16 +7466,16 @@
         // extra_proposal ₦90,000→₦70,000, compliance_doc_tracking ₦4,500→₦5,000/doc,
         // plus the new extra_5_documents add-on (₦50,000, +5 docs/mo).
         const ADDON_CATALOG_FRONTEND = {
-            extra_mailbox: { label: "Extra Mailbox", priceNgn: 45000 },
-            extra_50_emails: { label: "Extra 50 Emails/mo", priceNgn: 40000 },
-            extra_proposal: { label: "Extra Proposal/mo", priceNgn: 50000 },
+            extra_mailbox: { label: "Extra Mailbox", priceNgn: 35000 },
+            extra_50_emails: { label: "Extra 50 Emails/mo", priceNgn: 60000 },
+            extra_proposal: { label: "Extra Proposal/mo", priceNgn: 70000 },
             extra_10_ai_hours: { label: "Extra 10 AI Hours/mo", priceNgn: 70000 },
-            extra_5_documents: { label: "Extra Documents/mo", priceNgn: 30000 },
+            extra_5_documents: { label: "Extra 5 Documents/mo", priceNgn: 50000 },
             compliance_doc_tracking: { label: "Compliance Doc Tracking", priceNgn: 5000 },
-            extra_50_leads: { label: "Extra 50 Leads (email only)", priceNgn: 30000 },
-            advanced_50_leads: { label: "Advanced 50 Leads (with phone)", priceNgn: 80000 },
-            extra_crm_sync: { label: "Extra CRM Sync/mo", priceNgn: 50000 },
+            extra_crm_sync: { label: "Extra CRM Sync/mo", priceNgn: 25000 },
             extra_compliance_check: { label: "Extra Compliance Check/mo", priceNgn: 20000 },
+            social_asset_pack_12: { label: "12 Social Assets Pack", priceNgn: 80000 },
+            premium_ai_hours_5: { label: "5 Premium AI Hours", priceNgn: 60000 }
         };
 
         async function submitNewCalendarEvent(event) {
@@ -7888,6 +7965,7 @@
                         'agent-docs': loadAgentDocsView,            // NEW
                         'agent-invoices': loadAgentInvoices,        // NEW
                         'agent-addons': loadAgentAddonsUI,
+                        'agent-social-calendar': loadAdminSocialCalendar,
                     };
                     if (loaderMap[targetView]) loaderMap[targetView]();
                 });
@@ -10826,6 +10904,155 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             resultEl.innerHTML = docCardHtml + `<pre class="text-xs text-slate-300 whitespace-pre-wrap">${escapeHtml(JSON.stringify(res, null, 2))}</pre>`;
             showToast(res.success ? 'Done.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
         }
+
+        // =====================================================================
+        // [NEW] SOCIAL MEDIA CONTENT CALENDAR (admin side)
+        //   Generate a month of content for a client (respects their tier's
+        //   posting frequency, optionally steered by admin-recommended
+        //   topics), then review/edit/approve every post — individually or
+        //   in bulk — before it's eligible for auto-publish.
+        //   Loading is silent throughout: dims the existing list instead of
+        //   blanking it, and only the triggering button shows a spinner.
+        // =====================================================================
+        let ADMIN_SOCIAL_CACHE = [];
+
+        async function loadAdminSocialCalendar() {
+            populateAllClientsSelector('socialClientSelector');
+        }
+
+        async function generateSocialCalendarUI() {
+            const clientId = document.getElementById('socialClientSelector').value;
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            const monthOffset = parseInt(document.getElementById('socialMonthOffset').value, 10) || 0;
+            const topicsRaw = document.getElementById('socialTopics').value.trim();
+            const topics = topicsRaw ? topicsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+            const btn = document.getElementById('socialGenerateBtn');
+            setBtnBusy(btn, true, { busyLabel: 'Generating…' });
+            const res = await executeSecureBridgeCall('agent', 'agent-generate-social-calendar',
+                { clientId, monthOffset, topics }, { silent: true });
+            setBtnBusy(btn, false);
+
+            if (!res.success) { showToast(res.message || 'Generation failed.', 'error'); return; }
+            showToast(`${res.postsGenerated} posts generated.`, 'success');
+            await fetchAdminSocialCalendar(clientId);
+        }
+
+        async function setSocialFrequencyOverride() {
+            const clientId = document.getElementById('socialClientSelector').value;
+            const postsPerWeek = document.getElementById('socialFreqOverride').value;
+            if (!clientId || !postsPerWeek) { showToast('Select a client and enter a value.', 'error'); return; }
+            const res = await executeSecureBridgeCall('agent', 'agent-set-social-frequency', { clientId, postsPerWeek }, { silent: true });
+            showToast(res.success ? 'Override saved.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+        }
+
+        async function fetchAdminSocialCalendar(clientId) {
+            const listEl = document.getElementById('adminSocialCalendarList');
+            const alreadyRendered = listEl.dataset.rendered === '1';
+            if (alreadyRendered) listEl.style.opacity = '0.6';
+            else listEl.innerHTML = `<p class="text-slate-500 text-xs"><span class="ai-spinner"></span>Loading…</p>`;
+
+            const res = await executeSecureBridgeCall('agent', 'agent-get-social-calendar', { clientId }, { silent: true });
+            listEl.style.opacity = '1';
+
+            if (!res.success) { listEl.innerHTML = `<p class="text-red-400 text-xs">${escapeHtml(res.message || 'Could not load calendar.')}</p>`; return; }
+
+            ADMIN_SOCIAL_CACHE = (res.calendar || []).sort((a, b) => new Date(a.Date) - new Date(b.Date));
+            if (!ADMIN_SOCIAL_CACHE.length) {
+                listEl.innerHTML = `<p class="text-slate-500 text-xs">No calendar generated for this client yet.</p>`;
+                document.getElementById('socialAdminBatchSelector').innerHTML = '';
+                return;
+            }
+
+            const batches = {};
+            ADMIN_SOCIAL_CACHE.forEach(p => { (batches[p.BatchID] = batches[p.BatchID] || []).push(p); });
+            const batchIds = Object.keys(batches).sort((a, b) => new Date(batches[b][0].Date) - new Date(batches[a][0].Date));
+            const selector = document.getElementById('socialAdminBatchSelector');
+            selector.innerHTML = batchIds.map(b => {
+                const posts = batches[b];
+                const range = `${fmtDate(posts[0].Date).split(',')[0]} – ${fmtDate(posts[posts.length - 1].Date).split(',')[0]}`;
+                return `<option value="${escapeHtml(b)}">${range} (${posts.length} posts)</option>`;
+            }).join('');
+
+            listEl.dataset.rendered = '1';
+            renderAdminSocialCalendar();
+        }
+
+        function renderAdminSocialCalendar() {
+            const listEl = document.getElementById('adminSocialCalendarList');
+            const batchId = document.getElementById('socialAdminBatchSelector').value;
+            const posts = ADMIN_SOCIAL_CACHE.filter(p => p.BatchID === batchId);
+            if (!posts.length) { listEl.innerHTML = `<p class="text-slate-500 text-xs">No posts in this batch.</p>`; return; }
+
+            listEl.innerHTML = posts.map(p => {
+                const statusColor = p.Status === 'Approved' ? 'text-emerald-400' : p.Status === 'Rejected' ? 'text-red-400' : 'text-amber-400';
+                const isDecided = p.Status === 'Approved' || p.Status === 'Rejected';
+                return `
+        <div id="adminSocPost-${escapeHtml(p.PostID)}" class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+            <div class="flex items-start justify-between gap-3 mb-2">
+                <div class="flex items-center gap-2 text-xs text-slate-400">
+                    <span class="font-medium text-white">${escapeHtml(p.Platform)}</span>
+                    <span>· ${escapeHtml(p.DayOfWeek)} ${fmtDate(p.Date).split(',')[0]}</span>
+                    <span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] uppercase">${escapeHtml(p.PostType || '')}</span>
+                    <span class="text-[10px] text-slate-600">Admin: ${p.AdminApproved === true || p.AdminApproved === 'TRUE' ? '✓' : '—'} · Client: ${p.ClientApproved === true || p.ClientApproved === 'TRUE' ? '✓' : (p.ClientApproved === 'Rejected' ? '✗' : '—')}</span>
+                </div>
+                <span class="text-[10px] font-semibold ${statusColor}">${escapeHtml(p.Status || 'PendingApproval')}</span>
+            </div>
+            <textarea id="socCaption-${escapeHtml(p.PostID)}" class="w-full h-16 bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white">${escapeHtml(p.Caption || '')}</textarea>
+            <div class="grid grid-cols-3 gap-2 mt-2">
+                <input id="socVisual-${escapeHtml(p.PostID)}" placeholder="Visual suggestion" value="${escapeHtml(p.VisualSuggestion || '')}" class="bg-slate-900 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
+                <input id="socHashtags-${escapeHtml(p.PostID)}" placeholder="Hashtags" value="${escapeHtml(p.Hashtags || '')}" class="bg-slate-900 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
+                <input id="socCta-${escapeHtml(p.PostID)}" placeholder="CTA" value="${escapeHtml(p.CTA || '')}" class="bg-slate-900 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
+            </div>
+            <div class="flex gap-2 justify-end mt-3 pt-2 border-t border-slate-800">
+                <button onclick="saveSocialPostEdit('${escapeHtml(p.PostID)}')" class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Save Edit</button>
+                ${isDecided ? '' : `
+                <button onclick="rejectSocialPostAdmin('${escapeHtml(p.PostID)}')" class="text-xs px-3 py-1 bg-slate-800 hover:bg-red-900/50 rounded text-slate-300">Reject</button>
+                <button id="socApproveBtnAdmin-${escapeHtml(p.PostID)}" onclick="approveSocialPostAdmin('${escapeHtml(p.PostID)}')" class="text-xs px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Approve</button>`}
+            </div>
+        </div>`;
+            }).join('');
+        }
+
+        async function saveSocialPostEdit(postId) {
+            const clientId = document.getElementById('socialClientSelector').value;
+            const payload = {
+                clientId, postId,
+                caption: document.getElementById('socCaption-' + postId).value,
+                visualSuggestion: document.getElementById('socVisual-' + postId).value,
+                hashtags: document.getElementById('socHashtags-' + postId).value,
+                cta: document.getElementById('socCta-' + postId).value
+            };
+            const res = await executeSecureBridgeCall('agent', 'agent-edit-social-post', payload, { silent: true });
+            showToast(res.success ? 'Post updated — needs re-approval.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+            if (res.success) fetchAdminSocialCalendar(clientId);
+        }
+
+        async function approveSocialPostAdmin(postId) {
+            const clientId = document.getElementById('socialClientSelector').value;
+            const btn = document.getElementById('socApproveBtnAdmin-' + postId);
+            setBtnBusy(btn, true, { busyLabel: 'Approving…' });
+            const res = await executeSecureBridgeCall('agent', 'agent-approve-social-post', { clientId, postId }, { silent: true });
+            setBtnBusy(btn, false);
+            if (res.success) fetchAdminSocialCalendar(clientId);
+        }
+
+        async function rejectSocialPostAdmin(postId) {
+            const clientId = document.getElementById('socialClientSelector').value;
+            const reason = prompt('Reason for rejecting (optional):') || '';
+            const res = await executeSecureBridgeCall('agent', 'agent-reject-social-post', { clientId, postId, reason }, { silent: true });
+            if (res.success) fetchAdminSocialCalendar(clientId);
+        }
+
+        async function approveSocialBatchAdmin() {
+            const clientId = document.getElementById('socialClientSelector').value;
+            const batchId = document.getElementById('socialAdminBatchSelector').value;
+            if (!clientId || !batchId) return;
+            const res = await executeSecureBridgeCall('agent', 'agent-approve-social-batch', { clientId, batchId }, { silent: true });
+            showToast(res.success ? `${res.postsApproved} posts approved.` : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+            if (res.success) fetchAdminSocialCalendar(clientId);
+        }
+
         function updateIntegCredentialsPlaceholder() {
             const type = document.getElementById('integType').value;
             const ta = document.getElementById('integCredentials');
