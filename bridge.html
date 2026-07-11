@@ -2013,60 +2013,118 @@
                     <span class="text-[10px] font-mono tracking-wider text-slate-500 uppercase px-3 mb-2 block">Agent
                         Management</span>
 
-                    <!-- PRIMARY: the handful of views used every day -->
-                    <button class="agent-subview-link active" data-target-view="agent-clients">Client Registry</button>
-                    <button class="agent-subview-link" data-target-view="agent-online">Users Online &amp; Usage</button>
-                    <button class="agent-subview-link" data-target-view="agent-livechat">Live Chat</button>
-                    <button class="agent-subview-link" data-target-view="agent-tasks">Active Tasks</button>
-                    <button class="agent-subview-link" data-target-view="agent-approvals">Pending Approvals</button>
-                    <button class="agent-subview-link" data-target-view="agent-access-control">Access &amp;
-                        Credentials</button>
-
-                    <!-- SECONDARY: collapsed into a dropdown to keep the primary list short -->
-                    <div class="pt-2">
-                        <button type="button" onclick="toggleAgentSecondaryMenu()" id="agentSecondaryToggle"
-                            class="w-full flex items-center justify-between text-left px-3 py-2 text-xs font-medium text-slate-300 bg-slate-900/60 hover:bg-slate-900 rounded-lg border border-slate-800/60">
-                            <span>More tools</span>
-                            <i class="fa-solid fa-chevron-down text-[10px] transition-transform"
-                                id="agentSecondaryChevron"></i>
-                        </button>
-                        <div id="agentSecondaryMenu"
-                            class="hidden mt-1 space-y-1 border-l border-slate-800/60 ml-2 pl-1">
-                            <button class="agent-subview-link"
-                                data-target-view="agent-subscriptions">Subscriptions</button>
-                            <button class="agent-subview-link" data-target-view="agent-quotas">Quota Monitor</button>
-                            <button class="agent-subview-link" data-target-view="agent-usage">Usage Reports</button>
-                            <button class="agent-subview-link" data-target-view="agent-compliance">Compliance
-                                Logs</button>
-                            <button class="agent-subview-link" data-target-view="agent-violations">Compliance
-                                Violations</button>
-                            <button class="agent-subview-link" data-target-view="agent-docs">Compliance
-                                Documents</button>
-                            <button class="agent-subview-link" data-target-view="agent-compliance-frameworks">Compliance
-                                Frameworks</button>
-                            <button class="agent-subview-link" data-target-view="agent-ai-console">AI Actions
-                                Console</button>
-                            <button class="agent-subview-link" data-target-view="agent-social-calendar">Social
-                                Calendar</button>
-                            <button class="agent-subview-link" data-target-view="agent-mailboxes">Mailboxes</button>
-                            <button class="agent-subview-link" data-target-view="agent-scheduling">Scheduling</button>
-                            <button class="agent-subview-link" data-target-view="agent-va-clients">VA Clients</button>
-                            <button class="agent-subview-link" data-target-view="agent-addons">Add-ons &amp;
-                                Extras</button>
-                            <button class="agent-subview-link" data-target-view="agent-invoices">Invoices</button>
-                            <button class="agent-subview-link" data-target-view="agent-crmsync">CRM Sync</button>
-                            <button class="agent-subview-link"
-                                data-target-view="agent-integrations">Integrations</button>
-                            <div class="pt-1 mt-1 border-t border-slate-800/60 space-y-1">
-                                <button onclick="testDocCreation()"
-                                    class="w-full text-left text-xs px-3 py-1.5 bg-blue-800 hover:bg-blue-700 rounded text-white">Test
-                                    Doc Creation</button>
-                                <button onclick="repairClientFolders()"
-                                    class="w-full text-left text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded text-white">
-                                    Repair Folder Registry
-                                </button>
-                            </div>
+                    <!-- ================================================================
+                         4 grouped dropdowns replace the old flat list of 22 subview
+                         buttons. Each <select> fires jumpToAgentView(), which just
+                         finds the matching hidden .agent-subview-link button below and
+                         calls .click() on it — so all existing view-switching, active-
+                         state tracking, and the loaderMap dispatch in
+                         initializeAgentHub() keep working completely untouched.
+                    ================================================================= -->
+                    <div class="space-y-2 px-1">
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-1 px-2">Clients &amp; Access</label>
+                            <select
+                                class="agent-subview-select w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-2 text-xs text-white"
+                                onchange="jumpToAgentView(this.value, this)">
+                                <option value="agent-clients" selected>Client Registry</option>
+                                <option value="agent-online">Users Online &amp; Usage</option>
+                                <option value="agent-access-control">Access &amp; Credentials</option>
+                                <option value="agent-va-clients">VA Clients</option>
+                                <option value="agent-subscriptions">Subscriptions</option>
+                            </select>
                         </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-1 px-2">Operations</label>
+                            <select
+                                class="agent-subview-select w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-2 text-xs text-white"
+                                onchange="jumpToAgentView(this.value, this)">
+                                <option value="" selected>Choose…</option>
+                                <option value="agent-tasks">Active Tasks</option>
+                                <option value="agent-approvals">Pending Approvals</option>
+                                <option value="agent-mailboxes">Mailboxes</option>
+                                <option value="agent-scheduling">Scheduling</option>
+                                <option value="agent-ai-console">AI Actions Console</option>
+                                <option value="agent-addons">Add-ons &amp; Extras</option>
+                                <option value="agent-invoices">Invoices</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-1 px-2">Compliance &amp;
+                                Monitoring</label>
+                            <select
+                                class="agent-subview-select w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-2 text-xs text-white"
+                                onchange="jumpToAgentView(this.value, this)">
+                                <option value="" selected>Choose…</option>
+                                <option value="agent-quotas">Quota Monitor</option>
+                                <option value="agent-usage">Usage Reports</option>
+                                <option value="agent-compliance">Compliance Logs</option>
+                                <option value="agent-violations">Compliance Violations</option>
+                                <option value="agent-docs">Compliance Documents</option>
+                                <option value="agent-compliance-frameworks">Compliance Frameworks</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-1 px-2">Growth &amp; Integrations</label>
+                            <select
+                                class="agent-subview-select w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-2 text-xs text-white"
+                                onchange="jumpToAgentView(this.value, this)">
+                                <option value="" selected>Choose…</option>
+                                <option value="agent-livechat">Live Chat</option>
+                                <option value="agent-social-calendar">Social Calendar</option>
+                                <option value="agent-crmsync">CRM Sync</option>
+                                <option value="agent-integrations">Integrations</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- One-off utility actions — not views, so they stay as direct buttons -->
+                    <div class="pt-2 mt-1 border-t border-slate-800/60 space-y-1">
+                        <button onclick="testDocCreation()"
+                            class="w-full text-left text-xs px-3 py-1.5 bg-blue-800 hover:bg-blue-700 rounded text-white">Test
+                            Doc Creation</button>
+                        <button onclick="repairClientFolders()"
+                            class="w-full text-left text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded text-white">
+                            Repair Folder Registry
+                        </button>
+                    </div>
+
+                    <!-- Original subview buttons — kept for their click-handler logic
+                         (initializeAgentHub, loaderMap, active-state tracking) but no
+                         longer shown directly; the dropdowns above trigger them. -->
+                    <div class="hidden">
+                        <button class="agent-subview-link active" data-target-view="agent-clients">Client
+                            Registry</button>
+                        <button class="agent-subview-link" data-target-view="agent-online">Users Online &amp;
+                            Usage</button>
+                        <button class="agent-subview-link" data-target-view="agent-livechat">Live Chat</button>
+                        <button class="agent-subview-link" data-target-view="agent-tasks">Active Tasks</button>
+                        <button class="agent-subview-link" data-target-view="agent-approvals">Pending Approvals</button>
+                        <button class="agent-subview-link" data-target-view="agent-access-control">Access &amp;
+                            Credentials</button>
+                        <button class="agent-subview-link" data-target-view="agent-subscriptions">Subscriptions</button>
+                        <button class="agent-subview-link" data-target-view="agent-quotas">Quota Monitor</button>
+                        <button class="agent-subview-link" data-target-view="agent-usage">Usage Reports</button>
+                        <button class="agent-subview-link" data-target-view="agent-compliance">Compliance
+                            Logs</button>
+                        <button class="agent-subview-link" data-target-view="agent-violations">Compliance
+                            Violations</button>
+                        <button class="agent-subview-link" data-target-view="agent-docs">Compliance
+                            Documents</button>
+                        <button class="agent-subview-link" data-target-view="agent-compliance-frameworks">Compliance
+                            Frameworks</button>
+                        <button class="agent-subview-link" data-target-view="agent-ai-console">AI Actions
+                            Console</button>
+                        <button class="agent-subview-link" data-target-view="agent-social-calendar">Social
+                            Calendar</button>
+                        <button class="agent-subview-link" data-target-view="agent-mailboxes">Mailboxes</button>
+                        <button class="agent-subview-link" data-target-view="agent-scheduling">Scheduling</button>
+                        <button class="agent-subview-link" data-target-view="agent-va-clients">VA Clients</button>
+                        <button class="agent-subview-link" data-target-view="agent-addons">Add-ons &amp;
+                            Extras</button>
+                        <button class="agent-subview-link" data-target-view="agent-invoices">Invoices</button>
+                        <button class="agent-subview-link" data-target-view="agent-crmsync">CRM Sync</button>
+                        <button class="agent-subview-link" data-target-view="agent-integrations">Integrations</button>
                     </div>
                 </div>
 
@@ -5127,6 +5185,25 @@
         }
 
         // =====================================================================
+        // [NEW] Single source of truth for every price shown in this dashboard.
+        // Calls agent-get-service-pricing (the ServicePricing sheet, via
+        // AgentLib) once and caches the result — this is the SAME sheet the
+        // marketing site's agent-get-all-service-pricing reads from, just
+        // without tax/FX applied, since internal admin views want the raw
+        // PriceNGN an admin actually typed into the sheet. Replaces the old
+        // hardcoded fixedPricing / tierPricing / ADDON_PRICING_FRONTEND
+        // objects, which had drifted out of sync with real prices.
+        // Returns { itemKey: { label, priceNgn, unit, appliesTo, category, active } }
+        // =====================================================================
+        let SERVICE_PRICING_CACHE = null;
+        async function getServicePricing(forceRefresh = false) {
+            if (SERVICE_PRICING_CACHE && !forceRefresh) return SERVICE_PRICING_CACHE;
+            const res = await executeSecureBridgeCall('agent', 'agent-get-service-pricing', {}, { silent: true });
+            if (res.success && res.pricing) SERVICE_PRICING_CACHE = res.pricing;
+            return SERVICE_PRICING_CACHE || {};
+        }
+
+        // =====================================================================
         // [NEW] Row/button-scoped busy indicators — the replacement for the
         // full-page loader on long-running AI actions. Call setBtnBusy(el, true,
         // {busyLabel}) right before an executeSecureBridgeCall({silent:true}),
@@ -7968,6 +8045,7 @@
                         'agent-social-calendar': loadAdminSocialCalendar,
                     };
                     if (loaderMap[targetView]) loaderMap[targetView]();
+                    syncAgentSidebarSelects();
                 });
             });
 
@@ -8135,7 +8213,10 @@
             const tbodyId = 'agentSubscriptionsTableBody';
             showTableSkeleton(tbodyId, 9);
 
-            const res = await executeSecureBridgeCall('agent', 'agent-get-clients', {});
+            const [res, pricing] = await Promise.all([
+                executeSecureBridgeCall('agent', 'agent-get-clients', {}),
+                getServicePricing()
+            ]);
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
 
@@ -8150,9 +8231,8 @@
             document.getElementById('kpi-agent-active').textContent = active;
 
             const revenue = res.data.reduce((sum, c) => {
-                const fixedPricing = { 'starter_ops': 350000, 'growth_ops': 900000, 'enterprise_ops': 1500000, 'digital_launch': 500000 };
                 if (c.Tier === 'enterprise_ops' && parseFloat(c.CustomPriceNGN)) return sum + parseFloat(c.CustomPriceNGN);
-                if (fixedPricing[c.Tier] !== undefined) return sum + fixedPricing[c.Tier];
+                if (pricing[c.Tier] && pricing[c.Tier].priceNgn) return sum + pricing[c.Tier].priceNgn;
                 if (c.Tier === 'digital_accelerate' || c.Tier === 'digital_scale') {
                     // Quote-only tiers — only count if a real negotiated price was set via agent-set-custom-tier
                     return sum + (parseFloat(c.CustomPriceNGN) || 0);
@@ -8165,13 +8245,16 @@
 
             tbody.innerHTML = res.data.map(c => {
 
+                // Prices come live from the ServicePricing sheet (getServicePricing());
+                // quota numbers (hours/emails/proposals) aren't part of that sheet, so
+                // they stay as tier defaults here — same as before.
                 const tierPricing = {
-                    'starter_ops': { hours: 20, emails: 50, proposals: 1, price: 350000 },
-                    'growth_ops': { hours: 40, emails: 200, proposals: 3, price: 900000 },
-                    'enterprise_ops': { hours: 9999, emails: 9999, proposals: 9999, price: 1500000 },
-                    'digital_launch': { hours: 10, emails: 30, proposals: 1, price: 500000 },
-                    'digital_accelerate': { hours: 20, emails: 100, proposals: 2, price: null },   // was 1300000
-                    'digital_scale': { hours: 9999, emails: 9999, proposals: 9999, price: null }, // was 3500000
+                    'starter_ops': { hours: 20, emails: 50, proposals: 1, price: pricing.starter_ops?.priceNgn ?? null },
+                    'growth_ops': { hours: 40, emails: 200, proposals: 3, price: pricing.growth_ops?.priceNgn ?? null },
+                    'enterprise_ops': { hours: 9999, emails: 9999, proposals: 9999, price: pricing.enterprise_ops?.priceNgn ?? null },
+                    'digital_launch': { hours: 10, emails: 30, proposals: 1, price: pricing.digital_launch?.priceNgn ?? null },
+                    'digital_accelerate': { hours: 20, emails: 100, proposals: 2, price: null },   // quote-only tier
+                    'digital_scale': { hours: 9999, emails: 9999, proposals: 9999, price: null }, // quote-only tier
                     'custom': {
                         hours: c.CustomHours || 0, emails: c.CustomEmails || 0,
                         proposals: c.CustomProposals || 0, price: c.CustomPriceNGN || 0
@@ -8871,22 +8954,33 @@
         }
 
         // ================================================================
-        // NEW: SIDEBAR "MORE TOOLS" DROPDOWN (secondary agent nav)
+        // AI Agent Control sidebar — 4 grouped dropdowns (replaces the old
+        // flat list of 22 subview buttons / "More tools" flyout). Each
+        // <select onchange> calls this; it resets the other 3 dropdowns back
+        // to their placeholder and clicks the matching hidden
+        // .agent-subview-link button, so all of initializeAgentHub()'s
+        // existing view-switching / active-state / loaderMap logic keeps
+        // working completely untouched.
         // ================================================================
-        function toggleAgentSecondaryMenu() {
-            const menu = document.getElementById('agentSecondaryMenu');
-            const chevron = document.getElementById('agentSecondaryChevron');
-            if (!menu) return;
-            menu.classList.toggle('hidden');
-            if (chevron) chevron.classList.toggle('rotate-180');
+        function jumpToAgentView(view, selectEl) {
+            if (!view) return;
+            document.querySelectorAll('.agent-subview-select').forEach(s => {
+                if (s !== selectEl) s.value = '';
+            });
+            const btn = document.querySelector('.agent-subview-link[data-target-view="' + view + '"]');
+            if (btn) btn.click();
         }
-        // Keep the dropdown open if the currently active view lives inside it
-        // (e.g. after a refresh or a deep link into a secondary view).
-        function syncAgentSecondaryMenuOpenState() {
-            const menu = document.getElementById('agentSecondaryMenu');
-            if (!menu) return;
-            const hasActiveInside = !!menu.querySelector('.agent-subview-link.active');
-            if (hasActiveInside) menu.classList.remove('hidden');
+        // Keeps the relevant dropdown showing the currently active view after a
+        // refresh or a deep link (e.g. from a notification) lands on a
+        // secondary view instead of the default Client Registry.
+        function syncAgentSidebarSelects() {
+            const active = document.querySelector('.agent-subview-link.active');
+            if (!active) return;
+            const view = active.getAttribute('data-target-view');
+            document.querySelectorAll('.agent-subview-select').forEach(sel => {
+                const hasOption = !!sel.querySelector(`option[value="${view}"]`);
+                sel.value = hasOption ? view : '';
+            });
         }
 
         // ================================================================
@@ -9761,24 +9855,29 @@
         // newer system from the legacy Addons-JSON ledger below (different
         // catalog, different columns) — see the in-page note for why they're
         // kept apart rather than merged.
+        //
+        // The catalog itself is no longer hardcoded — it's built from
+        // getServicePricing() (the same ServicePricing sheet AgentLib charges
+        // against), filtered to Category === "Add-on", so it can never drift
+        // out of sync with what agent-purchase-addon will actually charge.
         // =====================================================================
-        const ADDON_PRICING_FRONTEND = {
-            extra_10_hours: { label: "Extra 10 hrs AI", price_ngn: 70000, unit: 10, appliesTo: "hours" },
-            extra_crm: { label: "Extra CRM connection", price_ngn: 150000, unit: 1, appliesTo: "crmAccounts" },
-            compliance_doc_tracking: { label: "Compliance document tracking", price_ngn: 20000, unit: 1, appliesTo: "complianceTracking" },
-            extra_mailbox: { label: "Extra mailbox", price_ngn: 45000, unit: 1, appliesTo: "mailboxes" },
-            extra_50_emails: { label: "Extra 50 emails", price_ngn: 60000, unit: 50, appliesTo: "emails" },
-            extra_proposal: { label: "Extra proposal", price_ngn: 90000, unit: 1, appliesTo: "proposals" },
-            extra_document: { label: "Extra document", price_ngn: 30000, unit: 1, appliesTo: "documents" },
-            extra_50_leads: { label: "Extra 50 leads (email only)", price_ngn: 30000, unit: 50, appliesTo: "leads" },
-            advanced_50_leads: { label: "Advanced 50 leads (with phone)", price_ngn: 80000, unit: 50, appliesTo: "advancedLeads" }
-        };
+        let ADDON_PRICING_FRONTEND = {};
+        async function refreshAddonPricingFrontend() {
+            const pricing = await getServicePricing();
+            ADDON_PRICING_FRONTEND = Object.fromEntries(
+                Object.entries(pricing)
+                    .filter(([, a]) => a.category === 'Add-on' && a.active !== false)
+                    .map(([key, a]) => [key, { label: a.label, price_ngn: a.priceNgn, unit: a.unit, appliesTo: a.appliesTo }])
+            );
+            return ADDON_PRICING_FRONTEND;
+        }
 
         let ADDON_CART = [];
 
-        function populateAddonCartCatalog() {
+        async function populateAddonCartCatalog() {
             const sel = document.getElementById('addonCartKey');
             if (!sel) return;
+            await refreshAddonPricingFrontend();
             sel.innerHTML = Object.entries(ADDON_PRICING_FRONTEND).map(([key, a]) =>
                 `<option value="${key}">${escapeHtml(a.label)} — ${fmtNaira(a.price_ngn)}</option>`).join('');
             updateAddonCartLinePreview();
@@ -9877,7 +9976,7 @@
         async function loadAgentAddonsUI() {
             // [NEW] Initialize the quantity-purchase panel every time this view loads.
             populateAllClientsSelector('addonCartClientSelector');
-            populateAddonCartCatalog();
+            await populateAddonCartCatalog();
             ADDON_CART = [];
             renderAddonCartTable();
             loadRecentAddonPurchases();
