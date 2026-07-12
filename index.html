@@ -1601,14 +1601,14 @@
                         <div class="svc-icon"><i class="fas fa-shield-halved"></i></div>
                         <h5 style="font-size:1.3rem;">Multi-Region Compliance Tracking</h5>
                         <p style="font-size:0.925rem;">Our AI Agent tracks and manages compliance for <strong
-                                style="color:#fdba74;">Nigeria (NDPA, CAC, FIRS)</strong>, <strong
+                                style="color:#fdba74;">Nigeria (NDPA, CAC, NRS/FIRS)</strong>, <strong
                                 style="color:#fdba74;">the EU (GDPR)</strong>, the UK, the US, and other regions —
                             complete with document intelligence, public record verification, expiry monitoring, and
                             automated violation alerts, so nothing lapses without you knowing.</p>
                         <div class="svc-taglist">
                             <span class="ai-svc-tag">NDPA</span>
                             <span class="ai-svc-tag">CAC</span>
-                            <span class="ai-svc-tag">FIRS</span>
+                            <span class="ai-svc-tag">NRS/FIRS</span>
                             <span class="ai-svc-tag">GDPR</span>
                             <span class="ai-svc-tag">UK Compliance</span>
                             <span class="ai-svc-tag">US Regulatory</span>
@@ -1694,7 +1694,7 @@
 
             <!-- Region coverage strip -->
             <div class="region-strip">
-                <div class="region-chip"><i class="fas fa-check-circle"></i> Nigeria — NDPA, CAC, FIRS</div>
+                <div class="region-chip"><i class="fas fa-check-circle"></i> Nigeria — NDPA, CAC, NRS/FIRS</div>
                 <div class="region-chip"><i class="fas fa-check-circle"></i> European Union — GDPR</div>
                 <div class="region-chip"><i class="fas fa-check-circle"></i> United Kingdom</div>
                 <div class="region-chip"><i class="fas fa-check-circle"></i> United States</div>
@@ -1881,7 +1881,7 @@
                         <div class="price-head">Starter Ops</div>
                         <div class="price-sub">For small teams & early-stage businesses</div>
                         <div style="margin-bottom:2px;"><span class="price-before">Before ₦350,000/mo</span><span
-                                class="price-discount-badge">-28.6%</span></div>
+                                class="price-discount-badge" id="starter-badge">-28.6%</span></div>
                         <div class="price-amount" id="starter-ngn">Loading price…<span
                                 style="font-size:0.95rem;font-weight:500;color:var(--light-text);"></span></div>
                         <div class="price-usd"><strong id="starter-usd">…</strong> USD/mo <span
@@ -1915,7 +1915,7 @@
                         <div class="price-head">Growth Ops</div>
                         <div class="price-sub">For growing companies with active pipelines</div>
                         <div style="margin-bottom:2px;"><span class="price-before">Before ₦950,000/mo</span><span
-                                class="price-discount-badge">-31.6%</span></div>
+                                class="price-discount-badge" id="growth-badge">-31.6%</span></div>
                         <div class="price-amount" id="growth-ngn">Loading price…<span
                                 style="font-size:0.95rem;font-weight:500;color:var(--light-text);"></span></div>
                         <div class="price-usd"><strong id="growth-usd">…</strong> USD/mo <span
@@ -1954,7 +1954,8 @@
                         <div class="price-head">Enterprise Ops</div>
                         <div class="price-sub">For large organisations with complex operations</div>
                         <div style="margin-bottom:2px;"><span class="price-before">Before Custom (from
-                                ₦2.3M)/mo</span><span class="price-discount-badge">-15.2%</span></div>
+                                ₦1,604,000)/mo</span><span class="price-discount-badge"
+                                id="enterprise-badge">-15.2%</span></div>
                         <div class="price-amount" id="enterprise-ngn">Loading price…<span
                                 style="font-size:0.95rem;font-weight:500;color:var(--light-text);"></span></div>
                         <div class="price-usd"><strong id="enterprise-usd">…</strong> USD/mo <span
@@ -2132,7 +2133,7 @@
                     <div class="price-card" style="border:1px solid #334155;background:#1e293b;color:#e2e8f0;">
                         <div class="price-head" style="color:#f8fasc;">Digital Scale</div>
                         <div class="price-sub">For enterprises ready to lead their category</div>
-                        <div class="price-amount" style="font-size:1.5rem;color:#f8fafc;" id="scale-ngn">Loading price…
+                        <div class="price-amount" style="color:#f8fafc;" id="scale-ngn">Loading price…
                         </div>
                         <div class="price-usd" style="color:#94a3b8;"><strong id="scale-usd">…</strong> USD <span
                                 class="live-badge">LIVE</span></div>
@@ -2577,6 +2578,16 @@
      CUSTOM SCRIPTS — Three.js Sphere, Exchange Rate, Animations
 ============================================================ -->
     <script>
+        // ========== API ENDPOINT ==========
+        // [FIX] Both calls on this page were fetching the bare string
+        // "api.thevictorias.com.ng" with no scheme, which the browser resolves
+        // as a *relative path* on this same page (e.g. thevictorias.com.ng/
+        // api.thevictorias.com.ng) instead of an absolute cross-origin request
+        // to the gateway — so it always 404'd and pricing/demo silently fell
+        // back to "unavailable". Every request from this page must go to the
+        // actual gateway host, with its scheme.
+        const API_URL = "https://api.thevictorias.com.ng";
+
         // ========== SERVICE PRICING (ServicePricing tab, via AgentLib) ==========
         // Single source of truth is the ServicePricing sheet in AgentLib — there
         // is NO hardcoded fallback price anywhere in this page. Every price
@@ -2585,9 +2596,12 @@
         // which returns every tier/add-on price already converted (fixed FX rates:
         // ₦1,300=$1, ₦1,600=€1) and with 7.5% tax applied — no separate third-party
         // FX call, and no risk of a stale number ever being shown to a visitor.
+        // This action is whitelisted as a PUBLIC agent action in gate.txt (see
+        // PUBLIC_AGENT_ACTIONS) — it's read-only and never returns client-
+        // specific pricing, so it works here with no admin token.
         async function fetchServicePricing(retries = 1) {
             try {
-                const response = await fetch("api.thevictorias.com.ng", {
+                const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ system: "agent", action: "agent-get-all-service-pricing" })
@@ -2604,6 +2618,35 @@
 
         function fmtNgn(n) { return '₦' + Math.round(n).toLocaleString(); }
         function fmtUsd(n) { return '$' + Math.round(n).toLocaleString(); }
+
+        // ---------------------------------------------------------------
+        // [FIXED] Discount badges ("-28.6%", "-31.6%", "-15.2%") used to be
+        // static text baked into the HTML, calculated once against
+        // whatever the "Now" price happened to be at the time someone
+        // wrote the copy. But the "Now" price is fetched live from the
+        // backend on every page load and can change (FX rate updates,
+        // sheet edits, etc.) -- so a hardcoded percentage only matches by
+        // coincidence, and drifts out of sync the moment the live price
+        // moves, exactly as seen when Now ₦322,500 no longer matched the
+        // static "-28.6%" badge.
+        //
+        // Fix: keep only the "Before" (reference/anchor) price as a fixed
+        // constant, and always compute the percentage fresh from that
+        // fixed Before price and whatever "Now" price just came back from
+        // the live fetch. This can never drift out of sync again.
+        // ---------------------------------------------------------------
+        const TIER_BEFORE_PRICES_NGN = {
+            starter_ops: 350000,
+            growth_ops: 950000,
+            enterprise_ops: 1604000
+        };
+
+        function updateDiscountBadge(badgeElId, beforePrice, nowPrice) {
+            const badgeEl = document.getElementById(badgeElId);
+            if (!badgeEl || !beforePrice || !nowPrice) return;
+            const pct = ((beforePrice - nowPrice) / beforePrice) * 100;
+            badgeEl.textContent = `${pct >= 0 ? '-' : '+'}${Math.abs(pct).toFixed(1)}%`;
+        }
 
         // If the API is unreachable, every placeholder becomes a short "call us"
         // message rather than silently displaying nothing (or a fake number).
@@ -2629,14 +2672,17 @@
             if (p.starter_ops) {
                 document.getElementById('starter-ngn').innerHTML = `Now ${fmtNgn(p.starter_ops.totalNgn)}<span style="font-size:0.95rem;font-weight:500;color:var(--light-text);">/mo</span>`;
                 document.getElementById('starter-usd').textContent = fmtUsd(p.starter_ops.totalUsd);
+                updateDiscountBadge('starter-badge', TIER_BEFORE_PRICES_NGN.starter_ops, p.starter_ops.totalNgn);
             }
             if (p.growth_ops) {
                 document.getElementById('growth-ngn').innerHTML = `Now ${fmtNgn(p.growth_ops.totalNgn)}<span style="font-size:0.95rem;font-weight:500;color:var(--light-text);">/mo</span>`;
                 document.getElementById('growth-usd').textContent = fmtUsd(p.growth_ops.totalUsd);
+                updateDiscountBadge('growth-badge', TIER_BEFORE_PRICES_NGN.growth_ops, p.growth_ops.totalNgn);
             }
             if (p.enterprise_ops) {
                 document.getElementById('enterprise-ngn').innerHTML = `Now ${fmtNgn(p.enterprise_ops.totalNgn)}+<span style="font-size:0.95rem;font-weight:500;color:var(--light-text);">/mo</span>`;
                 document.getElementById('enterprise-usd').textContent = `${fmtUsd(p.enterprise_ops.totalUsd)}+`;
+                updateDiscountBadge('enterprise-badge', TIER_BEFORE_PRICES_NGN.enterprise_ops, p.enterprise_ops.totalNgn);
             }
 
             // ---- Add-ons (ItemKey on each .addon-ngn's data-itemkey attribute) ----
@@ -3071,7 +3117,7 @@
             },
             enterpriseOps: {
                 tag: "Full Stack", title: "Enterprise Ops", sub: "For large organisations with complex operations",
-                price: "Before Custom (from ₦2.3M/mo) → Now ₦1,360,000+/mo (-15.2%) · $1,000+ USD/mo", cta: "Request Enterprise Quote", ctaService: "Enterprise Ops",
+                price: "Before Custom (from ₦1,604,000/mo) → Now ₦1,360,000+/mo (-15.2%) · $1,000+ USD/mo", cta: "Request Enterprise Quote", ctaService: "Enterprise Ops",
                 included: [
                     "80–150+ hrs/month AI-Human Hybrid VA support",
                     "Up to 8 managed mailboxes, unlimited emails",
@@ -3204,7 +3250,7 @@
         function runDemo() {
             const btn = event?.target?.closest('button');
             if (btn) { btn.disabled = true; btn.dataset.origText = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading demo…'; }
-            fetch("api.thevictorias.com.ng", {
+            fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ system: "agent", action: "agent-demo-simulate" })

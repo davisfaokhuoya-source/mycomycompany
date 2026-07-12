@@ -24,8 +24,7 @@ function navbar() {
                 <div class="nav-item dropdown">
                     <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Portals</a>
                     <div class="dropdown-menu m-0">
-                        <a href="careerhub.html" class="dropdown-item">Career</a>
-                        <a href="email.html" class="dropdown-item">Email</a>
+                        <a href="career.html" class="dropdown-item">Career</a>
                         <a href="client-dashboard.html" class="dropdown-item">Management</a>
                     </div>
                 </div>
