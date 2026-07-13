@@ -758,6 +758,12 @@
             let res;
             try {
                 res = await callGateway('clientportal', 'clientPortalGenerateDocument', payload);
+                if (res && res.queued) {
+                    statusEl.innerHTML = `<p class="text-xs text-slate-400 mt-2"><span class="ai-spinner"></span>Still generating your ${escapeHtml(spec ? spec.label : docType)}, this can take a couple of minutes…</p>`;
+                    res = await resolveClientJobResult(res, (waitedMs) => {
+                        statusEl.innerHTML = `<p class="text-xs text-slate-400 mt-2"><span class="ai-spinner"></span>Still working… (${Math.round(waitedMs / 1000)}s)</p>`;
+                    });
+                }
             } finally {
                 if (cardEl) cardEl.classList.remove('ai-working');
                 setBtnBusy(sendBtn, false);
@@ -817,6 +823,51 @@
             loadChat();
         }
 
+
+        /**
+         * Resolves a clientPortalGenerateDocument response to its FINAL result —
+         * polling clientPortalCheckJobStatus if it came back queued, or returning
+         * it as-is if it didn't (keeps this safe to call even before/without the
+         * AgentLib + Gateway queue patches are applied — it just won't have
+         * anything to poll in that case, since res.queued would never be true).
+         *
+         * @param {object} initialRes - whatever callGateway(...) returned
+         * @param {function} [onTick] - optional callback(elapsedMs)
+         */
+        async function resolveClientJobResult(initialRes, onTick) {
+            if (!initialRes || !initialRes.queued || !initialRes.jobId) {
+                return initialRes;
+            }
+
+            const jobId = initialRes.jobId;
+            const POLL_INTERVAL_MS = 3000;
+            const MAX_WAIT_MS = 5 * 60 * 1000; // matches the backend's 300000ms per-job budget
+            let waited = 0;
+
+            while (waited < MAX_WAIT_MS) {
+                await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+                waited += POLL_INTERVAL_MS;
+                if (onTick) onTick(waited);
+
+                const statusRes = await callGateway('clientportal', 'clientPortalCheckJobStatus', { jobId });
+
+                if (!statusRes.success) {
+                    return { success: false, message: statusRes.message || 'Job status lookup failed.' };
+                }
+                if (statusRes.status === 'done') {
+                    return statusRes.result;
+                }
+                if (statusRes.status === 'error') {
+                    return { success: false, message: statusRes.error || 'Document generation failed.' };
+                }
+                // "queued" or "running" — keep polling
+            }
+
+            return {
+                success: false,
+                message: "This is taking longer than usual (5+ min). It may still finish — check \"My Documents\" in a little while, or reach out to your account team."
+            };
+        }
         // =====================================================================
         // PRESENCE HEARTBEAT — lets the admin dashboard show you as "online"
         // =====================================================================

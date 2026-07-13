@@ -8858,6 +8858,56 @@
             });
         }
 
+
+        /**
+         * Given the gateway's immediate response to an agent-* call, resolves to the
+         * FINAL result — transparently polling agent-check-job-status if the action
+         * was queued (DOCUMENT_GENERATOR_ACTIONS on the backend), or just returning
+         * the response as-is if it wasn't.
+         *
+         * @param {object} initialRes - whatever executeSecureBridgeCall(...) returned
+         * @param {function} [onTick] - optional callback(elapsedMs) fired before each
+         *   poll, so callers can update a "still working…" message
+         */
+        async function resolveAgentJobResult(initialRes, onTick) {
+            if (!initialRes || !initialRes.queued || !initialRes.jobId) {
+                return initialRes; // not a queued job — nothing to poll
+            }
+
+            const jobId = initialRes.jobId;
+            const POLL_INTERVAL_MS = 3000;
+            const MAX_WAIT_MS = 5 * 60 * 1000; // give up after 5 min — matches the
+            // backend's own 300000ms budget for a single queued job run
+            let waited = 0;
+
+            while (waited < MAX_WAIT_MS) {
+                await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+                waited += POLL_INTERVAL_MS;
+                if (onTick) onTick(waited);
+
+                const statusRes = await executeSecureBridgeCall(
+                    'agent', 'agent-check-job-status', { jobId }, { silent: true }
+                );
+
+                if (!statusRes.success) {
+                    // Job record expired from cache or truly unknown — stop polling,
+                    // surface this clearly instead of looping forever.
+                    return { success: false, message: statusRes.message || 'Job status lookup failed.' };
+                }
+                if (statusRes.status === 'done') {
+                    return statusRes.result; // the actual agent-* result, e.g. { success, docUrl, ... }
+                }
+                if (statusRes.status === 'error') {
+                    return { success: false, message: statusRes.error || 'Document generation failed.' };
+                }
+                // status is "queued" or "running" — keep polling
+            }
+
+            return {
+                success: false,
+                message: 'Timed out waiting for the document after 5 minutes. It may still finish — check the JobLog sheet, or Pending Approvals if it queues there.'
+            };
+        }
         // ================================================================
         // AGENT HUB: COMPLIANCE DOCUMENTS
         // ================================================================
@@ -10580,12 +10630,22 @@ ${a.Status === 'Pending Review' ? `
                 showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
             });
         }
+
         function runClientComplianceReport() {
             const clientId = document.getElementById('compFrameworksClientSelector')?.value;
             if (!clientId) { showToast('Select a client first.', 'error'); return; }
             showToast('Generating report doc…', 'info');
-            executeSecureBridgeCall('agent', 'agent-compliance-report', { clientId }).then(res => {
-                document.getElementById('compFrameworksResult').textContent = JSON.stringify(res, null, 2);
+            const resultEl = document.getElementById('compFrameworksResult');
+            resultEl.textContent = 'Generating…';
+
+            executeSecureBridgeCall('agent', 'agent-compliance-report', { clientId }).then(async res => {
+                if (res && res.queued) {
+                    resultEl.textContent = 'Queued — generating, this can take a couple of minutes…';
+                    res = await resolveAgentJobResult(res, (waitedMs) => {
+                        resultEl.textContent = `Still working… (${Math.round(waitedMs / 1000)}s)`;
+                    });
+                }
+                resultEl.textContent = JSON.stringify(res, null, 2);
                 showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
             });
         }
@@ -11190,6 +11250,12 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             let res;
             try {
                 res = await executeSecureBridgeCall('agent', action, { clientId, ...params }, { silent: true });
+                if (res && res.queued) {
+                    resultEl.innerHTML = `<p class="text-emerald-400"><span class="ai-spinner"></span>Queued — generating document, this can take a couple of minutes…</p>`;
+                    res = await resolveAgentJobResult(res, (waitedMs) => {
+                        resultEl.innerHTML = `<p class="text-emerald-400"><span class="ai-spinner"></span>Still working… (${Math.round(waitedMs / 1000)}s)</p>`;
+                    });
+                }
             } finally {
                 setBtnBusy(runBtn, false);
             }
