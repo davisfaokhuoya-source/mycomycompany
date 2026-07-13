@@ -5234,7 +5234,7 @@
         // its own inline/row/button-level busy state (see setBtnBusy/setRowBusy
         // below), so long-running AI actions no longer freeze the whole dashboard.
         async function executeSecureBridgeCall(systemTarget, actionTarget, analyticalPayload = {}, opts = {}) {
-            const url = "https://script.google.com/macros/s/AKfycbyAI3UQCSTV_KhAEmnT958vbJiD3ZZZMlnRrTs5vzgMBPeqs7kPvZjSGDHjtxw8yg8c/exec";
+            const url = "https://api.thevictorias.com.ng";
             if (!url) {
                 alert("Please enter your Web App URL in the login screen.");
                 return { success: false, message: "No endpoint URL" };
@@ -5422,20 +5422,8 @@
         }
 
         function toggleSystemLoader(show) {
-            let loader = document.getElementById("systemLoader");
-            if (!loader) {
-                loader = document.createElement("div");
-                loader.id = "systemLoader";
-                loader.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px);";
-                loader.innerHTML = '<div style="border:3px solid #1e293b;border-top:3px solid #10b981;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;"></div>';
-                const style = document.createElement('style');
-                style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
-                document.head.appendChild(style);
-                document.body.appendChild(loader);
-            }
-            loader.style.display = show ? "flex" : "none";
+            return; // disabled — no more full-page blocking overlay
         }
-
         function showToast(message, type = "info") {
             const existing = document.getElementById("vh-toast");
             if (existing) existing.remove();
@@ -8530,12 +8518,18 @@
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
 
-            if (!res.success || !res.data?.length) {
+            // Only show tasks that are actually in progress
+            const activeOnly = (res.data || []).filter(t => {
+                const s = String(t.Status || '').toLowerCase();
+                return s !== 'completed' && s !== 'failed' && s !== 'cancelled';
+            });
+
+            if (!res.success || !activeOnly.length) {
                 tbody.innerHTML = emptyRow('No active tasks.', 8);
                 return;
             }
 
-            tbody.innerHTML = res.data.map(t => {
+            tbody.innerHTML = activeOnly.map(t => {
                 const progress = t.Progress || 0;
                 const progressColor = progress === 100 ? 'bg-emerald-500' : progress > 50 ? 'bg-blue-500' : 'bg-amber-500';
 
