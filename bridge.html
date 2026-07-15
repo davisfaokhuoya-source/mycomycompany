@@ -5132,7 +5132,18 @@
 
         const NICHE_OPTIONS = INDUSTRY_OPTIONS;
         const SECTOR_OPTIONS = INDUSTRY_OPTIONS;
-
+        let ACTIVE_AUTO_REFRESH = null;
+        function startAutoRefresh(viewKey, fn, intervalMs = 30000) {
+            stopAutoRefresh();
+            ACTIVE_AUTO_REFRESH = setInterval(() => {
+                const el = document.getElementById('view-' + viewKey);
+                if (el && !el.classList.contains('hidden')) fn();
+                else stopAutoRefresh();
+            }, intervalMs);
+        }
+        function stopAutoRefresh() {
+            if (ACTIVE_AUTO_REFRESH) { clearInterval(ACTIVE_AUTO_REFRESH); ACTIVE_AUTO_REFRESH = null; }
+        }
         // [CHANGED] Added optional 4th `opts` param. opts.silent === true skips the
         // full-page blocking loader entirely — used by any call that already shows
         // its own inline/row/button-level busy state (see setBtnBusy/setRowBusy
@@ -5150,7 +5161,7 @@
                 return { success: false, message: "No token" };
             }
 
-            const useGlobalLoader = !opts.silent;
+            const useGlobalLoader = opts.blocking === true; // [CHANGED] was: !opts.silent
             if (useGlobalLoader) toggleSystemLoader(true);
 
             try {
@@ -5487,6 +5498,7 @@
         }
 
         function switchSubSection(system, action) {
+            stopAutoRefresh();
             document.querySelectorAll('[id^="view-"]').forEach(view => {
                 view.classList.add('hidden');
                 view.style.display = 'none';
@@ -5558,7 +5570,7 @@
             };
 
             const initFn = initMap[action];
-            if (initFn) initFn();
+            if (initFn) { initFn(); startAutoRefresh(action, initFn); }
         }
 
         function initializeNavigation() {

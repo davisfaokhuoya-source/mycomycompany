@@ -212,6 +212,9 @@
                 <button class="nav-link" data-view="chat" onclick="showView('chat', this)">
                     <i class="fa-solid fa-comments w-4"></i> Live Chat
                 </button>
+                <button class="nav-link" data-view="mywork" onclick="showView('mywork', this)">
+                    <i class="fa-solid fa-list-check w-4"></i> My Work
+                </button>
                 <button class="nav-link" data-view="social" onclick="showView('social', this)">
                     <i class="fa-solid fa-share-nodes w-4"></i> Social Calendar
                 </button>
@@ -348,7 +351,13 @@
                     </div>
                     <div id="generateStatus" class="max-w-3xl"></div>
                 </section>
-
+                <section id="view-mywork" class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
+                    <p class="text-xs text-slate-400">Live status of anything currently being generated for you —
+                        updates automatically.</p>
+                    <div id="myWorkList" class="space-y-2">
+                        <p class="text-slate-500 text-xs">Loading…</p>
+                    </div>
+                </section>
                 <!-- LIVE CHAT -->
                 <section id="view-chat" class="view flex-1 h-full flex-col overflow-hidden">
                     <div class="flex-1 flex flex-col bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
@@ -515,6 +524,8 @@
             if (name === 'generate') loadDocumentCatalog();
             if (name === 'social') loadSocialCalendar();
             if (name === 'chat') { loadChat(); startChatPolling(); }
+            if (name === 'mywork') { loadMyWork(); startMyWorkPolling(); }
+            else if (name !== 'chat') clearInterval(MYWORK_TIMER);
             else clearInterval(CHAT_TIMER);
         }
 
@@ -994,6 +1005,31 @@
             const res = await callGateway('clientportal', 'clientPortalApproveSocialBatch', { batchId });
             setBtnBusy(btn, false);
             if (res.success) loadSocialCalendar();
+        }
+
+        let MYWORK_TIMER = null;
+        function startMyWorkPolling() { clearInterval(MYWORK_TIMER); MYWORK_TIMER = setInterval(loadMyWork, 30000); }
+
+        async function loadMyWork() {
+            const listEl = document.getElementById('myWorkList');
+            const already = listEl.dataset.rendered === '1';
+            const res = await callGateway('clientportal', 'clientPortalListActiveJobs');
+            if (!res.success) { if (!already) listEl.innerHTML = `<p class="text-red-400 text-xs">${escapeHtml(res.message || 'Could not load.')}</p>`; return; }
+            const jobs = res.jobs || [];
+            if (!jobs.length) { listEl.innerHTML = '<p class="text-slate-500 text-xs">Nothing running right now.</p>'; listEl.dataset.rendered = '1'; return; }
+            listEl.innerHTML = jobs.map(j => `
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+            <div>
+                <p class="text-sm text-white font-medium">${escapeHtml(j.action.replace('agent-generate-', '').replace('agent-', '').replace(/-/g, ' '))}</p>
+                <p class="text-[10px] text-slate-500">${fmtDate(j.createdAt)}</p>
+            </div>
+            ${j.status === 'queued' || j.status === 'running'
+                    ? `<span class="inline-flex items-center gap-1.5 text-amber-400 text-xs"><span class="ai-spinner"></span>${j.status === 'running' ? 'Working…' : 'Queued…'}</span>`
+                    : j.status === 'done'
+                        ? `<span class="text-emerald-400 text-xs"><i class="fa-solid fa-circle-check"></i> Done${j.docUrl ? ` — <a href="${escapeHtml(j.docUrl)}" target="_blank" class="text-blue-400 underline">Open</a>` : ''}</span>`
+                        : `<span class="text-red-400 text-xs"><i class="fa-solid fa-circle-xmark"></i> Failed</span>`}
+        </div>`).join('');
+            listEl.dataset.rendered = '1';
         }
     </script>
 </body>
