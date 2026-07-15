@@ -1010,6 +1010,19 @@
         let MYWORK_TIMER = null;
         function startMyWorkPolling() { clearInterval(MYWORK_TIMER); MYWORK_TIMER = setInterval(loadMyWork, 30000); }
 
+        async function terminateJob(jobId, btnEl) {
+            if (!confirm("Stop this job? This can't be undone, and it still counts against your document quota.")) return;
+            setBtnBusy(btnEl, true, { busyLabel: 'Stopping…' });
+            const res = await callGateway('clientportal', 'clientPortalTerminateJob', { jobId });
+            setBtnBusy(btnEl, false);
+            if (res.success) {
+                showToast ? showToast('Job terminated.', 'success') : null;
+                loadMyWork();
+            } else {
+                alert(res.message || 'Could not terminate this job.');
+            }
+        }
+
         async function loadMyWork() {
             const listEl = document.getElementById('myWorkList');
             const already = listEl.dataset.rendered === '1';
@@ -1023,11 +1036,17 @@
                 <p class="text-sm text-white font-medium">${escapeHtml(j.action.replace('agent-generate-', '').replace('agent-', '').replace(/-/g, ' '))}</p>
                 <p class="text-[10px] text-slate-500">${fmtDate(j.createdAt)}</p>
             </div>
-            ${j.status === 'queued' || j.status === 'running'
+            <div class="flex items-center gap-2">
+                ${j.status === 'queued' || j.status === 'running'
                     ? `<span class="inline-flex items-center gap-1.5 text-amber-400 text-xs"><span class="ai-spinner"></span>${j.status === 'running' ? 'Working…' : 'Queued…'}</span>`
                     : j.status === 'done'
                         ? `<span class="text-emerald-400 text-xs"><i class="fa-solid fa-circle-check"></i> Done${j.docUrl ? ` — <a href="${escapeHtml(j.docUrl)}" target="_blank" class="text-blue-400 underline">Open</a>` : ''}</span>`
-                        : `<span class="text-red-400 text-xs"><i class="fa-solid fa-circle-xmark"></i> Failed</span>`}
+                        : `<span class="text-red-400 text-xs"><i class="fa-solid fa-circle-xmark"></i> ${escapeHtml(j.status === 'Terminated' ? 'Terminated' : 'Failed')}</span>`}
+                ${j.canTerminate && (j.status === 'queued' || j.status === 'running')
+                    ? `<button onclick="terminateJob('${escapeHtml(j.jobId)}', this)"
+                        class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Terminate</button>`
+                    : ''}
+            </div>
         </div>`).join('');
             listEl.dataset.rendered = '1';
         }

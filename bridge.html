@@ -2316,10 +2316,16 @@
                                 <p class="text-xs text-slate-400">Monitor real-time AI work processes and completions.
                                 </p>
                             </div>
-                            <button onclick="loadAgentTasks()"
-                                class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700 transition-colors flex items-center gap-1">
-                                <i class="fa-solid fa-arrows-rotate"></i> Refresh
-                            </button>
+                            <div class="flex gap-2">
+                                <button onclick="loadAgentTasks()"
+                                    class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700 transition-colors flex items-center gap-1">
+                                    <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                                </button>
+                                <button onclick="runDocReconcileSweep(this)"
+                                    class="bg-amber-700 hover:bg-amber-600 text-xs text-white font-medium py-1.5 px-3 rounded transition-colors flex items-center gap-1">
+                                    <i class="fa-solid fa-magnifying-glass"></i> Run Reconciliation Sweep
+                                </button>
+                            </div>
                         </div>
                         <div
                             class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
@@ -8444,6 +8450,7 @@
             tbody.innerHTML = res.data.map(t => {
                 const progress = t.Progress || 0;
                 const progressColor = progress === 100 ? 'bg-emerald-500' : progress > 50 ? 'bg-blue-500' : 'bg-amber-500';
+                const isActive = t.Status === 'queued' || t.Status === 'running' || t.Status === 'In Progress';
 
                 return `
             <tr>
@@ -8461,13 +8468,25 @@
                 </td>
                 <td class="p-3 text-slate-500">${fmtDate(t.EstimatedCompletion)}</td>
                 <td class="p-3 text-center">${badge(t.Status || 'In Progress')}</td>
-                <td class="p-3 text-center">
+                <td class="p-3 text-center flex gap-1 justify-center">
                     <button onclick="viewAgentTaskDetails('${escapeHtml(t.TaskID || '')}')"
                         class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">View</button>
+                    ${isActive && t.TaskID ? `<button onclick="terminateAgentJob('${escapeHtml(t.TaskID)}', this)"
+                        class="text-xs px-3 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Terminate</button>` : ''}
                 </td>
             </tr>
         `;
             }).join('');
+        }
+
+        function terminateAgentJob(jobId, btnEl) {
+            if (!confirm('Terminate this job? It counts against quota if it was a client-requested doc, and cannot be resumed.')) return;
+            setBtnBusy(btnEl, true, { busyLabel: 'Stopping…' });
+            executeSecureBridgeCall('agent', 'agent-terminate-job', { jobId, terminatedBy: CURRENT_ADMIN_IDENTITY }).then(res => {
+                setBtnBusy(btnEl, false);
+                showToast(res.success ? 'Job terminated.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+                if (res.success) loadAgentTasks();
+            });
         }
 
         async function loadAgentComplianceLogs() {
@@ -10039,6 +10058,17 @@
             </td>
         </tr>`;
             }).join('');
+        }
+
+        function runDocReconcileSweep(btnEl) {
+            setBtnBusy(btnEl, true, { busyLabel: 'Sweeping…' });
+            executeSecureBridgeCall('agent', 'agent-run-doc-reconcile', {}).then(res => {
+                setBtnBusy(btnEl, false);
+                showToast(res.success
+                    ? `Reconciled: ${res.reconciled || 0} recovered, ${res.terminated || 0} auto-terminated.`
+                    : (res.message || 'Sweep failed.'), res.success ? 'success' : 'error');
+                if (res.success) loadAgentTasks();
+            });
         }
 
         /**
