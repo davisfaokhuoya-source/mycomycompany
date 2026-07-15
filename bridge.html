@@ -2046,7 +2046,6 @@
                                 <option value="agent-scheduling">Scheduling</option>
                                 <option value="agent-ai-console">AI Actions Console</option>
                                 <option value="agent-addons">Add-ons &amp; Extras</option>
-                                <option value="agent-pricing">Service Price List</option>
                                 <option value="agent-invoices">Invoices</option>
                             </select>
                         </div>
@@ -2123,8 +2122,6 @@
                         <button class="agent-subview-link" data-target-view="agent-va-clients">VA Clients</button>
                         <button class="agent-subview-link" data-target-view="agent-addons">Add-ons &amp;
                             Extras</button>
-                        <button class="agent-subview-link" data-target-view="agent-pricing">Service Price
-                            List</button>
                         <button class="agent-subview-link" data-target-view="agent-invoices">Invoices</button>
                         <button class="agent-subview-link" data-target-view="agent-crmsync">CRM Sync</button>
                         <button class="agent-subview-link" data-target-view="agent-integrations">Integrations</button>
@@ -2703,99 +2700,6 @@
                                 <button type="submit"
                                     class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded transition-colors shadow">
                                     Save Add-on
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- =====================================================================
-                         [NEW] SERVICE PRICE LIST — direct admin view/edit of the ServicePricing
-                         sheet, i.e. the actual single source of truth every price in this app
-                         (tier upgrades, add-on purchases, subscription invoices, the public
-                         marketing site's live price display) is resolved from. Previously the
-                         only way to change a price was to open the Google Sheet directly; this
-                         wires agent-set-service-pricing to a proper form so an admin can do it
-                         from here, and the change takes effect everywhere immediately (the
-                         backend clears its own cache on save — see _setServicePricing).
-                    ====================================================================== -->
-                    <div id="view-agent-pricing"
-                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
-                        <div class="flex justify-between items-center shrink-0">
-                            <div>
-                                <h3 class="text-lg font-bold text-white">Service Price List</h3>
-                                <p class="text-xs text-slate-400">Base prices for every tier and add-on, from the
-                                    ServicePricing sheet. These are the raw NGN figures BEFORE the 7.5% tax — tax is
-                                    applied automatically wherever a price is charged or displayed to a client.
-                                    Editing a price here updates it everywhere immediately.</p>
-                            </div>
-                            <button onclick="loadAgentServicePricing()"
-                                class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 flex items-center gap-1.5 shrink-0">
-                                <i class="fa-solid fa-rotate"></i> Refresh
-                            </button>
-                        </div>
-
-                        <div
-                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
-                            <table class="w-full text-left border-collapse text-xs">
-                                <thead
-                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
-                                    <tr>
-                                        <th class="p-3">Item Key</th>
-                                        <th class="p-3">Label</th>
-                                        <th class="p-3">Category</th>
-                                        <th class="p-3 text-right">Base Price (₦)</th>
-                                        <th class="p-3 text-right">+7.5% Tax (₦)</th>
-                                        <th class="p-3">Unit</th>
-                                        <th class="p-3 text-center">Active</th>
-                                        <th class="p-3 text-center">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="agentPricingTableBody" class="divide-y divide-slate-800/50 text-slate-300">
-                                    <!-- Populated by JS -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- MODAL: Edit Service Price -->
-                    <div id="modalEditPrice"
-                        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
-                        <div
-                            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-md w-full flex flex-col space-y-4">
-                            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                                <h3 class="text-sm font-bold text-white">Edit Service Price</h3>
-                                <button onclick="closeEditPriceModal()"
-                                    class="text-slate-400 hover:text-white text-sm font-bold">&times;</button>
-                            </div>
-                            <form id="editPriceForm" onsubmit="submitEditPrice(event)" class="space-y-3">
-                                <input type="hidden" id="editPriceItemKey" value="" />
-                                <div>
-                                    <label class="block text-xs text-slate-400 mb-1">Item Key</label>
-                                    <input type="text" id="editPriceItemKeyDisplay" disabled
-                                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-slate-500" />
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-slate-400 mb-1">Label</label>
-                                    <input type="text" id="editPriceLabel" required
-                                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-slate-400 mb-1">Base Price — before 7.5% tax
-                                        (₦)</label>
-                                    <input type="number" id="editPriceNgn" required min="0" step="1"
-                                        oninput="updateEditPriceTaxPreview()"
-                                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500" />
-                                    <p id="editPriceTaxPreview" class="text-[11px] text-emerald-400 mt-1"></p>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <input type="checkbox" id="editPriceActive"
-                                        class="rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-0" />
-                                    <label for="editPriceActive" class="text-xs text-slate-400">Active — shown on the
-                                        public pricing page and purchasable</label>
-                                </div>
-                                <button type="submit"
-                                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded transition-colors shadow">
-                                    Save Price
                                 </button>
                             </form>
                         </div>
@@ -5422,8 +5326,20 @@
         }
 
         function toggleSystemLoader(show) {
-            return; // disabled — no more full-page blocking overlay
+            let loader = document.getElementById("systemLoader");
+            if (!loader) {
+                loader = document.createElement("div");
+                loader.id = "systemLoader";
+                loader.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px);";
+                loader.innerHTML = '<div style="border:3px solid #1e293b;border-top:3px solid #10b981;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;"></div>';
+                const style = document.createElement('style');
+                style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+                document.head.appendChild(style);
+                document.body.appendChild(loader);
+            }
+            loader.style.display = show ? "flex" : "none";
         }
+
         function showToast(message, type = "info") {
             const existing = document.getElementById("vh-toast");
             if (existing) existing.remove();
@@ -8126,7 +8042,6 @@
                         'agent-docs': loadAgentDocsView,            // NEW
                         'agent-invoices': loadAgentInvoices,        // NEW
                         'agent-addons': loadAgentAddonsUI,
-                        'agent-pricing': loadAgentServicePricing,
                         'agent-social-calendar': loadAdminSocialCalendar,
                     };
                     if (loaderMap[targetView]) loaderMap[targetView]();
@@ -8298,7 +8213,10 @@
             const tbodyId = 'agentSubscriptionsTableBody';
             showTableSkeleton(tbodyId, 9);
 
-            const res = await executeSecureBridgeCall('agent', 'agent-get-clients', {});
+            const [res, pricing] = await Promise.all([
+                executeSecureBridgeCall('agent', 'agent-get-clients', {}),
+                getServicePricing()
+            ]);
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
 
@@ -8312,57 +8230,45 @@
             const active = res.data.filter(c => c.Status === 'Active').length;
             document.getElementById('kpi-agent-active').textContent = active;
 
-            // [FIXED] Revenue must match what clients are actually charged —
-            // that's c.PriceBreakdown (attached server-side by _getClients via
-            // the single _getServicePriceBreakdown resolver: ServicePricing
-            // base → this client's CustomPriceNGN override → 7.5% tax). The
-            // old code re-derived this from the tax-free ServicePricing map
-            // and skipped tax on custom prices entirely, so it always
-            // undercounted revenue vs. what the client dashboard showed.
             const revenue = res.data.reduce((sum, c) => {
-                const pb = c.PriceBreakdown;
-                if (!pb || !pb.success) return sum;
-                // Quote-only tiers only count once a real negotiated price has
-                // been set for this client (pb.overridden === true).
-                if ((c.Tier === 'digital_accelerate' || c.Tier === 'digital_scale') && !pb.overridden) return sum;
-                return sum + (pb.totalNgn || 0);
+                if (c.Tier === 'enterprise_ops' && parseFloat(c.CustomPriceNGN)) return sum + parseFloat(c.CustomPriceNGN);
+                if (pricing[c.Tier] && pricing[c.Tier].priceNgn) return sum + pricing[c.Tier].priceNgn;
+                if (c.Tier === 'digital_accelerate' || c.Tier === 'digital_scale') {
+                    // Quote-only tiers — only count if a real negotiated price was set via agent-set-custom-tier
+                    return sum + (parseFloat(c.CustomPriceNGN) || 0);
+                }
+                if (String(c.Tier).toLowerCase() === 'custom') return sum + (parseFloat(c.CustomPriceNGN) || 0);
+                return sum;
             }, 0);
             document.getElementById('kpi-agent-revenue').textContent = fmtNaira(revenue);
             document.getElementById('kpi-agent-pending').textContent = res.data.filter(c => c.Status === 'Pending').length;
 
             tbody.innerHTML = res.data.map(c => {
 
-                // Quota numbers (hours/emails/proposals) aren't part of the
-                // ServicePricing sheet, so they stay as tier defaults here,
-                // overridden per-client by Custom* columns when set.
-                const tierQuotas = {
-                    'starter_ops': { hours: 20, emails: 50, proposals: 1 },
-                    'growth_ops': { hours: 40, emails: 200, proposals: 3 },
-                    'enterprise_ops': { hours: 9999, emails: 9999, proposals: 9999 },
-                    'digital_launch': { hours: 10, emails: 30, proposals: 1 },
-                    'digital_accelerate': { hours: 20, emails: 100, proposals: 2 },
-                    'digital_scale': { hours: 9999, emails: 9999, proposals: 9999 },
+                // Prices come live from the ServicePricing sheet (getServicePricing());
+                // quota numbers (hours/emails/proposals) aren't part of that sheet, so
+                // they stay as tier defaults here — same as before.
+                const tierPricing = {
+                    'starter_ops': { hours: 20, emails: 50, proposals: 1, price: pricing.starter_ops?.priceNgn ?? null },
+                    'growth_ops': { hours: 40, emails: 200, proposals: 3, price: pricing.growth_ops?.priceNgn ?? null },
+                    'enterprise_ops': { hours: 9999, emails: 9999, proposals: 9999, price: pricing.enterprise_ops?.priceNgn ?? null },
+                    'digital_launch': { hours: 10, emails: 30, proposals: 1, price: pricing.digital_launch?.priceNgn ?? null },
+                    'digital_accelerate': { hours: 20, emails: 100, proposals: 2, price: null },   // quote-only tier
+                    'digital_scale': { hours: 9999, emails: 9999, proposals: 9999, price: null }, // quote-only tier
                     'custom': {
                         hours: c.CustomHours || 0, emails: c.CustomEmails || 0,
-                        proposals: c.CustomProposals || 0
+                        proposals: c.CustomProposals || 0, price: c.CustomPriceNGN || 0
                     }
                 };
 
-                const _baseQuotas = tierQuotas[c.Tier] || tierQuotas['starter_ops'];
+                const _baseTierInfo = tierPricing[c.Tier] || tierPricing['starter_ops'];
                 const tierInfo = {
-                    hours: (c.CustomHours !== undefined && c.CustomHours !== '' && c.CustomHours !== null) ? Number(c.CustomHours) : _baseQuotas.hours,
-                    emails: (c.CustomEmails !== undefined && c.CustomEmails !== '' && c.CustomEmails !== null) ? Number(c.CustomEmails) : _baseQuotas.emails,
-                    proposals: (c.CustomProposals !== undefined && c.CustomProposals !== '' && c.CustomProposals !== null) ? Number(c.CustomProposals) : _baseQuotas.proposals
+                    hours: (c.CustomHours !== undefined && c.CustomHours !== '' && c.CustomHours !== null) ? Number(c.CustomHours) : _baseTierInfo.hours,
+                    emails: (c.CustomEmails !== undefined && c.CustomEmails !== '' && c.CustomEmails !== null) ? Number(c.CustomEmails) : _baseTierInfo.emails,
+                    proposals: (c.CustomProposals !== undefined && c.CustomProposals !== '' && c.CustomProposals !== null) ? Number(c.CustomProposals) : _baseTierInfo.proposals,
+                    price: (c.CustomPriceNGN !== undefined && c.CustomPriceNGN !== '' && c.CustomPriceNGN !== null) ? Number(c.CustomPriceNGN) : _baseTierInfo.price,
+                    isUsd: _baseTierInfo.isUsd
                 };
-
-                // [FIXED] Price column now reads the same tax-included,
-                // override-aware breakdown the client portal uses, instead of
-                // a separately hand-rolled (and tax-free) number.
-                const pb = c.PriceBreakdown || {};
-                const isQuoteOnlyTier = (c.Tier === 'digital_accelerate' || c.Tier === 'digital_scale') && !pb.overridden;
-                const priceCell = isQuoteOnlyTier
-                    ? '<span class="text-amber-400">Custom Quote</span>'
-                    : fmtNaira(pb.totalNgn || 0) + (pb.overridden ? ' <span class="text-[10px] text-amber-400" title="Custom price set by admin">(custom)</span>' : '');
                 const endDate = c.EndDate || c.endDate || '—';
                 const daysLeft = c.EndDate ? Math.floor((new Date(c.EndDate) - new Date()) / 86400000) : null;
                 const expiryBadge = daysLeft !== null
@@ -8381,7 +8287,7 @@
             <td class="p-3 text-center font-mono">${tierInfo.hours === 9999 ? '∞' : tierInfo.hours}</td>
             <td class="p-3 text-center font-mono">${tierInfo.emails === 9999 ? '∞' : tierInfo.emails}</td>
             <td class="p-3 text-center font-mono">${tierInfo.proposals === 9999 ? '∞' : tierInfo.proposals}</td>
-           <td class="p-3 text-right font-bold text-emerald-400">${priceCell}</td>
+           <td class="p-3 text-right font-bold text-emerald-400">${tierInfo.isUsd ? '<span class="text-blue-400">$' + tierInfo.price + '/mo</span>' : (tierInfo.price === null ? '<span class="text-amber-400">Custom Quote</span>' : fmtNaira(tierInfo.price))}</td>
 <td class="p-3 text-center text-xs">${fmtDate(endDate)}<br>${expiryBadge}</td>
 <td class="p-3 text-center">${badge(c.Status || 'Active')}</td>
 <td class="p-3 text-center flex gap-1 justify-center">
@@ -8518,18 +8424,12 @@
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
 
-            // Only show tasks that are actually in progress
-            const activeOnly = (res.data || []).filter(t => {
-                const s = String(t.Status || '').toLowerCase();
-                return s !== 'completed' && s !== 'failed' && s !== 'cancelled';
-            });
-
-            if (!res.success || !activeOnly.length) {
+            if (!res.success || !res.data?.length) {
                 tbody.innerHTML = emptyRow('No active tasks.', 8);
                 return;
             }
 
-            tbody.innerHTML = activeOnly.map(t => {
+            tbody.innerHTML = res.data.map(t => {
                 const progress = t.Progress || 0;
                 const progressColor = progress === 100 ? 'bg-emerald-500' : progress > 50 ? 'bg-blue-500' : 'bg-amber-500';
 
@@ -8858,56 +8758,6 @@
             });
         }
 
-
-        /**
-         * Given the gateway's immediate response to an agent-* call, resolves to the
-         * FINAL result — transparently polling agent-check-job-status if the action
-         * was queued (DOCUMENT_GENERATOR_ACTIONS on the backend), or just returning
-         * the response as-is if it wasn't.
-         *
-         * @param {object} initialRes - whatever executeSecureBridgeCall(...) returned
-         * @param {function} [onTick] - optional callback(elapsedMs) fired before each
-         *   poll, so callers can update a "still working…" message
-         */
-        async function resolveAgentJobResult(initialRes, onTick) {
-            if (!initialRes || !initialRes.queued || !initialRes.jobId) {
-                return initialRes; // not a queued job — nothing to poll
-            }
-
-            const jobId = initialRes.jobId;
-            const POLL_INTERVAL_MS = 30000;
-            const MAX_WAIT_MS = 8 * 60 * 1000; // give up after 5 min — matches the
-            // backend's own 300000ms budget for a single queued job run
-            let waited = 0;
-
-            while (waited < MAX_WAIT_MS) {
-                await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
-                waited += POLL_INTERVAL_MS;
-                if (onTick) onTick(waited);
-
-                const statusRes = await executeSecureBridgeCall(
-                    'agent', 'agent-check-job-status', { jobId }, { silent: true }
-                );
-
-                if (!statusRes.success) {
-                    // Job record expired from cache or truly unknown — stop polling,
-                    // surface this clearly instead of looping forever.
-                    return { success: false, message: statusRes.message || 'Job status lookup failed.' };
-                }
-                if (statusRes.status === 'done') {
-                    return statusRes.result; // the actual agent-* result, e.g. { success, docUrl, ... }
-                }
-                if (statusRes.status === 'error') {
-                    return { success: false, message: statusRes.error || 'Document generation failed.' };
-                }
-                // status is "queued" or "running" — keep polling
-            }
-
-            return {
-                success: false,
-                message: 'Timed out waiting for the document after 5 minutes. It may still finish — check the JobLog sheet, or Pending Approvals if it queues there.'
-            };
-        }
         // ================================================================
         // AGENT HUB: COMPLIANCE DOCUMENTS
         // ================================================================
@@ -10179,116 +10029,6 @@
             }).join('');
         }
 
-        // =====================================================================
-        // [NEW] SERVICE PRICE LIST — admin view/edit of the ServicePricing sheet
-        // (agent-get-service-pricing / agent-set-service-pricing). This is the
-        // actual single source of truth _getServiceBasePriceNgn() resolves
-        // against everywhere else in the system (tier upgrades, add-on
-        // purchases, subscription invoices, the public marketing site's live
-        // price display) — editing here changes the real charge, not a copy.
-        //
-        // TAX_RATE_DISPLAY is a display-only mirror of the backend's
-        // AGENT_CONFIG.TAX_RATE (0.075), used purely to show the admin a
-        // live "+ tax" preview while typing — it does NOT compute what gets
-        // charged. The actual tax is always applied server-side by
-        // _applyTax(), inside _getServicePriceBreakdown().
-        // =====================================================================
-        const TAX_RATE_DISPLAY = 0.075;
-
-        async function loadAgentServicePricing() {
-            const tbodyId = 'agentPricingTableBody';
-            showTableSkeleton(tbodyId, 8);
-
-            const pricing = await getServicePricing(true); // force-refresh — admin wants the live sheet, not a stale cache
-            const tbody = document.getElementById(tbodyId);
-            if (!tbody) return;
-
-            const entries = Object.entries(pricing || {});
-            if (!entries.length) {
-                tbody.innerHTML = emptyRow('No priced items found — the ServicePricing sheet may not be seeded yet.', 8);
-                return;
-            }
-
-            // Tiers first, then add-ons, alphabetical within each group.
-            entries.sort(([keyA, a], [keyB, b]) => {
-                const catCompare = (a.category || '').localeCompare(b.category || '');
-                return catCompare !== 0 ? catCompare : keyA.localeCompare(keyB);
-            });
-
-            tbody.innerHTML = entries.map(([itemKey, item]) => {
-                const base = parseFloat(item.priceNgn) || 0;
-                const withTax = Math.round(base * (1 + TAX_RATE_DISPLAY));
-                const isActive = item.active !== false;
-                return `
-        <tr>
-            <td class="p-3 font-mono text-slate-500">${escapeHtml(itemKey)}</td>
-            <td class="p-3 font-medium text-slate-200">${escapeHtml(item.label || '—')}</td>
-            <td class="p-3 text-slate-400">${escapeHtml(item.category || '—')}</td>
-            <td class="p-3 text-right font-mono text-white">${fmtNaira(base)}</td>
-            <td class="p-3 text-right font-mono text-emerald-400">${fmtNaira(withTax)}</td>
-            <td class="p-3 text-slate-500">${escapeHtml(String(item.unit || '—'))}</td>
-            <td class="p-3 text-center">${badge(isActive ? 'Active' : 'Inactive')}</td>
-            <td class="p-3 text-center">
-                <button onclick='openEditPriceModal(${JSON.stringify(itemKey)}, ${JSON.stringify(item)})'
-                    class="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white">Edit</button>
-            </td>
-        </tr>`;
-            }).join('');
-        }
-
-        function openEditPriceModal(itemKey, item) {
-            const modal = document.getElementById('modalEditPrice');
-            if (!modal) return;
-            document.getElementById('editPriceItemKey').value = itemKey;
-            document.getElementById('editPriceItemKeyDisplay').value = itemKey;
-            document.getElementById('editPriceLabel').value = item.label || '';
-            document.getElementById('editPriceNgn').value = parseFloat(item.priceNgn) || 0;
-            document.getElementById('editPriceActive').checked = item.active !== false;
-            updateEditPriceTaxPreview();
-            modal.classList.remove('hidden');
-        }
-
-        function closeEditPriceModal() {
-            document.getElementById('modalEditPrice')?.classList.add('hidden');
-        }
-
-        function updateEditPriceTaxPreview() {
-            const base = parseFloat(document.getElementById('editPriceNgn')?.value) || 0;
-            const withTax = Math.round(base * (1 + TAX_RATE_DISPLAY));
-            const el = document.getElementById('editPriceTaxPreview');
-            if (el) el.textContent = `Client sees / pays: ${fmtNaira(withTax)} (base + 7.5% tax)`;
-        }
-
-        async function submitEditPrice(event) {
-            event.preventDefault();
-            const itemKey = document.getElementById('editPriceItemKey').value;
-            const priceNgn = parseFloat(document.getElementById('editPriceNgn').value) || 0;
-            const label = document.getElementById('editPriceLabel').value.trim();
-            const active = document.getElementById('editPriceActive').checked;
-
-            const submitBtn = event.target.querySelector('button[type="submit"]');
-            setBtnBusy(submitBtn, true, { busyLabel: 'Saving…' });
-
-            const res = await executeSecureBridgeCall('agent', 'agent-set-service-pricing',
-                { itemKey, priceNgn, label, active }, { silent: true });
-
-            setBtnBusy(submitBtn, false);
-
-            if (!res.success) {
-                showToast(res.message || 'Failed to save price.', 'error');
-                return;
-            }
-
-            showToast(`${label} updated to ${fmtNaira(priceNgn)} (+7.5% tax = ${fmtNaira(Math.round(priceNgn * (1 + TAX_RATE_DISPLAY)))}).`, 'success');
-            closeEditPriceModal();
-
-            // The backend already cleared its own cache on save; force-refresh
-            // this table AND the add-on cart catalog (agent-addons view) so
-            // neither shows a stale price for the rest of this session.
-            SERVICE_PRICING_CACHE = null;
-            loadAgentServicePricing();
-        }
-
         /**
          * Opens the modal. If clientId + index are provided, pre-fills for editing
          * an existing add-on; otherwise opens blank for a new one.
@@ -10630,22 +10370,12 @@ ${a.Status === 'Pending Review' ? `
                 showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
             });
         }
-
         function runClientComplianceReport() {
             const clientId = document.getElementById('compFrameworksClientSelector')?.value;
             if (!clientId) { showToast('Select a client first.', 'error'); return; }
             showToast('Generating report doc…', 'info');
-            const resultEl = document.getElementById('compFrameworksResult');
-            resultEl.textContent = 'Generating…';
-
-            executeSecureBridgeCall('agent', 'agent-compliance-report', { clientId }).then(async res => {
-                if (res && res.queued) {
-                    resultEl.textContent = 'Queued — generating, this can take a couple of minutes…';
-                    res = await resolveAgentJobResult(res, (waitedMs) => {
-                        resultEl.textContent = `Still working… (${Math.round(waitedMs / 1000)}s)`;
-                    });
-                }
-                resultEl.textContent = JSON.stringify(res, null, 2);
+            executeSecureBridgeCall('agent', 'agent-compliance-report', { clientId }).then(res => {
+                document.getElementById('compFrameworksResult').textContent = JSON.stringify(res, null, 2);
                 showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
             });
         }
@@ -11217,6 +10947,48 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             if (res.success) { closeAgentEditClientInfoModal(); loadAgentClients(); }
         }
 
+        /**
+ * Polls agent-check-job-status until a queued doc-generation job resolves
+ * to "done" or "error" (or times out). Safe to call on a response that was
+ * NOT queued — it just returns it straight back unchanged.
+ * @param {object} initialRes - whatever executeSecureBridgeCall(...) returned
+ * @param {function} [onTick] - optional callback(elapsedMs) for progress text
+ */
+        async function resolveAdminJobResult(initialRes, onTick) {
+            if (!initialRes || !initialRes.queued || !initialRes.jobId) {
+                return initialRes;
+            }
+
+            const jobId = initialRes.jobId;
+            const POLL_INTERVAL_MS = 3000;
+            const MAX_WAIT_MS = 5 * 60 * 1000; // matches the backend's per-job budget
+            let waited = 0;
+
+            while (waited < MAX_WAIT_MS) {
+                await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+                waited += POLL_INTERVAL_MS;
+                if (onTick) onTick(waited);
+
+                const statusRes = await executeSecureBridgeCall('agent', 'agent-check-job-status', { jobId }, { silent: true });
+
+                if (!statusRes.success) {
+                    return { success: false, message: statusRes.message || 'Job status lookup failed.' };
+                }
+                if (statusRes.status === 'done') {
+                    return statusRes.result;
+                }
+                if (statusRes.status === 'error') {
+                    return { success: false, message: statusRes.error || 'Document generation failed.' };
+                }
+                // "queued" or "running" — keep polling
+            }
+
+            return {
+                success: false,
+                message: "This is taking longer than usual (5+ min). It may still finish — check the client's documents shortly, or check the audit log."
+            };
+        }
+
         async function runAIConsoleAction() {
             const clientId = document.getElementById('aiConsoleClientSelector').value;
             const action = document.getElementById('aiConsoleAction').value;
@@ -11225,7 +10997,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             let params = {};
             const schema = AI_DIRECTIVE_SCHEMAS[action];
             if (schema) {
-                // [NEW] Build params from the friendly directive fields instead of JSON.
                 for (const f of schema) {
                     const el = document.getElementById('aiDirective_' + f.key);
                     const val = el ? el.value.trim() : '';
@@ -11240,8 +11011,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 catch (e) { showToast('Params must be valid JSON.', 'error'); return; }
             }
 
-            // [CHANGED] Button-level "AI working" animation instead of the full-page
-            // loader — the rest of the dashboard stays usable while this runs.
             const runBtn = document.getElementById('aiConsoleRunBtn');
             setBtnBusy(runBtn, true, { busyLabel: 'Working…' });
             const resultEl = document.getElementById('aiConsoleResult');
@@ -11250,9 +11019,13 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             let res;
             try {
                 res = await executeSecureBridgeCall('agent', action, { clientId, ...params }, { silent: true });
+
+                // [NEW] Document generators now return { queued: true, jobId } instead
+                // of running inline — poll agent-check-job-status until it actually
+                // finishes instead of showing the raw "queued" placeholder forever.
                 if (res && res.queued) {
-                    resultEl.innerHTML = `<p class="text-emerald-400"><span class="ai-spinner"></span>Queued — generating document, this can take a couple of minutes…</p>`;
-                    res = await resolveAgentJobResult(res, (waitedMs) => {
+                    resultEl.innerHTML = `<p class="text-emerald-400"><span class="ai-spinner"></span>Still generating — this can take a couple of minutes…</p>`;
+                    res = await resolveAdminJobResult(res, (waitedMs) => {
                         resultEl.innerHTML = `<p class="text-emerald-400"><span class="ai-spinner"></span>Still working… (${Math.round(waitedMs / 1000)}s)</p>`;
                     });
                 }
@@ -11279,7 +11052,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             resultEl.innerHTML = docCardHtml + `<pre class="text-xs text-slate-300 whitespace-pre-wrap">${escapeHtml(JSON.stringify(res, null, 2))}</pre>`;
             showToast(res.success ? 'Done.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
         }
-
         // =====================================================================
         // [NEW] SOCIAL MEDIA CONTENT CALENDAR (admin side)
         //   Generate a month of content for a client (respects their tier's
