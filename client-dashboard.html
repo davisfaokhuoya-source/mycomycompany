@@ -759,9 +759,9 @@
             try {
                 res = await callGateway('clientportal', 'clientPortalGenerateDocument', payload);
                 if (res && res.queued) {
-                    statusEl.innerHTML = `<p class="text-xs text-slate-400 mt-2"><span class="ai-spinner"></span>Still generating your ${escapeHtml(spec ? spec.label : docType)}, this can take a couple of minutes…</p>`;
+                    statusEl.innerHTML = `<p class="text-xs text-slate-400 mt-2"><span class="ai-spinner"></span>Generating your ${escapeHtml(spec ? spec.label : docType)} — we'll email you the moment it's ready, so feel free to navigate away.</p>`;
                     res = await resolveClientJobResult(res, (waitedMs) => {
-                        statusEl.innerHTML = `<p class="text-xs text-slate-400 mt-2"><span class="ai-spinner"></span>Still working… (${Math.round(waitedMs / 1000)}s)</p>`;
+                        statusEl.innerHTML = `<p class="text-xs text-slate-400 mt-2"><span class="ai-spinner"></span>Still working… (${Math.round(waitedMs / 1000)}s) — you'll get an email either way.</p>`;
                     });
                 }
             } finally {
@@ -841,7 +841,7 @@
 
             const jobId = initialRes.jobId;
             const POLL_INTERVAL_MS = 3000;
-            const MAX_WAIT_MS = 5 * 60 * 1000; // matches the backend's 300000ms per-job budget
+            const MAX_WAIT_MS = 6 * 60 * 1000; // matches the backend's 300000ms per-job budget
             let waited = 0;
 
             while (waited < MAX_WAIT_MS) {
