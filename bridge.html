@@ -300,12 +300,29 @@
                     <div
                         class="h-7 w-7 rounded-full bg-slate-800 flex items-center justify-center text-xs text-slate-300 font-mono">
                         OP</div>
-                    <div class="truncate">
+                    <div class="truncate flex-1">
                         <p id="welcomeTitle" class="text-xs font-medium text-white truncate">Operational Node Locked</p>
                         <span class="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
                             <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
                             Security Level Alpha
                         </span>
+                    </div>
+                    <div class="relative shrink-0">
+                        <button onclick="toggleAdminNotifPanel(event)"
+                            class="relative h-8 w-8 flex items-center justify-center rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
+                            <i class="fa-solid fa-bell text-sm"></i>
+                            <span id="adminNotifBadge"
+                                class="hidden absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">0</span>
+                        </button>
+                        <div id="adminNotifPanel" class="vh-dropdown-menu"
+                            style="right:auto;left:0;width:320px;max-height:420px;overflow-y:auto;">
+                            <div class="flex items-center justify-between px-3 py-2 border-b border-slate-800">
+                                <span class="text-xs font-bold text-white">Notifications</span>
+                                <button onclick="markAllAdminNotifsRead()"
+                                    class="text-[10px] text-emerald-400 hover:text-emerald-300">Mark all read</button>
+                            </div>
+                            <div id="adminNotifList" class="divide-y divide-slate-800/50"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -5139,8 +5156,10 @@
         const NICHE_OPTIONS = INDUSTRY_OPTIONS;
         const SECTOR_OPTIONS = INDUSTRY_OPTIONS;
         let ACTIVE_AUTO_REFRESH = null;
+        const ENABLE_ADMIN_AUTO_REFRESH = false; // <-- flip to true to restore old behavior
         function startAutoRefresh(viewKey, fn, intervalMs = 30000) {
             stopAutoRefresh();
+            if (!ENABLE_ADMIN_AUTO_REFRESH) return;
             ACTIVE_AUTO_REFRESH = setInterval(() => {
                 const el = document.getElementById('view-' + viewKey);
                 if (el && !el.classList.contains('hidden')) fn();
@@ -5320,6 +5339,7 @@
 
                     switchMasterHub('career');
                     startAgentLivePolling();
+                    startAdminNotifPolling();
                 } else {
                     alert(`SECURITY RESPONSE: ${result.message || 'Verification Failed'}`);
                 }
@@ -8455,7 +8475,7 @@
                 return `
             <tr>
                 <td class="p-3 font-mono text-slate-500">${escapeHtml(t.TaskID || t.taskID || '')}</td>
-                <td class="p-3 text-slate-300">${escapeHtml(t.CompanyName || '')}</td>
+                <td class="p-3 text-slate-300">${escapeHtml(t.CompanyName || t.ClientID || '—')}</td>
                 <td class="p-3 text-slate-400">${escapeHtml(t.TaskType || '')}</td>
                 <td class="p-3 text-slate-500">${fmtDate(t.CreatedAt || t.Timestamp)}</td>
                 <td class="p-3">
@@ -8471,18 +8491,18 @@
                 <td class="p-3 text-center flex gap-1 justify-center">
                     <button onclick="viewAgentTaskDetails('${escapeHtml(t.TaskID || '')}')"
                         class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">View</button>
-                    ${isActive && t.TaskID ? `<button onclick="terminateAgentJob('${escapeHtml(t.TaskID)}', this)"
-                        class="text-xs px-3 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Terminate</button>` : ''}
+                    ${isActive && t.TaskID ? `<button onclick="terminateAgentJob('${escapeHtml(t.TaskID)}','${escapeHtml(t.ClientID || '')}', this)"
+      class="text-xs px-3 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Terminate</button>` : ''}
                 </td>
             </tr>
         `;
             }).join('');
         }
 
-        function terminateAgentJob(jobId, btnEl) {
+        function terminateAgentJob(jobId, clientId, btnEl) {
             if (!confirm('Terminate this job? It counts against quota if it was a client-requested doc, and cannot be resumed.')) return;
             setBtnBusy(btnEl, true, { busyLabel: 'Stopping…' });
-            executeSecureBridgeCall('agent', 'agent-terminate-job', { jobId, terminatedBy: CURRENT_ADMIN_IDENTITY }).then(res => {
+            executeSecureBridgeCall('agent', 'agent-terminate-job', { jobId, clientId, terminatedBy: CURRENT_ADMIN_IDENTITY }).then(res => {
                 setBtnBusy(btnEl, false);
                 showToast(res.success ? 'Job terminated.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
                 if (res.success) loadAgentTasks();
@@ -9160,7 +9180,7 @@
             AGENT_LIVE_POLL_TIMER = setInterval(() => {
                 const onlineView = document.getElementById('view-agent-online');
                 if (onlineView && !onlineView.classList.contains('hidden')) loadAgentOnlineUsage();
-            }, 15000);
+            }, 60000);
         }
 
         // Extend the single results table with the new columns
@@ -10239,6 +10259,83 @@
             }
         }
 
+
+        let ADMIN_NOTIF_TIMER = null;
+        let ADMIN_NOTIF_CACHE = [];
+
+        function startAdminNotifPolling() {
+            if (ADMIN_NOTIF_TIMER) clearInterval(ADMIN_NOTIF_TIMER);
+            pollAdminNotifications();
+            ADMIN_NOTIF_TIMER = setInterval(pollAdminNotifications, 20000); // 20s — cheap read-only poll
+        }
+
+        async function pollAdminNotifications() {
+            const res = await executeSecureBridgeCall('agent', 'agent-get-notifications', { unreadOnly: false, limit: 30 }, { silent: true });
+            if (!res.success) return;
+            ADMIN_NOTIF_CACHE = res.notifications || [];
+            const badge = document.getElementById('adminNotifBadge');
+            if (badge) {
+                if (res.unreadCount > 0) {
+                    badge.textContent = res.unreadCount > 99 ? '99+' : res.unreadCount;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+            renderAdminNotifPanel();
+        }
+
+        function renderAdminNotifPanel() {
+            const list = document.getElementById('adminNotifList');
+            if (!list) return;
+            if (!ADMIN_NOTIF_CACHE.length) {
+                list.innerHTML = '<p class="text-xs text-slate-500 p-4 text-center">No notifications yet.</p>';
+                return;
+            }
+            const iconMap = { chat_message: 'fa-comment text-blue-400', job_complete: 'fa-circle-check text-emerald-400', job_failed: 'fa-circle-xmark text-red-400' };
+            list.innerHTML = ADMIN_NOTIF_CACHE.map(n => {
+                const isRead = n.Read === true || n.Read === 'TRUE';
+                const icon = iconMap[n.Type] || 'fa-bell text-slate-400';
+                return `
+        <div onclick='handleAdminNotifClick(${JSON.stringify(n.NotificationID)}, ${JSON.stringify(n.Link || '')})'
+            class="flex gap-2 px-3 py-2.5 cursor-pointer hover:bg-slate-800/60 ${isRead ? 'opacity-60' : ''}">
+            <i class="fa-solid ${icon} mt-0.5 text-xs"></i>
+            <div class="flex-1 min-w-0">
+                <p class="text-xs text-white font-medium truncate">${escapeHtml(n.Title || '')}</p>
+                <p class="text-[11px] text-slate-400 truncate">${escapeHtml(n.Message || '')}</p>
+                <p class="text-[9px] text-slate-600 mt-0.5">${fmtDate(n.CreatedAt)}${n.ClientID ? ' · ' + escapeHtml(n.ClientID) : ''}</p>
+            </div>
+            ${isRead ? '' : '<span class="h-1.5 w-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></span>'}
+        </div>`;
+            }).join('');
+        }
+
+        function toggleAdminNotifPanel(evt) {
+            evt.stopPropagation();
+            const panel = document.getElementById('adminNotifPanel');
+            if (!panel) return;
+            const isOpen = panel.classList.contains('open');
+            document.querySelectorAll('.vh-dropdown-menu.open').forEach(m => m.classList.remove('open'));
+            if (!isOpen) { panel.classList.add('open'); pollAdminNotifications(); }
+        }
+
+        function handleAdminNotifClick(notificationId, link) {
+            executeSecureBridgeCall('agent', 'agent-mark-notification-read', { notificationId }, { silent: true }).then(() => pollAdminNotifications());
+            document.getElementById('adminNotifPanel')?.classList.remove('open');
+            if (link) {
+                const btn = document.querySelector(`.agent-subview-link[data-target-view="${link}"]`)
+                    || document.querySelector(`[data-target-view="${link}"]`);
+                if (btn) {
+                    switchMasterHub('agent');
+                    setTimeout(() => btn.click(), 150);
+                }
+            }
+        }
+
+        function markAllAdminNotifsRead() {
+            executeSecureBridgeCall('agent', 'agent-mark-all-notifications-read', {}, { silent: true }).then(() => pollAdminNotifications());
+        }
+
         function initializeModule() {
             if (!document.getElementById("vh-pulse-style")) {
                 const style = document.createElement("style");
@@ -10271,6 +10368,7 @@
 
                     switchMasterHub('career');
                     startAgentLivePolling();
+                    startAdminNotifPolling();
                 }
             }, 800);
         }
