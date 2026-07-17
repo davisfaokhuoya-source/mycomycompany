@@ -386,6 +386,11 @@
                         Complaint Tickets
                     </a>
                     <a href="#" class="career-subview-link" data-target-view="career-admin-tools">Admin Tools</a>
+                    <a href="#" data-target-view="career-weekly-reports" class="career-subview-link">Weekly Reports
+                        &amp;
+                        AI Insights</a>
+                    <a href="#" data-target-view="career-team-insights" class="career-subview-link">Team
+                        Recommendations</a>
                     <div class="mt-4 border-t border-slate-800 pt-3 px-1">
                         <span
                             class="text-[10px] font-mono tracking-wider text-slate-500 uppercase px-2 mb-2 block">Universal
@@ -814,6 +819,74 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- VIEW: Weekly Reports & AI Insights -->
+                    <div id="view-career-weekly-reports"
+                        class="career-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Weekly Reports &amp; AI Insights</h3>
+                                <p class="text-xs text-slate-400">Partner-submitted weekly reports, AI scoring per
+                                    report, and a portfolio-wide digest.</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="loadWeeklyReportsUI()"
+                                    class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700">
+                                    <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                                </button>
+                                <button onclick="generateAdminDigestUI()"
+                                    class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Digest
+                                </button>
+                                <button onclick="runCareerAITriggersNowUI()"
+                                    class="bg-amber-700 hover:bg-amber-600 text-xs text-white font-medium py-1.5 px-3 rounded">
+                                    Run AI Jobs Now
+                                </button>
+                            </div>
+                        </div>
+                        <div id="adminDigestPanel"
+                            class="hidden shrink-0 bg-slate-950 border border-emerald-800/40 rounded-xl p-4 text-xs text-slate-300 space-y-2">
+                        </div>
+                        <div
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead
+                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                    <tr>
+                                        <th class="p-3">Partner</th>
+                                        <th class="p-3">Week</th>
+                                        <th class="p-3">Jobs</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3">AI Score</th>
+                                        <th class="p-3">AI Summary</th>
+                                        <th class="p-3">Recommendations</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="weeklyReportsTableBody" class="divide-y divide-slate-800/50 text-slate-300">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- VIEW: Team Recommendations -->
+                    <div id="view-career-team-insights"
+                        class="career-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Team Recommendations</h3>
+                                <p class="text-xs text-slate-400">AI-suggested additions and rearrangements based on
+                                    the current roster and performance.</p>
+                            </div>
+                            <button onclick="generateTeamRecommendationsUI()"
+                                class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Suggest Team Changes
+                            </button>
+                        </div>
+                        <div id="teamRecsPanel"
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar p-4 text-xs text-slate-300 space-y-4">
+                            <p class="text-slate-500">Click "Suggest Team Changes" to generate recommendations.</p>
                         </div>
                     </div>
 
@@ -5556,6 +5629,8 @@
                 'leads-broadcast': loadBroadcastQueue,
                 'leads-drive': loadMailDriveReports,
                 'career-complaints': initializeModule_career_complaints,
+                'career-weekly-reports': loadWeeklyReportsUI,
+                'career-team-insights': () => { }, // no auto-load — recommendations are generated on demand
                 'leads-calendar': loadCalendarEvents,
                 'agent-clients': loadAgentClients,
                 'agent-subscriptions': loadAgentSubscriptions,
@@ -8954,6 +9029,71 @@
             executeSecureBridgeCall('career', 'sendSignupCodeInvite', { code, email, name }).then(res => {
                 showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
             });
+        }
+
+        async function loadWeeklyReportsUI() {
+            showTableSkeleton('weeklyReportsTableBody', 7);
+            const res = await executeSecureBridgeCall('career', 'listWeeklyReports', {});
+            const tbody = document.getElementById('weeklyReportsTableBody');
+            if (!res.success || !res.reports?.length) { tbody.innerHTML = emptyRow('No weekly reports yet.', 7); return; }
+            tbody.innerHTML = res.reports.map(r => `
+        <tr><td class="p-3 text-white">${escapeHtml(r.partnerName || r.partnerEmail)}</td>
+        <td class="p-3 font-mono text-slate-400">${escapeHtml(r.weekKey)}</td>
+        <td class="p-3 text-center">${escapeHtml(String(r.jobsCompleted ?? '—'))}</td>
+        <td class="p-3 text-center">${badge(r.status)}</td>
+        <td class="p-3 text-center">${r.aiScore !== '' && r.aiScore != null ? escapeHtml(String(r.aiScore)) : '—'}</td>
+        <td class="p-3 text-slate-400 max-w-xs truncate" title="${escapeHtml(r.aiSummary || '')}">${escapeHtml(r.aiSummary || (r.status === 'Pending Review' ? 'Awaiting AI review…' : '—'))}</td>
+        <td class="p-3 text-slate-400 max-w-xs truncate" title="${escapeHtml(r.aiRecommendations || '')}">${escapeHtml(r.aiRecommendations || '—')}</td>
+        </tr>
+    `).join('');
+        }
+
+        async function generateAdminDigestUI() {
+            const panel = document.getElementById('adminDigestPanel');
+            panel.classList.remove('hidden');
+            panel.innerHTML = '<p class="text-slate-500">Generating digest from reviewed reports…</p>';
+            const res = await executeSecureBridgeCall('career', 'career-weekly-digest', {});
+            if (!res.success) { panel.innerHTML = `<p class="text-red-400">${escapeHtml(res.message || 'Failed to generate digest.')}</p>`; return; }
+            if (!res.digest) { panel.innerHTML = `<p class="text-slate-500">${escapeHtml(res.message || 'No reviewed reports yet.')}</p>`; return; }
+            const d = res.digest;
+            panel.innerHTML = `
+        <h4 class="text-sm font-bold text-emerald-400">Weekly Digest (${res.reportCount} reviewed reports)</h4>
+        <p><span class="text-slate-500 font-mono uppercase text-[10px] block mb-1">Progress</span>${escapeHtml(d.progress || '—')}</p>
+        <p><span class="text-slate-500 font-mono uppercase text-[10px] block mb-1">Downsides</span>${escapeHtml(d.downsides || '—')}</p>
+        <p><span class="text-slate-500 font-mono uppercase text-[10px] block mb-1">Recommendations</span>${escapeHtml(d.recommendations || '—')}</p>
+        <div class="flex gap-6 pt-1">
+            <div><span class="text-slate-500 font-mono uppercase text-[10px] block mb-1">Standout Partners</span>${(d.standoutPartners || []).map(escapeHtml).join(', ') || '—'}</div>
+            <div><span class="text-slate-500 font-mono uppercase text-[10px] block mb-1">At-Risk Partners</span>${(d.atRiskPartners || []).map(escapeHtml).join(', ') || '—'}</div>
+        </div>`;
+        }
+
+        async function runCareerAITriggersNowUI() {
+            showToast('Running AI jobs (report analysis, chat replies, weekly content)…', 'info');
+            const res = await executeSecureBridgeCall('career', 'career-run-ai-triggers-now', {});
+            showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+            loadWeeklyReportsUI();
+        }
+
+        async function generateTeamRecommendationsUI() {
+            const panel = document.getElementById('teamRecsPanel');
+            panel.innerHTML = '<p class="text-slate-500">Analyzing roster…</p>';
+            const res = await executeSecureBridgeCall('career', 'career-team-recommendations', {});
+            if (!res.success) { panel.innerHTML = `<p class="text-red-400">${escapeHtml(res.message || 'Failed.')}</p>`; return; }
+            const rec = res.recommendations || {};
+            const additions = (rec.additions || []).map(a => `
+        <div class="bg-slate-900 border border-slate-800 rounded p-3">
+            <p class="text-white font-medium">${escapeHtml(a.partnerName || a.partnerEmail)} → <span class="text-emerald-400">${escapeHtml(a.suggestedTeam || '—')}</span></p>
+            <p class="text-slate-400 mt-1">${escapeHtml(a.reason || '')}</p>
+        </div>`).join('') || '<p class="text-slate-500">No additions suggested.</p>';
+            const rearrangements = (rec.rearrangements || []).map(r => `
+        <div class="bg-slate-900 border border-slate-800 rounded p-3">
+            <p class="text-white font-medium">${escapeHtml(r.partnerName || r.partnerEmail)}: <span class="text-amber-400">${escapeHtml(r.fromTeam || '—')}</span> → <span class="text-emerald-400">${escapeHtml(r.toTeam || '—')}</span></p>
+            <p class="text-slate-400 mt-1">${escapeHtml(r.reason || '')}</p>
+        </div>`).join('') || '<p class="text-slate-500">No rearrangements suggested.</p>';
+            panel.innerHTML = `
+        <p class="text-sm text-slate-300">${escapeHtml(rec.summary || '')}</p>
+        <div><h4 class="text-xs font-bold text-emerald-400 uppercase mb-2">Suggested Additions</h4><div class="space-y-2">${additions}</div></div>
+        <div><h4 class="text-xs font-bold text-amber-400 uppercase mb-2">Suggested Rearrangements</h4><div class="space-y-2">${rearrangements}</div></div>`;
         }
 
         async function loadAccessControlPanel() {
