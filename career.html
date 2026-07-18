@@ -85,24 +85,35 @@
 
         .toast-container {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 99999;
+            top: 16px;
+            left: 50%;
+            right: auto;
+            bottom: auto;
+            transform: translateX(-50%);
+            z-index: 999999;
             display: flex;
             flex-direction: column;
+            align-items: center;
             gap: 8px;
+            width: 100%;
+            padding: 0 12px;
+            pointer-events: none;
         }
 
         .toast-item {
             background: #1d4ed8;
             color: #fff;
-            padding: 12px 18px;
+            padding: 14px 22px;
             border-radius: 8px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, .2);
-            font-size: 14px;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, .3);
+            font-size: 15px;
+            font-weight: 500;
             cursor: pointer;
-            max-width: 320px;
+            max-width: 90vw;
+            width: max-content;
+            text-align: center;
             animation: slideIn .3s ease;
+            pointer-events: auto;
         }
 
         .toast-item.success {
@@ -119,12 +130,12 @@
 
         @keyframes slideIn {
             from {
-                transform: translateX(100px);
+                transform: translateY(-30px);
                 opacity: 0
             }
 
             to {
-                transform: translateX(0);
+                transform: translateY(0);
                 opacity: 1
             }
         }
@@ -1393,7 +1404,7 @@
             return div.innerHTML;
         }
 
-        function showToast(msg, type = "info", duration = 5000) {
+        function showToast(msg, type = "info", duration = (type === "error" || type === "warning") ? 7000 : 5000) {
             const container = document.getElementById("toastContainer");
             const el = document.createElement("div");
             el.className = "toast-item " + type;
@@ -1462,7 +1473,8 @@
             };
             if (!data.name || !data.email || !data.password) return showToast("Name, email and password are required", "error");
             if (!data.state || !data.qualifications || !data.experience) return showToast("State of residence, qualifications and experience are required", "error");
-            const res = await apiCall("register", data);
+            // showLoading=false: regBtn already shows its own spinner via disableBtn()
+            const res = await apiCall("register", data, false);
             if (res.success) {
                 currentRegEmail = data.email;
                 document.getElementById("verifyEmailDisplay").innerHTML = `Code sent to <strong>${res.email}</strong>`;
@@ -1524,7 +1536,9 @@
             const email = document.getElementById("loginEmail").value.trim();
             const password = document.getElementById("loginPassword").value;
             if (!email || !password) return showToast("Email and password required", "error");
-            const res = await apiCall("login", { email, password });
+            // showLoading=false: the button itself already shows a spinner via
+            // disableBtn(), so we don't need the separate top-right loader too.
+            const res = await apiCall("login", { email, password }, false);
             if (res.success) {
                 currentToken = res.token;
                 currentUser = res.user;
@@ -2937,6 +2951,24 @@
 
                     // Load dashboard — if server refresh fails, cached user still shows
                     loadDashboard();
+                } catch (e) {
+                    console.error("Session restore failed:", e);
+                    clearSession();
+                }
+            } else if (savedToken && savedUser) {
+                // FIX: the local 24h rolling expiry above can lapse (e.g. the
+                // person doesn't open the app for a day or two) long before
+                // the real 7-day server session does. Previously this branch
+                // called clearSession() immediately, forcing a full re-login
+                // even though the token was still valid server-side. Now we
+                // ask the server first via silent re-auth, and only log the
+                // person out if the server itself rejects the token.
+                try {
+                    currentToken = savedToken;
+                    currentUser = JSON.parse(savedUser);
+                    document.getElementById("authSection").classList.add("d-none");
+                    document.getElementById("dashboardSection").classList.remove("d-none");
+                    attemptSilentReauth();
                 } catch (e) {
                     console.error("Session restore failed:", e);
                     clearSession();
