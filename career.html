@@ -643,7 +643,7 @@
             </div>
 
             <!-- TAB 0: Submit Client -->
-            <div id="tabContent0">
+            <div id="tabContent0" class="d-none">
                 <h5>New Client Registration</h5>
                 <div class="row g-2">
                     <div class="col-md-6"><input id="cName" class="form-control" placeholder="Client's Name"></div>
@@ -1482,7 +1482,7 @@
                 showVerifyStatus("Email verified successfully!", "success");
                 setTimeout(() => {
                     closeVerifyModal();
-                    showToast("Verified! Account pending approval within 1–2 hours.", "success");
+                    showToast("Verified! Your details are being reviewed — this usually takes 10–20 minutes. We'll email you as soon as you're approved to log in.", "success", 7000);
                 }, 1500);
             } else if (res.expired) {
                 // Code expired — clear field, show message, new code was auto-sent
@@ -1540,6 +1540,8 @@
                 currentRegEmail = email;
                 document.getElementById("verifyEmailDisplay").innerHTML = `Please verify your email first. Enter the code sent to <strong>${email}</strong> during registration, or click "Resend Verification Code" below if you no longer have it.`;
                 new bootstrap.Modal(document.getElementById("verifyModal")).show();
+            } else if (res.message && res.message.toLowerCase().includes("being reviewed")) {
+                showToast(res.message, "info", 7000);
             } else {
                 showToast(res.message || "Login failed", "error");
             }
@@ -1590,6 +1592,12 @@
                         refreshRes.message.toLowerCase().includes("session expired")
                     ) {
                         console.warn("Server session expired — attempting silent re-auth");
+                        // Gate the UI with whatever level we last knew about
+                        // BEFORE trying to reauth, so a slow/failed refresh
+                        // never leaves an unrestricted tab (e.g. Submit
+                        // Client) visible to a Level 0 user in the meantime.
+                        buildDropdownMenu();
+                        showTab(isLevel0() ? 6 : 0);
                         await attemptSilentReauth();
                         return;
                     }
