@@ -403,21 +403,46 @@
                             <div class="tab-pane fade" id="registerTab">
                                 <h4 class="text-center mb-4 text-dark">Register</h4>
                                 <div class="row g-2">
-                                    <div class="col-md-6">
-                                        <input type="text" id="regSignupCode" class="form-control mb-2"
+                                    <div class="col-12">
+                                        <input type="text" id="regSignupCode" class="form-control mb-1"
                                             placeholder="Signup Code (from your recruiter)" required />
+                                        <p class="text-muted"
+                                            style="font-size:0.78rem;line-height:1.4;margin-bottom:0.5rem;">
+                                            <i class="bi bi-info-circle"></i> Note: your signup code can only be used
+                                            once. If registration fails with a message saying the code has already
+                                            been used with your email, you've likely already registered — try
+                                            <strong>logging in</strong> instead. If you're then asked for a
+                                            verification code and don't have it, click <strong>"Resend Verification
+                                                Code"</strong> in the verification popup and check your email inbox
+                                            (or spam folder) for it.
+                                        </p>
                                     </div>
                                     <div class="col-md-6">
                                         <input type="text" id="regName" class="form-control" placeholder="Full Name">
                                     </div>
                                     <div class="col-md-6">
-                                        <input type="text" id="regState" class="form-control" placeholder="State">
+                                        <input type="text" id="regState" class="form-control"
+                                            placeholder="State of Residence">
                                     </div>
                                     <div class="col-md-6">
                                         <input type="tel" id="regPhone" class="form-control" placeholder="Phone">
                                     </div>
                                     <div class="col-md-6">
                                         <input type="email" id="regEmail" class="form-control" placeholder="Email">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <input type="text" id="regQualifications" class="form-control"
+                                            placeholder="Qualifications (e.g. B.Sc Marketing, HND Business Admin)">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <select id="regExperience" class="form-control">
+                                            <option value="" disabled selected>Relevant Experience</option>
+                                            <option value="None">No prior experience</option>
+                                            <option value="Less than 1 year">Less than 1 year</option>
+                                            <option value="1-3 years">1–3 years</option>
+                                            <option value="3-5 years">3–5 years</option>
+                                            <option value="5+ years">5+ years</option>
+                                        </select>
                                     </div>
                                     <div class="col-md-6">
                                         <input type="text" id="regAccountNo" class="form-control"
@@ -1139,7 +1164,8 @@
                         <li><strong>One-time services</strong> (e.g. CAC/company registration) pay commission once, when
                             the job is completed and paid.</li>
                         <li><strong>Subscription/plan services</strong> (e.g. a client on Starter Ops) pay commission on
-                            <strong>every renewal</strong>, for as long as that client's subscription stays active.</li>
+                            <strong>every renewal</strong>, for as long as that client's subscription stays active.
+                        </li>
                     </ul>
 
                     <h6 class="text-primary mt-4">Using the Platform</h6>
@@ -1239,6 +1265,10 @@
                     <input type="text" id="verifyCode" class="form-control mb-3" placeholder="6-digit code"
                         maxlength="6" style="font-size:1.4rem;text-align:center;">
                     <button onclick="handleVerify()" class="btn btn-primary w-100">Submit Code</button>
+                    <button onclick="handleResendVerification()" id="resendVerifyBtn"
+                        class="btn btn-link w-100 mt-2">Resend Verification Code</button>
+                    <p class="text-muted text-center" style="font-size:0.78rem;">Don't have the code? Click above,
+                        then check your email inbox or spam folder.</p>
                 </div>
                 <div class="modal-footer"><button onclick="closeVerifyModal()" class="btn btn-secondary">Close</button>
                 </div>
@@ -1423,12 +1453,15 @@
                 phone: document.getElementById("regPhone").value.trim(),
                 email: document.getElementById("regEmail").value.trim(),
                 signupCode: document.getElementById("regSignupCode").value.trim(),
+                qualifications: document.getElementById("regQualifications").value.trim(),
+                experience: document.getElementById("regExperience").value,
                 accountNumber: document.getElementById("regAccountNo").value.trim(),
                 accountName: document.getElementById("regAccountName").value.trim(),
                 bankName: document.getElementById("regBank").value.trim(),
                 password: document.getElementById("regPassword").value
             };
             if (!data.name || !data.email || !data.password) return showToast("Name, email and password are required", "error");
+            if (!data.state || !data.qualifications || !data.experience) return showToast("State of residence, qualifications and experience are required", "error");
             const res = await apiCall("register", data);
             if (res.success) {
                 currentRegEmail = data.email;
@@ -1464,6 +1497,17 @@
             }
         }
 
+        async function handleResendVerification() {
+            if (!currentRegEmail) return showToast("No email on file to resend to — please register or log in again", "error");
+            disableBtn("resendVerifyBtn", 15000);
+            const res = await apiCall("resendVerificationCode", { email: currentRegEmail });
+            if (res.success) {
+                showVerifyStatus("A new code has been sent to " + currentRegEmail + ". Check your inbox or spam folder.", "success");
+            } else {
+                showVerifyStatus(res.message || "Could not resend code", "danger");
+            }
+        }
+
         function showVerifyStatus(msg, type) {
             const el = document.getElementById("verifyStatus");
             el.textContent = msg;
@@ -1494,7 +1538,7 @@
                 loadDashboard(res.assessmentNotification);
             } else if (res.message && res.message.toLowerCase().includes("verify")) {
                 currentRegEmail = email;
-                document.getElementById("verifyEmailDisplay").innerHTML = `Please verify first. Code sent to <strong>${email}</strong>`;
+                document.getElementById("verifyEmailDisplay").innerHTML = `Please verify your email first. Enter the code sent to <strong>${email}</strong> during registration, or click "Resend Verification Code" below if you no longer have it.`;
                 new bootstrap.Modal(document.getElementById("verifyModal")).show();
             } else {
                 showToast(res.message || "Login failed", "error");
