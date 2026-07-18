@@ -882,6 +882,32 @@
                         </div>
                     </div>
 
+                    <div class="grid grid-cols-2 gap-6 mt-6">
+                        <!-- Weekly Targets -->
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col overflow-hidden"
+                            style="max-height:340px;">
+                            <div class="flex justify-between items-center mb-2 shrink-0">
+                                <h4 class="text-xs font-bold text-emerald-400">AI Weekly Targets</h4>
+                                <button onclick="loadPartnerTargetsUI()"
+                                    class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-white">Refresh</button>
+                            </div>
+                            <div id="partnerTargetsList"
+                                class="flex-1 overflow-auto custom-scrollbar space-y-2 text-xs text-slate-300"></div>
+                        </div>
+
+                        <!-- Flagged Partners -->
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col overflow-hidden"
+                            style="max-height:340px;">
+                            <div class="flex justify-between items-center mb-2 shrink-0">
+                                <h4 class="text-xs font-bold text-amber-400">Flagged for Review (Missed Targets)</h4>
+                                <button onclick="loadFlaggedPartnersUI()"
+                                    class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-white">Refresh</button>
+                            </div>
+                            <div id="flaggedPartnersList"
+                                class="flex-1 overflow-auto custom-scrollbar space-y-2 text-xs text-slate-300"></div>
+                        </div>
+                    </div>
+
                 </div>
             </section>
 
@@ -5640,7 +5666,7 @@
                 'career-settlements': initializeModule_career_settlements,
                 'career-messages': initializeModule_career_messages,
                 'career-elevation': initializeModule_career_elevation,
-                'career-admin-tools': loadSignupCodes,
+                'career-admin-tools': () => { loadSignupCodes(); loadPartnerTargetsUI(); loadFlaggedPartnersUI(); },
                 'assessment-students': initializeModule_assess_submissions,
                 'assessment-courses': initializeModule_assessment_courses,
                 'assessment-questions': initializeModule_assessment_questions,
@@ -10570,6 +10596,44 @@
             if (res.oversizedTeams?.length) html += `<div class="text-amber-400 mt-2">Oversized: ${res.oversizedTeams.map(escapeHtml).join(', ')}</div>`;
             if (res.undersizedTeams?.length) html += `<div class="text-amber-400">Undersized: ${res.undersizedTeams.map(escapeHtml).join(', ')}</div>`;
             box.innerHTML = html || '<span class="text-slate-500">No recommendations at this time.</span>';
+        }
+
+        async function loadPartnerTargetsUI() {
+            const el = document.getElementById('partnerTargetsList');
+            el.innerHTML = '<span class="text-slate-500">Loading...</span>';
+            const res = await executeSecureBridgeCall('career', 'getPartnerTargetsForAdmin', {});
+            if (!res.success || !res.targets?.length) { el.innerHTML = '<span class="text-slate-500">No targets set yet.</span>'; return; }
+            el.innerHTML = res.targets.map(t => `
+                <div class="border border-slate-800 rounded p-2">
+                    <div class="flex justify-between">
+                        <strong>${escapeHtml(t.name || t.email)}</strong>
+                        <span class="${t.status === 'Missed' ? 'text-red-400' : t.status === 'Met' ? 'text-emerald-400' : 'text-slate-400'}">${escapeHtml(t.status)}</span>
+                    </div>
+                    <div class="text-slate-400">Week of ${escapeHtml(t.weekOf)} — ${t.actual}/${t.target} approved</div>
+                    ${t.rationale ? `<div class="text-slate-500 mt-1">${escapeHtml(t.rationale)}</div>` : ''}
+                </div>`).join('');
+        }
+
+        async function loadFlaggedPartnersUI() {
+            const el = document.getElementById('flaggedPartnersList');
+            el.innerHTML = '<span class="text-slate-500">Loading...</span>';
+            const res = await executeSecureBridgeCall('career', 'getFlaggedPartnersForReview', {});
+            if (!res.success || !res.flagged?.length) { el.innerHTML = '<span class="text-slate-500">No one currently flagged.</span>'; return; }
+            el.innerHTML = res.flagged.map(f => `
+                <div class="border border-amber-900/50 rounded p-2">
+                    <div class="flex justify-between items-center">
+                        <strong>${escapeHtml(f.email)}</strong>
+                        <button onclick="clearPartnerFlagUI('${escapeHtml(f.email)}')" class="text-xs px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-white">Clear</button>
+                    </div>
+                    <div class="text-amber-400">${f.consecutiveMisses} consecutive misses</div>
+                    <div class="text-slate-500">${escapeHtml(f.lastAction || '')} — ${fmtDate(f.lastActionAt)}</div>
+                </div>`).join('');
+        }
+
+        async function clearPartnerFlagUI(email) {
+            const res = await executeSecureBridgeCall('career', 'clearPartnerPerformanceFlag', { email });
+            if (res.success) { showToast('Flag cleared.', 'success'); loadFlaggedPartnersUI(); }
+            else showToast(res.message || 'Failed.', 'error');
         }
 
         async function loadAgentApprovals() {

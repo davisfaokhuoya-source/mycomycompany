@@ -612,6 +612,9 @@
                     </button>
                     <ul class="dropdown-menu w-100" aria-labelledby="tabDropdown" id="mainDropdownMenu"></ul>
                 </div>
+                <button class="btn btn-outline-secondary btn-sm w-100 mt-2" onclick="showPlatformGuide()">
+                    <i class="fas fa-book me-1"></i> Platform Guide & Policies
+                </button>
             </div>
 
             <!-- TAB 0: Submit Client -->
@@ -1017,6 +1020,13 @@
                 <h5><i class="fas fa-robot"></i> AI Coach</h5>
 
                 <div class="card portal-card mb-4">
+                    <div class="card-header bg-light"><strong>Your Target This Week</strong></div>
+                    <div class="card-body" id="myTargetBody">
+                        <p class="text-muted text-center py-2">Loading...</p>
+                    </div>
+                </div>
+
+                <div class="card portal-card mb-4">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
                         <strong>Your Weekly Tip &amp; Social Content</strong>
                         <button class="btn btn-sm btn-outline-secondary" onclick="loadWeeklyTipsAndContent(true)"><i
@@ -1079,6 +1089,89 @@
                 <div class="modal-footer">
                     <button onclick="submitWeeklyReportUI()" class="btn btn-primary" id="submitWeeklyReportBtn">Submit
                         Report</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reply Modal -->
+    <!-- Platform Guide Modal -->
+    <div class="modal fade" id="platformGuideModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-book"></i> Platform Guide & Policies</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <h6 class="text-primary">How You Became (or Become) a Bridge Partner</h6>
+                    <ol>
+                        <li>Register with a valid signup code — registration is invite-only, never open to the public.
+                        </li>
+                        <li>Verify your email with the code sent to you.</li>
+                        <li>Watch the training module for your current level in the Training Academy tab.</li>
+                        <li>Take the assessment. Pass, and you're approved immediately. If you don't pass, you can
+                            retake once after a 7-day wait — a second miss closes the application.</li>
+                        <li>Once approved, you can submit clients and start earning commission.</li>
+                    </ol>
+
+                    <h6 class="text-primary mt-4">Commission Structure</h6>
+                    <table class="table table-sm table-bordered">
+                        <tr>
+                            <td><strong>Bridge Partner</strong></td>
+                            <td>Up to 7%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Consultant</strong></td>
+                            <td>Up to 10%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Senior Consultant</strong></td>
+                            <td>Up to 15%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Area Manager</strong></td>
+                            <td>Up to 20%</td>
+                        </tr>
+                    </table>
+                    <p><strong>One-time vs. recurring earnings:</strong></p>
+                    <ul>
+                        <li><strong>One-time services</strong> (e.g. CAC/company registration) pay commission once, when
+                            the job is completed and paid.</li>
+                        <li><strong>Subscription/plan services</strong> (e.g. a client on Starter Ops) pay commission on
+                            <strong>every renewal</strong>, for as long as that client's subscription stays active.</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">Using the Platform</h6>
+                    <ul>
+                        <li><strong>My Available Tasks / Submit Client</strong> — the services you're allowed to offer
+                            at your level, and where you submit new client jobs.</li>
+                        <li><strong>My Records</strong> — every job you've submitted and its status/earnings.</li>
+                        <li><strong>Earnings & Payout</strong> — your balance and how to request payment.</li>
+                        <li><strong>Upgrade Assessment</strong> — check eligibility and test for your next tier.</li>
+                        <li><strong>AI Coach</strong> — your weekly target and progress, AI-generated tips and
+                            ready-to-post social content for TikTok, LinkedIn, Facebook, Instagram, and WhatsApp, and a
+                            chat assistant for questions.</li>
+                        <li><strong>Messages</strong> — direct messages with the admin team.</li>
+                        <li><strong>Complaint Tickets</strong> — raise an issue for admin to review.</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">Policies That Apply to You</h6>
+                    <ul>
+                        <li><strong>Weekly report:</strong> you'll be asked to submit a short check-in each week —
+                            highlights, challenges, and your plan for the week ahead.</li>
+                        <li><strong>Weekly target:</strong> our AI agent sets an individual weekly target based on your
+                            recent performance, aimed at helping you (and the business) grow steadily.</li>
+                        <li><strong>Missed targets:</strong> a first miss gets you a supportive check-in. A second
+                            consecutive miss flags your account for admin review. A third consecutive miss results in a
+                            one-tier adjustment (reversible as your performance improves) — unless you're already a
+                            Bridge Partner, in which case it goes to admin for a decision.</li>
+                        <li><strong>You are an independent contractor</strong>, not an employee of The Victorias Ltd.
+                        </li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
                 </div>
             </div>
         </div>
@@ -1475,7 +1568,7 @@
                     if (refSection) refSection.style.display = "none";
                     showLevel0Guide();
                 } else {
-                    const refLink = `https://thevictorias.com.ng/ssp?ref=${currentUser.uniqueID || ""}`;
+                    const refLink = `https://thevictorias.com.ng/career?ref=${currentUser.uniqueID || ""}`;
                     const refInput = document.getElementById("referralLinkInput");
                     if (refInput) refInput.value = refLink;
 
@@ -1507,11 +1600,25 @@
                 startUnreadPolling();
 
                 checkWeeklyReportPrompt(refreshRes.weeklyReport);
+                checkFirstLoginGuide(currentUser.email);
 
             } catch (error) {
                 console.error("loadDashboard error:", error);
                 showToast("Could not refresh dashboard. Your session is still active.", "warning");
             }
+        }
+
+        function showPlatformGuide() {
+            const modalEl = document.getElementById("platformGuideModal");
+            if (!modalEl || typeof bootstrap === "undefined") return;
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+
+        function checkFirstLoginGuide(email) {
+            const key = "victoriasGuideSeen_" + (email || "").toLowerCase();
+            if (localStorage.getItem(key)) return;
+            localStorage.setItem(key, "1");
+            showPlatformGuide();
         }
 
         // =========== WEEKLY REPORT ===========
@@ -1563,7 +1670,22 @@
         // =========== AI COACH ===========
         function loadAICoachTab() {
             loadWeeklyTipsAndContent(false);
+            loadMyTarget();
             renderAIChatHistory();
+        }
+
+        async function loadMyTarget() {
+            const body = document.getElementById("myTargetBody");
+            const res = await apiCall("getMyCurrentTarget", { token: currentToken }, false);
+            if (!res.success) { body.innerHTML = `<p class="text-danger">${escapeHtml(res.message || "Could not load target.")}</p>`; return; }
+            if (!res.target) { body.innerHTML = `<p class="text-muted">No target set yet — check back Monday.</p>`; return; }
+            const pct = Math.min(100, Math.round((res.current / res.target) * 100));
+            body.innerHTML = `
+                <p class="mb-1"><strong>${res.current} / ${res.target}</strong> approved jobs this week</p>
+                <div class="progress mb-2" style="height:8px;">
+                    <div class="progress-bar ${pct >= 100 ? 'bg-success' : ''}" style="width:${pct}%"></div>
+                </div>
+                <p class="text-muted small mb-0">${escapeHtml(res.rationale || "")}</p>`;
         }
 
         function _contentCard(label, icon, text) {
