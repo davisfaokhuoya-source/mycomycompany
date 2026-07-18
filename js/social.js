@@ -245,7 +245,7 @@ function clientRateLimit(key, maxPerMinute = 3) {
             window.outerHeight - window.innerHeight > threshold) {
             console.clear();
         }
-    }, 1000);
+    }, 30000);
 })();
 
 function safeTrackingInput(value) {
