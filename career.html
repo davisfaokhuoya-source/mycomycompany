@@ -1013,8 +1013,76 @@
                 </div>
             </div>
 
+            <div id="tabContent13" class="d-none">
+                <h5><i class="fas fa-robot"></i> AI Coach</h5>
+
+                <div class="card portal-card mb-4">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <strong>Your Weekly Tip &amp; Social Content</strong>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="loadWeeklyTipsAndContent(true)"><i
+                                class="fas fa-sync"></i> Regenerate</button>
+                    </div>
+                    <div class="card-body" id="aiCoachContentBody">
+                        <p class="text-muted text-center py-3">Loading your weekly content...</p>
+                    </div>
+                </div>
+
+                <div class="card portal-card mb-4">
+                    <div class="card-header bg-light"><strong>Ask the AI Agent</strong></div>
+                    <div class="card-body">
+                        <div id="aiChatHistory" style="max-height:300px;overflow-y:auto;" class="mb-3"></div>
+                        <div class="input-group">
+                            <input type="text" id="aiChatInput" class="form-control"
+                                placeholder="Ask about your jobs, tips, or the process..."
+                                onkeydown="if(event.key==='Enter') sendAIChatMessage();">
+                            <button class="btn btn-primary" onclick="sendAIChatMessage()" id="aiChatSendBtn"><i
+                                    class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div><!-- end dashboardSection -->
     </div><!-- end container -->
+
+    <!-- Reply Modal -->
+    <!-- Weekly Report Modal (mandatory when due — no close button) -->
+    <div class="modal fade" id="weeklyReportModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Your Weekly Check-In</h5>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Please share a quick update on your week. This helps our team support
+                        you better.</p>
+                    <div class="mb-2">
+                        <label class="form-label small">Jobs completed this week</label>
+                        <input type="number" id="wrJobsCompleted" class="form-control" min="0" placeholder="e.g. 5">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Highlights / wins</label>
+                        <textarea id="wrHighlights" class="form-control" rows="2"
+                            placeholder="What went well this week?"></textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Challenges / downsides</label>
+                        <textarea id="wrChallenges" class="form-control" rows="2"
+                            placeholder="Anything that held you back or that you're struggling with?"></textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Plan for next week</label>
+                        <textarea id="wrNextWeekPlan" class="form-control" rows="2"
+                            placeholder="What's your focus for next week?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button onclick="submitWeeklyReportUI()" class="btn btn-primary" id="submitWeeklyReportBtn">Submit
+                        Report</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Reply Modal -->
     <div class="modal fade" id="replyModal" tabindex="-1">
@@ -1110,11 +1178,11 @@
             { idx: 10, icon: "fas fa-credit-card", label: "Payment Links" },
             { idx: 11, icon: "fas fa-star", label: "Upgrade Assessment" },
             { idx: 12, icon: "fas fa-ticket-alt", label: "Complaint Tickets" },
-            { idx: 13, icon: "fas fa-hashtag", label: "My Weekly Content" }
+            { idx: 13, icon: "fas fa-robot", label: "AI Coach" }
         ];
 
         // Only these tabs are accessible to level 0 users
-        const LEVEL0_ALLOWED_TABS = new Set([6, 7, 11, 13]);
+        const LEVEL0_ALLOWED_TABS = new Set([6, 7, 11]);
 
         let currentToken = null;
         let currentUser = null;
@@ -1162,6 +1230,26 @@
                 li.innerHTML = `<a class="dropdown-item" href="#" onclick="showTab(${t.idx});closeDropdown();"><i class="${t.icon} me-2"></i>${t.label}${dot}</a>`;
                 menu.appendChild(li);
             });
+            _ensureTabDropdownInitialized();
+        }
+
+        // Explicitly (re)initialize the dropdown with a FIXED Popper strategy
+        // instead of relying purely on Bootstrap's automatic data-attribute
+        // init. This guards against the most common cause of a dropdown that
+        // "opens" but is invisible/clipped: an `overflow:auto`/`hidden`
+        // ancestor clipping Popper's default `position:absolute` placement.
+        // Safe to call repeatedly — bootstrap.Dropdown.getOrCreateInstance
+        // reuses the existing instance instead of creating duplicates.
+        function _ensureTabDropdownInitialized() {
+            const btn = document.getElementById("tabDropdown");
+            if (!btn || typeof bootstrap === "undefined") return;
+            try {
+                bootstrap.Dropdown.getOrCreateInstance(btn, {
+                    popperConfig: (defaultConfig) => ({ ...defaultConfig, strategy: "fixed" })
+                });
+            } catch (e) {
+                console.warn("Dropdown init fallback failed:", e);
+            }
         }
 
         // =========== LOADER ===========
@@ -1175,6 +1263,13 @@
             if (loader) loader.classList.remove("active");
         }
         // =========== TOAST ===========
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return "";
+            const div = document.createElement("div");
+            div.textContent = String(str);
+            return div.innerHTML;
+        }
+
         function showToast(msg, type = "info", duration = 5000) {
             const container = document.getElementById("toastContainer");
             const el = document.createElement("div");
@@ -1411,10 +1506,128 @@
                 loadMessages();
                 startUnreadPolling();
 
+                checkWeeklyReportPrompt(refreshRes.weeklyReport);
+
             } catch (error) {
                 console.error("loadDashboard error:", error);
                 showToast("Could not refresh dashboard. Your session is still active.", "warning");
             }
+        }
+
+        // =========== WEEKLY REPORT ===========
+        function checkWeeklyReportPrompt(weeklyReportStatus) {
+            if (!weeklyReportStatus || !weeklyReportStatus.due) return;
+            if (isLevel0()) return; // applicants aren't working jobs yet — no report expected
+            const modalEl = document.getElementById("weeklyReportModal");
+            if (!modalEl || typeof bootstrap === "undefined") return;
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        }
+
+        async function submitWeeklyReportUI() {
+            const btn = document.getElementById("submitWeeklyReportBtn");
+            const jobsCompleted = document.getElementById("wrJobsCompleted").value;
+            const highlights = document.getElementById("wrHighlights").value.trim();
+            const challenges = document.getElementById("wrChallenges").value.trim();
+            const nextWeekPlan = document.getElementById("wrNextWeekPlan").value.trim();
+
+            if (!highlights && !challenges) {
+                showToast("Please share at least your highlights or challenges.", "warning");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "Submitting...";
+            try {
+                const res = await apiCall("submitWeeklyReport", {
+                    token: currentToken, jobsCompleted, highlights, challenges, nextWeekPlan
+                });
+                if (res.success) {
+                    showToast("Thanks — your weekly report was submitted!", "success");
+                    const modalEl = document.getElementById("weeklyReportModal");
+                    bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+                    ["wrJobsCompleted", "wrHighlights", "wrChallenges", "wrNextWeekPlan"].forEach(id => {
+                        document.getElementById(id).value = "";
+                    });
+                } else {
+                    showToast(res.message || "Could not submit report.", "error");
+                }
+            } catch (e) {
+                showToast("Network error submitting report.", "error");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Submit Report";
+            }
+        }
+
+        // =========== AI COACH ===========
+        function loadAICoachTab() {
+            loadWeeklyTipsAndContent(false);
+            renderAIChatHistory();
+        }
+
+        function _contentCard(label, icon, text) {
+            const safe = text ? escapeHtml(text) : "(not available)";
+            return `<div class="border rounded p-3 mb-2">
+                <div class="d-flex justify-content-between align-items-start">
+                    <strong><i class="${icon} me-1"></i>${label}</strong>
+                    <button class="btn btn-sm btn-link p-0" onclick="copyToClipboard(this)" data-copy="${encodeURIComponent(text || '')}"><i class="fas fa-copy"></i> Copy</button>
+                </div>
+                <p class="mb-0 mt-1" style="white-space:pre-wrap;">${safe}</p>
+            </div>`;
+        }
+
+        function copyToClipboard(btn) {
+            const text = decodeURIComponent(btn.getAttribute("data-copy") || "");
+            if (!text) return;
+            navigator.clipboard.writeText(text).then(() => showToast("Copied!", "success", 1500));
+        }
+
+        async function loadWeeklyTipsAndContent(regenerate) {
+            const body = document.getElementById("aiCoachContentBody");
+            body.innerHTML = `<p class="text-muted text-center py-3">${regenerate ? "Regenerating" : "Loading"} your weekly content...</p>`;
+            const res = await apiCall("getMyWeeklyTipsAndContent", { token: currentToken, regenerate }, false);
+            if (!res.success) {
+                body.innerHTML = `<p class="text-danger text-center py-3">${escapeHtml(res.message || "Could not load content.")}</p>`;
+                return;
+            }
+            const c = res.content;
+            body.innerHTML =
+                `<div class="alert alert-info"><i class="fas fa-lightbulb me-1"></i> ${escapeHtml(c.tip || "")}</div>` +
+                _contentCard("TikTok", "fab fa-tiktok", c.tiktok) +
+                _contentCard("LinkedIn", "fab fa-linkedin", c.linkedin) +
+                _contentCard("Facebook", "fab fa-facebook", c.facebook) +
+                _contentCard("Instagram", "fab fa-instagram", c.instagram) +
+                _contentCard("WhatsApp Status", "fab fa-whatsapp", c.whatsappStatus) +
+                _contentCard("WhatsApp Group Message", "fab fa-whatsapp", c.whatsappGroup) +
+                _contentCard("WhatsApp Direct Message", "fab fa-whatsapp", c.whatsappDM);
+        }
+
+        function renderAIChatHistory() {
+            const hist = document.getElementById("aiChatHistory");
+            if (hist.children.length === 0) {
+                hist.innerHTML = `<div class="text-muted small text-center py-2">Ask me anything about your jobs, upgrades, or how to grow your business.</div>`;
+            }
+        }
+
+        async function sendAIChatMessage() {
+            const input = document.getElementById("aiChatInput");
+            const message = input.value.trim();
+            if (!message) return;
+            const hist = document.getElementById("aiChatHistory");
+            if (hist.querySelector(".text-muted")) hist.innerHTML = "";
+            hist.innerHTML += `<div class="mb-2"><strong>You:</strong> ${escapeHtml(message)}</div>`;
+            input.value = "";
+            const btn = document.getElementById("aiChatSendBtn");
+            btn.disabled = true;
+            hist.innerHTML += `<div class="mb-2 text-muted" id="aiChatTyping"><em>AI is typing...</em></div>`;
+            hist.scrollTop = hist.scrollHeight;
+
+            const res = await apiCall("careerHubAIChat", { token: currentToken, message }, false);
+            document.getElementById("aiChatTyping")?.remove();
+            hist.innerHTML += `<div class="mb-2"><strong>AI:</strong> ${escapeHtml(res.success ? res.reply : (res.message || "Something went wrong."))}</div>`;
+            hist.scrollTop = hist.scrollHeight;
+            btn.disabled = false;
         }
 
         // =========== UNREAD POLLING ===========
@@ -1448,7 +1661,7 @@
                 showToast("Complete your training and assessment to unlock this section.", "warning");
                 idx = 6;
             }
-            for (let i = 0; i <= 12; i++) {
+            for (let i = 0; i <= 13; i++) {
                 const el = document.getElementById(`tabContent${i}`);
                 if (el) el.classList.add("d-none");
             }
@@ -1472,6 +1685,7 @@
             if (idx === 10) loadMyPaymentLinks();
             if (idx === 11) loadAssessmentTab();
             if (idx === 12) loadComplaints();
+            if (idx === 13) loadAICoachTab();
         }
 
         function updateDropdownButton(idx) {
@@ -1490,10 +1704,18 @@
         async function loadMyRecords() {
             const tbody = document.querySelector("#recordsTable tbody");
             if (!tbody) return;
-            tbody.innerHTML = "<tr><td colspan='6' class='text-center text-muted'>Loading...</td></tr>";
+            // Silent refresh: only show "Loading..." on first load. On repeat
+            // calls (auto-refresh, tab revisit) just dim the existing rows so
+            // the view doesn't flash blank — matches the client dashboard's
+            // dataset.rendered pattern.
+            const isFirstLoad = tbody.dataset.rendered !== "1";
+            if (isFirstLoad) tbody.innerHTML = "<tr><td colspan='6' class='text-center text-muted'>Loading...</td></tr>";
+            else tbody.closest("table").style.opacity = "0.6";
             const res = await apiCall("getMyRecords", { token: currentToken }, false);
+            tbody.closest("table").style.opacity = "1";
             if (!res.success || !res.records || !res.records.length) {
                 tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No records yet.</td></tr>`;
+                tbody.dataset.rendered = "1";
                 return;
             }
             const allRec = res.records;
@@ -1525,6 +1747,7 @@
             window.recPrev = () => { if (recPage > 1) renderRecPage(recPage - 1); };
             window.recNext = () => { if (recPage < totalPages) renderRecPage(recPage + 1); };
             renderRecPage(1);
+            tbody.dataset.rendered = "1";
         }
 
         async function submitClientForm() {
@@ -1590,10 +1813,14 @@
         async function loadMyUpgrades() {
             const tbody = document.querySelector("#upgradeTable tbody");
             if (!tbody) return;
-            tbody.innerHTML = "<tr><td colspan='4' class='text-center text-muted'>Loading...</td></tr>";
-            const res = await apiCall("getMyUpgrades", { token: currentToken });
+            const isFirstLoad = tbody.dataset.rendered !== "1";
+            if (isFirstLoad) tbody.innerHTML = "<tr><td colspan='4' class='text-center text-muted'>Loading...</td></tr>";
+            else tbody.closest("table").style.opacity = "0.6";
+            const res = await apiCall("getMyUpgrades", { token: currentToken }, false);
+            tbody.closest("table").style.opacity = "1";
             if (!res.success || !res.upgrades || !res.upgrades.length) {
                 tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No requests yet.</td></tr>`;
+                tbody.dataset.rendered = "1";
                 return;
             }
             const all = res.upgrades;
@@ -1620,6 +1847,7 @@
             window.upPrev = () => { if (upPage > 1) renderUpPage(upPage - 1); };
             window.upNext = () => { if (upPage < totalPages) renderUpPage(upPage + 1); };
             renderUpPage(1);
+            tbody.dataset.rendered = "1";
         }
 
         async function sendUpgradeRequest() {
@@ -1648,7 +1876,7 @@
             document.getElementById("currentLevel").textContent = level;
             document.getElementById("currentTierName").textContent = TIER_NAMES[level] || "Applicant";
             document.getElementById("payoutBtn").disabled = (res.currentBalance || 0) < 15000;
-            const histRes = await apiCall("getPaymentHistory", { token: currentToken });
+            const histRes = await apiCall("getPaymentHistory", { token: currentToken }, false);
             const tbody = document.querySelector("#paymentHistoryTable tbody");
             tbody.innerHTML = "";
             if (histRes.success && histRes.history && histRes.history.length) {
@@ -1766,8 +1994,12 @@
         // =========== MESSAGES ===========
         async function loadMessages() {
             const container = document.getElementById("messagesContainer");
-            container.innerHTML = `<p class="text-center text-muted py-4">Loading messages...</p>`;
+            const isFirstLoad = container.dataset.rendered !== "1";
+            if (isFirstLoad) container.innerHTML = `<p class="text-center text-muted py-4">Loading messages...</p>`;
+            else container.style.opacity = "0.6";
             const res = await apiCall("getMyMessages", { token: currentToken, page: msgCurrentPage }, false);
+            container.style.opacity = "1";
+            container.dataset.rendered = "1";
             if (!res.success) { container.innerHTML = `<div class="alert alert-danger">${res.message}</div>`; return; }
             msgTotalPages = res.totalPages || 1;
             const total = res.total || 0;
@@ -2516,10 +2748,13 @@
                     currentToken = savedToken;
                     currentUser = JSON.parse(savedUser);
 
-                    // Extend expiry by 3 more hours on every load so active users
-                    // never get logged out mid-session
+                    // Extend expiry by 24 hours on every load so active users
+                    // stay signed in for a full day even if this particular
+                    // page load can't reach the server (loadDashboard() below
+                    // will push this out further, up to 7 days, once a
+                    // successful server refresh comes back).
                     const newExpiry = new Date();
-                    newExpiry.setHours(newExpiry.getHours() + 3);
+                    newExpiry.setHours(newExpiry.getHours() + 24);
                     localStorage.setItem("victoriasExpiry", newExpiry.getTime());
 
                     // Show dashboard immediately from localStorage — no server round-trip needed

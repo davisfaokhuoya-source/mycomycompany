@@ -386,11 +386,6 @@
                         Complaint Tickets
                     </a>
                     <a href="#" class="career-subview-link" data-target-view="career-admin-tools">Admin Tools</a>
-                    <a href="#" data-target-view="career-weekly-reports" class="career-subview-link">Weekly Reports
-                        &amp;
-                        AI Insights</a>
-                    <a href="#" data-target-view="career-team-insights" class="career-subview-link">Team
-                        Recommendations</a>
                     <div class="mt-4 border-t border-slate-800 pt-3 px-1">
                         <span
                             class="text-[10px] font-mono tracking-wider text-slate-500 uppercase px-2 mb-2 block">Universal
@@ -749,6 +744,30 @@
                             <!-- Signup Codes -->
                             <div class="flex flex-col overflow-hidden space-y-3">
                                 <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0">
+                                    <h4 class="text-xs font-bold text-amber-400 mb-2">Invite a Selected Applicant (with
+                                        credentials)</h4>
+                                    <div class="flex flex-col gap-2">
+                                        <div class="flex gap-2">
+                                            <input type="text" id="inviteName" placeholder="Full name"
+                                                class="flex-1 bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white" />
+                                            <input type="email" id="inviteEmail" placeholder="Email"
+                                                class="flex-1 bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white" />
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <input type="text" id="invitePassword"
+                                                placeholder="Password (8+ chars, upper/lower/number/symbol)"
+                                                class="flex-1 bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white" />
+                                            <button onclick="sendPartnerInviteWithCredentials()"
+                                                class="bg-amber-600 hover:bg-amber-500 text-xs text-white font-medium px-3 rounded whitespace-nowrap">Send
+                                                Invite</button>
+                                        </div>
+                                        <p class="text-[10px] text-slate-500">Generates a signup code bound to this
+                                            email + password and emails all three to the applicant. Code and password
+                                            expire in 7 days.</p>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0">
                                     <h4 class="text-xs font-bold text-emerald-400 mb-2">Generate Signup Codes</h4>
                                     <div class="flex gap-2">
                                         <input type="number" id="sigCodeCount" value="10" min="1" max="200"
@@ -769,6 +788,7 @@
                                                 <th class="p-3">Status</th>
                                                 <th class="p-3">Used By</th>
                                                 <th class="p-3">Note</th>
+                                                <th class="p-3 text-center">Action</th>
                                             </tr>
                                         </thead>
                                         <tbody id="signupCodesTableBody"
@@ -822,71 +842,43 @@
                         </div>
                     </div>
 
-                    <!-- VIEW: Weekly Reports & AI Insights -->
-                    <div id="view-career-weekly-reports"
-                        class="career-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
-                        <div class="flex justify-between items-center shrink-0">
-                            <div>
-                                <h3 class="text-lg font-bold text-white">Weekly Reports &amp; AI Insights</h3>
-                                <p class="text-xs text-slate-400">Partner-submitted weekly reports, AI scoring per
-                                    report, and a portfolio-wide digest.</p>
+                    <div class="grid grid-cols-2 gap-6 mt-6">
+                        <!-- Weekly Reports -->
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col overflow-hidden"
+                            style="max-height:340px;">
+                            <div class="flex justify-between items-center mb-2 shrink-0">
+                                <h4 class="text-xs font-bold text-emerald-400">Weekly Reports (AI Reviewed)</h4>
+                                <div class="flex gap-2">
+                                    <button onclick="loadWeeklyReportsRollupUI()"
+                                        class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-white">AI
+                                        Rollup</button>
+                                    <button onclick="loadWeeklyReportsUI(true)"
+                                        class="text-xs px-2 py-1 bg-amber-700 hover:bg-amber-600 rounded text-white">Flagged
+                                        Only</button>
+                                    <button onclick="loadWeeklyReportsUI(false)"
+                                        class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-white">All</button>
+                                </div>
                             </div>
-                            <div class="flex gap-2">
-                                <button onclick="loadWeeklyReportsUI()"
-                                    class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700">
-                                    <i class="fa-solid fa-arrows-rotate"></i> Refresh
-                                </button>
-                                <button onclick="generateAdminDigestUI()"
-                                    class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded">
-                                    <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Digest
-                                </button>
-                                <button onclick="runCareerAITriggersNowUI()"
-                                    class="bg-amber-700 hover:bg-amber-600 text-xs text-white font-medium py-1.5 px-3 rounded">
-                                    Run AI Jobs Now
-                                </button>
+                            <div id="weeklyReportsRollupBox"
+                                class="text-xs text-slate-300 mb-2 hidden bg-slate-900 rounded p-2 whitespace-pre-wrap shrink-0">
                             </div>
+                            <div id="weeklyReportsList"
+                                class="flex-1 overflow-auto custom-scrollbar space-y-2 text-xs text-slate-300"></div>
                         </div>
-                        <div id="adminDigestPanel"
-                            class="hidden shrink-0 bg-slate-950 border border-emerald-800/40 rounded-xl p-4 text-xs text-slate-300 space-y-2">
-                        </div>
-                        <div
-                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
-                            <table class="w-full text-left border-collapse text-xs">
-                                <thead
-                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
-                                    <tr>
-                                        <th class="p-3">Partner</th>
-                                        <th class="p-3">Week</th>
-                                        <th class="p-3">Jobs</th>
-                                        <th class="p-3">Status</th>
-                                        <th class="p-3">AI Score</th>
-                                        <th class="p-3">AI Summary</th>
-                                        <th class="p-3">Recommendations</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="weeklyReportsTableBody" class="divide-y divide-slate-800/50 text-slate-300">
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
 
-                    <!-- VIEW: Team Recommendations -->
-                    <div id="view-career-team-insights"
-                        class="career-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
-                        <div class="flex justify-between items-center shrink-0">
-                            <div>
-                                <h3 class="text-lg font-bold text-white">Team Recommendations</h3>
-                                <p class="text-xs text-slate-400">AI-suggested additions and rearrangements based on
-                                    the current roster and performance.</p>
+                        <!-- Team Recommendations -->
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col overflow-hidden"
+                            style="max-height:340px;">
+                            <div class="flex justify-between items-center mb-2 shrink-0">
+                                <h4 class="text-xs font-bold text-emerald-400">Team Recommendations</h4>
+                                <button onclick="loadTeamRecommendationsUI()"
+                                    class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-white">Analyze</button>
                             </div>
-                            <button onclick="generateTeamRecommendationsUI()"
-                                class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded">
-                                <i class="fa-solid fa-wand-magic-sparkles"></i> Suggest Team Changes
-                            </button>
-                        </div>
-                        <div id="teamRecsPanel"
-                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar p-4 text-xs text-slate-300 space-y-4">
-                            <p class="text-slate-500">Click "Suggest Team Changes" to generate recommendations.</p>
+                            <div id="teamRecommendationsBox"
+                                class="flex-1 overflow-auto custom-scrollbar text-xs text-slate-300 space-y-2">
+                                <p class="text-slate-500">Click Analyze to get suggestions for unassigned partners and
+                                    team rebalancing.</p>
+                            </div>
                         </div>
                     </div>
 
@@ -5473,6 +5465,28 @@
         function showTableSkeleton(tbodyId, cols = 5) {
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
+
+            // Silent refresh: once this tbody has been populated with real
+            // data at least once, subsequent calls (auto-refresh, revisiting
+            // a section) just dim the existing rows instead of wiping them
+            // out to a skeleton — matching the client dashboard's fast,
+            // non-jarring refresh feel. A one-time MutationObserver restores
+            // full opacity and marks the tbody as "has data" the moment the
+            // calling load function overwrites this tbody's content with its
+            // actual result (success rows or an empty-state row) — this
+            // works generically for every view using this shared helper,
+            // without needing each of the ~40 call sites to be edited.
+            if (tbody.dataset.hasData === "1") {
+                tbody.style.transition = "opacity 0.2s ease";
+                tbody.style.opacity = "0.5";
+                const observer = new MutationObserver(() => {
+                    tbody.style.opacity = "1";
+                    observer.disconnect();
+                });
+                observer.observe(tbody, { childList: true });
+                return;
+            }
+
             let html = "";
             for (let i = 0; i < 5; i++) {
                 html += "<tr>";
@@ -5482,6 +5496,15 @@
                 html += "</tr>";
             }
             tbody.innerHTML = html;
+
+            // First-load marker: once the load function replaces this
+            // skeleton with its real result, flag this tbody as having data
+            // so the NEXT refresh dims instead of wiping.
+            const firstLoadObserver = new MutationObserver(() => {
+                tbody.dataset.hasData = "1";
+                firstLoadObserver.disconnect();
+            });
+            firstLoadObserver.observe(tbody, { childList: true });
         }
 
         function emptyRow(message, cols) {
@@ -5617,6 +5640,7 @@
                 'career-settlements': initializeModule_career_settlements,
                 'career-messages': initializeModule_career_messages,
                 'career-elevation': initializeModule_career_elevation,
+                'career-admin-tools': loadSignupCodes,
                 'assessment-students': initializeModule_assess_submissions,
                 'assessment-courses': initializeModule_assessment_courses,
                 'assessment-questions': initializeModule_assessment_questions,
@@ -5629,8 +5653,6 @@
                 'leads-broadcast': loadBroadcastQueue,
                 'leads-drive': loadMailDriveReports,
                 'career-complaints': initializeModule_career_complaints,
-                'career-weekly-reports': loadWeeklyReportsUI,
-                'career-team-insights': () => { }, // no auto-load — recommendations are generated on demand
                 'leads-calendar': loadCalendarEvents,
                 'agent-clients': loadAgentClients,
                 'agent-subscriptions': loadAgentSubscriptions,
@@ -9006,9 +9028,13 @@
         }
 
         async function loadSignupCodes() {
-            showTableSkeleton('signupCodesTableBody', 5);
-            const res = await executeSecureBridgeCall('career', 'listSignupCodes', {});
             const tbody = document.getElementById('signupCodesTableBody');
+            // Silent refresh: only show the full skeleton on first load (empty table).
+            // Subsequent calls (auto-refresh, after generating/inviting) update the
+            // rows in place without a jarring wipe-and-reload flash.
+            const isFirstLoad = !tbody.querySelector('tr');
+            if (isFirstLoad) showTableSkeleton('signupCodesTableBody', 5);
+            const res = await executeSecureBridgeCall('career', 'listSignupCodes', {});
             if (!res.success || !res.codes?.length) { tbody.innerHTML = emptyRow('No signup codes yet.', 5); return; }
             tbody.innerHTML = res.codes.map(c => `
         <tr><td class="p-3 font-mono text-emerald-400">${escapeHtml(c.code)}</td>
@@ -9029,71 +9055,6 @@
             executeSecureBridgeCall('career', 'sendSignupCodeInvite', { code, email, name }).then(res => {
                 showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
             });
-        }
-
-        async function loadWeeklyReportsUI() {
-            showTableSkeleton('weeklyReportsTableBody', 7);
-            const res = await executeSecureBridgeCall('career', 'listWeeklyReports', {});
-            const tbody = document.getElementById('weeklyReportsTableBody');
-            if (!res.success || !res.reports?.length) { tbody.innerHTML = emptyRow('No weekly reports yet.', 7); return; }
-            tbody.innerHTML = res.reports.map(r => `
-        <tr><td class="p-3 text-white">${escapeHtml(r.partnerName || r.partnerEmail)}</td>
-        <td class="p-3 font-mono text-slate-400">${escapeHtml(r.weekKey)}</td>
-        <td class="p-3 text-center">${escapeHtml(String(r.jobsCompleted ?? '—'))}</td>
-        <td class="p-3 text-center">${badge(r.status)}</td>
-        <td class="p-3 text-center">${r.aiScore !== '' && r.aiScore != null ? escapeHtml(String(r.aiScore)) : '—'}</td>
-        <td class="p-3 text-slate-400 max-w-xs truncate" title="${escapeHtml(r.aiSummary || '')}">${escapeHtml(r.aiSummary || (r.status === 'Pending Review' ? 'Awaiting AI review…' : '—'))}</td>
-        <td class="p-3 text-slate-400 max-w-xs truncate" title="${escapeHtml(r.aiRecommendations || '')}">${escapeHtml(r.aiRecommendations || '—')}</td>
-        </tr>
-    `).join('');
-        }
-
-        async function generateAdminDigestUI() {
-            const panel = document.getElementById('adminDigestPanel');
-            panel.classList.remove('hidden');
-            panel.innerHTML = '<p class="text-slate-500">Generating digest from reviewed reports…</p>';
-            const res = await executeSecureBridgeCall('career', 'career-weekly-digest', {});
-            if (!res.success) { panel.innerHTML = `<p class="text-red-400">${escapeHtml(res.message || 'Failed to generate digest.')}</p>`; return; }
-            if (!res.digest) { panel.innerHTML = `<p class="text-slate-500">${escapeHtml(res.message || 'No reviewed reports yet.')}</p>`; return; }
-            const d = res.digest;
-            panel.innerHTML = `
-        <h4 class="text-sm font-bold text-emerald-400">Weekly Digest (${res.reportCount} reviewed reports)</h4>
-        <p><span class="text-slate-500 font-mono uppercase text-[10px] block mb-1">Progress</span>${escapeHtml(d.progress || '—')}</p>
-        <p><span class="text-slate-500 font-mono uppercase text-[10px] block mb-1">Downsides</span>${escapeHtml(d.downsides || '—')}</p>
-        <p><span class="text-slate-500 font-mono uppercase text-[10px] block mb-1">Recommendations</span>${escapeHtml(d.recommendations || '—')}</p>
-        <div class="flex gap-6 pt-1">
-            <div><span class="text-slate-500 font-mono uppercase text-[10px] block mb-1">Standout Partners</span>${(d.standoutPartners || []).map(escapeHtml).join(', ') || '—'}</div>
-            <div><span class="text-slate-500 font-mono uppercase text-[10px] block mb-1">At-Risk Partners</span>${(d.atRiskPartners || []).map(escapeHtml).join(', ') || '—'}</div>
-        </div>`;
-        }
-
-        async function runCareerAITriggersNowUI() {
-            showToast('Running AI jobs (report analysis, chat replies, weekly content)…', 'info');
-            const res = await executeSecureBridgeCall('career', 'career-run-ai-triggers-now', {});
-            showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
-            loadWeeklyReportsUI();
-        }
-
-        async function generateTeamRecommendationsUI() {
-            const panel = document.getElementById('teamRecsPanel');
-            panel.innerHTML = '<p class="text-slate-500">Analyzing roster…</p>';
-            const res = await executeSecureBridgeCall('career', 'career-team-recommendations', {});
-            if (!res.success) { panel.innerHTML = `<p class="text-red-400">${escapeHtml(res.message || 'Failed.')}</p>`; return; }
-            const rec = res.recommendations || {};
-            const additions = (rec.additions || []).map(a => `
-        <div class="bg-slate-900 border border-slate-800 rounded p-3">
-            <p class="text-white font-medium">${escapeHtml(a.partnerName || a.partnerEmail)} → <span class="text-emerald-400">${escapeHtml(a.suggestedTeam || '—')}</span></p>
-            <p class="text-slate-400 mt-1">${escapeHtml(a.reason || '')}</p>
-        </div>`).join('') || '<p class="text-slate-500">No additions suggested.</p>';
-            const rearrangements = (rec.rearrangements || []).map(r => `
-        <div class="bg-slate-900 border border-slate-800 rounded p-3">
-            <p class="text-white font-medium">${escapeHtml(r.partnerName || r.partnerEmail)}: <span class="text-amber-400">${escapeHtml(r.fromTeam || '—')}</span> → <span class="text-emerald-400">${escapeHtml(r.toTeam || '—')}</span></p>
-            <p class="text-slate-400 mt-1">${escapeHtml(r.reason || '')}</p>
-        </div>`).join('') || '<p class="text-slate-500">No rearrangements suggested.</p>';
-            panel.innerHTML = `
-        <p class="text-sm text-slate-300">${escapeHtml(rec.summary || '')}</p>
-        <div><h4 class="text-xs font-bold text-emerald-400 uppercase mb-2">Suggested Additions</h4><div class="space-y-2">${additions}</div></div>
-        <div><h4 class="text-xs font-bold text-amber-400 uppercase mb-2">Suggested Rearrangements</h4><div class="space-y-2">${rearrangements}</div></div>`;
         }
 
         async function loadAccessControlPanel() {
@@ -10513,6 +10474,22 @@
             }, 800);
         }
 
+        async function sendPartnerInviteWithCredentials() {
+            const name = document.getElementById('inviteName').value.trim();
+            const email = document.getElementById('inviteEmail').value.trim();
+            const password = document.getElementById('invitePassword').value;
+            if (!email || !password) { showToast('Email and password are required.', 'error'); return; }
+            const res = await executeSecureBridgeCall('career', 'adminInvitePartnerWithCredentials', { name, email, password, createdBy: CURRENT_ADMIN_IDENTITY });
+            if (res.success) {
+                showToast(`Invite sent to ${email} (code ${res.code}).`, 'success');
+                document.getElementById('inviteName').value = '';
+                document.getElementById('inviteEmail').value = '';
+                document.getElementById('invitePassword').value = '';
+                loadSignupCodes();
+            } else {
+                showToast(res.message || 'Failed.', 'error');
+            }
+        }
         async function generateSignupCodesUI() {
             const count = document.getElementById('sigCodeCount').value;
             const note = document.getElementById('sigCodeNote').value.trim();
@@ -10523,18 +10500,6 @@
             } else {
                 showToast(res.message || 'Failed.', 'error');
             }
-        }
-        async function loadSignupCodes() {
-            showTableSkeleton('signupCodesTableBody', 4);
-            const res = await executeSecureBridgeCall('career', 'listSignupCodes', {});
-            const tbody = document.getElementById('signupCodesTableBody');
-            if (!res.success || !res.codes?.length) { tbody.innerHTML = emptyRow('No signup codes yet.', 4); return; }
-            tbody.innerHTML = res.codes.map(c => `
-        <tr><td class="p-3 font-mono text-emerald-400">${escapeHtml(c.code)}</td>
-        <td class="p-3 text-center">${badge(c.status)}</td>
-        <td class="p-3 text-slate-400">${escapeHtml(c.usedBy || '—')}</td>
-        <td class="p-3 text-slate-500">${escapeHtml(c.note || '—')}</td></tr>
-    `).join('');
         }
         async function createTeamUI() {
             const teamName = document.getElementById('teamName').value.trim();
@@ -10561,7 +10526,52 @@
             });
         }
 
-        // ============ approvals ============
+        async function loadWeeklyReportsUI(onlyFlagged) {
+            const el = document.getElementById('weeklyReportsList');
+            el.innerHTML = '<span class="text-slate-500">Loading...</span>';
+            const res = await executeSecureBridgeCall('career', 'getWeeklyReportsForAdmin', { onlyFlagged });
+            if (!res.success || !res.reports?.length) { el.innerHTML = '<span class="text-slate-500">No reports found.</span>'; return; }
+            el.innerHTML = res.reports.map(r => `
+                <div class="border border-slate-800 rounded p-2">
+                    <div class="flex justify-between">
+                        <strong>${escapeHtml(r.name || r.email)}</strong>
+                        <span class="${r.sentiment === 'Negative' ? 'text-red-400' : r.sentiment === 'Positive' ? 'text-emerald-400' : 'text-slate-400'}">${escapeHtml(r.sentiment)}${r.flagged ? ' ⚠' : ''}</span>
+                    </div>
+                    <div class="text-slate-400">${fmtDate(r.submittedAt)}</div>
+                    <div class="mt-1">${escapeHtml(r.summary || '')}</div>
+                    ${r.recommendation ? `<div class="mt-1 text-amber-300">→ ${escapeHtml(r.recommendation)}</div>` : ''}
+                </div>`).join('');
+        }
+
+        async function loadWeeklyReportsRollupUI() {
+            const box = document.getElementById('weeklyReportsRollupBox');
+            box.classList.remove('hidden');
+            box.textContent = 'Generating AI rollup...';
+            const res = await executeSecureBridgeCall('career', 'getWeeklyReportsRollup', { days: 7 });
+            box.textContent = res.success ? res.rollup : (res.message || 'Failed to generate rollup.');
+        }
+
+        async function loadTeamRecommendationsUI() {
+            const box = document.getElementById('teamRecommendationsBox');
+            box.innerHTML = '<span class="text-slate-500">Analyzing teams...</span>';
+            const res = await executeSecureBridgeCall('career', 'getTeamRecommendations', {});
+            if (!res.success) { box.innerHTML = `<span class="text-red-400">${escapeHtml(res.message || 'Failed.')}</span>`; return; }
+            let html = '';
+            if (res.narrative) html += `<div class="bg-slate-900 rounded p-2 whitespace-pre-wrap mb-2">${escapeHtml(res.narrative)}</div>`;
+            if (res.suggestions?.length) {
+                html += `<div class="text-slate-400 mb-1">Unassigned partners (${res.unassignedCount}):</div>`;
+                html += res.suggestions.map(s => `
+                    <div class="border border-slate-800 rounded p-2 mb-1">
+                        <strong>${escapeHtml(s.partner.name)}</strong> (${escapeHtml(s.partner.tierName)}, ${escapeHtml(s.partner.state || '—')})
+                        <div class="text-slate-400">${s.suggestedTeam ? '→ Suggest: ' + escapeHtml(s.suggestedTeam) : '→ No matching team'}</div>
+                        <div class="text-slate-500">${escapeHtml(s.reason)}</div>
+                    </div>`).join('');
+            }
+            if (res.oversizedTeams?.length) html += `<div class="text-amber-400 mt-2">Oversized: ${res.oversizedTeams.map(escapeHtml).join(', ')}</div>`;
+            if (res.undersizedTeams?.length) html += `<div class="text-amber-400">Undersized: ${res.undersizedTeams.map(escapeHtml).join(', ')}</div>`;
+            box.innerHTML = html || '<span class="text-slate-500">No recommendations at this time.</span>';
+        }
+
         async function loadAgentApprovals() {
             showTableSkeleton('agentApprovalsTableBody', 7);
             const status = document.getElementById('approvalsStatusFilter')?.value || 'Pending Review';
