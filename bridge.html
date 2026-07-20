@@ -5251,7 +5251,12 @@
         const ENABLE_ADMIN_AUTO_REFRESH = false; // <-- flip to true to restore old behavior
         function startAutoRefresh(viewKey, fn, intervalMs = 30000) {
             stopAutoRefresh();
-            if (!ENABLE_ADMIN_AUTO_REFRESH) return;
+            // [CHANGED] Global admin auto-refresh stays off (ENABLE_ADMIN_AUTO_REFRESH),
+            // but the AI Agent Control "active tasks" view is explicitly allow-listed
+            // so it keeps polling every 30s regardless — tasks in progress shouldn't
+            // require a manual refresh to see updated status.
+            const AUTO_REFRESH_ALLOWLIST = ['agent-tasks'];
+            if (!ENABLE_ADMIN_AUTO_REFRESH && AUTO_REFRESH_ALLOWLIST.indexOf(viewKey) === -1) return;
             ACTIVE_AUTO_REFRESH = setInterval(() => {
                 const el = document.getElementById('view-' + viewKey);
                 if (el && !el.classList.contains('hidden')) fn();
