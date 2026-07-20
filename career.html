@@ -1576,9 +1576,27 @@
                         <!-- TAB 9: Material -->
                         <div id="tabContent9" class="d-none" style="margin-bottom:20px;">
                             <h5><i class="fas fa-photo-video"></i> Material</h5>
+                            <div class="btn-group mt-2 mb-1" role="group" id="materialFilterGroup">
+                                <button type="button" class="btn btn-sm btn-primary" data-filter="all"
+                                    onclick="setMaterialFilter('all')">All</button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-filter="video"
+                                    onclick="setMaterialFilter('video')">Video</button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-filter="image"
+                                    onclick="setMaterialFilter('image')">Image</button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-filter="document"
+                                    onclick="setMaterialFilter('document')">Document</button>
+                            </div>
                             <div id="materialResourcesContainer" class="row g-4 mt-2">
                                 <div class="col-12 text-center text-muted py-4"><i
                                         class="fas fa-spinner fa-spin fa-2x"></i></div>
+                            </div>
+                            <div id="materialPagination"
+                                class="d-flex justify-content-between align-items-center mt-2 d-none">
+                                <button class="btn btn-sm btn-outline-secondary" id="btnMaterialPrev"
+                                    onclick="renderMaterialPage(materialPage - 1)">Previous</button>
+                                <span class="small text-muted" id="materialPageInfo"></span>
+                                <button class="btn btn-sm btn-outline-secondary" id="btnMaterialNext"
+                                    onclick="renderMaterialPage(materialPage + 1)">Next</button>
                             </div>
                         </div>
 
@@ -2986,7 +3004,7 @@
                 return;
             }
             const allRec = res.records;
-            const perPage = 15;
+            const perPage = 10;
             let recPage = 1;
             const totalPages = Math.ceil(allRec.length / perPage);
             function renderRecPage(p) {
@@ -3273,7 +3291,7 @@
             document.getElementById("messagesCount").textContent = `${total} total message(s) | Page ${msgCurrentPage} of ${msgTotalPages}`;
             const messages = res.messages || [];
             const pagination = document.getElementById("msgPagination");
-            if (total > 6) {
+            if (total > 10) {
                 pagination.classList.remove("d-none");
                 document.getElementById("btnMsgPrev").disabled = msgCurrentPage <= 1;
                 document.getElementById("btnMsgNext").disabled = msgCurrentPage >= msgTotalPages;
@@ -3442,8 +3460,12 @@
             tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Uploaded documents appear here after admin review.</td></tr>`;
         }
 
-        // =========== MEDIA RESOURCES ===========
-        // =========== MATERIAL (image resources) ===========
+        // =========== MATERIAL (image/document/video resources) ===========
+        let allMaterialItems = [];
+        let materialFilter = "all";
+        let materialPage = 1;
+        const MATERIAL_PER_PAGE = 10;
+
         async function loadMediaResources() {
             const container = document.getElementById("materialResourcesContainer");
             container.innerHTML = `<div class="col-12 text-center text-muted py-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>`;
@@ -3451,14 +3473,43 @@
             const res = await apiCall("getMaterialResources", { token: currentToken }, false);
             if (!res.success || !res.resources) {
                 container.innerHTML = `<div class="col-12"><div class="alert alert-info">Could not load material.</div></div>`;
+                document.getElementById("materialPagination").classList.add("d-none");
                 return;
             }
 
-            const items = res.resources;
-            if (!items.length) {
-                container.innerHTML = `<div class="col-12"><div class="alert alert-info">No material available for your level yet.</div></div>`;
+            allMaterialItems = res.resources;
+            materialPage = 1;
+            renderMaterialPage(1);
+        }
+
+        function setMaterialFilter(type) {
+            materialFilter = type;
+            document.querySelectorAll("#materialFilterGroup button").forEach(btn => {
+                const active = btn.dataset.filter === type;
+                btn.classList.toggle("btn-primary", active);
+                btn.classList.toggle("btn-outline-primary", !active);
+            });
+            materialPage = 1;
+            renderMaterialPage(1);
+        }
+
+        function renderMaterialPage(p) {
+            const container = document.getElementById("materialResourcesContainer");
+            const pagination = document.getElementById("materialPagination");
+            const filtered = materialFilter === "all"
+                ? allMaterialItems
+                : allMaterialItems.filter(m => m.type === materialFilter);
+
+            if (!filtered.length) {
+                container.innerHTML = `<div class="col-12"><div class="alert alert-info">No ${materialFilter === "all" ? "material" : materialFilter} available for your level yet.</div></div>`;
+                pagination.classList.add("d-none");
                 return;
             }
+
+            const totalPages = Math.ceil(filtered.length / MATERIAL_PER_PAGE);
+            materialPage = Math.min(Math.max(1, p), totalPages);
+            const start = (materialPage - 1) * MATERIAL_PER_PAGE;
+            const items = filtered.slice(start, start + MATERIAL_PER_PAGE);
 
             container.innerHTML = items.map(m => {
                 let media;
@@ -3491,6 +3542,15 @@
                     </div>
                 </div>`;
             }).join("");
+
+            if (totalPages > 1) {
+                pagination.classList.remove("d-none");
+                document.getElementById("btnMaterialPrev").disabled = materialPage <= 1;
+                document.getElementById("btnMaterialNext").disabled = materialPage >= totalPages;
+                document.getElementById("materialPageInfo").textContent = `Page ${materialPage} of ${totalPages} (${filtered.length} total)`;
+            } else {
+                pagination.classList.add("d-none");
+            }
         }
 
         function copyReferralLink() {
@@ -3610,7 +3670,8 @@
 
             serverQuestions.forEach((q, idx) => {
                 html += `<div class="mb-4">
-      <p class="fw-bold">${idx + 1}. ${q.q}</p>
+      <p class="fw-bold mb-1">${idx + 1}. ${q.q}</p>
+      <span class="badge bg-secondary mb-2">${q.category}</span>
       <div class="d-flex flex-column gap-2">`;
                 q.a.forEach((opt, oidx) => {
                     html += `<div class="form-check">
@@ -3747,6 +3808,26 @@
       <p class="mb-0 small text-muted">You can retake after 7 days.</p>
       ${extraNote}
     </div>`;
+            }
+            if (res.review && res.review.length) {
+                resultEl.innerHTML += `
+                <div class="mt-3">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#assessmentReview">
+                        Review your answers
+                    </button>
+                    <div class="collapse mt-2" id="assessmentReview">
+                        ${res.review.map((r, i) => `
+                            <div class="border rounded p-2 mb-2 ${r.correct ? 'border-success' : 'border-danger'}">
+                                <span class="badge bg-secondary mb-1">${r.category}</span>
+                                <p class="fw-bold mb-1">${i + 1}. ${r.q}</p>
+                                <p class="mb-1 small">Your answer: <strong>${r.yourAnswer}</strong>
+                                    ${r.correct ? '<i class="fas fa-check text-success ms-1"></i>' : `<i class="fas fa-times text-danger ms-1"></i> — Correct answer: <strong>${r.correctAnswer}</strong>`}
+                                </p>
+                                ${r.why ? `<p class="mb-0 small text-muted"><i class="fas fa-lightbulb me-1"></i>${r.why}</p>` : ''}
+                            </div>
+                        `).join("")}
+                    </div>
+                </div>`;
             }
             document.getElementById("assessmentQuestions").innerHTML = "";
             const startBtn = document.getElementById("startTestBtn");
@@ -3943,17 +4024,34 @@
                 container.innerHTML = `<p class="text-muted text-center py-3">No complaints submitted yet.</p>`;
                 return;
             }
-            let html = "";
-            res.complaints.forEach(c => {
-                const statusBg = c.status === "Resolved" ? "success" : c.status === "In Review" ? "warning" : "secondary";
-                html += `<div class="border rounded p-3 mb-3">
-            <div class="d-flex justify-content-between align-items-start mb-2"><strong>${c.subject}</strong><span class="complaint-badge bg-${statusBg}">${c.status}</span></div>
-            <p class="small text-muted mb-1">${new Date(c.date).toLocaleDateString("en-GB")}</p>
-            <p class="mb-2">${c.message}</p>
-            ${c.adminReply ? `<div class="alert alert-info mb-0 small"><strong>Admin Reply:</strong> ${c.adminReply}</div>` : ""}
-        </div>`;
-            });
-            container.innerHTML = html;
+            const all = res.complaints;
+            const perPage = 10;
+            let page = 1;
+            const totalPages = Math.ceil(all.length / perPage);
+            function renderComplaintsPage(p) {
+                page = p;
+                const slice = all.slice((p - 1) * perPage, p * perPage);
+                let html = "";
+                slice.forEach(c => {
+                    const statusBg = c.status === "Resolved" ? "success" : c.status === "In Review" ? "warning" : "secondary";
+                    html += `<div class="border rounded p-3 mb-3">
+                <div class="d-flex justify-content-between align-items-start mb-2"><strong>${c.subject}</strong><span class="complaint-badge bg-${statusBg}">${c.status}</span></div>
+                <p class="small text-muted mb-1">${new Date(c.date).toLocaleDateString("en-GB")}</p>
+                <p class="mb-2">${c.message}</p>
+                ${c.adminReply ? `<div class="alert alert-info mb-0 small"><strong>Admin Reply:</strong> ${c.adminReply}</div>` : ""}
+            </div>`;
+                });
+                if (totalPages > 1) {
+                    html += `<div class="d-flex justify-content-between align-items-center mt-2">
+                <button class="btn btn-sm btn-outline-secondary" ${p <= 1 ? "disabled" : ""} onclick="renderComplaintsPage(${p - 1})">Previous</button>
+                <span class="small text-muted">Page ${p} of ${totalPages}</span>
+                <button class="btn btn-sm btn-outline-secondary" ${p >= totalPages ? "disabled" : ""} onclick="renderComplaintsPage(${p + 1})">Next</button>
+            </div>`;
+                }
+                container.innerHTML = html;
+            }
+            window.renderComplaintsPage = renderComplaintsPage; // exposed for the Prev/Next button handlers above
+            renderComplaintsPage(1);
         }
 
         // =========== FORM CLEAR ===========
