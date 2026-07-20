@@ -2540,6 +2540,7 @@
                 document.getElementById("authSection").classList.add("d-none");
                 document.getElementById("dashboardSection").classList.remove("d-none");
                 loadDashboard(res.assessmentNotification);
+                announceTargetIfSet();
             } else if (res.message && res.message.toLowerCase().includes("verify")) {
                 currentRegEmail = email;
                 document.getElementById("verifyEmailDisplay").innerHTML = `Please verify your email first. Enter the code sent to <strong>${email}</strong> during registration, or click "Resend Verification Code" below if you no longer have it.`;
@@ -2775,9 +2776,21 @@
 
         async function loadMyTarget() {
             const body = document.getElementById("myTargetBody");
-            const res = await apiCall("getMyCurrentTarget", { token: currentToken }, false);
-            if (!res.success) { body.innerHTML = `<p class="text-danger">${escapeHtml(res.message || "Could not load target.")}</p>`; return; }
-            if (!res.target) { body.innerHTML = `<p class="text-muted">No target set yet — check back Monday.</p>`; return; }
+            body.innerHTML = `<p class="text-muted mb-0"><i class="fas fa-spinner fa-spin me-1"></i> Loading your task...</p>`;
+            let res;
+            try {
+                res = await apiCall("getMyCurrentTarget", { token: currentToken }, false);
+            } catch (e) {
+                res = null;
+            }
+            if (!res || !res.success) {
+                body.innerHTML = `<p class="text-danger mb-0"><i class="fas fa-triangle-exclamation me-1"></i> Unable to load your task. Please contact admin.</p>`;
+                return;
+            }
+            if (!res.target) {
+                body.innerHTML = `<p class="text-muted mb-0">No task for now — check back tomorrow.</p>`;
+                return;
+            }
             const pct = Math.min(100, Math.round((res.current / res.target) * 100));
             body.innerHTML = `
                 <p class="mb-1"><strong>${res.current} / ${res.target}</strong> approved jobs this week</p>
@@ -2785,6 +2798,26 @@
                     <div class="progress-bar ${pct >= 100 ? 'bg-success' : ''}" style="width:${pct}%"></div>
                 </div>
                 <p class="text-muted small mb-0">${escapeHtml(res.rationale || "")}</p>`;
+        }
+
+        // Shown once per week (not on every page reload) so a partner knows
+        // their target was actually set, without having to open the AI
+        // Coach tab themselves and second-guess whether they were assigned
+        // anything at all.
+        async function announceTargetIfSet() {
+            try {
+                const res = await apiCall("getMyCurrentTarget", { token: currentToken }, false);
+                if (!res || !res.success || !res.target) return;
+                const weekKey = res.weekOf || "unknown";
+                const flagKey = "victoriasTargetAnnounced_" + weekKey;
+                if (localStorage.getItem(flagKey)) return;
+                localStorage.setItem(flagKey, "1");
+                const jobWord = res.target === 1 ? "job" : "jobs";
+                showToast(`🎯 Your target this week is set: ${res.target} approved ${jobWord}. See the AI Coach tab for details.`, "success", 8000);
+            } catch (e) {
+                // Non-critical — silently skip if this fails, the AI Coach
+                // tab itself is still the source of truth.
+            }
         }
 
         function _contentCard(label, icon, text) {
@@ -3334,7 +3367,7 @@
             }
 
             container.innerHTML = videos.map(v => `
-                <div class="col-12 col-md-6">
+                <div class="${videos.length === 1 ? 'col-12 col-lg-8 mx-auto' : 'col-12 col-md-6'}">
                     <div class="card h-100">
                         <div class="video-wrapper">
                             <iframe src="${v.link}" title="${v.title}" frameborder="0"
@@ -3439,7 +3472,12 @@
                 } else {
                     media = `<img src="${m.link}" class="card-img-top" alt="${m.title}" style="height:200px;object-fit:cover;">`;
                 }
-                const colClass = m.type === "video" ? "col-12 col-md-6" : "col-12 col-sm-6 col-md-4";
+                let colClass;
+                if (items.length === 1) {
+                    colClass = m.type === "video" ? "col-12 col-lg-8 mx-auto" : "col-12 col-md-6 mx-auto";
+                } else {
+                    colClass = m.type === "video" ? "col-12 col-md-6" : "col-12 col-sm-6 col-md-4";
+                }
                 return `
                 <div class="${colClass}">
                     <div class="card h-100">
@@ -3988,6 +4026,7 @@
                     // Ask the backend for the ground truth. loadDashboard()
                     // handles the "session expired" case itself.
                     loadDashboard();
+                    announceTargetIfSet();
                 } catch (e) {
                     console.error("Session restore failed:", e);
                     clearSession();
