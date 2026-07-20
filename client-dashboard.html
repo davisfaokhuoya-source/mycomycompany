@@ -197,6 +197,12 @@
                 <div class="truncate">
                     <h1 class="text-sm font-bold tracking-wide text-white truncate" id="companyNameLabel">Client</h1>
                     <p class="text-[10px] font-mono tracking-wider text-emerald-400 uppercase" id="tierLabel">—</p>
+                    <p class="text-[10px] text-slate-500 mt-0.5 truncate">
+                        <span id="planLabel"></span>
+                        <span id="planPrice" class="text-slate-400"></span>
+                        <span id="planCustomBadge"
+                            class="hidden ml-1 px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[9px] uppercase">Custom</span>
+                    </p>
                 </div>
             </div>
 
@@ -575,53 +581,62 @@
             const res = await callGateway('clientportal', 'clientPortalDashboard');
             if (!res.success) { showLoginError(res.message || 'Session expired.'); logoutClient(); return; }
 
-            document.getElementById('companyNameLabel').textContent = res.companyName || CLIENT_ID;
-            document.getElementById('tierLabel').textContent = (res.tier || '').replace(/_/g, ' ');
-            // [NEW] Plan price — server already resolved base vs. custom
-            // override; frontend just displays whatever it says.
-            const pricing = res.pricing;
-            if (pricing) {
-                document.getElementById('planLabel').textContent = pricing.label || (res.tier || '').replace(/_/g, ' ');
-                document.getElementById('planPrice').textContent = pricing.priceNgn
-                    ? '₦' + Number(pricing.priceNgn).toLocaleString() + ' /mo'
-                    : 'Contact Sales';
-                document.getElementById('planCustomBadge').classList.toggle('hidden', !pricing.isCustom);
-            }
-            const u = res.usage || {};
-            // [CHANGED] limits now come from the backend's real _checkQuota (same
-            // source of truth the admin dashboard uses) instead of being absent —
-            // older gateway deployments without this field fall back gracefully.
-            const lim = res.limits || {};
+            try {
+                document.getElementById('companyNameLabel').textContent = res.companyName || CLIENT_ID;
+                document.getElementById('tierLabel').textContent = (res.tier || '').replace(/_/g, ' ');
+                // [NEW] Plan price — server already resolved base vs. custom
+                // override; frontend just displays whatever it says.
+                const pricing = res.pricing;
+                if (pricing) {
+                    document.getElementById('planLabel').textContent = pricing.label || (res.tier || '').replace(/_/g, ' ');
+                    document.getElementById('planPrice').textContent = pricing.priceNgn
+                        ? '₦' + Number(pricing.priceNgn).toLocaleString() + ' /mo'
+                        : 'Contact Sales';
+                    document.getElementById('planCustomBadge').classList.toggle('hidden', !pricing.isCustom);
+                }
+                const u = res.usage || {};
+                // [CHANGED] limits now come from the backend's real _checkQuota (same
+                // source of truth the admin dashboard uses) instead of being absent —
+                // older gateway deployments without this field fall back gracefully.
+                const lim = res.limits || {};
 
-            renderQuotaStat('statEmails', 'barEmails', u.emailsUsed || 0, lim.emails ?? '—');
-            renderQuotaStat('statProposals', 'barProposals', u.proposalsUsed || 0, lim.proposals ?? '—');
-            renderQuotaStat('statDocuments', 'barDocuments', u.documentsUsed || 0, lim.documents ?? '—');
+                renderQuotaStat('statEmails', 'barEmails', u.emailsUsed || 0, lim.emails ?? '—');
+                renderQuotaStat('statProposals', 'barProposals', u.proposalsUsed || 0, lim.proposals ?? '—');
+                renderQuotaStat('statDocuments', 'barDocuments', u.documentsUsed || 0, lim.documents ?? '—');
 
-            // Hours ring — now reflects the real limit instead of an arbitrary
-            // "visual only" percentage.
-            const hoursUsed = parseFloat(u.hoursUsed) || 0;
-            const hoursLimit = lim.hours;
-            const hoursUnlimited = hoursLimit === 999 || hoursLimit === undefined;
-            document.getElementById('statHours').textContent = hoursUnlimited ? `${hoursUsed} / Unlimited` : `${hoursUsed} / ${hoursLimit}`;
-            const ring = document.getElementById('ringHours');
-            const circumference = 175.9;
-            const pct = hoursUnlimited ? 6 : Math.min(100, (hoursUsed / Math.max(1, hoursLimit)) * 100);
-            ring.style.strokeDashoffset = circumference - (circumference * pct / 100);
+                // Hours ring — now reflects the real limit instead of an arbitrary
+                // "visual only" percentage.
+                const hoursUsed = parseFloat(u.hoursUsed) || 0;
+                const hoursLimit = lim.hours;
+                const hoursUnlimited = hoursLimit === 999 || hoursLimit === undefined;
+                document.getElementById('statHours').textContent = hoursUnlimited ? `${hoursUsed} / Unlimited` : `${hoursUsed} / ${hoursLimit}`;
+                const ring = document.getElementById('ringHours');
+                const circumference = 175.9;
+                const pct = hoursUnlimited ? 6 : Math.min(100, (hoursUsed / Math.max(1, hoursLimit)) * 100);
+                ring.style.strokeDashoffset = circumference - (circumference * pct / 100);
 
-            const pd = res.portalDocs || { used: 0, limit: 10 };
-            const limitLabel = pd.limit >= 999 ? 'Unlimited' : `${pd.used} / ${pd.limit} used`;
-            document.getElementById('portalDocsBadge').textContent = limitLabel;
-            const pdPct = pd.limit >= 999 ? 8 : Math.min(100, (pd.used / Math.max(1, pd.limit)) * 100);
-            document.getElementById('portalDocsBar').style.width = pdPct + '%';
+                const pd = res.portalDocs || { used: 0, limit: 10 };
+                const limitLabel = pd.limit >= 999 ? 'Unlimited' : `${pd.used} / ${pd.limit} used`;
+                document.getElementById('portalDocsBadge').textContent = limitLabel;
+                const pdPct = pd.limit >= 999 ? 8 : Math.min(100, (pd.used / Math.max(1, pd.limit)) * 100);
+                document.getElementById('portalDocsBar').style.width = pdPct + '%';
 
-            const list = document.getElementById('recentDocsList');
-            const docs = res.recentDocuments || [];
-            list.innerHTML = docs.length ? docs.map(d => `
+                const list = document.getElementById('recentDocsList');
+                const docs = res.recentDocuments || [];
+                list.innerHTML = docs.length ? docs.map(d => `
             <div class="flex justify-between items-center bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
                 <span class="text-slate-200">${escapeHtml(d.title || d.type)}</span>
                 <span class="text-slate-500 text-[10px]">${fmtDate(d.createdAt)}</span>
             </div>
         `).join('') : '<p class="text-slate-600">No documents yet.</p>';
+            } catch (e) {
+                // [NEW] A thrown error here used to abort silently mid-function,
+                // leaving every stat frozen on its placeholder markup with no
+                // indication anything was wrong. Now it's surfaced clearly.
+                console.error('loadOverview render error:', e);
+                const list = document.getElementById('recentDocsList');
+                if (list) list.innerHTML = `<p class="text-red-400">Couldn't render dashboard data: ${escapeHtml(e.message || e.toString())}</p>`;
+            }
         }
 
         // =====================================================================
