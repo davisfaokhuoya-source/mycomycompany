@@ -1093,7 +1093,7 @@
                             <div id="passportUploadView" class="d-none">
                                 <p class="small text-muted">Congratulations on passing your assessment! Upload a clear
                                     passport
-                                    photograph (JPG or PNG, max 2MB). You can only do this once.</p>
+                                    photograph (JPG or PNG, max 550KB). You can only do this once.</p>
                                 <input type="file" id="passportFileInput" accept="image/png,image/jpeg,image/jpg"
                                     class="form-control mb-2" />
                                 <button class="btn btn-primary btn-sm" onclick="handlePassportUpload()">Submit
@@ -3843,7 +3843,18 @@
                 document.getElementById("passportUploadedView").classList.remove("d-none");
                 document.getElementById("passportUploadView").classList.add("d-none");
                 document.getElementById("passportLockedView").classList.add("d-none");
-                document.getElementById("passportPreviewImg").src = res.passportUrl;
+                // res.passportUrl is a private Drive viewer link — a browser
+                // can't render that inside an <img>. Fetch the actual image
+                // bytes through the backend instead (it has Drive access)
+                // and use the returned data URL.
+                const imgEl = document.getElementById("passportPreviewImg");
+                imgEl.src = "";
+                const imgRes = await apiCall("getPassportImage", { token: currentToken }, false);
+                if (imgRes.success) {
+                    imgEl.src = imgRes.dataUrl;
+                } else {
+                    imgEl.alt = "Passport on file (preview unavailable)";
+                }
             } else if (res.unlocked) {
                 document.getElementById("passportUploadView").classList.remove("d-none");
                 document.getElementById("passportUploadedView").classList.add("d-none");
@@ -3859,7 +3870,7 @@
             const fileInput = document.getElementById("passportFileInput");
             const file = fileInput.files[0];
             if (!file) return showToast("Choose a photo first", "error");
-            if (file.size > 2 * 1024 * 1024) return showToast("File exceeds 2MB", "error");
+            if (file.size > 600 * 1024) return showToast("Maximum file size is 550KB. Please upload a smaller file.", "error");
 
             const reader = new FileReader();
             reader.onload = async function () {
