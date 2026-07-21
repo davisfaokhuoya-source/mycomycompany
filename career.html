@@ -16,6 +16,20 @@
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
     <style>
+        /* Bootstrap's own stylesheet is normally what hides inactive
+           .tab-pane elements. If the local css/bootstrap.min.css build is
+           missing or overriding those rules, every pane (Login, Register,
+           Verify Partner) renders stacked and visible at once, which is
+           what caused the overlapping auth forms. These rules pin down the
+           correct behavior regardless of what that stylesheet contains. */
+        .tab-content>.tab-pane {
+            display: none !important;
+        }
+
+        .tab-content>.tab-pane.active {
+            display: block !important;
+        }
+
         .portal-card {
             border-radius: 6px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, .1);
@@ -842,13 +856,16 @@
                     <div class="card portal-card p-4">
                         <ul class="nav nav-tabs mb-4">
                             <li class="nav-item">
-                                <a class="nav-link active" data-bs-toggle="tab" href="#loginTab">Login</a>
+                                <a class="nav-link active" href="#loginTab"
+                                    onclick="switchAuthTab(event,'loginTab')">Login</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#registerTab">Register</a>
+                                <a class="nav-link" href="#registerTab"
+                                    onclick="switchAuthTab(event,'registerTab')">Register</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#verifyAgentTab">Verify Partner</a>
+                                <a class="nav-link" href="#verifyAgentTab"
+                                    onclick="switchAuthTab(event,'verifyAgentTab')">Verify Partner</a>
                             </li>
                         </ul>
 
@@ -2343,6 +2360,25 @@
             const loader = document.getElementById("loaderOverlay");
             if (loader) loader.classList.remove("active");
         }
+
+        // =========== AUTH TABS (Login / Register / Verify Partner) ===========
+        // Deliberately NOT using Bootstrap's data-bs-toggle="tab" here — it was
+        // racing with something on first click and leaving both panes visible
+        // until a couple of extra clicks settled it. This does the class
+        // toggling directly and synchronously so there's nothing to race.
+        function switchAuthTab(evt, paneId) {
+            if (evt) evt.preventDefault();
+            document.querySelectorAll("#authSection .nav-tabs .nav-link").forEach(link => {
+                link.classList.remove("active");
+            });
+            if (evt && evt.currentTarget) evt.currentTarget.classList.add("active");
+            document.querySelectorAll("#authSection .tab-content .tab-pane").forEach(pane => {
+                pane.classList.remove("active", "show");
+            });
+            const target = document.getElementById(paneId);
+            if (target) target.classList.add("active", "show");
+        }
+
         // =========== TOAST ===========
         function escapeHtml(str) {
             if (str === null || str === undefined) return "";
