@@ -1692,6 +1692,24 @@
                             </div>
                         </div>
 
+                        <div id="tabContent14" class="d-none">
+                            <h5><i class="fas fa-chart-line"></i> Performance</h5>
+
+                            <div class="card portal-card mb-4">
+                                <div class="card-header bg-light"><strong>Your Performance</strong></div>
+                                <div class="card-body" id="individualPerfBody">
+                                    <p class="text-muted text-center py-3">Loading your performance...</p>
+                                </div>
+                            </div>
+
+                            <div class="card portal-card mb-4">
+                                <div class="card-header bg-light"><strong>Team Performance</strong></div>
+                                <div class="card-body" id="teamPerfBody">
+                                    <p class="text-muted text-center py-3">Loading team performance...</p>
+                                </div>
+                            </div>
+                        </div>
+
                     </div><!-- end tv-content-card (sub dashboard) -->
                 </main>
             </div><!-- end tv-shell -->
@@ -2244,6 +2262,7 @@
         const ALL_TABS = [
             { idx: 0, icon: "fas fa-upload", label: "Submit Client" },
             { idx: 1, icon: "fas fa-clipboard-list", label: "My Records" },
+            { idx: 14, icon: "fas fa-chart-line", label: "Performance" },
             { idx: 2, icon: "fas fa-paper-plane", label: "Submit Request" },
             { idx: 3, icon: "fas fa-arrow-up", label: "My Upgrades" },
             { idx: 4, icon: "fas fa-coins", label: "Earnings & Payout" },
@@ -2854,6 +2873,123 @@
                 <p class="text-muted small mb-0">${escapeHtml(res.rationale || "")}</p>`;
         }
 
+        // =========== PERFORMANCE TAB ===========
+        async function loadPerformanceTab() {
+            const indivBody = document.getElementById("individualPerfBody");
+            const teamBody = document.getElementById("teamPerfBody");
+            indivBody.innerHTML = `<p class="text-muted text-center py-3"><i class="fas fa-spinner fa-spin me-1"></i> Loading your performance...</p>`;
+            teamBody.innerHTML = `<p class="text-muted text-center py-3"><i class="fas fa-spinner fa-spin me-1"></i> Loading team performance...</p>`;
+
+            let res;
+            try {
+                res = await apiCall("getPerformanceOverview", { token: currentToken }, false);
+            } catch (e) {
+                res = null;
+            }
+            if (!res || !res.success) {
+                const msg = `<p class="text-danger mb-0"><i class="fas fa-triangle-exclamation me-1"></i> Unable to load performance data. Please try again later.</p>`;
+                indivBody.innerHTML = msg;
+                teamBody.innerHTML = msg;
+                return;
+            }
+            renderIndividualPerf(res.individual);
+            renderTeamPerf(res.team);
+        }
+
+        function _perfMiniBars(history) {
+            if (!history || !history.length) return "";
+            const max = Math.max(1, ...history.map(h => h.approved));
+            const bars = history.map(h => {
+                const h_pct = Math.max(4, Math.round((h.approved / max) * 100));
+                const label = escapeHtml(String(h.week).slice(5)); // MM-DD
+                return `<div class="text-center" style="flex:1;">
+                            <div style="height:60px;display:flex;align-items:flex-end;justify-content:center;">
+                                <div style="width:60%;background:#E07410;border-radius:3px 3px 0 0;height:${h_pct}%;" title="${h.approved} approved"></div>
+                            </div>
+                            <div class="small text-muted mt-1">${label}</div>
+                            <div class="small fw-bold">${h.approved}</div>
+                        </div>`;
+            }).join("");
+            return `<div class="d-flex align-items-end mt-2 mb-1">${bars}</div>`;
+        }
+
+        function renderIndividualPerf(ind) {
+            const body = document.getElementById("individualPerfBody");
+            if (!ind) { body.innerHTML = `<p class="text-muted mb-0">No performance data yet.</p>`; return; }
+
+            const target = ind.currentTarget;
+            const actual = ind.currentWeekActual || 0;
+            const pct = target ? Math.min(100, Math.round((actual / target) * 100)) : 0;
+
+            body.innerHTML = `
+                <div class="row text-center mb-3">
+                    <div class="col-6 col-md-3 mb-2">
+                        <div class="small text-muted">Tier</div>
+                        <div class="fw-bold">${escapeHtml(ind.tierName)}</div>
+                    </div>
+                    <div class="col-6 col-md-3 mb-2">
+                        <div class="small text-muted">Lifetime Jobs</div>
+                        <div class="fw-bold">${ind.totalJobsAll || 0}</div>
+                    </div>
+                    <div class="col-6 col-md-3 mb-2">
+                        <div class="small text-muted">Successful</div>
+                        <div class="fw-bold">${ind.successfulJobs || 0}</div>
+                    </div>
+                    <div class="col-6 col-md-3 mb-2">
+                        <div class="small text-muted">Total Earned</div>
+                        <div class="fw-bold">₦${Number(ind.totalEarned || 0).toLocaleString()}</div>
+                    </div>
+                </div>
+
+                ${target ? `
+                <p class="mb-1"><strong>${actual} / ${target}</strong> approved jobs this week</p>
+                <div class="progress mb-3" style="height:8px;">
+                    <div class="progress-bar ${pct >= 100 ? 'bg-success' : ''}" style="width:${pct}%"></div>
+                </div>` : `<p class="text-muted">No target set for this week yet.</p>`}
+
+                <div class="small text-muted mb-1">Last 6 weeks — approved jobs</div>
+                ${_perfMiniBars(ind.weeklyHistory)}
+
+                <div class="alert alert-info mt-3 mb-0">
+                    <i class="fas fa-robot me-1"></i> ${escapeHtml(ind.aiAnalysis || "")}
+                </div>`;
+        }
+
+        function renderTeamPerf(team) {
+            const body = document.getElementById("teamPerfBody");
+            if (!team) {
+                body.innerHTML = `<p class="text-muted mb-0">You're not on a team yet.</p>`;
+                return;
+            }
+            const pct = team.teamTargetSum ? Math.min(100, Math.round((team.teamActualSum / team.teamTargetSum) * 100)) : 0;
+            const rows = (team.members || []).map((m, i) => `
+                <tr class="${m.isYou ? 'table-warning' : ''}">
+                    <td>${i + 1}</td>
+                    <td>${escapeHtml(m.name)}${m.isYou ? ' <span class="badge bg-secondary">You</span>' : ''}</td>
+                    <td>${escapeHtml(m.role || "Member")}</td>
+                    <td>${m.weeklyActual} / ${m.weeklyTarget !== null && m.weeklyTarget !== undefined ? m.weeklyTarget : "–"}</td>
+                    <td>${m.totalJobsAll || 0}</td>
+                </tr>`).join("");
+
+            body.innerHTML = `
+                <h6 class="mb-3">${escapeHtml(team.teamName || "Your Team")}</h6>
+                <p class="mb-1"><strong>${team.teamActualSum} / ${team.teamTargetSum}</strong> combined approved jobs this week</p>
+                <div class="progress mb-3" style="height:8px;">
+                    <div class="progress-bar ${pct >= 100 ? 'bg-success' : ''}" style="width:${pct}%"></div>
+                </div>
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr><th>#</th><th>Name</th><th>Role</th><th>This Week</th><th>Lifetime Jobs</th></tr>
+                        </thead>
+                        <tbody>${rows || `<tr><td colspan="5" class="text-muted text-center">No team members found.</td></tr>`}</tbody>
+                    </table>
+                </div>
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-robot me-1"></i> ${escapeHtml(team.aiAnalysis || "")}
+                </div>`;
+        }
+
         // Shown once per week (not on every page reload) so a partner knows
         // their target was actually set, without having to open the AI
         // Coach tab themselves and second-guess whether they were assigned
@@ -2971,7 +3107,7 @@
                 showToast("Complete your training and assessment to unlock this section.", "warning");
                 idx = 6;
             }
-            for (let i = 0; i <= 13; i++) {
+            for (let i = 0; i <= 14; i++) {
                 const el = document.getElementById(`tabContent${i}`);
                 if (el) el.classList.add("d-none");
             }
@@ -2980,6 +3116,7 @@
             updateDropdownButton(idx);
 
             if (idx === 1) loadMyRecords();
+            if (idx === 14) loadPerformanceTab();
             if (idx === 3) loadMyUpgrades();
             if (idx === 4) loadEarningsAndPayout();
             if (idx === 5) loadProfileData();
