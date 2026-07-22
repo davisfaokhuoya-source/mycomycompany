@@ -819,6 +819,18 @@
                                         class="w-full bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 rounded">Create
                                         Team</button>
                                 </div>
+                                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 space-y-2">
+                                    <h4 class="text-xs font-bold text-emerald-400">Assign Member to Team</h4>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <input type="email" id="assignMemberEmail" placeholder="Member email"
+                                            class="bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white" />
+                                        <input type="text" id="assignMemberTeamId" placeholder="Team ID"
+                                            class="bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white" />
+                                    </div>
+                                    <button onclick="assignAgentToTeamUI()"
+                                        class="w-full bg-sky-600 hover:bg-sky-500 text-xs text-white font-medium py-1.5 rounded">Assign
+                                        to Team</button>
+                                </div>
                                 <div class="bg-slate-950 border border-amber-800/40 rounded-xl p-3 shrink-0">
                                     <div class="flex justify-between items-center mb-2">
                                         <span class="text-[10px] font-mono uppercase text-amber-400">Stale Leads (7+
@@ -10543,6 +10555,17 @@
             if (!teamName || !leadEmail) { showToast('Team name and lead email required.', 'error'); return; }
             const res = await executeSecureBridgeCall('career', 'createTeam', { teamName, state, leadEmail, backupLeadEmail });
             showToast(res.success ? `Team created: ${res.teamId}` : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+        }
+        async function assignAgentToTeamUI() {
+            const email = document.getElementById('assignMemberEmail').value.trim();
+            const teamId = document.getElementById('assignMemberTeamId').value.trim();
+            if (!email || !teamId) { showToast('Member email and Team ID required.', 'error'); return; }
+            const res = await executeSecureBridgeCall('career', 'assignAgentToTeam', { email, teamId });
+            showToast(res.success ? (res.message || 'Assigned.') : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+            if (res.success) {
+                document.getElementById('assignMemberEmail').value = '';
+                document.getElementById('assignMemberTeamId').value = '';
+            }
         }
         async function loadStaleLeadTeams() {
             const res = await executeSecureBridgeCall('career', 'getStaleLeadTeams', {});
