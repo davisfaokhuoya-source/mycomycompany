@@ -886,7 +886,7 @@
                         </div>
                     </div>
 
-                    <div id="view-career-report-tools" class="career-view hidden grid grid-cols-2 gap-6 mt-6">
+                    <div id="view-career-report-tools" class="career-view hidden flex-1 grid grid-cols-2 gap-6 mt-6">
                         <div class="col-span-2">
                             <h3 class="text-lg font-bold text-white">Weekly Report Tools</h3>
                             <p class="text-xs text-slate-400">AI-reviewed weekly reports and related report-generation
@@ -931,7 +931,7 @@
                         </div>
                     </div>
 
-                    <div id="view-career-target-tools" class="career-view hidden grid grid-cols-2 gap-6 mt-6">
+                    <div id="view-career-target-tools" class="career-view hidden flex-1 grid grid-cols-2 gap-6 mt-6">
                         <div class="col-span-2">
                             <h3 class="text-lg font-bold text-white">Weekly Target Tools</h3>
                             <p class="text-xs text-slate-400">AI-set weekly partner targets and flagged-partner
@@ -5645,6 +5645,14 @@
                 .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
+        // Truncates for table cells, but (unlike a bare .substring()) leaves
+        // an ellipsis so it's obvious the text was cut off rather than
+        // looking like the data itself just stops mid-word.
+        function truncateText(text, len) {
+            const s = String(text || "");
+            return s.length > len ? s.substring(0, len).trimEnd() + "…" : s;
+        }
+
         function switchMasterHub(hubId) {
             currentHub = hubId;
             // Hide ALL views across every hub first (prevents ghost views from other hubs)
@@ -6363,7 +6371,7 @@
     <tr>
       <td class="p-3 text-slate-500">${fmtDate(m.Timestamp || m.timestamp)}</td>
       <td class="p-3 text-slate-300">${escapeHtml(m['Recipient Email'] || m.recipientEmail || m.RecipientEmail || '—')}</td>
-      <td class="p-3 text-slate-200">${escapeHtml((m.Subject || m.subject || 'No subject').substring(0, 40))}</td>
+      <td class="p-3 text-slate-200">${escapeHtml(truncateText(m.Subject || m.subject || 'No subject', 40))}</td>
       <td class="p-3 text-center">${badge((m.isRead === true || m.isRead === 'TRUE') ? 'Read' : 'Delivered')}</td>
     </tr>
   `).join('');
@@ -6412,9 +6420,9 @@
       <td class="p-3 text-slate-400 font-mono">${escapeHtml(r.UniqueID || r.uniqueID || '—')}</td>
       <td class="p-3 text-slate-300">${escapeHtml(r.Email || r.email || '—')}</td>
       <td class="p-3 text-slate-200">${escapeHtml(r.RequestType || r.requestType || '—')}</td>
-      <td class="p-3 text-slate-400">${escapeHtml((r.Message || r.message || '').substring(0, 40))}</td>
+      <td class="p-3 text-slate-400">${escapeHtml(truncateText(r.Message || r.message || '', 40))}</td>
       <td class="p-3 text-center">${badge(r.Status || r.status || 'Pending')}</td>
-      <td class="p-3 text-slate-400">${escapeHtml((r.AdminNotes || r.adminNotes || '').substring(0, 40))}</td>
+      <td class="p-3 text-slate-400">${escapeHtml(truncateText(r.AdminNotes || r.adminNotes || '', 40))}</td>
       <td class="p-3 text-center flex gap-1 justify-center">
         <button onclick="approveElevation('${escapeHtml(r.Email || r.email || '')}')"
           class="text-emerald-400 text-xs px-2 py-1 border border-emerald-500/30 rounded hover:bg-emerald-950 transition-colors">Approve</button>
@@ -7441,10 +7449,10 @@
     <tr>
       <td class="p-3 text-slate-500">${fmtDate(c.Timestamp || c.timestamp)}</td>
       <td class="p-3 text-slate-300 font-mono">${escapeHtml(c.Email || c.email || '—')}</td>
-      <td class="p-3 text-slate-200">${escapeHtml((c.Subject || c.subject || '').substring(0, 50))}</td>
+      <td class="p-3 text-slate-200">${escapeHtml(truncateText(c.Subject || c.subject || '', 50))}</td>
       <td class="p-3 text-slate-400">${escapeHtml((c.Message || c.message || '').substring(0, 60))}</td>
       <td class="p-3 text-center">${badge(c.Status || c.status || 'Open')}</td>
-      <td class="p-3 text-slate-400">${escapeHtml((c.AdminReply || c.adminReply || '—').substring(0, 40))}</td>
+      <td class="p-3 text-slate-400">${escapeHtml(truncateText(c.AdminReply || c.adminReply || '—', 40))}</td>
       <td class="p-3 text-center">
         <button onclick="openEditModal('${escapeHtml(c.Email || c.email || '')}', ${JSON.stringify(c).replace(/"/g, '&quot;')}, 'career-complaints')"
           style="font-size:11px;padding:3px 8px;border:1px solid #534ab7;background:transparent;color:#534ab7;border-radius:4px;cursor:pointer;">Edit</button>
@@ -11719,7 +11727,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 : 'This integration type is stored but has no automated consumer yet.';
         }
 
-        // ============= wire new views into existing loaders ============
+        // ============ wire new views into existing loaders ============
         const _origInitMap = {
             'agent-approvals': loadAgentApprovals,
             'agent-compliance-frameworks': () => { populateAgentClientSelector('compFrameworksClientSelector'); },
@@ -11733,6 +11741,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             'agent-va-clients': loadVAClientsUI,
             'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector'); }
         };
+
         document.addEventListener("DOMContentLoaded", initializeModule);
     </script>
 </body>
