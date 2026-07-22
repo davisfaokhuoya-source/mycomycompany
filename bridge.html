@@ -831,6 +831,16 @@
                                         class="w-full bg-sky-600 hover:bg-sky-500 text-xs text-white font-medium py-1.5 rounded">Assign
                                         to Team</button>
                                 </div>
+                                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 space-y-2">
+                                    <h4 class="text-xs font-bold text-emerald-400">Welcome Message Backfill</h4>
+                                    <p class="text-[10px] text-slate-500">Sends the "getting started" welcome message
+                                        (business/company/NGO checklist, weekly task timing, team status) to any
+                                        already-approved partner who hasn't received it yet. Safe to click more than
+                                        once.</p>
+                                    <button onclick="sendWelcomeBackfillUI()"
+                                        class="w-full bg-indigo-600 hover:bg-indigo-500 text-xs text-white font-medium py-1.5 rounded">Send
+                                        to Partners Missing It</button>
+                                </div>
                                 <div class="bg-slate-950 border border-amber-800/40 rounded-xl p-3 shrink-0">
                                     <div class="flex justify-between items-center mb-2">
                                         <span class="text-[10px] font-mono uppercase text-amber-400">Stale Leads (7+
@@ -10566,6 +10576,10 @@
                 document.getElementById('assignMemberEmail').value = '';
                 document.getElementById('assignMemberTeamId').value = '';
             }
+        }
+        async function sendWelcomeBackfillUI() {
+            const res = await executeSecureBridgeCall('career', 'sendWelcomeMessageToPartnersWithoutTask', {});
+            showToast(res.success ? (res.message || 'Done.') : (res.message || 'Failed.'), res.success ? 'success' : 'error');
         }
         async function loadStaleLeadTeams() {
             const res = await executeSecureBridgeCall('career', 'getStaleLeadTeams', {});
