@@ -387,6 +387,7 @@
                         Complaint Tickets
                     </a>
                     <a href="#" class="career-subview-link" data-target-view="career-admin-tools">Admin Tools</a>
+                    <a href="#" class="career-subview-link" data-target-view="career-teams">Teams</a>
                     <a href="#" class="career-subview-link" data-target-view="career-report-tools">Report Tools</a>
                     <a href="#" class="career-subview-link" data-target-view="career-target-tools">Target Tools</a>
                     <div class="mt-4 border-t border-slate-800 pt-3 px-1">
@@ -867,7 +868,30 @@
                         </div>
                     </div>
 
+                    <div id="view-career-teams"
+                        class="career-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Teams &amp; Members</h3>
+                                <p class="text-xs text-slate-400">Every team currently formed, its Lead/Backup Lead,
+                                    and full member roster.</p>
+                            </div>
+                            <button onclick="loadCareerTeamsUI()"
+                                class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium px-3 py-1.5 rounded">
+                                <i class="fa-solid fa-arrows-rotate mr-1"></i> Refresh
+                            </button>
+                        </div>
+                        <div id="careerTeamsList" class="flex-1 overflow-auto custom-scrollbar space-y-3">
+                            <p class="text-xs text-slate-500 text-center py-6">Loading teams...</p>
+                        </div>
+                    </div>
+
                     <div id="view-career-report-tools" class="career-view hidden grid grid-cols-2 gap-6 mt-6">
+                        <div class="col-span-2">
+                            <h3 class="text-lg font-bold text-white">Weekly Report Tools</h3>
+                            <p class="text-xs text-slate-400">AI-reviewed weekly reports and related report-generation
+                                utilities.</p>
+                        </div>
                         <!-- Weekly Reports -->
                         <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col overflow-hidden"
                             style="max-height:340px;">
@@ -908,6 +932,11 @@
                     </div>
 
                     <div id="view-career-target-tools" class="career-view hidden grid grid-cols-2 gap-6 mt-6">
+                        <div class="col-span-2">
+                            <h3 class="text-lg font-bold text-white">Weekly Target Tools</h3>
+                            <p class="text-xs text-slate-400">AI-set weekly partner targets and flagged-partner
+                                review.</p>
+                        </div>
                         <!-- Weekly Targets -->
                         <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col overflow-hidden"
                             style="max-height:340px;">
@@ -5697,6 +5726,7 @@
                 'career-messages': initializeModule_career_messages,
                 'career-elevation': initializeModule_career_elevation,
                 'career-admin-tools': () => { loadSignupCodes(); loadPartnerTargetsUI(); loadFlaggedPartnersUI(); },
+                'career-teams': loadCareerTeamsUI,
                 'assessment-students': initializeModule_assess_submissions,
                 'assessment-courses': initializeModule_assessment_courses,
                 'assessment-questions': initializeModule_assessment_questions,
@@ -10427,13 +10457,19 @@
         }
 
         async function pollAdminNotifications() {
-            const res = await executeSecureBridgeCall('agent', 'agent-get-notifications', { unreadOnly: false, limit: 30 }, { silent: true });
-            if (!res.success) return;
-            ADMIN_NOTIF_CACHE = res.notifications || [];
+            const [agentRes, careerRes] = await Promise.all([
+                executeSecureBridgeCall('agent', 'agent-get-notifications', { unreadOnly: false, limit: 30 }, { silent: true }),
+                executeSecureBridgeCall('career', 'getCareerAdminNotifications', { limit: 30 }, { silent: true })
+            ]);
+            const agentNotifs = (agentRes.success ? (agentRes.notifications || []) : []).map(n => ({ ...n, Source: 'agent' }));
+            const careerNotifs = (careerRes.success ? (careerRes.notifications || []) : []).map(n => ({ ...n, Source: 'career' }));
+            ADMIN_NOTIF_CACHE = [...agentNotifs, ...careerNotifs].sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
+
+            const totalUnread = (agentRes.success ? (agentRes.unreadCount || 0) : 0) + (careerRes.success ? (careerRes.unreadCount || 0) : 0);
             const badge = document.getElementById('adminNotifBadge');
             if (badge) {
-                if (res.unreadCount > 0) {
-                    badge.textContent = res.unreadCount > 99 ? '99+' : res.unreadCount;
+                if (totalUnread > 0) {
+                    badge.textContent = totalUnread > 99 ? '99+' : totalUnread;
                     badge.classList.remove('hidden');
                 } else {
                     badge.classList.add('hidden');
@@ -10449,12 +10485,19 @@
                 list.innerHTML = '<p class="text-xs text-slate-500 p-4 text-center">No notifications yet.</p>';
                 return;
             }
-            const iconMap = { chat_message: 'fa-comment text-blue-400', job_complete: 'fa-circle-check text-emerald-400', job_failed: 'fa-circle-xmark text-red-400' };
+            const iconMap = {
+                chat_message: 'fa-comment text-blue-400',
+                job_complete: 'fa-circle-check text-emerald-400',
+                job_failed: 'fa-circle-xmark text-red-400',
+                complaint: 'fa-triangle-exclamation text-amber-400',
+                client_submission: 'fa-user-plus text-sky-400',
+                payout_request: 'fa-money-bill-wave text-emerald-400'
+            };
             list.innerHTML = ADMIN_NOTIF_CACHE.map(n => {
                 const isRead = n.Read === true || n.Read === 'TRUE';
                 const icon = iconMap[n.Type] || 'fa-bell text-slate-400';
                 return `
-        <div onclick='handleAdminNotifClick(${JSON.stringify(n.NotificationID)}, ${JSON.stringify(n.Link || '')})'
+        <div onclick='handleAdminNotifClick(${JSON.stringify(n.NotificationID)}, ${JSON.stringify(n.Link || '')}, ${JSON.stringify(n.Source)})'
             class="flex gap-2 px-3 py-2.5 cursor-pointer hover:bg-slate-800/60 ${isRead ? 'opacity-60' : ''}">
             <i class="fa-solid ${icon} mt-0.5 text-xs"></i>
             <div class="flex-1 min-w-0">
@@ -10476,21 +10519,29 @@
             if (!isOpen) { panel.classList.add('open'); pollAdminNotifications(); }
         }
 
-        function handleAdminNotifClick(notificationId, link) {
-            executeSecureBridgeCall('agent', 'agent-mark-notification-read', { notificationId }, { silent: true }).then(() => pollAdminNotifications());
+        function handleAdminNotifClick(notificationId, link, source) {
+            if (source === 'career') {
+                executeSecureBridgeCall('career', 'markCareerNotificationRead', { notificationId }, { silent: true }).then(() => pollAdminNotifications());
+            } else {
+                executeSecureBridgeCall('agent', 'agent-mark-notification-read', { notificationId }, { silent: true }).then(() => pollAdminNotifications());
+            }
             document.getElementById('adminNotifPanel')?.classList.remove('open');
             if (link) {
-                const btn = document.querySelector(`.agent-subview-link[data-target-view="${link}"]`)
+                const btn = document.querySelector(`.career-subview-link[data-target-view="${link}"]`)
+                    || document.querySelector(`.agent-subview-link[data-target-view="${link}"]`)
                     || document.querySelector(`[data-target-view="${link}"]`);
                 if (btn) {
-                    switchMasterHub('agent');
+                    switchMasterHub(source === 'career' ? 'career' : 'agent');
                     setTimeout(() => btn.click(), 150);
                 }
             }
         }
 
         function markAllAdminNotifsRead() {
-            executeSecureBridgeCall('agent', 'agent-mark-all-notifications-read', {}, { silent: true }).then(() => pollAdminNotifications());
+            Promise.all([
+                executeSecureBridgeCall('agent', 'agent-mark-all-notifications-read', {}, { silent: true }),
+                executeSecureBridgeCall('career', 'markAllCareerNotificationsRead', {}, { silent: true })
+            ]).then(() => pollAdminNotifications());
         }
 
         function initializeModule() {
@@ -10580,6 +10631,59 @@
         async function sendWelcomeBackfillUI() {
             const res = await executeSecureBridgeCall('career', 'sendWelcomeMessageToPartnersWithoutTask', {});
             showToast(res.success ? (res.message || 'Done.') : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+        }
+        async function loadCareerTeamsUI() {
+            const container = document.getElementById('careerTeamsList');
+            if (!container) return;
+            container.innerHTML = '<p class="text-xs text-slate-500 text-center py-6">Loading teams...</p>';
+            const res = await executeSecureBridgeCall('career', 'getAllTeamsForAdmin', {});
+            if (!res.success) {
+                container.innerHTML = `<p class="text-xs text-red-400 text-center py-6">${escapeHtml(res.message || 'Failed to load teams.')}</p>`;
+                return;
+            }
+            if (!res.teams || !res.teams.length) {
+                container.innerHTML = '<p class="text-xs text-slate-500 text-center py-6">No teams have been formed yet.</p>';
+                return;
+            }
+            container.innerHTML = res.teams.map(t => {
+                const memberRows = (t.members || []).map(m => `
+                    <tr class="border-b border-slate-800/60">
+                        <td class="p-2 text-xs text-white">${escapeHtml(m.name || '')}</td>
+                        <td class="p-2 text-xs text-slate-400">${escapeHtml(m.email || '')}</td>
+                        <td class="p-2 text-xs text-slate-400">${escapeHtml(m.phone || '')}</td>
+                        <td class="p-2 text-xs text-slate-400">${escapeHtml(m.state || '')}</td>
+                        <td class="p-2 text-xs">${badge(m.role || 'Member')}</td>
+                        <td class="p-2 text-xs text-slate-400">${m.successfulJobs || 0} / ${m.totalJobsAll || 0}</td>
+                    </tr>`).join('') || `<tr><td colspan="6" class="p-2 text-xs text-slate-500 text-center">No members yet.</td></tr>`;
+
+                return `
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h4 class="text-sm font-bold text-white">${escapeHtml(t.teamName || t.teamId)}
+                                <span class="text-xs font-mono text-slate-500">(${escapeHtml(t.teamId)})</span></h4>
+                            <p class="text-xs text-slate-400">${escapeHtml(t.state || '')} &middot; Lead: ${escapeHtml(t.leadEmail || '—')}
+                                ${t.backupLeadEmail ? ' &middot; Backup Lead: ' + escapeHtml(t.backupLeadEmail) : ''}</p>
+                        </div>
+                        <div>${badge(t.status || 'Active')}</div>
+                    </div>
+                    <div class="overflow-auto custom-scrollbar">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-left">
+                                    <th class="p-2 text-[10px] uppercase text-slate-500">Name</th>
+                                    <th class="p-2 text-[10px] uppercase text-slate-500">Email</th>
+                                    <th class="p-2 text-[10px] uppercase text-slate-500">Phone</th>
+                                    <th class="p-2 text-[10px] uppercase text-slate-500">State</th>
+                                    <th class="p-2 text-[10px] uppercase text-slate-500">Role</th>
+                                    <th class="p-2 text-[10px] uppercase text-slate-500">Approved / Total Jobs</th>
+                                </tr>
+                            </thead>
+                            <tbody>${memberRows}</tbody>
+                        </table>
+                    </div>
+                </div>`;
+            }).join('');
         }
         async function loadStaleLeadTeams() {
             const res = await executeSecureBridgeCall('career', 'getStaleLeadTeams', {});
@@ -11615,7 +11719,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 : 'This integration type is stored but has no automated consumer yet.';
         }
 
-        // ============ wire new views into existing loaders ============
+        // ============= wire new views into existing loaders ============
         const _origInitMap = {
             'agent-approvals': loadAgentApprovals,
             'agent-compliance-frameworks': () => { populateAgentClientSelector('compFrameworksClientSelector'); },
@@ -11629,7 +11733,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             'agent-va-clients': loadVAClientsUI,
             'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector'); }
         };
-
         document.addEventListener("DOMContentLoaded", initializeModule);
     </script>
 </body>
