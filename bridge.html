@@ -2206,6 +2206,7 @@
                                 <option value="agent-approvals">Pending Approvals</option>
                                 <option value="agent-mailboxes">Mailboxes</option>
                                 <option value="agent-scheduling">Scheduling</option>
+                                <option value="agent-doc-studio">Document Studio</option>
                                 <option value="agent-ai-console">AI Actions Console</option>
                                 <option value="agent-addons">Add-ons &amp; Extras</option>
                                 <option value="agent-invoices">Invoices</option>
@@ -2281,6 +2282,8 @@
                             Calendar</button>
                         <button class="agent-subview-link" data-target-view="agent-mailboxes">Mailboxes</button>
                         <button class="agent-subview-link" data-target-view="agent-scheduling">Scheduling</button>
+                        <button class="agent-subview-link" data-target-view="agent-doc-studio">Document
+                            Studio</button>
                         <button class="agent-subview-link" data-target-view="agent-va-clients">VA Clients</button>
                         <button class="agent-subview-link" data-target-view="agent-addons">Add-ons &amp;
                             Extras</button>
@@ -2981,6 +2984,63 @@
                     </div>
 
                     <!-- AI ACTIONS CONSOLE -->
+                    <!-- [NEW] DOCUMENT STUDIO — full catalog (64 doc types across universal + 6
+                         industry verticals), searchable/filterable instead of a long flat list,
+                         dynamic per-doc field form, and a sample-upload panel that teaches the AI
+                         a client's real document layout (e.g. how many report-card columns a
+                         given school actually uses) instead of guessing at a generic template. -->
+                    <div id="view-agent-doc-studio"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-white">Document Studio</h3>
+                            <p class="text-xs text-slate-400">Generate any catalog document for a client, or upload a
+                                sample so the AI learns that client's exact format first.</p>
+                        </div>
+
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 space-y-3">
+                            <div class="grid grid-cols-4 gap-3">
+                                <div>
+                                    <label class="block text-[10px] text-slate-400 mb-1">Client</label>
+                                    <select id="docStudioClientId" onchange="onDocStudioClientChange()"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white">
+                                        <option value="">Select…</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-slate-400 mb-1">Category</label>
+                                    <select id="docStudioCategory" onchange="renderDocStudioCatalog()"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white">
+                                        <option value="">All categories</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-slate-400 mb-1">Industry</label>
+                                    <select id="docStudioIndustry" onchange="renderDocStudioCatalog()"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white">
+                                        <option value="">All industries</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-slate-400 mb-1">Search</label>
+                                    <input id="docStudioSearch" type="text" oninput="renderDocStudioCatalog()"
+                                        placeholder="e.g. invoice, report card, NDA…"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white">
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span id="docStudioCount" class="text-[10px] text-slate-500 font-mono"></span>
+                                <button onclick="openDocStudioUploadModal()"
+                                    class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white border border-slate-700">
+                                    <i class="fa-solid fa-upload"></i> Teach AI a Sample Format
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="docStudioCatalogGrid"
+                            class="flex-1 overflow-auto custom-scrollbar grid grid-cols-3 gap-3 content-start">
+                        </div>
+                    </div>
+
                     <div id="view-agent-ai-console"
                         class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
                         <div>
@@ -4698,6 +4758,79 @@
                     Upload &amp; Verify Document
                 </button>
             </form>
+        </div>
+    </div>
+
+    <!-- [NEW] MODAL: Generate Document (Document Studio) — dynamic form built from
+         DOCUMENT_CATALOG's field list for whichever doc the admin picked. Table-type
+         fields (e.g. report-card subjects, invoice line items) render as an editable
+         column/row grid instead of a JSON textarea, and auto-prefill with any
+         previously learned sample-format columns for this client + doc type. -->
+    <div id="modalGenerateDocument"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2 shrink-0">
+                <div>
+                    <h3 id="genDocTitle" class="text-sm font-bold text-white">Generate Document</h3>
+                    <p id="genDocSubtitle" class="text-[10px] text-slate-500 font-mono"></p>
+                </div>
+                <button onclick="closeGenerateDocumentModal()"
+                    class="text-slate-400 hover:text-white text-sm font-bold">&times;</button>
+            </div>
+            <div id="genDocTemplateNotice"
+                class="hidden text-[10px] text-emerald-400 bg-emerald-950/30 border border-emerald-900/50 rounded p-2">
+            </div>
+            <form id="generateDocumentForm" onsubmit="submitGenerateDocument(event)"
+                class="space-y-3 overflow-auto custom-scrollbar flex-1 pr-1">
+                <div id="genDocFields" class="space-y-3"></div>
+                <button type="submit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded sticky bottom-0">
+                    <i class="fa-solid fa-bolt"></i> Generate
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- [NEW] MODAL: Teach AI a Sample Format — admin uploads one real example of a
+         client's document; AI reads it and stores the actual columns/fields it found
+         (e.g. a specific school's 7-column report card) against that client + best-fit
+         catalog doc type, so future generations reuse the client's real layout. -->
+    <div id="modalDocStudioUpload"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full flex flex-col space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white">Teach AI a Sample Format</h3>
+                <button onclick="closeDocStudioUploadModal()"
+                    class="text-slate-400 hover:text-white text-sm font-bold">&times;</button>
+            </div>
+            <p class="text-[10px] text-slate-500">Upload one real example of this client's document (their actual
+                report card, invoice, whatever). The AI reads its structure and saves the columns it finds so future
+                generations match this client's real format — not a generic template.</p>
+            <form id="docStudioUploadForm" onsubmit="submitDocStudioUpload(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Client</label>
+                    <select id="dsUploadClientId" required
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">What is this document? (optional hint)</label>
+                    <input type="text" id="dsUploadHint" placeholder="e.g. our Term 2 report card"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Sample File</label>
+                    <input type="file" id="dsUploadFile" required
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                </div>
+                <button type="submit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded">
+                    Analyze &amp; Save Format
+                </button>
+            </form>
+            <div id="dsUploadResult"
+                class="hidden text-xs bg-slate-950 border border-slate-800 rounded p-3 space-y-2 text-slate-300"></div>
         </div>
     </div>
 
@@ -8272,6 +8405,7 @@
                         'agent-invoices': loadAgentInvoices,        // NEW
                         'agent-addons': loadAgentAddonsUI,
                         'agent-social-calendar': loadAdminSocialCalendar,
+                        'agent-doc-studio': loadDocStudio,          // NEW
                     };
                     if (loaderMap[targetView]) loaderMap[targetView]();
                     syncAgentSidebarSelects();
@@ -10889,6 +11023,303 @@ ${a.Status === 'Pending Review' ? `
                 document.getElementById('compFrameworksResult').textContent = JSON.stringify(res, null, 2);
                 showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
             });
+        }
+
+        // =====================================================================
+        // [NEW] DOCUMENT STUDIO
+        // Surfaces the full backend document catalog (agent-list-catalog-documents
+        // → DocumentsLib.DOCUMENT_CATALOG, ~64 types across universal + 6 industry
+        // verticals) as a searchable/filterable grid instead of a long flat list,
+        // with a per-doc dynamic field form (agent-catalog-document to generate),
+        // and a sample-upload flow (agent-analyze-document-sample /
+        // agent-get-document-template) that teaches the AI a specific client's
+        // real document layout — e.g. how many report-card columns THIS school
+        // actually uses — instead of guessing at a generic template.
+        // =====================================================================
+
+        let DOC_STUDIO_CATALOG = null;   // cached array from agent-list-catalog-documents
+        let DOC_STUDIO_SPEC = null;      // currently-open doc spec in the Generate modal
+        const DOC_STUDIO_TABLE_STATE = {}; // fieldKey -> { columns: [...], rows: [{...}] }
+
+        async function loadDocStudio() {
+            await populateAgentClientSelector('docStudioClientId', null);
+            await populateAgentClientSelector('dsUploadClientId', null);
+            if (!DOC_STUDIO_CATALOG) {
+                const res = await executeSecureBridgeCall('agent', 'agent-list-catalog-documents', {});
+                DOC_STUDIO_CATALOG = (res.success && res.documentTypes) ? res.documentTypes : [];
+
+                const catSel = document.getElementById('docStudioCategory');
+                const categories = [...new Set(DOC_STUDIO_CATALOG.map(d => d.category).filter(Boolean))].sort();
+                catSel.innerHTML = '<option value="">All categories</option>' +
+                    categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c.charAt(0).toUpperCase() + c.slice(1))}</option>`).join('');
+
+                const indSel = document.getElementById('docStudioIndustry');
+                const industries = [...new Set(DOC_STUDIO_CATALOG.flatMap(d => d.industries || []))].sort();
+                indSel.innerHTML = '<option value="">All industries</option>' +
+                    industries.map(i => `<option value="${escapeHtml(i)}">${escapeHtml(i.charAt(0).toUpperCase() + i.slice(1))}</option>`).join('');
+            }
+            renderDocStudioCatalog();
+        }
+
+        // Selecting a client auto-narrows the Industry filter to that client's
+        // industry (they can still widen it back to "All industries" manually).
+        function onDocStudioClientChange() {
+            const clientId = document.getElementById('docStudioClientId')?.value;
+            const client = AGENT_CLIENTS_CACHE[clientId];
+            const indSel = document.getElementById('docStudioIndustry');
+            if (client && client.Industry && indSel) indSel.value = client.Industry;
+            renderDocStudioCatalog();
+        }
+
+        function renderDocStudioCatalog() {
+            const grid = document.getElementById('docStudioCatalogGrid');
+            const countEl = document.getElementById('docStudioCount');
+            if (!grid || !DOC_STUDIO_CATALOG) return;
+
+            const category = document.getElementById('docStudioCategory')?.value || '';
+            const industry = document.getElementById('docStudioIndustry')?.value || '';
+            const search = (document.getElementById('docStudioSearch')?.value || '').trim().toLowerCase();
+
+            const filtered = DOC_STUDIO_CATALOG.filter(d => {
+                if (category && d.category !== category) return false;
+                if (industry && (d.industries || []).indexOf(industry) === -1 && (d.industries || []).indexOf('universal') === -1) return false;
+                if (search && !(d.label || '').toLowerCase().includes(search) && !(d.id || '').toLowerCase().includes(search)) return false;
+                return true;
+            });
+
+            countEl.textContent = `${filtered.length} of ${DOC_STUDIO_CATALOG.length} document types`;
+
+            const riskBadge = (tier) => {
+                if (tier === 'hold_for_approval') return '<span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-900/50 text-amber-300 border border-amber-800">Needs approval</span>';
+                if (tier === 'delayed_send') return '<span class="text-[9px] px-1.5 py-0.5 rounded bg-blue-900/50 text-blue-300 border border-blue-800">Review window</span>';
+                return '<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-900/50 text-emerald-300 border border-emerald-800">Auto-send</span>';
+            };
+
+            grid.innerHTML = filtered.length ? filtered.map(d => `
+                <button onclick="openGenerateDocumentModal('${escapeHtml(d.id)}')"
+                    class="text-left bg-slate-950 border border-slate-800 hover:border-emerald-700 rounded-lg p-3 space-y-1.5 transition-colors">
+                    <div class="flex justify-between items-start gap-2">
+                        <span class="text-xs font-bold text-white">${escapeHtml(d.label)}</span>
+                        ${riskBadge(d.riskTier)}
+                    </div>
+                    <div class="text-[10px] text-slate-500 font-mono">${escapeHtml(d.category || '')} · ${(d.industries || []).map(escapeHtml).join(', ')}</div>
+                </button>
+            `).join('') : `<div class="col-span-3 text-center text-xs text-slate-500 py-8">No document types match this filter.</div>`;
+        }
+
+        // ---- Generate Document modal (dynamic form from a catalog spec) ----
+
+        async function openGenerateDocumentModal(docId) {
+            const clientId = document.getElementById('docStudioClientId')?.value;
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            const spec = DOC_STUDIO_CATALOG.find(d => d.id === docId);
+            if (!spec) { showToast('Unknown document type.', 'error'); return; }
+
+            DOC_STUDIO_SPEC = spec;
+            Object.keys(DOC_STUDIO_TABLE_STATE).forEach(k => delete DOC_STUDIO_TABLE_STATE[k]);
+
+            document.getElementById('genDocTitle').textContent = spec.label;
+            document.getElementById('genDocSubtitle').textContent = `${docId} · ${spec.category} · client: ${(AGENT_CLIENTS_CACHE[clientId] || {}).CompanyName || clientId}`;
+
+            const noticeEl = document.getElementById('genDocTemplateNotice');
+            noticeEl.classList.add('hidden');
+            noticeEl.textContent = '';
+
+            // Look up any AI-learned sample format for this client + doc type, and
+            // use it to prefill table-field columns (this is the piece that makes a
+            // 7-column report card render with 7 columns for THIS client).
+            let learnedColumns = null;
+            try {
+                const tRes = await executeSecureBridgeCall('agent', 'agent-get-document-template', { clientId, docId });
+                if (tRes.success && tRes.template && tRes.template.columns && tRes.template.columns.length) {
+                    learnedColumns = tRes.template.columns;
+                    noticeEl.classList.remove('hidden');
+                    noticeEl.textContent = `Using the format learned from "${tRes.template.fileName}" — columns: ${tRes.template.columns.join(', ')}.`;
+                }
+            } catch (e) { /* non-fatal — falls back to a blank table */ }
+
+            const fieldsWrap = document.getElementById('genDocFields');
+            fieldsWrap.innerHTML = (spec.fields || []).map(fd => {
+                const id = `genField_${fd.key}`;
+                const reqStar = fd.required ? '<span class="text-red-400">*</span>' : '';
+                if (fd.type === 'table') {
+                    return `<div><label class="block text-xs text-slate-400 mb-1">${escapeHtml(fd.label)} ${reqStar}</label>
+                        <div id="${id}_wrap"></div></div>`;
+                }
+                if (fd.type === 'textarea') {
+                    return `<div><label class="block text-xs text-slate-400 mb-1">${escapeHtml(fd.label)} ${reqStar}</label>
+                        <textarea id="${id}" ${fd.required ? 'required' : ''} rows="3"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></textarea></div>`;
+                }
+                return `<div><label class="block text-xs text-slate-400 mb-1">${escapeHtml(fd.label)} ${reqStar}</label>
+                    <input type="text" id="${id}" ${fd.required ? 'required' : ''}
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" /></div>`;
+            }).join('');
+
+            // Mount interactive column/row editors for table fields after the static HTML
+            // lands. Catalog docs use at most one table field in practice, so a learned
+            // template (if any) applies to it directly; otherwise fall back to a
+            // generic 2-column starting grid the admin can freely reshape.
+            const tableFields = (spec.fields || []).filter(fd => fd.type === 'table');
+            tableFields.forEach(fd => {
+                const cols = (learnedColumns && tableFields.length === 1) ? learnedColumns : ['Item', 'Value'];
+                initDocStudioTableField(fd.key, cols);
+            });
+
+            document.getElementById('modalGenerateDocument').classList.remove('hidden');
+        }
+
+        function initDocStudioTableField(key, defaultColumns) {
+            DOC_STUDIO_TABLE_STATE[key] = {
+                columns: defaultColumns.slice(),
+                rows: [Object.fromEntries(defaultColumns.map(c => [c, '']))]
+            };
+            renderDocStudioTableField(key);
+        }
+
+        function renderDocStudioTableField(key) {
+            const wrap = document.getElementById(`genField_${key}_wrap`);
+            if (!wrap) return;
+            const state = DOC_STUDIO_TABLE_STATE[key];
+            wrap.innerHTML = `
+                <div class="border border-slate-800 rounded overflow-auto custom-scrollbar">
+                    <table class="w-full text-[10px]">
+                        <thead><tr class="bg-slate-900">
+                            ${state.columns.map((c, ci) => `<th class="p-1 text-left">
+                                <input value="${escapeHtml(c)}" onchange="renameDocStudioColumn('${key}', ${ci}, this.value)"
+                                    class="w-full bg-transparent text-slate-300 font-mono text-[10px] border-b border-slate-700 focus:outline-none" />
+                            </th>`).join('')}
+                            <th class="p-1"></th>
+                        </tr></thead>
+                        <tbody>
+                            ${state.rows.map((row, ri) => `<tr class="border-t border-slate-800">
+                                ${state.columns.map(c => `<td class="p-1">
+                                    <input value="${escapeHtml(row[c] || '')}" onchange="setDocStudioCell('${key}', ${ri}, '${escapeHtml(c)}', this.value)"
+                                        class="w-full bg-slate-950 text-white text-[10px] p-1 rounded border border-slate-800" />
+                                </td>`).join('')}
+                                <td class="p-1"><button type="button" onclick="removeDocStudioRow('${key}', ${ri})"
+                                    class="text-slate-500 hover:text-red-400 text-[10px]">✕</button></td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="flex gap-2 mt-1">
+                    <button type="button" onclick="addDocStudioRow('${key}')" class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-white">+ Row</button>
+                    <button type="button" onclick="addDocStudioColumn('${key}')" class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-white">+ Column</button>
+                </div>`;
+        }
+
+        function renameDocStudioColumn(key, colIndex, newName) {
+            const state = DOC_STUDIO_TABLE_STATE[key];
+            const oldName = state.columns[colIndex];
+            if (!newName || newName === oldName) return;
+            state.columns[colIndex] = newName;
+            state.rows.forEach(r => { r[newName] = r[oldName]; delete r[oldName]; });
+            renderDocStudioTableField(key);
+        }
+        function setDocStudioCell(key, rowIndex, col, value) { DOC_STUDIO_TABLE_STATE[key].rows[rowIndex][col] = value; }
+        function addDocStudioRow(key) {
+            const state = DOC_STUDIO_TABLE_STATE[key];
+            state.rows.push(Object.fromEntries(state.columns.map(c => [c, ''])));
+            renderDocStudioTableField(key);
+        }
+        function removeDocStudioRow(key, rowIndex) {
+            const state = DOC_STUDIO_TABLE_STATE[key];
+            if (state.rows.length <= 1) return;
+            state.rows.splice(rowIndex, 1);
+            renderDocStudioTableField(key);
+        }
+        function addDocStudioColumn(key) {
+            const state = DOC_STUDIO_TABLE_STATE[key];
+            const name = prompt('New column name:');
+            if (!name || state.columns.includes(name)) return;
+            state.columns.push(name);
+            state.rows.forEach(r => { r[name] = ''; });
+            renderDocStudioTableField(key);
+        }
+
+        function closeGenerateDocumentModal() {
+            document.getElementById('modalGenerateDocument').classList.add('hidden');
+            document.getElementById('generateDocumentForm')?.reset();
+            DOC_STUDIO_SPEC = null;
+        }
+
+        async function submitGenerateDocument(event) {
+            event.preventDefault();
+            const clientId = document.getElementById('docStudioClientId')?.value;
+            const spec = DOC_STUDIO_SPEC;
+            if (!clientId || !spec) return;
+
+            const fields = {};
+            (spec.fields || []).forEach(fd => {
+                if (fd.type === 'table') {
+                    fields[fd.key] = DOC_STUDIO_TABLE_STATE[fd.key] ? DOC_STUDIO_TABLE_STATE[fd.key].rows : [];
+                } else {
+                    fields[fd.key] = document.getElementById(`genField_${fd.key}`)?.value || '';
+                }
+            });
+
+            const btn = event.target.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+            try {
+                const res = await executeSecureBridgeCall('agent', 'agent-catalog-document', { clientId, docId: spec.id, fields });
+                showToast(res.success ? `Generated: ${res.title || spec.label}` : (res.message || 'Generation failed.'), res.success ? 'success' : 'error');
+                if (res.success) closeGenerateDocumentModal();
+            } catch (e) {
+                showToast('Generation error: ' + e.toString(), 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'Generate'; }
+            }
+        }
+
+        // ---- Teach AI a Sample Format (upload modal) ----
+
+        function openDocStudioUploadModal() {
+            document.getElementById('modalDocStudioUpload').classList.remove('hidden');
+            document.getElementById('dsUploadResult').classList.add('hidden');
+            const preselected = document.getElementById('docStudioClientId')?.value;
+            if (preselected) document.getElementById('dsUploadClientId').value = preselected;
+        }
+        function closeDocStudioUploadModal() {
+            document.getElementById('modalDocStudioUpload').classList.add('hidden');
+            document.getElementById('docStudioUploadForm')?.reset();
+        }
+
+        async function submitDocStudioUpload(event) {
+            event.preventDefault();
+            const clientId = document.getElementById('dsUploadClientId').value;
+            const docHint = document.getElementById('dsUploadHint').value.trim();
+            const file = document.getElementById('dsUploadFile').files[0];
+            if (!clientId || !file) { showToast('Client and a sample file are required.', 'error'); return; }
+
+            const btn = event.target.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Analyzing…'; }
+            try {
+                const base64Data = await fileToBase64(file);
+                const res = await executeSecureBridgeCall('agent', 'agent-analyze-document-sample', {
+                    clientId, fileName: file.name, mimeType: file.type, base64Data, docHint
+                });
+                if (res.success) {
+                    const resultEl = document.getElementById('dsUploadResult');
+                    resultEl.classList.remove('hidden');
+                    const matchedSpec = res.suggestedCatalogId ? DOC_STUDIO_CATALOG?.find(d => d.id === res.suggestedCatalogId) : null;
+                    resultEl.innerHTML = `
+                        <div><span class="text-slate-500">Detected:</span> ${escapeHtml(res.detectedLabel || 'Unknown')}</div>
+                        <div><span class="text-slate-500">Matches catalog type:</span> ${matchedSpec ? escapeHtml(matchedSpec.label) : '<span class="text-amber-400">no close match</span>'}</div>
+                        <div><span class="text-slate-500">Columns found:</span> ${(res.columns || []).map(escapeHtml).join(', ') || '—'}</div>
+                        ${res.fieldNotes ? `<div><span class="text-slate-500">Notes:</span> ${escapeHtml(res.fieldNotes)}</div>` : ''}
+                        ${matchedSpec ? `<button onclick="closeDocStudioUploadModal(); openGenerateDocumentModal('${escapeHtml(matchedSpec.id)}')"
+                            class="mt-2 w-full text-xs px-2 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Generate ${escapeHtml(matchedSpec.label)} now, using this format</button>` : ''}
+                    `;
+                    showToast('Sample analyzed and format saved.', 'success');
+                } else {
+                    showToast(res.message || 'Analysis failed.', 'error');
+                }
+            } catch (e) {
+                showToast('Upload error: ' + e.toString(), 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'Analyze & Save Format'; }
+            }
         }
 
         // ============ AI Actions Console ============
