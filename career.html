@@ -1829,6 +1829,21 @@
                                     </div>
                                 </div>
 
+                                <!-- LEAD-ONLY: Team Engagement — starts hidden; only shown by
+                                     renderLeadEngagementSection() when the backend confirms this
+                                     user is the team's Lead/Backup Lead. Regular members never see
+                                     this card populated. -->
+                                <div class="card portal-card mb-4 d-none" id="leadEngagementCard"
+                                    style="border-left:4px solid var(--tv-orange);">
+                                    <div class="card-header bg-light d-flex align-items-center gap-2">
+                                        <i class="fas fa-user-shield" style="color:var(--tv-orange);"></i>
+                                        <strong>Team Engagement</strong>
+                                        <span class="badge" style="background:var(--tv-orange);color:#fff;">Lead
+                                            only</span>
+                                    </div>
+                                    <div class="card-body" id="leadEngagementBody"></div>
+                                </div>
+
                                 <div class="card portal-card mb-4">
                                     <div class="card-header bg-light"><strong>Team Chat</strong></div>
                                     <div class="card-body">
@@ -3161,7 +3176,14 @@
                 return;
             }
             const pct = team.teamTargetSum ? Math.min(100, Math.round((team.teamActualSum / team.teamTargetSum) * 100)) : 0;
-            const rows = (team.members || []).map((m, i) => `
+
+            // Individual member performance is a Lead-only view (see
+            // getPerformanceOverview on the backend — non-leads only ever
+            // receive name/role, never weeklyActual/weeklyTarget). Regular
+            // members just see the combined team number above.
+            let membersSection = "";
+            if (team.isLead) {
+                const rows = (team.members || []).map((m, i) => `
                 <tr class="${m.isYou ? 'table-warning' : ''}">
                     <td>${i + 1}</td>
                     <td>${escapeHtml(m.name)}${m.isYou ? ' <span class="badge bg-secondary">You</span>' : ''}</td>
@@ -3169,13 +3191,7 @@
                     <td>${m.weeklyActual} / ${m.weeklyTarget !== null && m.weeklyTarget !== undefined ? m.weeklyTarget : "–"}</td>
                     <td>${m.totalJobsAll || 0}</td>
                 </tr>`).join("");
-
-            body.innerHTML = `
-                <h6 class="mb-3">${escapeHtml(team.teamName || "Your Team")}</h6>
-                <p class="mb-1"><strong>${team.teamActualSum} / ${team.teamTargetSum}</strong> combined approved jobs this week</p>
-                <div class="progress mb-3" style="height:8px;">
-                    <div class="progress-bar ${pct >= 100 ? 'bg-success' : ''}" style="width:${pct}%"></div>
-                </div>
+                membersSection = `
                 <div class="table-responsive mb-3">
                     <table class="table table-sm align-middle">
                         <thead>
@@ -3183,10 +3199,47 @@
                         </thead>
                         <tbody>${rows || `<tr><td colspan="5" class="text-muted text-center">No team members found.</td></tr>`}</tbody>
                     </table>
+                </div>`;
+            }
+
+            body.innerHTML = `
+                <h6 class="mb-3">${escapeHtml(team.teamName || "Your Team")}</h6>
+                <p class="mb-1"><strong>${team.teamActualSum} / ${team.teamTargetSum}</strong> combined approved jobs this week</p>
+                <div class="progress mb-3" style="height:8px;">
+                    <div class="progress-bar ${pct >= 100 ? 'bg-success' : ''}" style="width:${pct}%"></div>
                 </div>
+                ${membersSection}
                 <div class="alert alert-info mb-0">
                     <i class="fas fa-robot me-1"></i> ${escapeHtml(team.aiAnalysis || "")}
                 </div>`;
+
+            renderLeadEngagementSection(team);
+        }
+
+        // ===== LEAD-ONLY: Team Engagement panel =====
+        // Only rendered/populated when getPerformanceOverview reports
+        // isLead===true for the current user; the container itself starts
+        // hidden (d-none) in markup, so a regular member never sees so much
+        // as an empty card — this section simply doesn't exist for them.
+        function renderLeadEngagementSection(team) {
+            const card = document.getElementById("leadEngagementCard");
+            if (!card) return;
+            if (!team.isLead || !team.leadInsights) {
+                card.classList.add("d-none");
+                return;
+            }
+            card.classList.remove("d-none");
+            const tips = (team.leadInsights.tips || []).map(t => `<li>${escapeHtml(t)}</li>`).join("");
+            const tasks = (team.leadInsights.tasks || []).map(t => `<li class="form-check mb-1">
+                <input class="form-check-input" type="checkbox" />
+                <label class="form-check-label">${escapeHtml(t)}</label>
+            </li>`).join("");
+            document.getElementById("leadEngagementBody").innerHTML = `
+                <p class="small text-muted mb-2"><i class="fas fa-lock me-1"></i>Visible to you as Lead only.</p>
+                <h6 class="small text-uppercase text-muted mb-2">Coaching Tips</h6>
+                <ul class="mb-3">${tips || "<li>No tips available right now.</li>"}</ul>
+                <h6 class="small text-uppercase text-muted mb-2">This Week's Engagement Tasks</h6>
+                <ul class="list-unstyled mb-0">${tasks || "<li>No tasks suggested right now.</li>"}</ul>`;
         }
 
         // Shown once per week (not on every page reload) so a partner knows
