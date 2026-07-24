@@ -3029,7 +3029,12 @@
                             </div>
                             <div class="flex justify-between items-center">
                                 <span id="docStudioCount" class="text-[10px] text-slate-500 font-mono"></span>
-                                <div class="flex gap-2">
+                                <div class="flex items-center gap-3">
+                                    <label class="flex items-center gap-1.5 text-[10px] text-slate-400">
+                                        <input type="checkbox" id="docStudioTestIntegrations"
+                                            class="accent-emerald-600">
+                                        Also test email/scheduling (uses selected client, reads real email)
+                                    </label>
                                     <button onclick="runDocStudioSelfTests()"
                                         class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white border border-slate-700">
                                         <i class="fa-solid fa-vial"></i> Run System Tests
@@ -5926,6 +5931,7 @@
                 'agent-crmsync': () => { populateAgentClientSelector('crmSyncClientSelector').then(loadCrmSyncUI); },
                 'agent-online': loadAgentOnlineUsage,
                 'agent-livechat': () => { populateAllClientsSelector('chatClientSelector'); startChatPolling(); },
+                'agent-doc-studio': loadDocStudio, // [FIX] was only wired into the unused initializeAgentHub() loaderMap
             };
 
             const initFn = initMap[action];
@@ -11289,7 +11295,8 @@ ${a.Status === 'Pending Review' ? `
             resultsEl.innerHTML = '<span class="text-slate-500">Running…</span>';
 
             const clientId = document.getElementById('docStudioClientId')?.value || '';
-            const payload = clientId ? { clientId } : {};
+            const testIntegrations = document.getElementById('docStudioTestIntegrations')?.checked || false;
+            const payload = clientId ? { clientId, testIntegrations } : {};
             const res = await executeSecureBridgeCall('agent', 'agent-run-self-tests', payload);
 
             if (!res || res.results === undefined) {
@@ -11299,7 +11306,10 @@ ${a.Status === 'Pending Review' ? `
             const lines = res.results.map(r =>
                 `<div class="${r.pass ? 'text-emerald-400' : 'text-red-400'}">${r.pass ? '✓' : '✗'} ${escapeHtml(r.name)}${r.detail ? ' — ' + escapeHtml(r.detail) : ''}</div>`
             ).join('');
-            resultsEl.innerHTML = `<div class="mb-1 text-white">${res.passed} passed, ${res.failed} failed${res.liveTierRan ? ' (live tier ran — test doc generated & trashed)' : ' (static tier only — select a client to also run the live tier)'}</div>${lines}`;
+            const tierNote = res.integrationsTierRan
+                ? ' (live doc-gen + email/scheduling tiers ran)'
+                : (res.liveTierRan ? ' (live doc-gen tier ran — tick the box above to also test email/scheduling)' : ' (static tier only — select a client to run more)');
+            resultsEl.innerHTML = `<div class="mb-1 text-white">${res.passed} passed, ${res.failed} failed${tierNote}</div>${lines}`;
             showToast(res.success ? 'All self-tests passed.' : `${res.failed} self-test(s) failed — see details.`, res.success ? 'success' : 'error');
         }
 
