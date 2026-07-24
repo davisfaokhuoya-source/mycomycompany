@@ -3029,10 +3029,19 @@
                             </div>
                             <div class="flex justify-between items-center">
                                 <span id="docStudioCount" class="text-[10px] text-slate-500 font-mono"></span>
-                                <button onclick="openDocStudioUploadModal()"
-                                    class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white border border-slate-700">
-                                    <i class="fa-solid fa-upload"></i> Teach AI a Sample Format
-                                </button>
+                                <div class="flex gap-2">
+                                    <button onclick="runDocStudioSelfTests()"
+                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white border border-slate-700">
+                                        <i class="fa-solid fa-vial"></i> Run System Tests
+                                    </button>
+                                    <button onclick="openDocStudioUploadModal()"
+                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white border border-slate-700">
+                                        <i class="fa-solid fa-upload"></i> Teach AI a Sample Format
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="docStudioTestResults"
+                                class="hidden text-[10px] font-mono bg-slate-950 border border-slate-800 rounded p-2 max-h-40 overflow-auto custom-scrollbar">
                             </div>
                         </div>
 
@@ -11270,6 +11279,28 @@ ${a.Status === 'Pending Review' ? `
             } finally {
                 if (btn) { btn.disabled = false; btn.textContent = 'Generate'; }
             }
+        }
+
+        // ---- Run System Tests (static tier by default; live tier if a client
+        // is selected, since that generates+trashes one real test document) ----
+        async function runDocStudioSelfTests() {
+            const resultsEl = document.getElementById('docStudioTestResults');
+            resultsEl.classList.remove('hidden');
+            resultsEl.innerHTML = '<span class="text-slate-500">Running…</span>';
+
+            const clientId = document.getElementById('docStudioClientId')?.value || '';
+            const payload = clientId ? { clientId } : {};
+            const res = await executeSecureBridgeCall('agent', 'agent-run-self-tests', payload);
+
+            if (!res || res.results === undefined) {
+                resultsEl.innerHTML = `<span class="text-red-400">Test run failed: ${escapeHtml((res && res.message) || 'unknown error')}</span>`;
+                return;
+            }
+            const lines = res.results.map(r =>
+                `<div class="${r.pass ? 'text-emerald-400' : 'text-red-400'}">${r.pass ? '✓' : '✗'} ${escapeHtml(r.name)}${r.detail ? ' — ' + escapeHtml(r.detail) : ''}</div>`
+            ).join('');
+            resultsEl.innerHTML = `<div class="mb-1 text-white">${res.passed} passed, ${res.failed} failed${res.liveTierRan ? ' (live tier ran — test doc generated & trashed)' : ' (static tier only — select a client to also run the live tier)'}</div>${lines}`;
+            showToast(res.success ? 'All self-tests passed.' : `${res.failed} self-test(s) failed — see details.`, res.success ? 'success' : 'error');
         }
 
         // ---- Teach AI a Sample Format (upload modal) ----
