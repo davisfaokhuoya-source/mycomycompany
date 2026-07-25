@@ -4897,6 +4897,25 @@
         </div>
     </div>
 
+    <div id="modalReplacePendingDoc"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-md w-full space-y-4">
+            <h3 class="text-sm font-bold text-white">Upload Replacement Document</h3>
+            <p class="text-xs text-slate-400">This replaces the AI-generated file waiting for approval. The
+                generated version is discarded — whatever you upload here is what gets sent to the client
+                once you click Approve &amp; Send.</p>
+            <input type="file" id="replacePendingDocFile"
+                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
+            <div class="flex gap-2">
+                <button onclick="closeReplacePendingDocModal()"
+                    class="flex-1 text-xs px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded text-white">Cancel</button>
+                <button onclick="submitReplacePendingDoc()"
+                    class="flex-1 text-xs px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Upload &amp;
+                    Stage</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL: Create Invoice -->
     <div id="modalCreateInvoice"
         class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
@@ -10811,9 +10830,32 @@
   <td class="p-3 text-center flex gap-1 justify-center">
 ${a.Status === 'Pending Review' ? `
 <button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Approved')" class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Approve & Send</button>
-<button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Rejected')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Reject</button>` : ''}
+<button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Rejected')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Reject</button>
+<button onclick="openReplacePendingDocModal('${escapeHtml(a.ApprovalID)}')" class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Upload Replacement</button>` : ''}
 <button onclick="repairApprovalDelivery('${escapeHtml(a.ApprovalID)}')" class="text-xs px-2 py-1 bg-amber-700 hover:bg-amber-600 rounded text-white">Repair & Resend</button>
 </td></tr>`).join('');
+        }
+
+        let REPLACE_PENDING_DOC_TARGET = null;
+        function openReplacePendingDocModal(approvalId) {
+            REPLACE_PENDING_DOC_TARGET = approvalId;
+            document.getElementById('replacePendingDocFile').value = '';
+            document.getElementById('modalReplacePendingDoc').classList.remove('hidden');
+        }
+        function closeReplacePendingDocModal() {
+            document.getElementById('modalReplacePendingDoc').classList.add('hidden');
+            REPLACE_PENDING_DOC_TARGET = null;
+        }
+        /** Uploads an admin-supplied file in place of the AI-generated one for a pending approval — the generated file is trashed and this becomes what gets sent once approved. */
+        async function submitReplacePendingDoc() {
+            const file = document.getElementById('replacePendingDocFile').files[0];
+            if (!file || !REPLACE_PENDING_DOC_TARGET) { showToast('Choose a file first.', 'error'); return; }
+            const base64Data = await fileToBase64(file);
+            const res = await executeSecureBridgeCall('agent', 'agent-replace-pending-doc', {
+                approvalId: REPLACE_PENDING_DOC_TARGET, fileName: file.name, mimeType: file.type, base64Data
+            });
+            showToast(res.success ? 'Replacement staged — approve to send it.' : (res.message || 'Upload failed.'), res.success ? 'success' : 'error');
+            if (res.success) { closeReplacePendingDocModal(); loadAgentApprovals(); }
         }
 
         function repairApprovalDelivery(approvalId) {
