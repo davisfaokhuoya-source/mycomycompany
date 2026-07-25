@@ -932,7 +932,11 @@
                     </div>
 
                     <div id="view-career-target-tools" class="career-view hidden flex-1 grid grid-cols-2 gap-6 mt-6">
-
+                        <div class="col-span-2">
+                            <h3 class="text-lg font-bold text-white">Weekly Target Tools</h3>
+                            <p class="text-xs text-slate-400">AI-set weekly partner targets and flagged-partner
+                                review.</p>
+                        </div>
                         <!-- Weekly Targets -->
                         <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col overflow-hidden"
                             style="max-height:340px;">
@@ -3039,6 +3043,10 @@
                                         class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white border border-slate-700">
                                         <i class="fa-solid fa-upload"></i> Teach AI a Sample Format
                                     </button>
+                                    <button onclick="openDocStudioSamplesModal()"
+                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white border border-slate-700">
+                                        <i class="fa-solid fa-folder-open"></i> View Samples
+                                    </button>
                                 </div>
                             </div>
                             <div id="docStudioTestResults"
@@ -4809,15 +4817,15 @@
     <div id="modalDocStudioUpload"
         class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
         <div
-            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full flex flex-col space-y-4">
+            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full flex flex-col space-y-4 max-h-[90vh] overflow-auto custom-scrollbar">
             <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                <h3 class="text-sm font-bold text-white">Teach AI a Sample Format</h3>
+                <h3 class="text-sm font-bold text-white">Teach AI a Document Format</h3>
                 <button onclick="closeDocStudioUploadModal()"
                     class="text-slate-400 hover:text-white text-sm font-bold">&times;</button>
             </div>
-            <p class="text-[10px] text-slate-500">Upload one real example of this client's document (their actual
-                report card, invoice, whatever). The AI reads its structure and saves the columns it finds so future
-                generations match this client's real format — not a generic template.</p>
+            <p class="text-[10px] text-slate-500">Upload a real asset for this client — a sample with data in it, a
+                blank form to be filled exactly, or their letterhead/logo for branding. The AI proposes what it found;
+                you confirm before it's used for real generation.</p>
             <form id="docStudioUploadForm" onsubmit="submitDocStudioUpload(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Client</label>
@@ -4825,22 +4833,67 @@
                         class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></select>
                 </div>
                 <div>
+                    <label class="block text-xs text-slate-400 mb-1">Asset type</label>
+                    <select id="dsUploadAssetType"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
+                        <option value="sample">Sample document (has real data in it)</option>
+                        <option value="blank_template">Blank template (an empty form — AI fills it exactly)</option>
+                        <option value="letterhead">Letterhead (used at the top of official documents)</option>
+                        <option value="logo">Logo</option>
+                    </select>
+                </div>
+                <div>
                     <label class="block text-xs text-slate-400 mb-1">What is this document? (optional hint)</label>
                     <input type="text" id="dsUploadHint" placeholder="e.g. our Term 2 report card"
                         class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
                 </div>
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">Sample File</label>
+                    <label class="block text-xs text-slate-400 mb-1">File</label>
                     <input type="file" id="dsUploadFile" required
                         class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
                 </div>
                 <button type="submit"
                     class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded">
-                    Analyze &amp; Save Format
+                    Analyze
                 </button>
             </form>
             <div id="dsUploadResult"
-                class="hidden text-xs bg-slate-950 border border-slate-800 rounded p-3 space-y-2 text-slate-300"></div>
+                class="hidden text-xs bg-slate-950 border border-slate-800 rounded p-3 space-y-3 text-slate-300"></div>
+        </div>
+    </div>
+
+    <div id="modalDocStudioSamples"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2 shrink-0">
+                <h3 class="text-sm font-bold text-white">Samples on File</h3>
+                <button onclick="closeDocStudioSamplesModal()"
+                    class="text-slate-400 hover:text-white text-sm font-bold">&times;</button>
+            </div>
+            <div id="docStudioSamplesList" class="flex-1 overflow-auto custom-scrollbar space-y-2 text-xs"></div>
+        </div>
+    </div>
+
+    <div id="modalDeleteClient"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-red-900 p-6 rounded-xl shadow-2xl max-w-md w-full space-y-4">
+            <h3 class="text-sm font-bold text-red-400"><i class="fa-solid fa-triangle-exclamation"></i> Delete Client —
+                Permanent</h3>
+            <p class="text-xs text-slate-400">This deletes <strong id="deleteClientName" class="text-white"></strong>
+                and every
+                record tied to them — subscriptions, usage, tasks, invoices, mailboxes, documents, learned templates —
+                plus their entire Drive folder. This cannot be undone from the dashboard.</p>
+            <p class="text-xs text-slate-400">Type the company name exactly to confirm:</p>
+            <input type="text" id="deleteClientConfirmInput" placeholder="Company name"
+                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
+            <div class="flex gap-2">
+                <button onclick="closeDeleteClientModal()"
+                    class="flex-1 text-xs px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded text-white">Cancel</button>
+                <button onclick="submitDeleteClient()"
+                    class="flex-1 text-xs px-3 py-2 bg-red-700 hover:bg-red-600 rounded text-white">Delete
+                    Permanently</button>
+            </div>
         </div>
     </div>
 
@@ -5350,7 +5403,7 @@
                 { name: 'Assigned Agent', key: 'Agent', type: 'text', required: false },
                 { name: 'Funnel Stage', key: 'Stage', type: 'select', required: true, options: [{ value: 'New Prospect', label: 'New Prospect' }, { value: 'Contacted', label: 'Contacted' }, { value: 'Negotiation', label: 'Negotiation' }, { value: 'Closed', label: 'Closed' }] }
             ],
-            // ADD inside EDIT_MODAL_FORM_SCHEMAS object, after the last entry:
+
             'leads-calendar': [
                 { name: 'Title', key: 'Title', type: 'text', required: true },
                 { name: 'Date & Time', key: 'DateTime', type: 'datetime-local', required: true },
@@ -5416,10 +5469,6 @@
 
         };
 
-        // ================================================================
-        // INDUSTRY & REFERENCE DATA
-        // ================================================================
-
         const INDUSTRY_OPTIONS = [
             { value: "Fintech", label: "💳 Fintech" },
             { value: "Real Estate", label: "🏢 Real Estate" },
@@ -5444,13 +5493,10 @@
         const NICHE_OPTIONS = INDUSTRY_OPTIONS;
         const SECTOR_OPTIONS = INDUSTRY_OPTIONS;
         let ACTIVE_AUTO_REFRESH = null;
-        const ENABLE_ADMIN_AUTO_REFRESH = false; // <-- flip to true to restore old behavior
+        const ENABLE_ADMIN_AUTO_REFRESH = false;
         function startAutoRefresh(viewKey, fn, intervalMs = 30000) {
             stopAutoRefresh();
-            // [CHANGED] Global admin auto-refresh stays off (ENABLE_ADMIN_AUTO_REFRESH),
-            // but the AI Agent Control "active tasks" view is explicitly allow-listed
-            // so it keeps polling every 30s regardless — tasks in progress shouldn't
-            // require a manual refresh to see updated status.
+
             const AUTO_REFRESH_ALLOWLIST = ['agent-tasks'];
             if (!ENABLE_ADMIN_AUTO_REFRESH && AUTO_REFRESH_ALLOWLIST.indexOf(viewKey) === -1) return;
             ACTIVE_AUTO_REFRESH = setInterval(() => {
@@ -5462,10 +5508,7 @@
         function stopAutoRefresh() {
             if (ACTIVE_AUTO_REFRESH) { clearInterval(ACTIVE_AUTO_REFRESH); ACTIVE_AUTO_REFRESH = null; }
         }
-        // [CHANGED] Added optional 4th `opts` param. opts.silent === true skips the
-        // full-page blocking loader entirely — used by any call that already shows
-        // its own inline/row/button-level busy state (see setBtnBusy/setRowBusy
-        // below), so long-running AI actions no longer freeze the whole dashboard.
+
         async function executeSecureBridgeCall(systemTarget, actionTarget, analyticalPayload = {}, opts = {}) {
             const url = "https://api.thevictorias.com.ng";
             if (!url) {
@@ -5479,7 +5522,7 @@
                 return { success: false, message: "No token" };
             }
 
-            const useGlobalLoader = opts.blocking === true; // [CHANGED] was: !opts.silent
+            const useGlobalLoader = opts.blocking === true;
             if (useGlobalLoader) toggleSystemLoader(true);
 
             try {
@@ -5513,17 +5556,6 @@
             }
         }
 
-        // =====================================================================
-        // [NEW] Single source of truth for every price shown in this dashboard.
-        // Calls agent-get-service-pricing (the ServicePricing sheet, via
-        // AgentLib) once and caches the result — this is the SAME sheet the
-        // marketing site's agent-get-all-service-pricing reads from, just
-        // without tax/FX applied, since internal admin views want the raw
-        // PriceNGN an admin actually typed into the sheet. Replaces the old
-        // hardcoded fixedPricing / tierPricing / ADDON_PRICING_FRONTEND
-        // objects, which had drifted out of sync with real prices.
-        // Returns { itemKey: { label, priceNgn, unit, appliesTo, category, active } }
-        // =====================================================================
         let SERVICE_PRICING_CACHE = null;
         async function getServicePricing(forceRefresh = false) {
             if (SERVICE_PRICING_CACHE && !forceRefresh) return SERVICE_PRICING_CACHE;
@@ -5532,14 +5564,6 @@
             return SERVICE_PRICING_CACHE || {};
         }
 
-        // =====================================================================
-        // [NEW] Row/button-scoped busy indicators — the replacement for the
-        // full-page loader on long-running AI actions. Call setBtnBusy(el, true,
-        // {busyLabel}) right before an executeSecureBridgeCall({silent:true}),
-        // then setBtnBusy(el, false) in a finally block. The button gets a
-        // pulsing/sweeping "AI working" animation and an inline spinner instead
-        // of blocking the rest of the page.
-        // =====================================================================
         function setBtnBusy(el, busy, opts = {}) {
             if (!el) return;
             if (busy) {
@@ -5557,20 +5581,11 @@
             }
         }
 
-        // Marks/unmarks an entire table row as "AI agent working on this row"
-        // without touching any individual button inside it.
         function setRowBusy(rowEl, busy) {
             if (!rowEl) return;
             rowEl.classList.toggle('ai-working-row', !!busy);
         }
 
-        // =====================================================================
-        // [NEW] Reusable click-toggle dropdown (replaces hover-only .group
-        // dropdowns, which don't work reliably on click/touch and can't be
-        // scoped per-row without duplicate IDs). Usage:
-        //   <button onclick="toggleRowDropdown(event, 'dd-CLIENT123')">Actions ▾</button>
-        //   <div id="dd-CLIENT123" class="vh-dropdown-menu"> ...buttons... </div>
-        // =====================================================================
         function toggleRowDropdown(evt, menuId) {
             evt.stopPropagation();
             const menu = document.getElementById(menuId);
@@ -5582,7 +5597,6 @@
         document.addEventListener('click', () => {
             document.querySelectorAll('.vh-dropdown-menu.open').forEach(m => m.classList.remove('open'));
         });
-
 
         async function executeMultiFactorLogin(event) {
             event.preventDefault();
@@ -5694,16 +5708,6 @@
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
 
-            // Silent refresh: once this tbody has been populated with real
-            // data at least once, subsequent calls (auto-refresh, revisiting
-            // a section) just dim the existing rows instead of wiping them
-            // out to a skeleton — matching the client dashboard's fast,
-            // non-jarring refresh feel. A one-time MutationObserver restores
-            // full opacity and marks the tbody as "has data" the moment the
-            // calling load function overwrites this tbody's content with its
-            // actual result (success rows or an empty-state row) — this
-            // works generically for every view using this shared helper,
-            // without needing each of the ~40 call sites to be edited.
             if (tbody.dataset.hasData === "1") {
                 tbody.style.transition = "opacity 0.2s ease";
                 tbody.style.opacity = "0.5";
@@ -5725,9 +5729,6 @@
             }
             tbody.innerHTML = html;
 
-            // First-load marker: once the load function replaces this
-            // skeleton with its real result, flag this tbody as having data
-            // so the NEXT refresh dims instead of wiping.
             const firstLoadObserver = new MutationObserver(() => {
                 tbody.dataset.hasData = "1";
                 firstLoadObserver.disconnect();
@@ -5788,9 +5789,6 @@
                 .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        // Truncates for table cells, but (unlike a bare .substring()) leaves
-        // an ellipsis so it's obvious the text was cut off rather than
-        // looking like the data itself just stops mid-word.
         function truncateText(text, len) {
             const s = String(text || "");
             return s.length > len ? s.substring(0, len).trimEnd() + "…" : s;
@@ -5798,7 +5796,7 @@
 
         function switchMasterHub(hubId) {
             currentHub = hubId;
-            // Hide ALL views across every hub first (prevents ghost views from other hubs)
+
             document.querySelectorAll('[id^="view-"]').forEach(v => {
                 v.classList.add('hidden');
                 v.style.display = 'none';
@@ -5840,16 +5838,16 @@
 
             if (hubId === 'agent') {
                 setTimeout(() => {
-                    // Hide all agent views first
+
                     document.querySelectorAll('.agent-view').forEach(v => v.classList.add('hidden'));
-                    // Show only clients view
+
                     const clientsView = document.getElementById('view-agent-clients');
                     if (clientsView) { clientsView.classList.remove('hidden'); clientsView.style.display = 'flex'; }
-                    // Set active nav
+
                     document.querySelectorAll('.agent-subview-link').forEach(l => l.classList.remove('active'));
                     const firstBtn = document.querySelector('[data-target-view="agent-clients"]');
                     if (firstBtn) firstBtn.classList.add('active');
-                    // Load data
+
                     loadAgentClients();
                 }, 100);
             }
@@ -5890,6 +5888,7 @@
                 'leads-broadcast': loadBroadcastQueue,
                 'leads-drive': loadMailDriveReports,
                 'career-complaints': initializeModule_career_complaints,
+                'career-report-tools': () => { loadWeeklyReportsUI(false); },
                 'leads-calendar': loadCalendarEvents,
                 'agent-clients': loadAgentClients,
                 'agent-subscriptions': loadAgentSubscriptions,
@@ -5899,9 +5898,9 @@
                 'agent-addons': loadAgentAddonsUI,
                 'agent-social-calendar': loadAdminSocialCalendar,
                 'agent-compliance': loadAgentComplianceLogs,
-                'agent-violations': loadAgentViolations,   // NEW
-                'agent-docs': loadAgentDocsView,            // NEW
-                'agent-invoices': loadAgentInvoices,        // NEW
+                'agent-violations': loadAgentViolations,
+                'agent-docs': loadAgentDocsView,
+                'agent-invoices': loadAgentInvoices,
                 'publish-connections': loadSocialConnections,
                 'publish-queue': loadPublishQueue,
                 'publish-settings': loadPublishGlobalSwitch,
@@ -5927,7 +5926,7 @@
                 'agent-crmsync': () => { populateAgentClientSelector('crmSyncClientSelector').then(loadCrmSyncUI); },
                 'agent-online': loadAgentOnlineUsage,
                 'agent-livechat': () => { populateAllClientsSelector('chatClientSelector'); startChatPolling(); },
-                'agent-doc-studio': loadDocStudio, // [FIX] was only wired into the unused initializeAgentHub() loaderMap
+                'agent-doc-studio': loadDocStudio,
             };
 
             const initFn = initMap[action];
@@ -5946,13 +5945,12 @@
                     document.querySelectorAll(
                         '.career-subview-link, .assessment-subview-link, .leads-subview-link, .client-subview-link, .agent-subview-link, .v5-subview-link, [data-target-view]'
                     ).forEach(l => l.classList.remove('active'));
-                    this.classList.add('active');   // fix
+                    this.classList.add('active');
 
                     switchSubSection(systemName, subTabId);
                 });
             });
         }
-
 
         const paginationState = {
             'career-users': { page: 1, totalPages: 1, total: 0, hasNext: false, hasPrev: false },
@@ -6142,7 +6140,7 @@
         }
 
         async function updateKPIs() {
-            // Get fresh data for accurate calculations
+
             const earningsRes = await executeSecureBridgeCall('career', 'career-earnings', {});
 
             if (!earningsRes.success || !earningsRes.data) {
@@ -6152,10 +6150,8 @@
 
             let data = earningsRes.data;
 
-            // Apply the same universal filter that the table uses
             data = filterTableByState(data, UNI_FILTER_STATE);
 
-            // === Gross Distributed Commissions (Total Paid) ===
             const grossPaid = data
                 .filter(r => {
                     const status = String(r.PayoutStatus || r['Payout Status'] || r.Status || '').toLowerCase();
@@ -6166,17 +6162,14 @@
                     return sum + amount;
                 }, 0);
 
-            // === Active Payout Pipeline Retention (Sum Total Earned) ===
             const totalEarned = data
                 .reduce((sum, r) => {
                     const amount = parseFloat(r.EarningsNaira || r.AmountToCharge || r.Amount || 0);
                     return sum + amount;
                 }, 0);
 
-            // === Total Sourced Project Counts ===
             const totalProjects = data.length;
 
-            // Update DOM
             document.getElementById('kpi-gross').textContent = fmtNaira(grossPaid);
             document.getElementById('kpi-payout').textContent = fmtNaira(totalEarned);
             document.getElementById('kpi-projects').textContent = totalProjects + " Units";
@@ -6184,12 +6177,11 @@
             console.log(`✅ KPIs Updated | Paid: ${grossPaid} | Earned: ${totalEarned} | Projects: ${totalProjects}`);
         }
 
-        <!-- Add these functions -->
         function openAddProjectRowModal() {
             const modal = document.getElementById('modalAddProjectRow');
             if (modal) {
                 modal.classList.remove('hidden');
-                // Optional: reset form
+
                 const form = document.getElementById('addProjectRowForm');
                 if (form) form.reset();
             }
@@ -6236,12 +6228,11 @@
             if (res.success) {
                 showToast("Project row added successfully!", "success");
                 closeAddProjectRowModal();
-                loadClientSubmittedProjects(); // refresh the table
+                loadClientSubmittedProjects();
             } else {
                 showToast(res.message || res.error || "Failed to add row", "error");
             }
         }
-
 
         function clearUniversalFilter() {
             ['uniFilterLevel', 'uniFilterStatus', 'uniFilterDateStart', 'uniFilterDateEnd'].forEach(id => {
@@ -6321,7 +6312,7 @@
                 openSendClientEmailModal(userData.Email || userData.email, userData.Name || userData.name);
             }
             else if (action === 'message') {
-                // Reuse existing admin message function
+
                 const subject = prompt("Enter message subject:", "Important Notice");
                 if (!subject) return;
                 const body = prompt("Enter message body:");
@@ -6355,7 +6346,7 @@
         <td class="p-3 text-center">${badge(r.PartnerID || r['Partner ID'] || r['PartnerID']) || '—'}
             ${badge(r.PartnerEmail || r['Partner Email'] || r['PartnerEmail']) || '—'}</td>
         <td class="p-3 text-slate-400 font-mono">${fmtNaira(r.Paid || r['Paid'] || '—')}
-            ${badge(r['Payment Type'] || '—')}</td> 
+            ${badge(r['Payment Type'] || '—')}</td>
         <td class="p-3 font-bold text-emerald-400">${fmtNaira(r.EarningsNaira || r['EarningsNaira'] || 0)}</td>
         <td class="p-3 text-center">${badge(r['Paid Date'] || '')}</td>
         <td class="p-3 text-slate-400">${escapeHtml(r.Service || r.service || '—')}</td>
@@ -6436,24 +6427,24 @@
                 return `
     <tr>
         <td class="p-3 text-slate-500 font-mono text-xs">${fmtDate(r.Timestamp || r.Date || r.date)}</td>
-        
+
         <td class="p-3">
             <div class="font-medium">${escapeHtml(name || r.Name || r['PartnerName'] || '—')}</div>
             <div class="text-xs text-slate-400 font-mono">${escapeHtml(email)}</div>
             <div class="text-[10px] text-slate-500">ID: ${escapeHtml(r.UniqueID || r.uniqueID || r.PartnerID || '—')}</div>
         </td>
-        
+
         <td class="p-3 text-xs">
             <div>${escapeHtml(r.BankName || r['BankName'] || '—')}</div>
             <div class="font-mono">${escapeHtml(r.AccountNumber || '—')}</div>
             <div class="text-slate-400">${escapeHtml(r.AccountName || '—')}</div>
         </td>
-        
+
         <td class="p-3 text-right font-bold text-emerald-400">${fmtNaira(r['AmountNaira'])}</td>
         <td class="p-3 text-slate-400">${fmtDate(r.Status || r['Status'])}</td>
         <td class="p-3 text-slate-400">${fmtDate(r.PaidDate || r['PaidDate'] || r.paidDate)}</td>
         <td class="p-3 text-center font-mono">${escapeHtml(r.SuccessfulJobs || r.successfulJobs || r['SuccessfulJobs'] || '—')}</td>
-        
+
         <td class="p-3 text-center">
             <select onchange="handleSettlementAction('${escapeHtml(email)}', this.value, ${JSON.stringify(r).replace(/"/g, '&quot;')})"
                 class="bg-slate-900 border border-slate-700 text-xs rounded px-3 py-1 text-white focus:outline-none">
@@ -6835,7 +6826,7 @@
             if (btn) { btn.disabled = false; btn.textContent = 'Initialize Production Protocol & Add to Ledger'; }
 
             if (res.success) {
-                // Populate the auto-generated fields in the modal for display
+
                 const tcEl = document.getElementById('onboardLedgerTrackingCode');
                 const txEl = document.getElementById('onboardLedgerTxRef');
                 if (tcEl) tcEl.value = res.trackingCode || '';
@@ -6860,7 +6851,6 @@
 
             const p = typeof projectData === 'string' ? JSON.parse(projectData) : projectData;
 
-            // Client Information
             document.getElementById('onboardLedgerClientName').value =
                 p.ClientName || p.clientName || p['Client Name'] || p.Name || '';
 
@@ -6870,7 +6860,6 @@
             document.getElementById('onboardLedgerClientPhone').value =
                 p.ClientPhone || p.clientPhone || p['Client Phone'] || p.Phone || p.phone || '';
 
-            // Service & Partner Details
             document.getElementById('onboardLedgerService').value =
                 p.Service || p.service || p['Engaged Service'] || p.EngagedService || '';
 
@@ -6880,22 +6869,18 @@
             document.getElementById('onboardLedgerPartnerEmail').value =
                 p.PartnerEmail || p.partnerEmail || p['Partner Email'] || '';
 
-            // Amount
             document.getElementById('onboardLedgerAmountPaid').value =
                 p.AmountToCharge || p.AmountPaid || p.Amount || p.amount || '';
 
-            // Payment Type (default fallback)
             const paymentTypeEl = document.getElementById('onboardLedgerPaymentType');
             if (paymentTypeEl) {
                 paymentTypeEl.value = p.PaymentType || p.paymentType || 'Digital Platform';
             }
 
-            // Payment Date (default to today)
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('onboardLedgerPaymentDate').value =
                 p.PaymentDate || p.paymentDate || p.Date || p.Timestamp || today;
 
-            // Auto-generated fields (cleared)
             document.getElementById('onboardLedgerTrackingCode').value = '';
             document.getElementById('onboardLedgerTxRef').value = '';
 
@@ -7202,7 +7187,6 @@
 
             let res = await executeSecureBridgeCall('client', 'client-submitted', {});
 
-
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
 
@@ -7238,15 +7222,15 @@
     <td class="p-3 font-bold text-emerald-400 text-right">${fmtNaira(amount)}</td>
     <td class="p-3 text-center">
         <div class="flex flex-wrap gap-1 justify-center">
-            <button onclick="handleClientProjectAction('edit', ${rowDataStr})" 
+            <button onclick="handleClientProjectAction('edit', ${rowDataStr})"
                 class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">✏️ Edit</button>
-            <button onclick="handleClientProjectAction('email', ${rowDataStr})" 
+            <button onclick="handleClientProjectAction('email', ${rowDataStr})"
                 class="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">✉️ Email</button>
-            <button onclick="handleClientProjectAction('payment', ${rowDataStr})" 
+            <button onclick="handleClientProjectAction('payment', ${rowDataStr})"
                 class="text-xs px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">🔗 Payment</button>
             ${isOnboarded ?
                             `<button disabled class="text-xs px-3 py-1 bg-gray-700 cursor-not-allowed rounded text-gray-400" title="Already onboarded: ${escapeHtml(trackingCode)}">✅ Onboarded</button>` :
-                            `<button onclick="handleClientProjectAction('onboard', ${rowDataStr})" 
+                            `<button onclick="handleClientProjectAction('onboard', ${rowDataStr})"
                 class="text-xs px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white">🚀 Onboard</button>`}
         </div>
     </td>
@@ -7257,7 +7241,6 @@
         function handleClientProjectAction(action, rowData) {
             if (!action) return;
 
-            // Safely parse the row data
             let p;
             try {
                 p = typeof rowData === 'string' ? JSON.parse(rowData) : rowData;
@@ -7291,7 +7274,6 @@
                 }
                 openOnboardToLedgerModal(p);
             }
-
 
         }
 
@@ -7441,27 +7423,27 @@
                 const company = l['Name Company'] || l.Company || '—';
                 const email = l.Email || l.email || '—';
                 const source = l['Source Channel'] || l.Source || 'Executive Outbound Search';
-                const state = l.State || l.state || '—';                    // ← Changed to State
+                const state = l.State || l.state || '—';
                 const stage = l['Funnel Stage'] || l.Stage || l.Engagement || "New Prospect";
                 const priority = l.Priority || l.priority || "Medium";
 
                 return `
         <tr class="hover:bg-slate-800/60 transition-colors">
             <td class="p-3 font-mono text-slate-400 text-xs">${escapeHtml(leadId)}</td>
-            
+
             <td class="p-3">
                 <div class="font-medium text-slate-200">${escapeHtml(fullName)}</div>
                 <div class="text-[10px] text-slate-500">${escapeHtml(company)}</div>
             </td>
-            
+
             <td class="p-3 font-mono text-slate-400 text-xs">${escapeHtml(email)}</td>
-            
+
             <td class="p-3 text-slate-400 text-xs">${escapeHtml(source)}</td>
-            
+
             <td class="p-3 text-slate-300">${escapeHtml(state)}</td>   <!-- Now shows State -->
-            
+
             <td class="p-3 text-center">${badge(stage)}</td>
-            
+
             <td class="p-3 text-center">
                 <span class="inline-block px-3 py-1 text-xs rounded-full font-medium
                     ${priority.toLowerCase() === 'high' ? 'bg-red-900 text-red-300' :
@@ -7470,7 +7452,7 @@
                     ${escapeHtml(priority)}
                 </span>
             </td>
-            
+
             <td class="p-3 text-center">
                 <div class="flex gap-2 justify-center">
                     <button onclick="openEditModal('${escapeHtml(leadId)}', ${JSON.stringify(l).replace(/"/g, '&quot;')}, 'leads-matrix')"
@@ -7494,11 +7476,9 @@
                 return;
             }
 
-            // Prefill the form
             document.getElementById('emailClientToAddress').value = clientEmail || '';
             document.getElementById('emailClientToDisplay').value = clientEmail || '';
 
-            // Optional: Set default subject
             const subjectEl = document.getElementById('emailClientSubject');
             if (subjectEl) {
                 subjectEl.value = `Follow-up: ${clientName || 'Prospect'}`;
@@ -7517,7 +7497,6 @@
                 if (res.success) loadLeadsMatrix();
             });
         }
-
 
         function openLeadCreationModalFormPanel() {
             const modal = document.getElementById("modalCrmLeadCreationFormPortal");
@@ -7668,7 +7647,6 @@
             const schema = EDIT_MODAL_FORM_SCHEMAS[recordType] || [];
             const usedKeys = new Set();
 
-            // 1. Render fields from predefined schema
             if (schema.length > 0) {
                 schema.forEach(field => {
                     usedKeys.add(field.key);
@@ -7676,7 +7654,6 @@
                 });
             }
 
-            // 2. Only auto-add extra fields for record types WITHOUT a defined schema
             if (schema.length === 0) {
                 Object.keys(rec).forEach(key => {
                     if (usedKeys.has(key)) return;
@@ -7692,7 +7669,7 @@
 
             modal.classList.remove('hidden');
         }
-        // Helper: Create individual form field
+
         function createFormField(container, field, rec) {
             const wrapper = document.createElement('div');
             wrapper.className = "mb-4";
@@ -7704,13 +7681,13 @@
 
             let currentVal = rec[field.key];
             if (currentVal === undefined || currentVal === '') {
-                // Try case variations + common spacing/alias variants
+
                 const k = field.key;
                 const candidates = [
                     k, k.toLowerCase(), k.toUpperCase(),
-                    k.replace(/([A-Z])/g, ' $1').trim(),          // "ClientName" -> "Client Name"
-                    k.replace(/\s+/g, ''),                          // strip spaces
-                    'Client' + k, 'client' + k,                      // ClientEmail <-> Email aliasing
+                    k.replace(/([A-Z])/g, ' $1').trim(),
+                    k.replace(/\s+/g, ''),
+                    'Client' + k, 'client' + k,
                     k.replace(/^Client/, ''), k.replace(/^client/, '')
                 ];
                 for (const c of candidates) {
@@ -7757,14 +7734,12 @@
             container.appendChild(wrapper);
         }
 
-        // Helper: Guess input type
         function getFieldType(key, value) {
             const k = String(key).toLowerCase();
 
             if (k.includes('email')) return 'email';
             if (k.includes('phone') || k.includes('number')) return 'tel';
 
-            // CRITICAL FIX: Treat Timestamp as text to avoid browser validation errors
             if (k.includes('timestamp') || k.includes('time') || k.includes('date')) {
                 return 'text';
             }
@@ -7882,7 +7857,6 @@
             CAL_EVENTS_ALL = (res.success && res.data) ? res.data : [];
             CAL_EVENTS_PAGE = 1;
 
-            // Re-render grid with event markers
             renderCalendarGrid();
             renderCalendarEventsTable(CAL_EVENTS_ALL);
         }
@@ -7911,10 +7885,7 @@
             document.getElementById('addonPrice').value = a.priceNgn;
             document.getElementById('addonName').value = a.label;
         }
-        // Mirror the backend catalog so labels/prices match exactly — keep in sync manually if you edit ADDON_CATALOG
-        // [CHANGED] Synced with the reduced pricing update: extra_mailbox ₦45,000→₦35,000,
-        // extra_proposal ₦90,000→₦70,000, compliance_doc_tracking ₦4,500→₦5,000/doc,
-        // plus the new extra_5_documents add-on (₦50,000, +5 docs/mo).
+
         const ADDON_CATALOG_FRONTEND = {
             extra_mailbox: { label: "Extra Mailbox", priceNgn: 35000 },
             extra_50_emails: { label: "Extra 50 Emails/mo", priceNgn: 60000 },
@@ -7951,7 +7922,6 @@
             if (res.success) { closeEventCreationModal(); loadCalendarEvents(); }
         }
 
-        // Replace the entire edit form submit listener with this improved version
         document.addEventListener('DOMContentLoaded', () => {
             const editForm = document.getElementById('edit-form');
             if (!editForm) return;
@@ -7969,17 +7939,16 @@
                     return;
                 }
 
-                // === CUSTOM MAPPING TO FIX SETTLEMENT UPDATE ===
                 let system = 'career';
                 let action = 'update-record';
 
                 if (recordType === 'career-settlements') {
-                    system = 'career';           // or 'client' if you prefer
-                    action = 'update-record'; // This is the key change
+                    system = 'career';
+                    action = 'update-record';
                 }
                 else if (recordType === 'client-onboarded') {
                     system = 'client';
-                    action = 'update-record';   // CORRECT — matches sheetMap idKey: "TrackingCode"
+                    action = 'update-record';
                 }
                 else if (['career-users', 'career-earnings', 'career-complaints'].includes(recordType)) {
                     system = 'career';
@@ -8015,7 +7984,6 @@
                     showToast('Record updated successfully', 'success');
                     closeEditModal();
 
-                    // Refresh the relevant table
                     const refreshMap = {
                         'career-settlements': initializeModule_career_settlements,
                         'career-users': initializeModule_career_users,
@@ -8023,7 +7991,7 @@
                         'career-complaints': initializeModule_career_complaints,
                         'client-onboarded': loadProductionFulfillment,
                         'assessment-students': initializeModule_assess_submissions,
-                        // add more as needed
+
                     };
 
                     if (refreshMap[recordType]) {
@@ -8035,7 +8003,6 @@
             });
         });
 
-        // ---- HELPER: get industry/location from sidebar quick-run inputs ----
         function v5GetIndustry(overrideId) {
             const el = overrideId ? document.getElementById(overrideId) : null;
             if (el && el.value) return el.value.trim();
@@ -8043,7 +8010,6 @@
             const quickEl = document.getElementById('v5QuickIndustry');
             if (quickEl && quickEl.value) return quickEl.value.trim();
 
-            // If no value, prompt user to select
             showToast('Please select an industry from the sidebar.', 'error');
             return '';
         }
@@ -8052,13 +8018,9 @@
             return document.getElementById('v5QuickLocation')?.value?.trim() || 'Nigeria';
         }
 
-        // ================================================================
-        // RUN HANDLERS — trigger V5 jobs via gateway
-        // ================================================================
-
         async function runV5LinkedIn() {
             const query = document.getElementById('v5LinkedInQuery')?.value?.trim();
-            const title = document.getElementById('v5LinkedInTitle')?.value; // NOW DROPDOWN
+            const title = document.getElementById('v5LinkedInTitle')?.value;
             const location = document.getElementById('v5LinkedInLocation')?.value?.trim() || v5GetLocation();
 
             if (!query || !title) {
@@ -8068,7 +8030,6 @@
 
             showToast('Running LinkedIn scrape…', 'info');
             const res = await executeSecureBridgeCall('leads', 'v5-scrape-linkedin', { query, title, location });
-
 
             if (res.success) {
                 showToast(`Scrape complete: ${res.snippetsCount || 0} snippets found.`, 'success');
@@ -8090,7 +8051,6 @@
             if (res.success) {
                 showToast(`Trends loaded for ${industry}.`, 'success');
 
-                // Show live result panel
                 const panel = document.getElementById('v5TrendsLiveResult');
                 if (panel) panel.classList.remove('hidden');
 
@@ -8128,8 +8088,6 @@
                 showToast(res.message || 'Content generation failed.', 'error');
             }
         }
-
-
 
         async function runV5Calendar() {
             const topic = document.getElementById('v5CalendarTopic')?.value?.trim();
@@ -8188,7 +8146,6 @@
             if (res.success) {
                 showToast(`Analyzed ${res.competitorsAnalyzed || 0} competitors.`, 'success');
 
-                // Show gaps panel
                 const panel = document.getElementById('v5MarketGapsPanel');
                 if (panel && res.gaps?.length) {
                     panel.classList.remove('hidden');
@@ -8203,10 +8160,6 @@
                 showToast(res.message || 'Analysis failed.', 'error');
             }
         }
-
-        // ================================================================
-        // HISTORY LOADERS — fetch from V5 sheets via gateway read routes
-        // ================================================================
 
         async function loadV5LinkedInHistory() {
             const tbodyId = 'v5LinkedInTableBody';
@@ -8376,10 +8329,6 @@
         </tr>`).join('');
         }
 
-        // ================================================================
-        // AGENT HUB INITIALIZATION & HANDLERS
-        // ================================================================
-
         function initializeAgentHub() {
             document.querySelectorAll('.agent-subview-link').forEach(link => {
                 link.addEventListener('click', function (e) {
@@ -8389,21 +8338,17 @@
                     const targetView = this.getAttribute('data-target-view');
                     if (!targetView) return;
 
-                    // Hide all views across the whole page
                     document.querySelectorAll('[id^="view-"]').forEach(v => v.classList.add('hidden'));
 
-                    // Show the target view
                     const el = document.getElementById('view-' + targetView);
                     if (el) {
                         el.classList.remove('hidden');
                         el.style.display = 'flex';
                     }
 
-                    // Update active state
                     document.querySelectorAll('.agent-subview-link').forEach(l => l.classList.remove('active'));
                     this.classList.add('active');
 
-                    // Load data
                     const loaderMap = {
                         'agent-clients': loadAgentClients,
                         'agent-subscriptions': loadAgentSubscriptions,
@@ -8411,26 +8356,24 @@
                         'agent-usage': loadAgentUsageReports,
                         'agent-tasks': loadAgentTasks,
                         'agent-compliance': loadAgentComplianceLogs,
-                        'agent-violations': loadAgentViolations,   // NEW
-                        'agent-docs': loadAgentDocsView,            // NEW
-                        'agent-invoices': loadAgentInvoices,        // NEW
+                        'agent-violations': loadAgentViolations,
+                        'agent-docs': loadAgentDocsView,
+                        'agent-invoices': loadAgentInvoices,
                         'agent-addons': loadAgentAddonsUI,
                         'agent-social-calendar': loadAdminSocialCalendar,
-                        'agent-doc-studio': loadDocStudio,          // NEW
+                        'agent-doc-studio': loadDocStudio,
                     };
                     if (loaderMap[targetView]) loaderMap[targetView]();
                     syncAgentSidebarSelects();
                 });
             });
 
-            // Initialize all dropdowns on load
             setTimeout(() => {
                 initializeIndustrySelects();
 
-                // Wire up any dynamic industry selectors
                 document.querySelectorAll('select[id*="Industry"]').forEach(sel => {
                     sel.addEventListener('change', function () {
-                        // Optional: trigger dependent field updates
+
                         console.log('Industry changed to:', this.value);
                     });
                 });
@@ -8487,6 +8430,9 @@
             ${(c.Status === 'Active')
                         ? `<button onclick="openAgentDeactivateModal('${cid}')"><i class="fa-solid fa-ban text-red-400 w-3"></i> Deactivate</button>`
                         : `<button onclick="activateAgentClient('${cid}')"><i class="fa-solid fa-check text-emerald-400 w-3"></i> Activate</button>`}
+            <button onclick='openDeleteClientModal("${cid}", ${JSON.stringify(c.CompanyName || "").replace(/"/g, "&quot;")})'>
+                <i class="fa-solid fa-trash text-red-500 w-3"></i> Delete Client
+            </button>
         </div>
     </div>
     </div>
@@ -8494,6 +8440,31 @@
         </tr>
     `;
             }).join('');
+        }
+
+        let DELETE_CLIENT_TARGET = null;
+        function openDeleteClientModal(clientId, companyName) {
+            DELETE_CLIENT_TARGET = { clientId, companyName };
+            document.getElementById('deleteClientName').textContent = companyName;
+            document.getElementById('deleteClientConfirmInput').value = '';
+            document.getElementById('modalDeleteClient').classList.remove('hidden');
+        }
+        function closeDeleteClientModal() {
+            document.getElementById('modalDeleteClient').classList.add('hidden');
+            DELETE_CLIENT_TARGET = null;
+        }
+        async function submitDeleteClient() {
+            if (!DELETE_CLIENT_TARGET) return;
+            const typed = document.getElementById('deleteClientConfirmInput').value.trim();
+            if (typed !== DELETE_CLIENT_TARGET.companyName) {
+                showToast('Name did not match — nothing was deleted.', 'error');
+                return;
+            }
+            const res = await executeSecureBridgeCall('agent', 'agent-delete-client', {
+                clientId: DELETE_CLIENT_TARGET.clientId, confirmCompanyName: typed
+            });
+            showToast(res.success ? 'Client deleted.' : (res.message || 'Delete failed.'), res.success ? 'success' : 'error');
+            if (res.success) { closeDeleteClientModal(); loadAgentClients(); }
         }
 
         function activateAgentClient(clientId) {
@@ -8511,12 +8482,6 @@
             });
         }
 
-        // =====================================================================
-        // CLIENT PORTAL LOGIN MANAGEMENT (NEW)
-        // Admin-side controls for creating/resetting/revoking the credentials a
-        // client uses to sign into client-dashboard.html. Wired to the four
-        // agent-*-client-portal* actions in AgentLib via the bridge gateway.
-        // =====================================================================
         let CP_ACTIVE_CLIENT_ID = null;
 
         function openClientPortalModal(clientId, companyName) {
@@ -8582,7 +8547,6 @@
             });
         }
 
-
         async function loadAgentSubscriptions() {
             const tbodyId = 'agentSubscriptionsTableBody';
             showTableSkeleton(tbodyId, 9);
@@ -8599,7 +8563,6 @@
                 return;
             }
 
-            // Update KPIs
             document.getElementById('kpi-agent-total').textContent = res.data.length;
             const active = res.data.filter(c => c.Status === 'Active').length;
             document.getElementById('kpi-agent-active').textContent = active;
@@ -8608,7 +8571,7 @@
                 if (c.Tier === 'enterprise_ops' && parseFloat(c.CustomPriceNGN)) return sum + parseFloat(c.CustomPriceNGN);
                 if (pricing[c.Tier] && pricing[c.Tier].priceNgn) return sum + pricing[c.Tier].priceNgn;
                 if (c.Tier === 'digital_accelerate' || c.Tier === 'digital_scale') {
-                    // Quote-only tiers — only count if a real negotiated price was set via agent-set-custom-tier
+
                     return sum + (parseFloat(c.CustomPriceNGN) || 0);
                 }
                 if (String(c.Tier).toLowerCase() === 'custom') return sum + (parseFloat(c.CustomPriceNGN) || 0);
@@ -8619,16 +8582,13 @@
 
             tbody.innerHTML = res.data.map(c => {
 
-                // Prices come live from the ServicePricing sheet (getServicePricing());
-                // quota numbers (hours/emails/proposals) aren't part of that sheet, so
-                // they stay as tier defaults here — same as before.
                 const tierPricing = {
                     'starter_ops': { hours: 20, emails: 50, proposals: 1, price: pricing.starter_ops?.priceNgn ?? null },
                     'growth_ops': { hours: 40, emails: 200, proposals: 3, price: pricing.growth_ops?.priceNgn ?? null },
                     'enterprise_ops': { hours: 9999, emails: 9999, proposals: 9999, price: pricing.enterprise_ops?.priceNgn ?? null },
                     'digital_launch': { hours: 10, emails: 30, proposals: 1, price: pricing.digital_launch?.priceNgn ?? null },
-                    'digital_accelerate': { hours: 20, emails: 100, proposals: 2, price: null },   // quote-only tier
-                    'digital_scale': { hours: 9999, emails: 9999, proposals: 9999, price: null }, // quote-only tier
+                    'digital_accelerate': { hours: 20, emails: 100, proposals: 2, price: null },
+                    'digital_scale': { hours: 9999, emails: 9999, proposals: 9999, price: null },
                     'custom': {
                         hours: c.CustomHours || 0, emails: c.CustomEmails || 0,
                         proposals: c.CustomProposals || 0, price: c.CustomPriceNGN || 0
@@ -8700,7 +8660,6 @@
             <td colspan="7" class="p-3 text-slate-500">Quota unavailable${q?.expired ? ' (expired)' : ''}</td></tr>`;
                 }
 
-                // Marketing-tier clients return a different shape — branch here.
                 if (q.tierLabel) {
                     const chUsed = q.used.contentReviewHours ?? 0, chLimit = q.limits.contentReviewHours === 999 ? '∞' : q.limits.contentReviewHours;
                     const saUsed = q.used.socialAssets ?? 0, saLimit = q.limits.socialAssets === 999 ? '∞' : q.limits.socialAssets;
@@ -8724,7 +8683,6 @@
         </tr>`;
                 }
 
-                // Ops-tier (unchanged, existing logic)
                 const hoursUsed = q.used.hours, hoursLimit = q.limits.hours === 999 ? '∞' : q.limits.hours;
                 const emailsUsed = q.used.emails, emailsLimit = q.limits.emails === 999 ? '∞' : q.limits.emails;
                 const propUsed = q.used.proposals, propLimit = q.limits.proposals === 999 ? '∞' : q.limits.proposals;
@@ -8875,9 +8833,6 @@
             }).join('');
         }
 
-        // === MODAL HANDLERS ===
-
-        // REPLACE openAgentClientRegisterModal()
         function openAgentClientRegisterModal() {
             const modal = document.getElementById('modalAgentClientRegister');
             if (!modal) return;
@@ -8906,7 +8861,6 @@
             modal.classList.remove('hidden');
         }
 
-        // NEW — Enterprise Limits modal handlers
         function openAgentEnterpriseLimitsModal(clientId, companyName) {
             document.getElementById('entLimitsClientId').value = clientId;
             document.getElementById('entLimitsClientName').value = companyName;
@@ -9085,12 +9039,8 @@
 
         function viewAgentTaskDetails(taskId) {
             showToast(`Task Details: ${taskId}`, 'info');
-            // Expand this to open a detailed view modal if needed
-        }
 
-        // ================================================================
-        // AGENT HUB: COMPLIANCE VIOLATIONS
-        // ================================================================
+        }
 
         async function loadAgentViolations() {
             const tbodyId = 'agentViolationsTableBody';
@@ -9145,11 +9095,7 @@
             });
         }
 
-        // ================================================================
-        // AGENT HUB: COMPLIANCE DOCUMENTS
-        // ================================================================
-
-        const AGENT_CLIENTS_CACHE = {}; // clientId -> full client record, used for industry lookups
+        const AGENT_CLIENTS_CACHE = {};
 
         async function populateAgentClientSelector(selectId, autoLoadFn) {
             const select = document.getElementById(selectId);
@@ -9196,7 +9142,7 @@
         function getDocTypesForIndustry(industry) {
             const extra = COMPLIANCE_DOC_TYPES_BY_INDUSTRY[industry] || [];
             const deduped = Array.from(new Set([...COMPLIANCE_DOC_TYPES_BASE, ...extra]));
-            deduped.push("Custom Document"); // always last
+            deduped.push("Custom Document");
             return deduped;
         }
 
@@ -9238,8 +9184,8 @@
                 if (res.success) {
                     showToast('Uploaded — public-record status: ' + (res.publicVerification?.status || 'checked'), 'success');
                     closeUploadComplianceDocModal();
-                    document.getElementById('docsClientSelector').value = clientId;   // keep selector in sync
-                    loadAgentComplianceDocs();                                        // one table, refreshed correctly
+                    document.getElementById('docsClientSelector').value = clientId;
+                    loadAgentComplianceDocs();
                 } else {
                     showToast(res.message || 'Upload failed.', 'error');
                 }
@@ -9249,12 +9195,9 @@
             }
         }
 
-        // Inside submitAddAddon's backend handler (wherever agent-set-addons is processed),
-        // AFTER successfully writing the addons array, apply the effect for any NEWLY added
-        // or newly-Active addon:
         function _setClientAddonsWithEffects(payload) {
             const { clientId, addons } = payload;
-            // Load the previous state to diff against (so we only apply effects once, not on every save).
+
             const client = _getClient({ clientId });
             const previousAddons = client.success ? _parseAddonsJson(client.client.Addons) : [];
             const previousKeys = new Set(previousAddons.filter(a => a.status === "Active").map(a => a.catalogKey));
@@ -9263,14 +9206,12 @@
             newKeys.forEach(key => { if (!previousKeys.has(key)) _applyAddonEffect(clientId, key, "add"); });
             previousKeys.forEach(key => { if (!newKeys.has(key)) _applyAddonEffect(clientId, key, "remove"); });
 
-            return _setClientAddons(payload); // your existing raw-write function, unchanged
+            return _setClientAddons(payload);
         }
 
         async function loadSignupCodes() {
             const tbody = document.getElementById('signupCodesTableBody');
-            // Silent refresh: only show the full skeleton on first load (empty table).
-            // Subsequent calls (auto-refresh, after generating/inviting) update the
-            // rows in place without a jarring wipe-and-reload flash.
+
             const isFirstLoad = !tbody.querySelector('tr');
             if (isFirstLoad) showTableSkeleton('signupCodesTableBody', 5);
             const res = await executeSecureBridgeCall('career', 'listSignupCodes', {});
@@ -9285,7 +9226,6 @@
         </td></tr>
     `).join('');
         }
-        // Update the <thead> in signupCodesTableBody's table to add an "Invite" column.
 
         function openInviteCodeModal(code) {
             const email = prompt(`Send signup code ${code} to which email?`);
@@ -9344,15 +9284,6 @@
             });
         }
 
-        // ================================================================
-        // AI Agent Control sidebar — 4 grouped dropdowns (replaces the old
-        // flat list of 22 subview buttons / "More tools" flyout). Each
-        // <select onchange> calls this; it resets the other 3 dropdowns back
-        // to their placeholder and clicks the matching hidden
-        // .agent-subview-link button, so all of initializeAgentHub()'s
-        // existing view-switching / active-state / loaderMap logic keeps
-        // working completely untouched.
-        // ================================================================
         function jumpToAgentView(view, selectEl) {
             if (!view) return;
             document.querySelectorAll('.agent-subview-select').forEach(s => {
@@ -9361,9 +9292,7 @@
             const btn = document.querySelector('.agent-subview-link[data-target-view="' + view + '"]');
             if (btn) btn.click();
         }
-        // Keeps the relevant dropdown showing the currently active view after a
-        // refresh or a deep link (e.g. from a notification) lands on a
-        // secondary view instead of the default Client Registry.
+
         function syncAgentSidebarSelects() {
             const active = document.querySelector('.agent-subview-link.active');
             if (!active) return;
@@ -9374,9 +9303,6 @@
             });
         }
 
-        // ================================================================
-        // NEW: AGENT USERS — ONLINE PRESENCE & USAGE
-        // ================================================================
         async function loadAgentOnlineUsage() {
             const tbody = document.getElementById('agentOnlineUsageTableBody');
             if (!tbody) return;
@@ -9431,11 +9357,6 @@
             }, 250);
         }
 
-        // ================================================================
-        // LIVE CHAT — persisted server-side in the AgentChatLog sheet
-        // (source of truth); the script cache is used only as a speed
-        // layer so polling stays fast.
-        // ================================================================
         let LIVE_CHAT_CLIENT = null;
         let LIVE_CHAT_TIMER = null;
 
@@ -9512,8 +9433,6 @@
             showToast(res.success ? (res.message || 'Emailed.') : (res.message || 'Failed.'), res.success ? 'success' : 'error');
         }
 
-        // Single lightweight heartbeat: refreshes the Online/Usage table and
-        // the active chat thread only while their respective views are visible.
         let AGENT_LIVE_POLL_TIMER = null;
         function startAgentLivePolling() {
             if (AGENT_LIVE_POLL_TIMER) return;
@@ -9523,7 +9442,6 @@
             }, 60000);
         }
 
-        // Extend the single results table with the new columns
         async function loadAgentComplianceDocs() {
             const clientId = document.getElementById('docsClientSelector')?.value;
             const tbody = document.getElementById('agentDocsTableBody');
@@ -9644,10 +9562,6 @@
             });
         }
 
-        // ================================================================
-        // AGENT HUB: INVOICES
-        // ================================================================
-
         async function loadAgentInvoices() {
             const tbodyId = 'agentInvoicesTableBody';
             showTableSkeleton(tbodyId, 8);
@@ -9722,11 +9636,10 @@
             }
         }
 
-        // Initialize on sidebar navigation
         let agentTaskPollingInterval = null;
 
         function startAgentTaskMonitor(taskId) {
-            // Show a live monitor panel
+
             const panel = document.createElement('div');
             panel.id = 'agent-live-monitor';
             panel.style.cssText = 'position:fixed;bottom:24px;right:24px;width:380px;background:#0f172a;border:1px solid #34d399;border-radius:12px;padding:16px;z-index:9999;font-family:monospace;font-size:12px;';
@@ -9736,7 +9649,6 @@
     `;
             document.body.appendChild(panel);
 
-            // Poll for updates
             agentTaskPollingInterval = setInterval(async () => {
                 const res = await executeSecureBridgeCall('agent', 'agent-all-tasks', {});
                 if (res.success && res.data) {
@@ -9759,7 +9671,7 @@
         }
 
         function initializeIndustrySelects() {
-            // Populate all industry selects on page load
+
             document.querySelectorAll('select[id*="Industry"], select[id*="Niche"], select[id*="niche"]').forEach(select => {
                 if (!select.dataset.populated) {
                     const optionsToUse = select.id.includes('Niche') || select.id.includes('niche') ? NICHE_OPTIONS : INDUSTRY_OPTIONS;
@@ -9770,15 +9682,10 @@
             });
         }
 
-        // ================================================================
-        // AGENT HUB: LEAD GENERATION & DRIVE FUNCTIONS
-        // ================================================================
-
         function openAgentLeadGenerationModal() {
             const modal = document.getElementById('modalAgentLeadGeneration');
             if (!modal) return;
 
-            // Populate client dropdown
             const select = document.getElementById('leadGenClientId');
             if (select) {
                 select.innerHTML = '<option value="">Loading clients...</option>';
@@ -9793,7 +9700,6 @@
                 });
             }
 
-            // Clear previous results
             document.getElementById('leadGenResultsPanel').classList.add('hidden');
             document.getElementById('leadGenResults').innerHTML = '';
             document.getElementById('agentLeadGenerationForm').reset();
@@ -9824,7 +9730,6 @@
             const btn = event.target.querySelector('button[type="submit"]');
             if (btn) { btn.disabled = true; btn.textContent = 'Delegating to Apollo...'; }
 
-            // Build payload
             const payload = {
                 clientId,
                 count,
@@ -9838,7 +9743,6 @@
 
             if (btn) { btn.disabled = false; btn.textContent = 'Delegate to Apollo & Fetch Leads'; }
 
-            // Replace inside submitAgentLeadGeneration:
             if (res.success) {
                 showToast(`Lead generation initiated: ${res.added || 0} leads added!`, 'success');
                 const resultsPanel = document.getElementById('leadGenResultsPanel');
@@ -9926,7 +9830,6 @@
             tbody.innerHTML = rows;
         }
 
-
         function submitConnectEmail(event) {
             event.preventDefault();
             const clientId = document.getElementById('connectEmailClientId').value;
@@ -9952,12 +9855,7 @@
                 select.innerHTML = '<option value="">Select…</option>' + res.data.map(c =>
                     `<option value="${escapeHtml(c.clientId)}">${escapeHtml(c.displayName)}</option>`
                 ).join('');
-                // BUGFIX: the previous "only if there's exactly one client" check almost
-                // never fired, because agent-get-all-clients merges AgentClients + VAClients
-                // into a single list — so the count is rarely exactly 1 even with a single
-                // real ops client, and the panel was left permanently blank waiting on an
-                // onchange event that never comes. When a caller wants an always-loaded
-                // panel (autoLoadFn provided), just select the first client by default.
+
                 if (autoLoadFn) {
                     const preselect = select.dataset.preselect;
                     if (preselect) { delete select.dataset.preselect; select.value = preselect; }
@@ -9998,7 +9896,6 @@
     `;
         }
 
-        // Add to Mailboxes view loader — show connection status alongside mailboxes
         async function loadEmailConnectionsPanel(clientId) {
             const res = await executeSecureBridgeCall('agent', 'agent-get-email-connections', { clientId });
             if (!res.success) return;
@@ -10019,10 +9916,6 @@
                 if (res.success) loadEmailConnectionsPanel(clientId);
             });
         }
-
-        // ================================================================
-        // PUBLISH HUB
-        // ================================================================
 
         async function loadSocialConnections() {
             const selector = document.getElementById('connectionsClientSelector');
@@ -10082,7 +9975,7 @@
             if (!text || !text.trim()) return;
             executeSecureBridgeCall('publish', 'agent-publish-adhoc', { clientId, platform, content: text.trim() }).then(res => {
                 showToast(res.success ? ('Posted to ' + platform + '.') : (res.message || 'Failed.'), res.success ? 'success' : 'error');
-                if (res.success) loadPublishQueue(); // harmless if not on that tab
+                if (res.success) loadPublishQueue();
             });
         }
 
@@ -10125,9 +10018,6 @@
             if (!tbody) return;
             showTableSkeleton('publishQueueTableBody', 7);
 
-            // Reuses the existing leads-v5-content read route, which already
-            // returns V5_SocialQueue rows (now including ClientID/PostURL/PublishNotes
-            // once publish-init-sheets has run).
             const res = await executeSecureBridgeCall('leads', 'leads-v5-content', {});
             if (!res.success || !res.data?.length) {
                 tbody.innerHTML = emptyRow('No queued content found.', 7);
@@ -10149,11 +10039,7 @@
         </tr>
     `).join('');
         }
-        // [REMOVED] generateDocument(clientId, type) — Pitch Deck / Financial Report /
-        // Infographic Brief generation moved into the AI Actions Console's
-        // "Document Generation" category (see AI_ACTION_CATALOG + runDocGenAction
-        // below), where the admin can type a directive (e.g. "pitch to Dangote",
-        // "monthly report for last 2 months") instead of firing with no input.
+
         function publishQueueRowNow(clientId, platform, rowNumber) {
             if (!confirm('Publish this post now, bypassing the batch schedule?')) return;
             executeSecureBridgeCall('publish', 'agent-publish-post', { clientId, platform, rowNumber }).then(res => {
@@ -10195,15 +10081,6 @@
             });
         }
 
-        // ================================================================
-        // AGENT HUB: ADD-ONS & EXTRAS
-        // Backend stores addons as a JSON array in the "Addons" column on
-        // AgentClients (ops) or VAClients (VA). agent-set-addons REPLACES the
-        // whole array, so every add/edit/delete here re-reads current addons,
-        // mutates the array client-side, then writes the full array back.
-        // ================================================================
-
-        // clientId -> { kind: 'ops'|'va', displayName, raw }  (raw includes Addons JSON)
         const ADDON_CLIENT_CACHE = {};
 
         async function _addonFetchAllClientsWithAddons() {
@@ -10239,19 +10116,6 @@
             }
         }
 
-        // =====================================================================
-        // [NEW] Purchase Add-on (quantity-capable) — wired to the backend's
-        // ADDON_PRICING / _purchaseAddon (agent-purchase-addon), which already
-        // supports a `quantity` multiplier server-side. This is a SEPARATE,
-        // newer system from the legacy Addons-JSON ledger below (different
-        // catalog, different columns) — see the in-page note for why they're
-        // kept apart rather than merged.
-        //
-        // The catalog itself is no longer hardcoded — it's built from
-        // getServicePricing() (the same ServicePricing sheet AgentLib charges
-        // against), filtered to Category === "Add-on", so it can never drift
-        // out of sync with what agent-purchase-addon will actually charge.
-        // =====================================================================
         let ADDON_PRICING_FRONTEND = {};
         async function refreshAddonPricingFrontend() {
             const pricing = await getServicePricing();
@@ -10317,10 +10181,6 @@
                 fmtNaira(ADDON_CART.reduce((s, l) => s + l.lineTotal, 0));
         }
 
-        // Submits the whole cart — one agent-purchase-addon call per line, since
-        // that's the shape _purchaseAddon expects (single addonKey + quantity).
-        // This is what lets an admin buy several DIFFERENT add-ons at DIFFERENT
-        // quantities for the same client in one action.
         async function purchaseAddonCart() {
             const clientId = document.getElementById('addonCartClientSelector').value;
             if (!clientId) { showToast('Select a client.', 'error'); return; }
@@ -10347,9 +10207,6 @@
             loadRecentAddonPurchases();
         }
 
-        // Pulls the last few ADDON_PURCHASED entries straight from the audit log
-        // (no dedicated "purchases" sheet needed — _purchaseAddon already logs
-        // every purchase there via _logAudit).
         async function loadRecentAddonPurchases() {
             const el = document.getElementById('recentAddonPurchasesList');
             if (!el) return;
@@ -10365,7 +10222,7 @@
         }
 
         async function loadAgentAddonsUI() {
-            // [NEW] Initialize the quantity-purchase panel every time this view loads.
+
             populateAllClientsSelector('addonCartClientSelector');
             await populateAddonCartCatalog();
             ADDON_CART = [];
@@ -10379,7 +10236,6 @@
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
 
-            // Flatten: one row per addon, tagged with its parent client + index
             const flat = [];
             clientRows.forEach(c => {
                 const addons = _parseAddonsJson(c.addonsRaw);
@@ -10439,7 +10295,6 @@
             const modal = document.getElementById('modalAddAddon');
             if (!modal) return;
 
-            // Populate client dropdown (ops + VA combined)
             const select = document.getElementById('addonClientId');
             select.innerHTML = '<option value="">Loading…</option>';
             const clientRows = await _addonFetchAllClientsWithAddons();
@@ -10502,7 +10357,6 @@
 
             if (!newAddon.name) { showToast('Add-on name is required.', 'error'); return; }
 
-            // Re-fetch current addons fresh (avoid stale cache overwriting concurrent edits)
             const cached = ADDON_CLIENT_CACHE[clientId];
             const kind = cached?.kind || 'ops';
             let currentAddons = [];
@@ -10568,7 +10422,7 @@
             const email = userData.Email || userData.email;
             if (action === 'edit') { openEditModal(userId, userData, 'career-users'); }
             else if (action === 'email') { openSendClientEmailModal(email, userData.Name || userData.name); }
-            else if (action === 'message') { /* existing message logic unchanged */ }
+            else if (action === 'message') { }
             else if (action === 'block') {
                 const duration = prompt('Block duration — enter 24h, 48h, or 1w:', '24h');
                 if (!duration) return;
@@ -10599,14 +10453,13 @@
             }
         }
 
-
         let ADMIN_NOTIF_TIMER = null;
         let ADMIN_NOTIF_CACHE = [];
 
         function startAdminNotifPolling() {
             if (ADMIN_NOTIF_TIMER) clearInterval(ADMIN_NOTIF_TIMER);
             pollAdminNotifications();
-            ADMIN_NOTIF_TIMER = setInterval(pollAdminNotifications, 20000); // 20s — cheap read-only poll
+            ADMIN_NOTIF_TIMER = setInterval(pollAdminNotifications, 20000);
         }
 
         async function pollAdminNotifications() {
@@ -10979,7 +10832,6 @@ ${a.Status === 'Pending Review' ? `
             });
         }
 
-        // ============ compliance frameworks ============
         const FRAMEWORK_OPTIONS = ["NDPA 2023", "FIRS Tax", "CAMA 2020", "CAC Annual Returns", "CBN Guidelines",
             "NAFDAC", "SCUML", "FCCPC Consumer Protection", "NBA Rules", "NUC / NBTE / Federal MoE", "SON",
             "NESREA Environment", "Tourism Board", "NCC", "NITDA", "NBC", "AML/CFT", "SEC Nigeria",
@@ -11036,21 +10888,9 @@ ${a.Status === 'Pending Review' ? `
             });
         }
 
-        // =====================================================================
-        // [NEW] DOCUMENT STUDIO
-        // Surfaces the full backend document catalog (agent-list-catalog-documents
-        // → DocumentsLib.DOCUMENT_CATALOG, ~64 types across universal + 6 industry
-        // verticals) as a searchable/filterable grid instead of a long flat list,
-        // with a per-doc dynamic field form (agent-catalog-document to generate),
-        // and a sample-upload flow (agent-analyze-document-sample /
-        // agent-get-document-template) that teaches the AI a specific client's
-        // real document layout — e.g. how many report-card columns THIS school
-        // actually uses — instead of guessing at a generic template.
-        // =====================================================================
-
-        let DOC_STUDIO_CATALOG = null;   // cached array from agent-list-catalog-documents
-        let DOC_STUDIO_SPEC = null;      // currently-open doc spec in the Generate modal
-        const DOC_STUDIO_TABLE_STATE = {}; // fieldKey -> { columns: [...], rows: [{...}] }
+        let DOC_STUDIO_CATALOG = null;
+        let DOC_STUDIO_SPEC = null;
+        const DOC_STUDIO_TABLE_STATE = {};
 
         async function loadDocStudio() {
             await populateAgentClientSelector('docStudioClientId', null);
@@ -11072,8 +10912,6 @@ ${a.Status === 'Pending Review' ? `
             renderDocStudioCatalog();
         }
 
-        // Selecting a client auto-narrows the Industry filter to that client's
-        // industry (they can still widen it back to "All industries" manually).
         function onDocStudioClientChange() {
             const clientId = document.getElementById('docStudioClientId')?.value;
             const client = AGENT_CLIENTS_CACHE[clientId];
@@ -11118,8 +10956,6 @@ ${a.Status === 'Pending Review' ? `
             `).join('') : `<div class="col-span-3 text-center text-xs text-slate-500 py-8">No document types match this filter.</div>`;
         }
 
-        // ---- Generate Document modal (dynamic form from a catalog spec) ----
-
         async function openGenerateDocumentModal(docId) {
             const clientId = document.getElementById('docStudioClientId')?.value;
             if (!clientId) { showToast('Select a client first.', 'error'); return; }
@@ -11136,9 +10972,6 @@ ${a.Status === 'Pending Review' ? `
             noticeEl.classList.add('hidden');
             noticeEl.textContent = '';
 
-            // Look up any AI-learned sample format for this client + doc type, and
-            // use it to prefill table-field columns (this is the piece that makes a
-            // 7-column report card render with 7 columns for THIS client).
             let learnedColumns = null;
             try {
                 const tRes = await executeSecureBridgeCall('agent', 'agent-get-document-template', { clientId, docId });
@@ -11147,7 +10980,7 @@ ${a.Status === 'Pending Review' ? `
                     noticeEl.classList.remove('hidden');
                     noticeEl.textContent = `Using the format learned from "${tRes.template.fileName}" — columns: ${tRes.template.columns.join(', ')}.`;
                 }
-            } catch (e) { /* non-fatal — falls back to a blank table */ }
+            } catch (e) { }
 
             const fieldsWrap = document.getElementById('genDocFields');
             fieldsWrap.innerHTML = (spec.fields || []).map(fd => {
@@ -11167,10 +11000,6 @@ ${a.Status === 'Pending Review' ? `
                         class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" /></div>`;
             }).join('');
 
-            // Mount interactive column/row editors for table fields after the static HTML
-            // lands. Catalog docs use at most one table field in practice, so a learned
-            // template (if any) applies to it directly; otherwise fall back to a
-            // generic 2-column starting grid the admin can freely reshape.
             const tableFields = (spec.fields || []).filter(fd => fd.type === 'table');
             tableFields.forEach(fd => {
                 const cols = (learnedColumns && tableFields.length === 1) ? learnedColumns : ['Item', 'Value'];
@@ -11283,8 +11112,6 @@ ${a.Status === 'Pending Review' ? `
             }
         }
 
-        // ---- Run System Tests (static tier by default; live tier if a client
-        // is selected, since that generates+trashes one real test document) ----
         async function runDocStudioSelfTests() {
             const resultsEl = document.getElementById('docStudioTestResults');
             resultsEl.classList.remove('hidden');
@@ -11309,8 +11136,6 @@ ${a.Status === 'Pending Review' ? `
             showToast(res.success ? 'All self-tests passed.' : `${res.failed} self-test(s) failed — see details.`, res.success ? 'success' : 'error');
         }
 
-        // ---- Teach AI a Sample Format (upload modal) ----
-
         function openDocStudioUploadModal() {
             document.getElementById('modalDocStudioUpload').classList.remove('hidden');
             document.getElementById('dsUploadResult').classList.add('hidden');
@@ -11320,50 +11145,134 @@ ${a.Status === 'Pending Review' ? `
         function closeDocStudioUploadModal() {
             document.getElementById('modalDocStudioUpload').classList.add('hidden');
             document.getElementById('docStudioUploadForm')?.reset();
+            DOC_STUDIO_PENDING_REVIEW = null;
         }
 
+        let DOC_STUDIO_PENDING_REVIEW = null;
+
+        /** Uploads the file and, for sample/blank_template assets, shows the AI's proposal for review instead of saving it immediately. */
         async function submitDocStudioUpload(event) {
             event.preventDefault();
             const clientId = document.getElementById('dsUploadClientId').value;
+            const assetType = document.getElementById('dsUploadAssetType').value;
             const docHint = document.getElementById('dsUploadHint').value.trim();
             const file = document.getElementById('dsUploadFile').files[0];
-            if (!clientId || !file) { showToast('Client and a sample file are required.', 'error'); return; }
+            if (!clientId || !file) { showToast('Client and a file are required.', 'error'); return; }
 
             const btn = event.target.querySelector('button[type="submit"]');
             if (btn) { btn.disabled = true; btn.textContent = 'Analyzing…'; }
             try {
                 const base64Data = await fileToBase64(file);
                 const res = await executeSecureBridgeCall('agent', 'agent-analyze-document-sample', {
-                    clientId, fileName: file.name, mimeType: file.type, base64Data, docHint
+                    clientId, assetType, fileName: file.name, mimeType: file.type, base64Data, docHint
                 });
-                if (res.success) {
-                    const resultEl = document.getElementById('dsUploadResult');
-                    resultEl.classList.remove('hidden');
-                    const matchedSpec = res.suggestedCatalogId ? DOC_STUDIO_CATALOG?.find(d => d.id === res.suggestedCatalogId) : null;
-                    resultEl.innerHTML = `
-                        <div><span class="text-slate-500">Detected:</span> ${escapeHtml(res.detectedLabel || 'Unknown')}</div>
-                        <div><span class="text-slate-500">Matches catalog type:</span> ${matchedSpec ? escapeHtml(matchedSpec.label) : '<span class="text-amber-400">no close match</span>'}</div>
-                        <div><span class="text-slate-500">Columns found:</span> ${(res.columns || []).map(escapeHtml).join(', ') || '—'}</div>
-                        ${res.fieldNotes ? `<div><span class="text-slate-500">Notes:</span> ${escapeHtml(res.fieldNotes)}</div>` : ''}
-                        ${matchedSpec ? `<button onclick="closeDocStudioUploadModal(); openGenerateDocumentModal('${escapeHtml(matchedSpec.id)}')"
-                            class="mt-2 w-full text-xs px-2 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Generate ${escapeHtml(matchedSpec.label)} now, using this format</button>` : ''}
-                    `;
-                    showToast('Sample analyzed and format saved.', 'success');
-                } else {
-                    showToast(res.message || 'Analysis failed.', 'error');
+                if (!res.success) { showToast(res.message || 'Analysis failed.', 'error'); return; }
+
+                if (assetType === 'letterhead' || assetType === 'logo') {
+                    showToast((assetType === 'letterhead' ? 'Letterhead' : 'Logo') + ' saved — it will now be used on this client\'s documents.', 'success');
+                    closeDocStudioUploadModal();
+                    return;
                 }
+                renderDocStudioReview(clientId, res);
             } catch (e) {
                 showToast('Upload error: ' + e.toString(), 'error');
             } finally {
-                if (btn) { btn.disabled = false; btn.textContent = 'Analyze & Save Format'; }
+                if (btn) { btn.disabled = false; btn.textContent = 'Analyze'; }
             }
         }
 
-        // ============ AI Actions Console ============
+        /** Shows the AI's proposed columns, field roles, and blank-template guess for the admin to edit and confirm before it's used for real generation. */
+        function renderDocStudioReview(clientId, res) {
+            DOC_STUDIO_PENDING_REVIEW = { clientId, recordId: res.recordId, columns: (res.columns || []).slice() };
+            const roles = (res.templateSpec && res.templateSpec.proposedFieldRoles) || {};
+            const isBlank = !!(res.templateSpec && res.templateSpec.isBlankTemplate);
+            const roleOptions = ['data_field', 'boilerplate', 'signature_block'];
+            const catalogOptions = DOC_STUDIO_CATALOG || [];
+
+            const resultEl = document.getElementById('dsUploadResult');
+            resultEl.classList.remove('hidden');
+            resultEl.innerHTML = `
+                <div class="text-white font-medium">${escapeHtml(res.detectedLabel || 'Unknown document')}</div>
+                <div>
+                    <label class="block text-slate-500 mb-1">Catalog match</label>
+                    <select id="dsReviewCatalogId" class="w-full bg-slate-900 border border-slate-800 rounded p-1.5">
+                        <option value="">No match — don't link to a catalog type</option>
+                        ${catalogOptions.map(d => `<option value="${escapeHtml(d.id)}" ${d.id === res.suggestedCatalogId ? 'selected' : ''}>${escapeHtml(d.label)}</option>`).join('')}
+                    </select>
+                </div>
+                <label class="flex items-center gap-1.5">
+                    <input type="checkbox" id="dsReviewIsBlank" ${isBlank ? 'checked' : ''} class="accent-emerald-600">
+                    This is a blank template — fill it exactly rather than writing a new one
+                </label>
+                <div>
+                    <label class="block text-slate-500 mb-1">Fields found (role tells the AI how to treat each one)</label>
+                    <div id="dsReviewFields" class="space-y-1 max-h-48 overflow-auto custom-scrollbar">
+                        ${(res.columns || []).map((c, i) => `
+                            <div class="flex items-center gap-2">
+                                <input value="${escapeHtml(c)}" data-field-index="${i}" data-field-name
+                                    class="flex-1 bg-slate-900 border border-slate-800 rounded p-1 text-[11px]">
+                                <select data-field-index="${i}" data-field-role class="bg-slate-900 border border-slate-800 rounded p-1 text-[11px]">
+                                    ${roleOptions.map(r => `<option value="${r}" ${roles[c] === r ? 'selected' : (r === 'data_field' && !roles[c] ? 'selected' : '')}>${r}</option>`).join('')}
+                                </select>
+                            </div>`).join('')}
+                    </div>
+                </div>
+                ${res.fieldNotes ? `<div><span class="text-slate-500">AI notes:</span> ${escapeHtml(res.fieldNotes)}</div>` : ''}
+                <button onclick="confirmDocStudioReview()" class="w-full text-xs px-2 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white">
+                    Confirm &amp; Save
+                </button>
+            `;
+        }
+
+        /** Persists the admin's (possibly edited) review of the AI's proposal — the last step of the human-in-the-loop setup. */
+        async function confirmDocStudioReview() {
+            if (!DOC_STUDIO_PENDING_REVIEW) return;
+            const columns = [...document.querySelectorAll('[data-field-name]')].map(el => el.value.trim()).filter(Boolean);
+            const fieldRoles = {};
+            document.querySelectorAll('[data-field-role]').forEach(sel => {
+                const idx = sel.getAttribute('data-field-index');
+                const name = columns[idx];
+                if (name) fieldRoles[name] = sel.value;
+            });
+            const isBlankTemplate = document.getElementById('dsReviewIsBlank').checked;
+            const catalogId = document.getElementById('dsReviewCatalogId').value;
+
+            const res = await executeSecureBridgeCall('agent', 'agent-confirm-document-template', {
+                clientId: DOC_STUDIO_PENDING_REVIEW.clientId, recordId: DOC_STUDIO_PENDING_REVIEW.recordId,
+                columns, fieldRoles, isBlankTemplate, catalogId
+            });
+            showToast(res.success ? 'Saved — this format will now be used for generation.' : (res.message || 'Save failed.'), res.success ? 'success' : 'error');
+            if (res.success) closeDocStudioUploadModal();
+        }
+
+        function openDocStudioSamplesModal() {
+            const clientId = document.getElementById('docStudioClientId')?.value;
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            document.getElementById('modalDocStudioSamples').classList.remove('hidden');
+            loadDocStudioSamples(clientId);
+        }
+        function closeDocStudioSamplesModal() {
+            document.getElementById('modalDocStudioSamples').classList.add('hidden');
+        }
+
+        /** Lists every sample/blank-template/letterhead/logo on file for the selected client. */
+        async function loadDocStudioSamples(clientId) {
+            const listEl = document.getElementById('docStudioSamplesList');
+            listEl.innerHTML = '<span class="text-slate-500">Loading…</span>';
+            const res = await executeSecureBridgeCall('agent', 'agent-list-document-samples', { clientId });
+            if (!res.success || !res.samples.length) { listEl.innerHTML = '<span class="text-slate-500">No samples uploaded yet.</span>'; return; }
+            listEl.innerHTML = res.samples.map(s => `
+                <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded p-2">
+                    <div>
+                        <div class="text-slate-200">${escapeHtml(s.detectedLabel || s.fileName)}</div>
+                        <div class="text-slate-500 text-[10px]">${escapeHtml(s.assetType)} · ${escapeHtml(s.status)} ${s.suggestedCatalogId ? '· ' + escapeHtml(s.suggestedCatalogId) : ''}</div>
+                    </div>
+                    ${s.viewUrl ? `<a href="${escapeHtml(s.viewUrl)}" target="_blank" class="text-emerald-400 hover:text-emerald-300"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>` : ''}
+                </div>`).join('');
+        }
+
         const AI_ACTION_CATALOG = {
-            // [NEW] Pitch Deck / Financial Report / Infographic Brief moved here from
-            // the per-client-row buttons — now driven by a directive input (see
-            // AI_DIRECTIVE_SCHEMAS) instead of firing with zero context.
+
             "Document Generation": [
                 ["agent-generate-pitch-deck", '{"purpose":""}'],
                 ["agent-generate-financial-report", '{"period":""}'],
@@ -11412,8 +11321,7 @@ ${a.Status === 'Pending Review' ? `
                 ["agent-log-task", '{"taskType":"Custom Task","title":"","notes":""}']
             ]
         };
-        // [NEW] Field schemas for the friendly "Directive Input" panel. Any action
-        // NOT listed here falls back to the raw JSON params editor, unchanged.
+
         const AI_DIRECTIVE_SCHEMAS = {
             "agent-generate-pitch-deck": [
                 { key: "purpose", label: "Purpose / Directive", placeholder: "e.g. Investor pitch to Dangote Group", type: "text" }
@@ -11447,9 +11355,6 @@ ${a.Status === 'Pending Review' ? `
             prefillAIConsoleParams();
         }
 
-        // [CHANGED] Now toggles between the friendly directive panel (for actions
-        // in AI_DIRECTIVE_SCHEMAS) and the raw JSON textarea (everything else),
-        // instead of always prefilling raw JSON.
         function prefillAIConsoleParams() {
             const cat = document.getElementById('aiConsoleCategory').value;
             const action = document.getElementById('aiConsoleAction').value;
@@ -11476,7 +11381,6 @@ ${a.Status === 'Pending Review' ? `
             }
         }
 
-        // ============ mailboxes ============
         async function loadAgentMailboxesUI() {
             const clientId = document.getElementById('mailboxesClientSelector')?.value;
             const tbody = document.getElementById('agentMailboxesTableBody');
@@ -11509,7 +11413,6 @@ ${a.Status === 'Pending Review' ? `
             });
         }
 
-        // ============ scheduling ============
         async function loadSchedulingMailboxes() {
             const clientId = document.getElementById('schedulingClientSelector')?.value;
             const sel = document.getElementById('schedulingMailboxSelector');
@@ -11568,7 +11471,6 @@ ${a.Status === 'Pending Review' ? `
             });
         }
 
-        // ============ VA clients ============
         async function loadVAClientsUI() {
             showTableSkeleton('agentVAClientsTableBody', 6);
             const res = await executeSecureBridgeCall('agent', 'agent-get-va-clients', {});
@@ -11629,7 +11531,6 @@ ${a.Status === 'Pending Review' ? `
 
         function openRegisterVAClientModal() { document.getElementById('modalRegisterVAClient').classList.remove('hidden'); }
 
-        // REPLACE submitRegisterVAClient
         function submitRegisterVAClient(event) {
             event.preventDefault();
             const payload = {
@@ -11655,14 +11556,13 @@ ${a.Status === 'Pending Review' ? `
             });
         }
 
-        // ============ integrations ============
         async function loadIntegrationsUI() {
             const clientId = document.getElementById('integrationsClientSelector')?.value;
             const tbody = document.getElementById('agentIntegrationsTableBody');
             if (!clientId) { tbody.innerHTML = emptyRow('Select a client.', 5); return; }
             showTableSkeleton('agentIntegrationsTableBody', 5);
             const res = await executeSecureBridgeCall('agent', 'agent-list-integrations', { clientId });
-            // AgentLib's _listIntegrations returns { integrations: [...] }, not { data: [...] }
+
             if (!res.success || !res.integrations?.length) { tbody.innerHTML = emptyRow('No integrations connected.', 5); return; }
             tbody.innerHTML = res.integrations.map(i => `
     <tr><td class="p-3">${badge(i.type)}</td>
@@ -11706,7 +11606,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             });
         }
 
-        // ============ CRM Sync ============
         const CRM_CREDENTIAL_HINTS = {
             hubspot: '{"accessToken":"pat-xxx"}  — HubSpot Private App access token',
             google_sheets: '{"sheetId":"...","sheetName":"Contacts","columnMap":{"name":"Full Name","email":"Email","phone":"Phone","company":"Company"}}  — client must share the sheet (Editor access) with management@thevictorias.com.ng',
@@ -11799,12 +11698,11 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             });
         }
 
-        // ============ custom tier patch ============
         function toggleUpdateTierCustomFields() {
             const isCustom = document.getElementById('updateTierValue').value === 'custom';
             document.getElementById('updateTierCustomFields').classList.toggle('hidden', !isCustom);
         }
-        // override submitAgentUpdateTier to branch on custom
+
         async function submitAgentUpdateTier(event) {
             event.preventDefault();
             const clientId = document.getElementById('updateTierClientId').value;
@@ -11940,7 +11838,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
 
             const jobId = initialRes.jobId;
             const POLL_INTERVAL_MS = 3000;
-            const MAX_WAIT_MS = 6 * 60 * 1000; // matches the backend's per-job budget
+            const MAX_WAIT_MS = 6 * 60 * 1000;
             let waited = 0;
 
             while (waited < MAX_WAIT_MS) {
@@ -11959,7 +11857,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 if (statusRes.status === 'error') {
                     return { success: false, message: statusRes.error || 'Document generation failed.' };
                 }
-                // "queued" or "running" — keep polling
+
             }
 
             return {
@@ -11999,9 +11897,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             try {
                 res = await executeSecureBridgeCall('agent', action, { clientId, ...params }, { silent: true });
 
-                // [NEW] Document generators now return { queued: true, jobId } instead
-                // of running inline — poll agent-check-job-status until it actually
-                // finishes instead of showing the raw "queued" placeholder forever.
                 if (res && res.queued) {
                     resultEl.innerHTML = `<p class="text-emerald-400"><span class="ai-spinner"></span>Still generating — we'll email you when it's ready. You can navigate away and check Pending Approvals later.</p>`;
                     res = await resolveAdminJobResult(res, (waitedMs) => {
@@ -12012,7 +11907,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 setBtnBusy(runBtn, false);
             }
 
-            // Build the document link card if a docUrl came back
             let docCardHtml = '';
             if (res.docUrl) {
                 docCardHtml = `
@@ -12031,15 +11925,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             resultEl.innerHTML = docCardHtml + `<pre class="text-xs text-slate-300 whitespace-pre-wrap">${escapeHtml(JSON.stringify(res, null, 2))}</pre>`;
             showToast(res.success ? 'Done.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
         }
-        // =====================================================================
-        // [NEW] SOCIAL MEDIA CONTENT CALENDAR (admin side)
-        //   Generate a month of content for a client (respects their tier's
-        //   posting frequency, optionally steered by admin-recommended
-        //   topics), then review/edit/approve every post — individually or
-        //   in bulk — before it's eligible for auto-publish.
-        //   Loading is silent throughout: dims the existing list instead of
-        //   blanking it, and only the triggering button shows a spinner.
-        // =====================================================================
+
         let ADMIN_SOCIAL_CACHE = [];
 
         async function loadAdminSocialCalendar() {
@@ -12195,7 +12081,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 : 'This integration type is stored but has no automated consumer yet.';
         }
 
-        // ============ wire new views into existing loaders ============
         const _origInitMap = {
             'agent-approvals': loadAgentApprovals,
             'agent-compliance-frameworks': () => { populateAgentClientSelector('compFrameworksClientSelector'); },
