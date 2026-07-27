@@ -225,6 +225,9 @@
                 <button class="nav-link" data-view="social" onclick="showView('social', this)">
                     <i class="fa-solid fa-share-nodes w-4"></i> Social Calendar
                 </button>
+                <button class="nav-link" data-view="appointments" onclick="showView('appointments', this)">
+                    <i class="fa-solid fa-calendar-days w-4"></i> Appointments
+                </button>
             </nav>
 
             <div class="p-3 border-t border-slate-800">
@@ -458,6 +461,56 @@
                     </div>
                 </section>
 
+                <section id="view-appointments" class="view flex-1 h-full flex-col overflow-hidden space-y-4">
+                    <div class="flex justify-between items-center shrink-0">
+                        <p class="text-xs text-slate-400">Meetings and calls scheduled on your behalf.</p>
+                        <button onclick="loadAppointments()"
+                            class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">
+                            <i class="fa-solid fa-rotate"></i> Refresh
+                        </button>
+                    </div>
+
+                    <div
+                        class="flex flex-wrap gap-2 items-center shrink-0 bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <select id="apptFilterStatus" onchange="applyAppointmentFilters()"
+                            class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+                            <option value="">All</option>
+                            <option value="upcoming">Upcoming</option>
+                            <option value="planned">Planned</option>
+                            <option value="past">Past</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                        <div class="flex items-center gap-1">
+                            <input id="apptFilterFrom" type="date" onchange="applyAppointmentFilters()"
+                                class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                            <span class="text-slate-600 text-xs">to</span>
+                            <input id="apptFilterTo" type="date" onchange="applyAppointmentFilters()"
+                                class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                        </div>
+                        <button onclick="clearAppointmentFilters()"
+                            class="text-xs px-2 py-1.5 text-slate-400 hover:text-white">
+                            Clear
+                        </button>
+                    </div>
+
+                    <div class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead
+                                class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                <tr>
+                                    <th class="p-3">Title</th>
+                                    <th class="p-3">With</th>
+                                    <th class="p-3">When</th>
+                                    <th class="p-3">Type</th>
+                                    <th class="p-3 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="appointmentsTableBody" class="divide-y divide-slate-800/50 text-slate-300">
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
             </div>
         </main>
     </div>
@@ -572,12 +625,13 @@
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             if (btn) btn.classList.add('active');
 
-            const titles = { overview: 'Overview', documents: 'My Documents', generate: 'Generate a Document', chat: 'Live Chat', social: 'Social Calendar' };
+            const titles = { overview: 'Overview', documents: 'My Documents', generate: 'Generate a Document', chat: 'Live Chat', social: 'Social Calendar', appointments: 'Appointments' };
             document.getElementById('pageTitle').textContent = titles[name] || name;
 
             if (name === 'documents') loadDocuments();
             if (name === 'generate') loadDocumentCatalog();
             if (name === 'social') loadSocialCalendar();
+            if (name === 'appointments') loadAppointments();
             if (name === 'chat') {
                 loadChat();
                 startChatPolling();
@@ -776,6 +830,57 @@
             renderDocumentsTable(ALL_DOCUMENTS);
         }
 
+        let ALL_APPOINTMENTS = [];
+
+        async function loadAppointments() {
+            const tbody = document.getElementById('appointmentsTableBody');
+            tbody.innerHTML = '<tr><td class="p-3 text-slate-500" colspan="5">Loading…</td></tr>';
+            const res = await callGateway('clientportal', 'clientPortalGetAppointments');
+            if (!res.success) { tbody.innerHTML = `<tr><td class="p-3 text-red-400" colspan="5">${escapeHtml(res.message || 'Failed to load.')}</td></tr>`; return; }
+            ALL_APPOINTMENTS = res.appointments || [];
+            renderAppointmentsTable(ALL_APPOINTMENTS);
+        }
+
+        function renderAppointmentsTable(items) {
+            const tbody = document.getElementById('appointmentsTableBody');
+            tbody.innerHTML = items.length ? items.map(a => {
+                const statusColor = a.bucket === 'cancelled' ? 'text-red-400' : (a.bucket === 'past' ? 'text-slate-500' : (a.bucket === 'upcoming' ? 'text-amber-400' : 'text-emerald-400'));
+                const bucketLabel = a.bucket.charAt(0).toUpperCase() + a.bucket.slice(1);
+                return `
+            <tr>
+                <td class="p-3 text-white">${escapeHtml(a.title || '—')}</td>
+                <td class="p-3">${escapeHtml(a.withWhom || '—')}</td>
+                <td class="p-3 text-slate-500">${fmtDate(a.dateTime)}</td>
+                <td class="p-3">${escapeHtml(a.type || '—')}</td>
+                <td class="p-3 text-center ${statusColor}">${escapeHtml(bucketLabel)}</td>
+            </tr>`;
+            }).join('') : '<tr><td class="p-3 text-slate-600" colspan="5">No appointments match your filters.</td></tr>';
+        }
+
+        function applyAppointmentFilters() {
+            const status = document.getElementById('apptFilterStatus').value;
+            const fromVal = document.getElementById('apptFilterFrom').value;
+            const toVal = document.getElementById('apptFilterTo').value;
+            const from = fromVal ? new Date(fromVal) : null;
+            const to = toVal ? new Date(new Date(toVal).getTime() + 24 * 60 * 60 * 1000 - 1) : null;
+
+            const filtered = ALL_APPOINTMENTS.filter(a => {
+                if (status && a.bucket !== status) return false;
+                const when = a.dateTime ? new Date(a.dateTime) : null;
+                if (from && (!when || when < from)) return false;
+                if (to && (!when || when > to)) return false;
+                return true;
+            });
+            renderAppointmentsTable(filtered);
+        }
+
+        function clearAppointmentFilters() {
+            document.getElementById('apptFilterStatus').value = '';
+            document.getElementById('apptFilterFrom').value = '';
+            document.getElementById('apptFilterTo').value = '';
+            renderAppointmentsTable(ALL_APPOINTMENTS);
+        }
+
         async function downloadDocument(docId) {
             const res = await callGateway('clientportal', 'clientPortalDownloadDocument', { docId });
             if (res.success && res.downloadUrl) window.open(res.downloadUrl, '_blank');
@@ -820,7 +925,7 @@
             container.style.opacity = '1';
 
             if (!res.success) {
-                container.innerHTML = `<p class="text-red-400 text-xs col-span-2">${escapeHtml(res.message || 'Could not load Documents.')}</p>`;
+                container.innerHTML = `<p class="text-red-400 text-xs col-span-2">${escapeHtml(res.message || 'Could not load documents.')}</p>`;
                 return;
             }
 
