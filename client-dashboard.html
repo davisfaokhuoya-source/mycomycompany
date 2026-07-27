@@ -399,6 +399,32 @@
                         one counts against your plan's monthly allotment (shown on the Overview tab). Click an
                         available card to add instructions, then hit Send. Cards you've used up for this period, or
                         that aren't part of your plan, are shown greyed out with the reason underneath.</p>
+
+                    <!-- Auto-send preference: controls lightweight/reference documents (receipts, payment
+                         confirmations, etc.) only — these are the ones that email straight out to a recipient.
+                         Bigger documents (reports, plans, proposals) never need your approval either way, they
+                         just don't have a "recipient" to send to in the same sense. -->
+                    <div
+                        class="max-w-3xl rounded-lg border border-slate-700 bg-slate-800/60 p-4 flex items-start justify-between gap-4">
+                        <div>
+                            <div class="text-sm font-semibold text-white">Auto-send receipts & confirmations</div>
+                            <p class="text-xs text-slate-400 mt-1 max-w-xl">When on, lightweight documents (receipts,
+                                payment confirmations) email straight to the recipient the moment they're generated.
+                                When off, they're generated and held in <span class="text-slate-300">My
+                                    Documents</span> — tagged "Pending Your Approval" — until you click Approve &
+                                Send yourself.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                            <input type="checkbox" id="autoSendToggle" class="sr-only peer"
+                                onchange="setAutoSendPreference(this.checked)">
+                            <div class="w-11 h-6 bg-slate-600 peer-focus:outline-none rounded-full peer
+                                peer-checked:bg-emerald-600 transition-colors
+                                after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                                after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all
+                                peer-checked:after:translate-x-5"></div>
+                        </label>
+                    </div>
+
                     <!-- [NEW] Populated by loadDocumentCatalog() from clientPortalDocumentCatalog — all 12 document
                          types the admin can create (including Action Plan, Strategic Plan, and Agreement), each
                          shown active/inactive per the client's own quota. -->
@@ -629,7 +655,7 @@
             document.getElementById('pageTitle').textContent = titles[name] || name;
 
             if (name === 'documents') loadDocuments();
-            if (name === 'generate') loadDocumentCatalog();
+            if (name === 'generate') { loadDocumentCatalog(); loadAutoSendPreference(); }
             if (name === 'social') loadSocialCalendar();
             if (name === 'appointments') loadAppointments();
             if (name === 'chat') {
@@ -911,6 +937,24 @@
             action_plan: "fa-list-check", strategic_plan: "fa-chess", agreement: "fa-file-contract"
         };
         let DOC_CATALOG_CACHE = {}; // docType -> catalog entry, used when building the Send payload
+
+        async function loadAutoSendPreference() {
+            const toggle = document.getElementById('autoSendToggle');
+            const res = await callGateway('clientportal', 'clientPortalGetAutoSendPreference');
+            if (res.success) toggle.checked = !!res.autoSendDocuments;
+        }
+
+        async function setAutoSendPreference(enabled) {
+            const toggle = document.getElementById('autoSendToggle');
+            toggle.disabled = true;
+            const res = await callGateway('clientportal', 'clientPortalSetAutoSendPreference', { enabled });
+            toggle.disabled = false;
+            if (!res.success) {
+                // Revert the visual toggle if the save failed, and let them know why.
+                toggle.checked = !enabled;
+                alert(res.message || 'Could not save that setting — please try again.');
+            }
+        }
 
         async function loadDocumentCatalog() {
             const container = document.getElementById('generateCardsContainer');
