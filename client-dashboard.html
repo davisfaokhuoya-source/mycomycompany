@@ -228,6 +228,9 @@
                 <button class="nav-link" data-view="appointments" onclick="showView('appointments', this)">
                     <i class="fa-solid fa-calendar-days w-4"></i> Appointments
                 </button>
+                <button class="nav-link" data-view="emailactivity" onclick="showView('emailactivity', this)">
+                    <i class="fa-solid fa-envelope-open-text w-4"></i> Email Activity
+                </button>
             </nav>
 
             <div class="p-3 border-t border-slate-800">
@@ -404,8 +407,7 @@
                          confirmations, etc.) only — these are the ones that email straight out to a recipient.
                          Bigger documents (reports, plans, proposals) never need your approval either way, they
                          just don't have a "recipient" to send to in the same sense. -->
-                    <div
-                        class="max-w-3xl rounded-lg border border-slate-700 bg-slate-800/60 p-4 flex items-start justify-between gap-4">
+                    <div class="max-w-3xl rounded-lg border border-slate-700 bg-slate-800/60 p-4 flex items-start justify-between gap-4">
                         <div>
                             <div class="text-sm font-semibold text-white">Auto-send receipts & confirmations</div>
                             <p class="text-xs text-slate-400 mt-1 max-w-xl">When on, lightweight documents (receipts,
@@ -415,8 +417,7 @@
                                 Send yourself.</p>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
-                            <input type="checkbox" id="autoSendToggle" class="sr-only peer"
-                                onchange="setAutoSendPreference(this.checked)">
+                            <input type="checkbox" id="autoSendToggle" class="sr-only peer" onchange="setAutoSendPreference(this.checked)">
                             <div class="w-11 h-6 bg-slate-600 peer-focus:outline-none rounded-full peer
                                 peer-checked:bg-emerald-600 transition-colors
                                 after:content-[''] after:absolute after:top-[2px] after:left-[2px]
@@ -537,6 +538,45 @@
                     </div>
                 </section>
 
+                <!-- EMAIL ACTIVITY -->
+                <section id="view-emailactivity" class="view flex-1 h-full flex-col overflow-hidden space-y-4">
+                    <div class="flex justify-between items-center shrink-0">
+                        <p class="text-xs text-slate-400 max-w-2xl">Every message the agent has seen in your
+                            connected mailbox, what it decided, and what it replied with — 50 per page.</p>
+                        <button onclick="loadEmailActivity(1)"
+                            class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white shrink-0">
+                            <i class="fa-solid fa-rotate"></i> Refresh
+                        </button>
+                    </div>
+
+                    <div class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead
+                                class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                <tr>
+                                    <th class="p-3 w-1/6">From</th>
+                                    <th class="p-3 w-1/6">Subject</th>
+                                    <th class="p-3 w-2/6">Message</th>
+                                    <th class="p-3 w-2/6">Agent's Reply</th>
+                                    <th class="p-3 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="emailActivityTableBody" class="divide-y divide-slate-800/50 text-slate-300">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex justify-between items-center shrink-0 text-xs text-slate-400">
+                        <span id="emailActivityPageInfo"></span>
+                        <div class="flex gap-2">
+                            <button id="emailActivityPrevBtn" onclick="loadEmailActivity(EMAIL_ACTIVITY_PAGE - 1)"
+                                class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white disabled:opacity-40 disabled:cursor-not-allowed">Prev</button>
+                            <button id="emailActivityNextBtn" onclick="loadEmailActivity(EMAIL_ACTIVITY_PAGE + 1)"
+                                class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
+                        </div>
+                    </div>
+                </section>
+
             </div>
         </main>
     </div>
@@ -550,6 +590,7 @@
         let SESSION_TOKEN = localStorage.getItem('VIC_CLIENT_TOKEN') || "";
         let PRESENCE_TIMER = null;
         let CHAT_TIMER = null;
+        let EMAIL_ACTIVITY_PAGE = 1;
 
         // =====================================================================
         // BRIDGE CALL — same wire format the admin dashboard uses, just against
@@ -651,13 +692,14 @@
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             if (btn) btn.classList.add('active');
 
-            const titles = { overview: 'Overview', documents: 'My Documents', generate: 'Generate a Document', chat: 'Live Chat', social: 'Social Calendar', appointments: 'Appointments' };
+            const titles = { overview: 'Overview', documents: 'My Documents', generate: 'Generate a Document', chat: 'Live Chat', social: 'Social Calendar', appointments: 'Appointments', emailactivity: 'Email Activity' };
             document.getElementById('pageTitle').textContent = titles[name] || name;
 
             if (name === 'documents') loadDocuments();
             if (name === 'generate') { loadDocumentCatalog(); loadAutoSendPreference(); }
             if (name === 'social') loadSocialCalendar();
             if (name === 'appointments') loadAppointments();
+            if (name === 'emailactivity') loadEmailActivity(1);
             if (name === 'chat') {
                 loadChat();
                 startChatPolling();
@@ -881,6 +923,47 @@
                 <td class="p-3 text-center ${statusColor}">${escapeHtml(bucketLabel)}</td>
             </tr>`;
             }).join('') : '<tr><td class="p-3 text-slate-600" colspan="5">No appointments match your filters.</td></tr>';
+        }
+
+        async function loadEmailActivity(page) {
+            if (page < 1) return;
+            const tbody = document.getElementById('emailActivityTableBody');
+            const prevBtn = document.getElementById('emailActivityPrevBtn');
+            const nextBtn = document.getElementById('emailActivityNextBtn');
+            const pageInfo = document.getElementById('emailActivityPageInfo');
+            tbody.innerHTML = '<tr><td class="p-3 text-slate-500" colspan="5">Loading…</td></tr>';
+
+            const res = await callGateway('clientportal', 'clientPortalGetEmailActivity', { page });
+            if (!res.success) {
+                tbody.innerHTML = `<tr><td class="p-3 text-red-400" colspan="5">${escapeHtml(res.message || 'Failed to load.')}</td></tr>`;
+                pageInfo.textContent = '';
+                prevBtn.disabled = true; nextBtn.disabled = true;
+                return;
+            }
+
+            EMAIL_ACTIVITY_PAGE = res.page || page;
+            const items = res.data || [];
+
+            const statusColor = (s) => {
+                s = String(s || '').toLowerCase();
+                if (s.indexOf('flagged') !== -1) return 'text-amber-400';
+                if (s.indexOf('failed') !== -1) return 'text-red-400';
+                if (s.indexOf('skipped') !== -1) return 'text-slate-500';
+                return 'text-emerald-400';
+            };
+
+            tbody.innerHTML = items.length ? items.map(m => `
+            <tr>
+                <td class="p-3 text-white align-top">${escapeHtml(m.from || '—')}</td>
+                <td class="p-3 align-top">${escapeHtml(m.subject || '—')}</td>
+                <td class="p-3 text-slate-400 align-top">${escapeHtml(m.bodySummary || '—')}</td>
+                <td class="p-3 text-slate-400 align-top">${m.aiReply ? escapeHtml(m.aiReply) : '<span class="text-slate-600">—</span>'}</td>
+                <td class="p-3 text-center align-top ${statusColor(m.status)}">${escapeHtml(m.status || '—')}</td>
+            </tr>`).join('') : '<tr><td class="p-3 text-slate-600" colspan="5">No mailbox activity yet.</td></tr>';
+
+            pageInfo.textContent = `Page ${res.page} of ${res.totalPages} — ${res.total} total`;
+            prevBtn.disabled = !res.hasPrev;
+            nextBtn.disabled = !res.hasNext;
         }
 
         function applyAppointmentFilters() {
