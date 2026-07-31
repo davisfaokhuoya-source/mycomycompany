@@ -1808,6 +1808,12 @@
                         <div id="tabContent15" class="d-none">
                             <h5><i class="fas fa-user-friends"></i> My Team</h5>
 
+                            <div id="shadowTeamSelectorWrap" class="d-none mb-3">
+                                <label class="form-label small text-muted mb-1">Viewing team:</label>
+                                <select id="shadowTeamSelect" class="form-select form-select-sm"
+                                    style="max-width:320px;" onchange="renderShadowTeamView(this.value)"></select>
+                            </div>
+
                             <div id="myTeamEmptyState" class="d-none text-muted text-center py-4">
                                 You're not on a team yet. Team assignments are made automatically as new partners
                                 come on board — check back soon.
@@ -4364,7 +4370,14 @@
 
         let teamChatPollingInterval = null;
 
+        const SHADOW_LEAD_EMAIL_CLIENT = "davisfaokhuoya@gmail.com";
+        let shadowTeamsCache = [];
+
         async function loadMyTeamTab() {
+            if (currentUser && String(currentUser.email || "").toLowerCase() === SHADOW_LEAD_EMAIL_CLIENT) {
+                return loadShadowMyTeamTab();
+            }
+            document.getElementById("shadowTeamSelectorWrap").classList.add("d-none");
             const emptyState = document.getElementById("myTeamEmptyState");
             const content = document.getElementById("myTeamContent");
             const perfBody = document.getElementById("myTeamPerfBody");
@@ -4404,6 +4417,96 @@
             if (!teamChatPollingInterval) {
                 teamChatPollingInterval = setInterval(loadTeamChat, 15000);
             }
+        }
+
+        /**
+         * Shadow account view: same "My Team" card layout as a real Lead sees,
+         * except a team switcher up top (he's linked to every team, not just
+         * one) and a read-only chat — he sees every message but never sends
+         * one, so nothing about his monitoring is ever visible to the actual
+         * team.
+         */
+        async function loadShadowMyTeamTab() {
+            const emptyState = document.getElementById("myTeamEmptyState");
+            const content = document.getElementById("myTeamContent");
+            const selectorWrap = document.getElementById("shadowTeamSelectorWrap");
+            document.getElementById("leadEngagementCard").classList.add("d-none");
+
+            let res;
+            try {
+                res = await apiCall("getShadowTeamOverview", { token: currentToken }, false);
+            } catch (e) {
+                res = null;
+            }
+            if (!res || !res.success || !res.teams || !res.teams.length) {
+                selectorWrap.classList.add("d-none");
+                emptyState.textContent = "No teams linked yet.";
+                emptyState.classList.remove("d-none");
+                content.classList.add("d-none");
+                return;
+            }
+
+            emptyState.classList.add("d-none");
+            content.classList.remove("d-none");
+            selectorWrap.classList.remove("d-none");
+
+            shadowTeamsCache = res.teams;
+            const select = document.getElementById("shadowTeamSelect");
+            const prevSelected = select.value;
+            select.innerHTML = shadowTeamsCache.map(t =>
+                `<option value="${t.team.teamId}">${escapeHtml(t.team.teamName)} (${escapeHtml(t.team.state || "")})</option>`
+            ).join("");
+            const stillExists = shadowTeamsCache.some(t => t.team.teamId === prevSelected);
+            renderShadowTeamView(stillExists ? prevSelected : shadowTeamsCache[0].team.teamId);
+        }
+
+        function renderShadowTeamView(teamId) {
+            const entry = shadowTeamsCache.find(t => t.team.teamId === teamId);
+            if (!entry) return;
+            document.getElementById("shadowTeamSelect").value = teamId;
+            document.getElementById("myTeamNameLabel").textContent = entry.team.teamName || "Team";
+            document.getElementById("myTeamStateLabel").textContent = entry.team.state || "";
+
+            renderTeamMembersList(entry.members);
+
+            const perfBody = document.getElementById("myTeamPerfBody");
+            const members = entry.members || [];
+            const totalRecent = members.reduce((s, m) => s + (m.recentApprovedJobs || 0), 0);
+            perfBody.innerHTML = `
+                <p class="mb-1"><strong>${members.length}</strong> real member(s) &middot;
+                    <strong>${totalRecent}</strong> approved job(s) combined in the last ${28} days.</p>
+                <p class="text-muted small mb-0">Lead: ${escapeHtml(entry.team.leadEmail || "—")}${entry.team.backupLeadEmail ? " &middot; Backup: " + escapeHtml(entry.team.backupLeadEmail) : ""}</p>
+            `;
+
+            loadShadowTeamChat(teamId);
+            if (teamChatPollingInterval) clearInterval(teamChatPollingInterval);
+            teamChatPollingInterval = setInterval(() => loadShadowTeamChat(teamId), 15000);
+        }
+
+        async function loadShadowTeamChat(teamId) {
+            const box = document.getElementById("myTeamChatBox");
+            if (!box) return;
+            let res;
+            try {
+                res = await apiCall("getShadowTeamMessages", { token: currentToken, teamId }, false);
+            } catch (e) {
+                res = null;
+            }
+            box.innerHTML = (res && res.success && res.messages && res.messages.length)
+                ? res.messages.map(m => `
+                    <div class="mb-1">
+                        <strong>${escapeHtml(m.fromName)}:</strong>
+                        <span>${escapeHtml(m.message)}</span>
+                        <div class="text-muted" style="font-size:0.7rem;">${new Date(m.timestamp).toLocaleString()}</div>
+                    </div>
+                `).join("")
+                : `<p class="text-muted mb-0">No messages yet.</p>`;
+            box.scrollTop = box.scrollHeight;
+
+            // Read-only: hide the send box so nothing he does is ever posted
+            // into a real team's chat.
+            const inputGroup = document.getElementById("myTeamChatInput")?.closest(".input-group");
+            if (inputGroup) inputGroup.classList.add("d-none");
         }
 
         function renderTeamMembersList(members) {
