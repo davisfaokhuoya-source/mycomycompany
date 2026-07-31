@@ -1269,7 +1269,12 @@
                                         placeholder="Client's Email"></div>
                                 <div class="col-md-6"><input id="cArea" class="form-control" placeholder="Area Sourced">
                                 </div>
-                                <div class="col-md-6"><select id="cService" class="form-select"></select></div>
+                                <div class="col-md-6">
+                                    <select id="cService" class="form-select"></select>
+                                    <div class="form-text">Prices aren't shown as a separate field — select a
+                                        service below to see its price, timeline, and details in its
+                                        description.</div>
+                                </div>
                                 <div class="col-12 mt-2">
                                     <div id="taskDescriptionDisplay" class="alert alert-info small d-none"
                                         style="border-left:4px solid #E07410;"></div>
@@ -1382,7 +1387,7 @@
                             </div>
                             <div class="card mb-4">
                                 <div class="card-header bg-light d-flex justify-content-between"><strong>Request
-                                        Payout</strong><span class="text-muted small">Minimum: ₦15,000</span></div>
+                                        Payout</strong><span class="text-muted small">Minimum: ₦10,000</span></div>
                                 <div class="card-body">
                                     <div class="alert alert-info">Balance: <strong id="balanceAmount">₦0</strong></div>
                                     <button onclick="requestPayout()" id="payoutBtn"
@@ -3600,7 +3605,7 @@
             const level = res.currentLevel || 0;
             document.getElementById("currentLevel").textContent = level;
             document.getElementById("currentTierName").textContent = TIER_NAMES[level] || "Applicant";
-            document.getElementById("payoutBtn").disabled = (res.currentBalance || 0) < 15000;
+            document.getElementById("payoutBtn").disabled = (res.currentBalance || 0) < 10000;
             const histRes = await apiCall("getPaymentHistory", { token: currentToken }, false);
             const tbody = document.querySelector("#paymentHistoryTable tbody");
             tbody.innerHTML = "";
@@ -3642,7 +3647,7 @@
             if (!currentToken) return showToast("Please login first", "error");
             const balText = document.getElementById("balanceAmount").textContent;
             const amount = parseFloat(balText.replace(/[₦,]/g, "")) || 0;
-            if (amount < 15000) return showToast("Minimum payout is ₦15,000", "error");
+            if (amount < 10000) return showToast("Minimum payout is ₦10,000", "error");
             const res = await apiCall("requestPayment", { token: currentToken, amount }, false);
             if (res.success) { showToast(res.message || "Payout request submitted!", "success"); await loadEarningsAndPayout(); }
             else showToast(res.message || "Failed", "error");
