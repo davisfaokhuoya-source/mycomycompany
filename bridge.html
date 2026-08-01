@@ -2250,6 +2250,10 @@
                             class="w-full text-left text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded text-white">
                             Repair Folder Registry
                         </button>
+                        <button onclick="openScheduledAutomationsModal()"
+                            class="w-full text-left text-xs px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white">
+                            <i class="fa-solid fa-clock"></i> Scheduled Automations
+                        </button>
                     </div>
 
                     <!-- Original subview buttons — kept for their click-handler logic
@@ -12408,6 +12412,42 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
 
         populateCrmSyncClientSelect();
 
+        async function openScheduledAutomationsModal() {
+            showModalContent('Scheduled Automations', '<i class="fa-solid fa-spinner fa-spin"></i> Loading…');
+            await refreshScheduledAutomationsModal();
+        }
+
+        async function refreshScheduledAutomationsModal() {
+            const res = await executeSecureBridgeCall('agent', 'agent-get-scheduled-automations-status', {});
+            if (!res.success) {
+                showModalContent('Scheduled Automations', `<div class="text-red-400 text-xs">${escapeHtml(res.message || 'Could not load status.')}</div>`);
+                return;
+            }
+            const missing = res.automations.filter(a => !a.installed);
+            const rows = res.automations.map(a => `
+        <div class="flex items-center justify-between py-1.5 border-b border-slate-800/60 text-xs">
+            <div>
+                <div class="text-white">${escapeHtml(a.description)}</div>
+                <div class="text-slate-600 font-mono text-[10px]">${escapeHtml(a.handlerFunction)}</div>
+            </div>
+            <span class="${a.installed ? 'text-emerald-400' : 'text-red-400'}">${a.installed ? '<i class="fa-solid fa-circle-check"></i> Running' : '<i class="fa-solid fa-triangle-exclamation"></i> Not installed'}</span>
+        </div>`).join('');
+            const html = `
+        <div class="space-y-3">
+            ${missing.length ? `<div class="text-[11px] text-amber-400 bg-amber-950/30 border border-amber-900 rounded p-2">${missing.length} automation(s) are not currently scheduled — click Install All below to fix.</div>` : '<div class="text-[11px] text-emerald-400">All scheduled automations are installed and running.</div>'}
+            <div>${rows}</div>
+            <button onclick="installScheduledAutomations()" class="w-full text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-white">Install All</button>
+        </div>`;
+            showModalContent('Scheduled Automations', html);
+        }
+
+        function installScheduledAutomations() {
+            executeSecureBridgeCall('agent', 'agent-install-scheduled-automations', {}).then(res => {
+                showToast(res.message || (res.success ? 'Installed.' : 'Failed.'), res.success ? 'success' : 'error');
+                refreshScheduledAutomationsModal();
+            });
+        }
+
         function repairClientFolders() {
             if (!confirm('Scan all Ops and VA clients and backfill the ClientFolders sheet for any missing entries?')) return;
             executeSecureBridgeCall('agent', 'agent-repair-client-folders', {}).then(res => {
@@ -12728,6 +12768,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             'agent-va-clients': loadVAClientsUI,
             'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector'); }
         };
+
         document.addEventListener("DOMContentLoaded", initializeModule);
     </script>
 </body>
