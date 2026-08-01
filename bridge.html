@@ -3208,6 +3208,9 @@
                                 <button onclick="openConnectEmailModal()"
                                     class="bg-blue-600 hover:bg-blue-500 text-xs text-white font-medium py-1.5 px-3 rounded shadow"><i
                                         class="fa-solid fa-envelope-circle-check"></i> Connect Email</button>
+                                <button onclick="runAgentEmailTest()"
+                                    class="bg-indigo-600 hover:bg-indigo-500 text-xs text-white font-medium py-1.5 px-3 rounded shadow"><i
+                                        class="fa-solid fa-flask"></i> Test Agent on Email</button>
                             </div>
                         </div>
                         <div
@@ -3218,10 +3221,14 @@
                                     <tr>
                                         <th class="p-3">Mailbox ID</th>
                                         <th class="p-3">Label</th>
+                                        <th class="p-3">Linked Email</th>
                                         <th class="p-3">Created</th>
                                         <th class="p-3 text-center">Extra?</th>
                                         <th class="p-3 text-center">Status</th>
+                                        <th class="p-3 text-center">Private</th>
+                                        <th class="p-3 text-center">Confirm</th>
                                         <th class="p-3 text-center">Open</th>
+                                        <th class="p-3 text-center">Delete</th>
                                     </tr>
                                 </thead>
                                 <tbody id="agentMailboxesTableBody" class="divide-y divide-slate-800/50 text-slate-300">
@@ -5847,6 +5854,26 @@
             loader.style.display = show ? "flex" : "none";
         }
 
+        function showModalContent(title, bodyHtml) {
+            let modal = document.getElementById('genericResultModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'genericResultModal';
+                modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-[999] hidden';
+                modal.innerHTML = `
+        <div class="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-auto">
+          <div class="flex items-center justify-between p-4 border-b border-slate-800">
+            <h3 id="genericResultModalTitle" class="text-sm font-bold text-white"></h3>
+            <button onclick="document.getElementById('genericResultModal').classList.add('hidden')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div id="genericResultModalBody" class="p-4"></div>
+        </div>`;
+                document.body.appendChild(modal);
+            }
+            document.getElementById('genericResultModalTitle').textContent = title;
+            document.getElementById('genericResultModalBody').innerHTML = bodyHtml;
+            modal.classList.remove('hidden');
+        }
         function showToast(message, type = "info") {
             const existing = document.getElementById("vh-toast");
             if (existing) existing.remove();
@@ -10033,8 +10060,13 @@
             executeSecureBridgeCall('agent', 'agent-connect-email', {
                 clientId, emailAddress, mailboxLabel, emailProvider: 'Manual'
             }).then(res => {
-                showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
-                if (res.success) document.getElementById('modalConnectEmail').classList.add('hidden');
+                if (res.success && res.linked) {
+                    showToast('✅ Linked: ' + emailAddress + ' — ' + res.message, 'success');
+                    document.getElementById('modalConnectEmail').classList.add('hidden');
+                    loadAgentMailboxesUI();
+                } else {
+                    showToast('❌ Link failed: ' + (res.message || 'Unknown error.'), 'error');
+                }
             });
         }
 
@@ -11619,17 +11651,67 @@ ${a.Status === 'Pending Review' ? `
         async function loadAgentMailboxesUI() {
             const clientId = document.getElementById('mailboxesClientSelector')?.value;
             const tbody = document.getElementById('agentMailboxesTableBody');
-            if (!clientId) { tbody.innerHTML = emptyRow('Select a client.', 6); return; }
-            showTableSkeleton('agentMailboxesTableBody', 6);
+            if (!clientId) { tbody.innerHTML = emptyRow('Select a client.', 10); return; }
+            showTableSkeleton('agentMailboxesTableBody', 10);
             const res = await executeSecureBridgeCall('agent', 'agent-get-mailboxes', { clientId });
-            if (!res.success || !res.data?.length) { tbody.innerHTML = emptyRow('No mailboxes yet.', 6); return; }
-            tbody.innerHTML = res.data.map(m => `
-    <tr><td class="p-3 font-mono text-slate-500">${escapeHtml(m.MailboxID)}</td>
+            if (!res.success || !res.data?.length) { tbody.innerHTML = emptyRow('No mailboxes yet.', 10); return; }
+            tbody.innerHTML = res.data.map(m => {
+                const isPrivate = m.IsPrivate === true || m.IsPrivate === 'TRUE' || m.IsPrivate === 'true';
+                const linked = !!m.EmailAddress;
+                return `
+    <tr id="mbxRow_${escapeHtml(m.MailboxID)}">
+    <td class="p-3 font-mono text-slate-500">${escapeHtml(m.MailboxID)}</td>
     <td class="p-3">${escapeHtml(m.Label)}</td>
+    <td class="p-3">${linked ? escapeHtml(m.EmailAddress) + ' <span class="text-emerald-400">●</span>' : '<span class="text-slate-600">Not linked</span>'}</td>
     <td class="p-3 text-slate-500">${fmtDate(m.CreatedAt)}</td>
     <td class="p-3 text-center">${m.IsExtra === true || m.IsExtra === 'TRUE' ? 'Yes' : 'No'}</td>
     <td class="p-3 text-center">${badge(m.Status)}</td>
-    <td class="p-3 text-center"><a href="${escapeHtml(m.SheetURL)}" target="_blank" class="text-blue-400 underline text-xs">Open</a></td></tr>`).join('');
+    <td class="p-3 text-center">${isPrivate ? '<span class="text-amber-400"><i class="fa-solid fa-lock"></i> Private</span>' : '<span class="text-slate-500"><i class="fa-solid fa-lock-open"></i> Open</span>'}</td>
+    <td class="p-3 text-center">
+      ${linked
+                        ? `<button id="confirmBtn_${escapeHtml(m.MailboxID)}" onclick="confirmMailboxLink('${escapeHtml(m.MailboxID)}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-medium py-1 px-2 rounded"><i class="fa-solid fa-check-double"></i> Confirm</button>`
+                        : `<span class="text-slate-600 text-[11px]">Link email first</span>`}
+      ${m.LastVerifyStatus ? `<div class="text-[10px] mt-1 ${m.LastVerifyStatus === 'Confirmed' ? 'text-emerald-400' : 'text-red-400'}">${escapeHtml(m.LastVerifyStatus)}${m.LastVerifyDurationMs ? ' — ' + (Math.round(m.LastVerifyDurationMs / 100) / 10) + 's' : ''}</div>` : ''}
+    </td>
+    <td class="p-3 text-center">${isPrivate
+                        ? '<span class="text-slate-600 text-[11px]" title="Client has marked this mailbox private">🔒 Hidden</span>'
+                        : `<a href="${escapeHtml(m.SheetURL)}" target="_blank" class="text-blue-400 underline text-xs">Open</a>`}</td>
+    <td class="p-3 text-center"><button onclick="deleteMailboxRow('${escapeHtml(clientId)}','${escapeHtml(m.MailboxID)}','${escapeHtml(m.Label)}')" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button></td>
+    </tr>`;
+            }).join('');
+        }
+
+        async function confirmMailboxLink(mailboxId) {
+            const btn = document.getElementById('confirmBtn_' + mailboxId);
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Confirming…'; }
+            const res = await executeSecureBridgeCall('agent', 'agent-confirm-mailbox', { mailboxId });
+            showToast(res.message || (res.success ? 'Confirmed.' : 'Confirmation failed.'), res.success ? 'success' : 'error');
+            loadAgentMailboxesUI();
+        }
+
+        function deleteMailboxRow(clientId, mailboxId, label) {
+            if (!confirm('Delete mailbox "' + label + '"? This cannot be undone.')) return;
+            executeSecureBridgeCall('agent', 'agent-remove-mailbox', { clientId, mailboxId }).then(res => {
+                showToast(res.message || (res.success ? 'Mailbox deleted.' : 'Failed.'), res.success ? 'success' : 'error');
+                if (res.success) loadAgentMailboxesUI();
+            });
+        }
+
+        async function runAgentEmailTest() {
+            const clientId = document.getElementById('mailboxesClientSelector')?.value;
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            showToast('Running agent email test…', 'info');
+            const res = await executeSecureBridgeCall('agent', 'agent-test-email-processing', { clientId });
+            if (!res.success) { showToast(res.message || 'Test failed.', 'error'); return; }
+            const html = `
+      <div class="text-xs text-slate-300 space-y-2">
+        <div><span class="text-slate-500">Sample email from:</span> ${escapeHtml(res.sample.from)}</div>
+        <div><span class="text-slate-500">Subject:</span> ${escapeHtml(res.sample.subject)}</div>
+        <div><span class="text-slate-500">Body:</span> ${escapeHtml(res.sample.body)}</div>
+        <div class="border-t border-slate-800 pt-2"><span class="text-slate-500">Agent classification:</span> ${escapeHtml(JSON.stringify(res.classification))}</div>
+        <div class="border-t border-slate-800 pt-2"><span class="text-slate-500">Agent's drafted reply:</span><br>${escapeHtml(res.draft.body)}</div>
+      </div>`;
+            showModalContent('Agent Email Test Result', html);
         }
         function openAddMailboxModal() {
             const clientId = document.getElementById('mailboxesClientSelector')?.value;
@@ -11643,8 +11725,15 @@ ${a.Status === 'Pending Review' ? `
             const isExtra = document.getElementById('mbxIsExtra').checked;
             const action = isExtra ? 'agent-purchase-extra-mailbox' : 'agent-add-mailbox';
             executeSecureBridgeCall('agent', action, { clientId, label, isExtra }).then(res => {
-                showToast(res.success ? 'Mailbox created.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
-                if (res.success) { document.getElementById('modalAddMailbox').classList.add('hidden'); loadAgentMailboxesUI(); }
+                if (res.success) {
+                    showToast(res.linked ? ('✅ ' + res.message) : (res.message || 'Mailbox created.'), 'success');
+                    document.getElementById('modalAddMailbox').classList.add('hidden');
+                    loadAgentMailboxesUI();
+                } else if (res.duplicate) {
+                    showToast('⚠️ ' + res.message, 'error');
+                } else {
+                    showToast(res.message || 'Failed.', 'error');
+                }
             });
         }
 
@@ -11878,6 +11967,8 @@ ${a.Status === 'Pending Review' ? `
             });
         }
 
+        const CRM_INTEGRATION_TYPES = ['hubspot', 'zoho', 'salesforce', 'google_sheets', 'generic_rest'];
+
         async function loadIntegrationsUI() {
             const clientId = document.getElementById('integrationsClientSelector')?.value;
             const tbody = document.getElementById('agentIntegrationsTableBody');
@@ -11886,17 +11977,23 @@ ${a.Status === 'Pending Review' ? `
             const res = await executeSecureBridgeCall('agent', 'agent-list-integrations', { clientId });
 
             if (!res.success || !res.integrations?.length) { tbody.innerHTML = emptyRow('No integrations connected.', 5); return; }
-            tbody.innerHTML = res.integrations.map(i => `
+            tbody.innerHTML = res.integrations.map(i => {
+                const canConfirm = CRM_INTEGRATION_TYPES.indexOf(i.type) !== -1;
+                return `
     <tr><td class="p-3">${badge(i.type)}</td>
     <td class="p-3">${escapeHtml(i.label || '—')}</td>
     <td class="p-3 font-mono text-slate-500">••••</td>
-    <td class="p-3 text-center">${badge(i.status || 'Connected')}</td>
+    <td class="p-3 text-center">${badge(i.status || 'Connected')}
+      ${i.LastVerifyStatus ? `<div class="text-[10px] mt-1 ${i.LastVerifyStatus === 'Confirmed' ? 'text-emerald-400' : 'text-red-400'}">${escapeHtml(i.LastVerifyStatus)}${i.LastVerifyDurationMs ? ' — ' + (Math.round(i.LastVerifyDurationMs / 100) / 10) + 's' : ''}</div>` : ''}
+    </td>
     <td class="p-3 text-center flex gap-1 justify-center">
   <button onclick="testIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.type)}')" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Test</button>
-  // In loadIntegrationsUI(), add this button inside the action cell for i.type === 'email' rows:
+${canConfirm ? `<button id="crmConfirmBtn_${escapeHtml(clientId)}_${escapeHtml(i.type)}" onclick="confirmCrmIntegration('${escapeHtml(clientId)}','${escapeHtml(i.type)}')" class="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white">Confirm</button>` : ''}
 ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHtml(clientId)}')" class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Send Email</button>` : ''}
   <button onclick="disconnectIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.type)}')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Disconnect</button>
-</td></tr>`).join('');
+  <button onclick="deleteIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.type)}')" class="text-xs px-2 py-1 bg-red-700 hover:bg-red-600 rounded text-white">Delete</button>
+</td></tr>`;
+            }).join('');
         }
 
         function openConnectIntegrationModal() {
@@ -11918,6 +12015,21 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         function testIntegrationAction(clientId, type) {
             executeSecureBridgeCall('agent', 'agent-test-integration', { clientId, type }).then(res => {
                 showToast(res.success ? 'Integration OK.' : (res.message || 'Test failed.'), res.success ? 'success' : 'error');
+            });
+        }
+        async function confirmCrmIntegration(clientId, type) {
+            const btn = document.getElementById('crmConfirmBtn_' + clientId + '_' + type);
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Confirming…'; }
+            const res = await executeSecureBridgeCall('agent', 'agent-confirm-crm', { clientId, type });
+            showToast(res.message || (res.success ? 'Confirmed.' : 'Confirmation failed.'), res.success ? 'success' : 'error');
+            loadIntegrationsUI();
+            if (typeof loadCrmSyncUI === 'function') loadCrmSyncUI();
+        }
+        function deleteIntegrationAction(clientId, type) {
+            if (!confirm('Permanently delete this ' + type + ' integration? This cannot be undone.')) return;
+            executeSecureBridgeCall('agent', 'agent-delete-integration', { clientId, type }).then(res => {
+                showToast(res.message || (res.success ? 'Deleted.' : 'Failed.'), res.success ? 'success' : 'error');
+                if (res.success) loadIntegrationsUI();
             });
         }
         function disconnectIntegrationAction(clientId, type) {
@@ -11998,7 +12110,9 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
     <tr>
         <td class="p-3">${badge(i.provider)}</td>
         <td class="p-3">${escapeHtml(i.label || i.provider)}</td>
-        <td class="p-3 text-center">${badge(i.status || 'Active')}</td>
+        <td class="p-3 text-center">${badge(i.status || 'Active')}
+          ${i.LastVerifyStatus ? `<div class="text-[10px] mt-1 ${i.LastVerifyStatus === 'Confirmed' ? 'text-emerald-400' : 'text-red-400'}">${escapeHtml(i.LastVerifyStatus)}${i.LastVerifyDurationMs ? ' — ' + (Math.round(i.LastVerifyDurationMs / 100) / 10) + 's' : ''}</div>` : ''}
+        </td>
         <td class="p-3 text-slate-500">${i.lastSyncedAt ? fmtDate(i.lastSyncedAt) : 'Never'}</td>
         <td class="p-3 text-center font-mono">${i.lastSyncCount ?? 0}</td>
         <td class="p-3 text-center flex gap-1 justify-center">
@@ -12006,8 +12120,12 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Sync Now</button>
             <button onclick="testIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.provider)}')"
                 class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Test</button>
+            <button id="crmConfirmBtn_${escapeHtml(clientId)}_${escapeHtml(i.provider)}" onclick="confirmCrmIntegration('${escapeHtml(clientId)}','${escapeHtml(i.provider)}')"
+                class="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white">Confirm</button>
             <button onclick="disconnectIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.provider)}')"
                 class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Disconnect</button>
+            <button onclick="deleteIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.provider)}')"
+                class="text-xs px-2 py-1 bg-red-700 hover:bg-red-600 rounded text-white">Delete</button>
         </td>
     </tr>`).join('');
         }

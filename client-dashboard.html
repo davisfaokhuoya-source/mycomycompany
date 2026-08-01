@@ -407,7 +407,8 @@
                          confirmations, etc.) only — these are the ones that email straight out to a recipient.
                          Bigger documents (reports, plans, proposals) never need your approval either way, they
                          just don't have a "recipient" to send to in the same sense. -->
-                    <div class="max-w-3xl rounded-lg border border-slate-700 bg-slate-800/60 p-4 flex items-start justify-between gap-4">
+                    <div
+                        class="max-w-3xl rounded-lg border border-slate-700 bg-slate-800/60 p-4 flex items-start justify-between gap-4">
                         <div>
                             <div class="text-sm font-semibold text-white">Auto-send receipts & confirmations</div>
                             <p class="text-xs text-slate-400 mt-1 max-w-xl">When on, lightweight documents (receipts,
@@ -417,7 +418,8 @@
                                 Send yourself.</p>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
-                            <input type="checkbox" id="autoSendToggle" class="sr-only peer" onchange="setAutoSendPreference(this.checked)">
+                            <input type="checkbox" id="autoSendToggle" class="sr-only peer"
+                                onchange="setAutoSendPreference(this.checked)">
                             <div class="w-11 h-6 bg-slate-600 peer-focus:outline-none rounded-full peer
                                 peer-checked:bg-emerald-600 transition-colors
                                 after:content-[''] after:absolute after:top-[2px] after:left-[2px]
@@ -547,6 +549,13 @@
                             class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white shrink-0">
                             <i class="fa-solid fa-rotate"></i> Refresh
                         </button>
+                    </div>
+
+                    <div id="mailboxPrivacyPanel"
+                        class="shrink-0 bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-300">
+                        <p class="text-slate-400 mb-2">Mailbox privacy — when private, our admin team cannot see the
+                            messages the agent has replied to in that mailbox.</p>
+                        <div id="mailboxPrivacyList" class="space-y-2"></div>
                     </div>
 
                     <div class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
@@ -964,6 +973,36 @@
             pageInfo.textContent = `Page ${res.page} of ${res.totalPages} — ${res.total} total`;
             prevBtn.disabled = !res.hasPrev;
             nextBtn.disabled = !res.hasNext;
+
+            loadMailboxPrivacyPanel();
+        }
+
+        async function loadMailboxPrivacyPanel() {
+            const wrap = document.getElementById('mailboxPrivacyList');
+            if (!wrap) return;
+            wrap.innerHTML = '<p class="text-slate-500">Loading mailboxes…</p>';
+            const res = await callGateway('clientportal', 'clientPortalListMailboxes', {});
+            if (!res.success || !res.mailboxes?.length) {
+                wrap.innerHTML = '<p class="text-slate-600">No mailboxes found.</p>';
+                return;
+            }
+            wrap.innerHTML = res.mailboxes.map(m => `
+        <div class="flex items-center justify-between bg-slate-900 rounded px-3 py-2">
+            <div>
+                <span class="text-white">${escapeHtml(m.label)}</span>
+                <span class="text-slate-500 ml-2">${escapeHtml(m.emailAddress || 'Not linked')}</span>
+            </div>
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+                <span class="${m.isPrivate ? 'text-amber-400' : 'text-slate-500'}">${m.isPrivate ? 'Private' : 'Visible to admin'}</span>
+                <input type="checkbox" ${m.isPrivate ? 'checked' : ''} onchange="toggleMailboxPrivacy('${escapeHtml(m.mailboxId)}', this.checked)" class="w-4 h-4 accent-emerald-500">
+            </label>
+        </div>`).join('');
+        }
+
+        async function toggleMailboxPrivacy(mailboxId, isPrivate) {
+            const res = await callGateway('clientportal', 'clientPortalSetMailboxPrivacy', { mailboxId, isPrivate });
+            if (!res.success) { alert(res.message || 'Failed to update privacy.'); }
+            loadMailboxPrivacyPanel();
         }
 
         function applyAppointmentFilters() {
