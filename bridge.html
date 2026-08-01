@@ -12185,6 +12185,23 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 if (res.success) { document.getElementById('modalConnectIntegration').classList.add('hidden'); loadIntegrationsUI(); }
             });
         }
+        async function viewCrmFieldSchema(clientId, provider) {
+            showModalContent('CRM Fields: ' + provider, '<i class="fa-solid fa-spinner fa-spin"></i> Loading…');
+            const res = await executeSecureBridgeCall('agent', 'agent-get-crm-field-schema', { clientId, provider });
+            if (!res.success || !res.schemas?.length) {
+                showModalContent('CRM Fields: ' + provider, '<div class="text-slate-500 text-xs">No fields discovered yet — run Sync Now or Confirm first.</div>');
+                return;
+            }
+            const html = res.schemas.map(s => `
+        <div class="mb-3">
+            <div class="text-xs text-slate-400 mb-1">${escapeHtml(s.objectType)} — ${s.fieldCount} fields — last seen ${fmtDate(s.lastSeenAt)}</div>
+            <div class="flex flex-wrap gap-1">
+                ${s.fields.map(f => `<span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono">${escapeHtml(f)}</span>`).join('')}
+            </div>
+        </div>`).join('');
+            showModalContent('CRM Fields: ' + provider, html);
+        }
+
         function testIntegrationAction(clientId, type) {
             executeSecureBridgeCall('agent', 'agent-test-integration', { clientId, type }).then(res => {
                 showToast(res.success ? 'Integration OK.' : (res.message || 'Test failed.'), res.success ? 'success' : 'error');
@@ -12295,6 +12312,8 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Test</button>
             <button id="crmConfirmBtn_${escapeHtml(clientId)}_${escapeHtml(i.provider)}" onclick="confirmCrmIntegration('${escapeHtml(clientId)}','${escapeHtml(i.provider)}')"
                 class="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white">Confirm</button>
+            <button onclick="viewCrmFieldSchema('${escapeHtml(clientId)}','${escapeHtml(i.provider)}')"
+                class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-white border border-slate-700">Fields</button>
             <button onclick="disconnectIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.provider)}')"
                 class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Disconnect</button>
             <button onclick="deleteIntegrationAction('${escapeHtml(clientId)}','${escapeHtml(i.provider)}')"
