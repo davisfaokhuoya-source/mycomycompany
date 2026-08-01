@@ -3047,6 +3047,10 @@
                                         class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white border border-slate-700">
                                         <i class="fa-solid fa-folder-open"></i> View Samples
                                     </button>
+                                    <button onclick="openBrandingModal()"
+                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white border border-slate-700">
+                                        <i class="fa-solid fa-palette"></i> Branding
+                                    </button>
                                 </div>
                             </div>
                             <div id="docStudioTestResults"
@@ -3227,7 +3231,7 @@
                                         <th class="p-3 text-center">Status</th>
                                         <th class="p-3 text-center">Private</th>
                                         <th class="p-3 text-center">Confirm</th>
-                                        <th class="p-3 text-center">Open</th>
+                                        <th class="p-3 text-center">View</th>
                                         <th class="p-3 text-center">Delete</th>
                                     </tr>
                                 </thead>
@@ -4967,6 +4971,64 @@
                     class="text-slate-400 hover:text-white text-sm font-bold">&times;</button>
             </div>
             <div id="docStudioSamplesList" class="flex-1 overflow-auto custom-scrollbar space-y-2 text-xs"></div>
+        </div>
+    </div>
+
+    <div id="modalBranding"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white"><i class="fa-solid fa-palette"></i> Client Branding</h3>
+                <button onclick="document.getElementById('modalBranding').classList.add('hidden')"
+                    class="text-slate-400 hover:text-white text-sm font-bold">&times;</button>
+            </div>
+            <div class="space-y-3 text-xs text-slate-300">
+                <div>
+                    <label class="block text-slate-500 mb-1">Website</label>
+                    <input id="brandingWebsite" type="text" placeholder="https://example.com"
+                        class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white">
+                </div>
+                <div>
+                    <label class="block text-slate-500 mb-1">Social media / brand notes</label>
+                    <textarea id="brandingSocialNotes" rows="3"
+                        class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"></textarea>
+                </div>
+                <button onclick="saveBrandingWebPresence()"
+                    class="text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-white">Save Website &
+                    Notes</button>
+
+                <div class="border-t border-slate-800 pt-3">
+                    <label class="block text-slate-500 mb-1">Brand colors</label>
+                    <div class="flex items-center gap-2 mb-2">
+                        <input id="brandingPrimary" type="color" value="#CC5500"
+                            class="h-8 w-10 bg-transparent border-0">
+                        <input id="brandingPrimaryHex" type="text" placeholder="#RRGGBB primary"
+                            class="flex-1 bg-slate-950 border border-slate-700 rounded p-2 text-white font-mono text-[11px]">
+                    </div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <input id="brandingDark" type="color" value="#1a1a1a" class="h-8 w-10 bg-transparent border-0">
+                        <input id="brandingDarkHex" type="text" placeholder="#RRGGBB dark (optional)"
+                            class="flex-1 bg-slate-950 border border-slate-700 rounded p-2 text-white font-mono text-[11px]">
+                    </div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <input id="brandingLight" type="color" value="#f5f5f5" class="h-8 w-10 bg-transparent border-0">
+                        <input id="brandingLightHex" type="text" placeholder="#RRGGBB light (optional)"
+                            class="flex-1 bg-slate-950 border border-slate-700 rounded p-2 text-white font-mono text-[11px]">
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="saveBrandingColors()"
+                            class="text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-white">Save
+                            Colors</button>
+                        <button onclick="resolveBrandingColorsNow()"
+                            class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white border border-slate-700">Re-detect
+                            Now</button>
+                        <button onclick="resetBrandingNow()"
+                            class="text-xs px-3 py-1.5 bg-red-900 hover:bg-red-800 rounded text-red-200">Reset
+                            Branding</button>
+                    </div>
+                    <p id="brandingCurrentInfo" class="text-[10px] text-slate-500 mt-2"></p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -11511,6 +11573,73 @@ ${a.Status === 'Pending Review' ? `
             document.getElementById('modalDocStudioSamples').classList.add('hidden');
         }
 
+        async function openBrandingModal() {
+            const clientId = document.getElementById('docStudioClientId')?.value;
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            document.getElementById('modalBranding').classList.remove('hidden');
+            document.getElementById('modalBranding').dataset.clientId = clientId;
+            document.getElementById('brandingCurrentInfo').textContent = 'Loading…';
+            const res = await executeSecureBridgeCall('agent', 'agent-get-client', { clientId });
+            if (!res.success || !res.client) { document.getElementById('brandingCurrentInfo').textContent = 'Could not load current branding.'; return; }
+            const c = res.client;
+            document.getElementById('brandingWebsite').value = c.Website || c.WebsiteURL || '';
+            document.getElementById('brandingSocialNotes').value = c.SocialMediaNotes || '';
+            const primary = /^#[0-9a-f]{6}$/i.test(c.BrandPrimary) ? c.BrandPrimary : '#CC5500';
+            const dark = /^#[0-9a-f]{6}$/i.test(c.BrandDark) ? c.BrandDark : '#1a1a1a';
+            const light = /^#[0-9a-f]{6}$/i.test(c.BrandLight) ? c.BrandLight : '#f5f5f5';
+            document.getElementById('brandingPrimary').value = primary;
+            document.getElementById('brandingPrimaryHex').value = c.BrandPrimary || '';
+            document.getElementById('brandingDark').value = dark;
+            document.getElementById('brandingDarkHex').value = c.BrandDark || '';
+            document.getElementById('brandingLight').value = light;
+            document.getElementById('brandingLightHex').value = c.BrandLight || '';
+            document.getElementById('brandingCurrentInfo').textContent = c.BrandPrimary
+                ? ('Current colors are cached — new documents reuse these until you Reset or Re-detect.')
+                : ('No colors cached yet — the next document generated will auto-detect from the website/letterhead.');
+        }
+
+        function saveBrandingWebPresence() {
+            const clientId = document.getElementById('modalBranding').dataset.clientId;
+            const websiteUrl = document.getElementById('brandingWebsite').value.trim();
+            const socialMediaNotes = document.getElementById('brandingSocialNotes').value.trim();
+            executeSecureBridgeCall('agent', 'agent-set-client-web-presence', { clientId, websiteUrl, socialMediaNotes }).then(res => {
+                showToast(res.message || (res.success ? 'Saved.' : 'Failed.'), res.success ? 'success' : 'error');
+            });
+        }
+
+        function saveBrandingColors() {
+            const clientId = document.getElementById('modalBranding').dataset.clientId;
+            const primary = document.getElementById('brandingPrimaryHex').value.trim() || document.getElementById('brandingPrimary').value;
+            const dark = document.getElementById('brandingDarkHex').value.trim() || document.getElementById('brandingDark').value;
+            const light = document.getElementById('brandingLightHex').value.trim() || document.getElementById('brandingLight').value;
+            executeSecureBridgeCall('agent', 'agent-set-brand-colors', { clientId, primary, dark, light }).then(res => {
+                showToast(res.message || (res.success ? 'Colors saved.' : 'Failed.'), res.success ? 'success' : 'error');
+            });
+        }
+
+        async function resolveBrandingColorsNow() {
+            const clientId = document.getElementById('modalBranding').dataset.clientId;
+            showToast('Detecting brand colors…', 'info');
+            const res = await executeSecureBridgeCall('agent', 'agent-resolve-brand-colors', { clientId });
+            if (!res.success || !res.palette) { showToast('Could not detect colors.', 'error'); return; }
+            document.getElementById('brandingPrimary').value = res.palette.primary;
+            document.getElementById('brandingPrimaryHex').value = res.palette.primary;
+            document.getElementById('brandingDark').value = res.palette.dark;
+            document.getElementById('brandingDarkHex').value = res.palette.dark;
+            document.getElementById('brandingLight').value = res.palette.light;
+            document.getElementById('brandingLightHex').value = res.palette.light;
+            showToast('Detected — review and Save Colors to confirm.', 'success');
+        }
+
+        function resetBrandingNow() {
+            const clientId = document.getElementById('modalBranding').dataset.clientId;
+            if (!confirm('Reset cached brand colors for this client? The next document generated will re-detect them from scratch.')) return;
+            executeSecureBridgeCall('agent', 'agent-reset-branding', { clientId }).then(res => {
+                showToast(res.message || (res.success ? 'Branding reset.' : 'Failed.'), res.success ? 'success' : 'error');
+                if (res.success) openBrandingModal();
+            });
+        }
+
         /** Lists every sample/blank-template/letterhead/logo on file for the selected client. */
         async function loadDocStudioSamples(clientId) {
             const listEl = document.getElementById('docStudioSamplesList');
@@ -11673,12 +11802,56 @@ ${a.Status === 'Pending Review' ? `
                         : `<span class="text-slate-600 text-[11px]">Link email first</span>`}
       ${m.LastVerifyStatus ? `<div class="text-[10px] mt-1 ${m.LastVerifyStatus === 'Confirmed' ? 'text-emerald-400' : 'text-red-400'}">${escapeHtml(m.LastVerifyStatus)}${m.LastVerifyDurationMs ? ' — ' + (Math.round(m.LastVerifyDurationMs / 100) / 10) + 's' : ''}</div>` : ''}
     </td>
-    <td class="p-3 text-center">${isPrivate
-                        ? '<span class="text-slate-600 text-[11px]" title="Client has marked this mailbox private">🔒 Hidden</span>'
-                        : `<a href="${escapeHtml(m.SheetURL)}" target="_blank" class="text-blue-400 underline text-xs">Open</a>`}</td>
+    <td class="p-3 text-center"><button onclick="viewMailboxData('${escapeHtml(m.MailboxID)}','${escapeHtml(m.Label)}',${isPrivate})" class="text-blue-400 hover:text-blue-300 text-xs"><i class="fa-solid fa-eye"></i> View</button></td>
     <td class="p-3 text-center"><button onclick="deleteMailboxRow('${escapeHtml(clientId)}','${escapeHtml(m.MailboxID)}','${escapeHtml(m.Label)}')" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button></td>
     </tr>`;
             }).join('');
+        }
+
+        const MAILBOX_VIEW_TABS = [
+            { tab: 'Inbox', label: 'Inbox & Replies' },
+            { tab: 'Drafts', label: 'Drafts' },
+            { tab: 'ScheduledEvents', label: 'Scheduled Events' },
+            { tab: 'AppointmentRequests', label: 'Appointment Requests' }
+        ];
+
+        async function viewMailboxData(mailboxId, label, isPrivate) {
+            const tabsHtml = MAILBOX_VIEW_TABS.map((t, i) =>
+                `<button onclick="loadMailboxViewTab('${mailboxId}','${t.tab}')" id="mbxViewTabBtn_${t.tab}" class="text-xs px-2 py-1 rounded ${i === 0 ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">${t.label}</button>`
+            ).join(' ');
+            const html = `
+        <div class="space-y-3">
+            ${isPrivate ? '<div class="text-[11px] text-amber-400 bg-amber-950/30 border border-amber-900 rounded p-2"><i class="fa-solid fa-lock"></i> This mailbox is marked private by the client — inbox/reply content will be hidden below.</div>' : ''}
+            <div class="flex gap-2 flex-wrap">${tabsHtml}</div>
+            <div id="mbxViewTabContent" class="text-xs text-slate-300 max-h-[50vh] overflow-auto"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</div>
+        </div>`;
+            showModalContent('Mailbox: ' + label, html);
+            loadMailboxViewTab(mailboxId, 'Inbox');
+        }
+
+        async function loadMailboxViewTab(mailboxId, tab) {
+            MAILBOX_VIEW_TABS.forEach(t => {
+                const btn = document.getElementById('mbxViewTabBtn_' + t.tab);
+                if (btn) btn.className = 'text-xs px-2 py-1 rounded ' + (t.tab === tab ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700');
+            });
+            const content = document.getElementById('mbxViewTabContent');
+            if (!content) return;
+            content.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading…';
+            const res = await executeSecureBridgeCall('agent', 'agent-get-mailbox-data', { mailboxId, tab });
+            if (!res.success) {
+                content.innerHTML = `<div class="text-amber-400">${escapeHtml(res.message || 'Could not load this data.')}</div>`;
+                return;
+            }
+            const rows = res.data || [];
+            if (!rows.length) { content.innerHTML = '<div class="text-slate-600">Nothing here yet.</div>'; return; }
+            const cols = Object.keys(rows[0]);
+            content.innerHTML = `
+        <table class="w-full text-left border-collapse text-[11px]">
+            <thead class="text-slate-500 border-b border-slate-800"><tr>${cols.map(c => `<th class="p-2">${escapeHtml(c)}</th>`).join('')}</tr></thead>
+            <tbody class="divide-y divide-slate-800/50">
+                ${rows.map(r => `<tr>${cols.map(c => `<td class="p-2 align-top">${escapeHtml(String(r[c] ?? ''))}</td>`).join('')}</tr>`).join('')}
+            </tbody>
+        </table>`;
         }
 
         async function confirmMailboxLink(mailboxId) {
