@@ -5032,6 +5032,12 @@
                     </div>
                     <p id="brandingCurrentInfo" class="text-[10px] text-slate-500 mt-2"></p>
                 </div>
+
+                <div class="border-t border-slate-800 pt-3">
+                    <label class="block text-slate-500 mb-1"><i class="fa-solid fa-check-double"></i> Proof of use —
+                        documents this letterhead/logo actually appeared in</label>
+                    <div id="brandingUsageHistory" class="text-[11px] max-h-32 overflow-auto"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -11415,7 +11421,14 @@ ${a.Status === 'Pending Review' ? `
             const btn = event.target.querySelector('button[type="submit"]');
             if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
             try {
-                const res = await executeSecureBridgeCall('agent', 'agent-catalog-document', { clientId, docId: spec.id, fields });
+                let res = await executeSecureBridgeCall('agent', 'agent-catalog-document', { clientId, docId: spec.id, fields });
+                if (res && res.queued) {
+                    showToast('Generating — this can take a bit for longer documents. You\'ll get an email when it\'s ready; you can also check Active Tasks.', 'info');
+                    closeGenerateDocumentModal();
+                    res = await resolveAdminJobResult(res, (waitedMs) => {
+                        if (btn) btn.textContent = 'Generating… (' + Math.round(waitedMs / 1000) + 's)';
+                    });
+                }
                 showToast(res.success ? `Generated: ${res.title || spec.label}` : (res.message || 'Generation failed.'), res.success ? 'success' : 'error');
                 if (res.success) closeGenerateDocumentModal();
             } catch (e) {
@@ -11600,6 +11613,23 @@ ${a.Status === 'Pending Review' ? `
             document.getElementById('brandingCurrentInfo').textContent = c.BrandPrimary
                 ? ('Current colors are cached — new documents reuse these until you Reset or Re-detect.')
                 : ('No colors cached yet — the next document generated will auto-detect from the website/letterhead.');
+            loadBrandAssetUsage(clientId);
+        }
+
+        async function loadBrandAssetUsage(clientId) {
+            const el = document.getElementById('brandingUsageHistory');
+            if (!el) return;
+            el.innerHTML = '<span class="text-slate-600">Loading…</span>';
+            const res = await executeSecureBridgeCall('agent', 'agent-get-brand-asset-usage', { clientId });
+            if (!res.success || !res.usage?.length) {
+                el.innerHTML = '<span class="text-slate-600">No documents have used this client\'s letterhead/logo yet — generate a document (a letter uses the letterhead; anything else uses the logo) and it\'ll show up here.</span>';
+                return;
+            }
+            el.innerHTML = res.usage.slice(0, 10).map(u => `
+        <div class="flex justify-between border-b border-slate-800/60 py-1">
+            <span class="text-slate-300">${escapeHtml(u.AssetType)} — ${escapeHtml(u.DocumentTitle || 'Untitled')}</span>
+            <span class="text-slate-600">${fmtDate(u.UsedAt)}</span>
+        </div>`).join('');
         }
 
         function saveBrandingWebPresence() {
@@ -11650,17 +11680,35 @@ ${a.Status === 'Pending Review' ? `
             listEl.innerHTML = '<span class="text-slate-500">Loading…</span>';
             const res = await executeSecureBridgeCall('agent', 'agent-list-document-samples', { clientId });
             if (!res.success || !res.samples.length) { listEl.innerHTML = '<span class="text-slate-500">No samples uploaded yet.</span>'; return; }
-            listEl.innerHTML = res.samples.map(s => `
+            listEl.innerHTML = res.samples.map(s => {
+                const canTest = (s.assetType === 'letterhead' || s.assetType === 'logo') ||
+                    (s.status === 'confirmed' && s.suggestedCatalogId);
+                return `
                 <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded p-2">
                     <div>
                         <div class="text-slate-200">${escapeHtml(s.detectedLabel || s.fileName)}</div>
                         <div class="text-slate-500 text-[10px]">${escapeHtml(s.assetType)} · ${escapeHtml(s.status)} ${s.suggestedCatalogId ? '· ' + escapeHtml(s.suggestedCatalogId) : ''}</div>
                     </div>
                     <div class="flex items-center gap-3">
+                        ${canTest ? `<button onclick="testTrainedAsset('${escapeHtml(clientId)}','${escapeHtml(s.assetType)}','${escapeHtml(s.suggestedCatalogId || '')}',this)" class="text-[10px] px-2 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white">Test</button>` : ''}
                         ${s.viewUrl ? `<a href="${escapeHtml(s.viewUrl)}" target="_blank" class="text-emerald-400 hover:text-emerald-300"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>` : ''}
                         <button onclick="deleteDocStudioSample('${escapeHtml(clientId)}','${escapeHtml(s.recordId)}')" class="text-slate-500 hover:text-red-400"><i class="fa-solid fa-trash"></i></button>
                     </div>
-                </div>`).join('');
+                </div>`;
+            }).join('');
+        }
+
+        async function testTrainedAsset(clientId, assetType, docId, btnEl) {
+            if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Testing…'; }
+            showToast('Generating a real test document to confirm this asset is used…', 'info');
+            let res = await executeSecureBridgeCall('agent', 'agent-test-trained-asset', { clientId, assetType, docId: docId || undefined });
+            if (res && res.queued) {
+                res = await resolveAdminJobResult(res, (waitedMs) => {
+                    if (btnEl) btnEl.textContent = 'Testing… (' + Math.round(waitedMs / 1000) + 's)';
+                });
+            }
+            if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Test'; }
+            showToast(res.message || (res.success ? 'Confirmed.' : 'Test failed.'), res.success ? 'success' : 'error');
         }
 
         /** Removes a bad or unwanted sample/letterhead/logo entry from the list and trashes its Drive file. */
@@ -12754,7 +12802,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 ? 'Include a "provider" field: sendgrid, mailgun, or webhook — each needs different fields.'
                 : 'This integration type is stored but has no automated consumer yet.';
         }
-
         const _origInitMap = {
             'agent-approvals': loadAgentApprovals,
             'agent-compliance-frameworks': () => { populateAgentClientSelector('compFrameworksClientSelector'); },
