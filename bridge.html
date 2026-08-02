@@ -5306,14 +5306,57 @@
 
             <div class="border-t border-slate-800 pt-3">
                 <p class="text-[11px] text-slate-500 mb-2">
-                    <strong class="text-blue-400">Manual connect (non-Gmail / already have credentials
-                        elsewhere):</strong>
-                    just register the address against a mailbox. No consent flow.
+                    <strong class="text-blue-400">Microsoft / Outlook / Office 365 — client authorizes
+                        themselves:</strong>
+                    same idea as Gmail, but for Outlook.com or a company's Microsoft 365 mailbox.
+                </p>
+                <button onclick="generateMicrosoftOAuthLink()"
+                    class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium py-2 rounded">
+                    Generate Microsoft Authorization Link
+                </button>
+                <div id="msOauthLinkResult"
+                    class="hidden bg-slate-950 border border-slate-800 rounded p-3 mt-2 text-xs text-slate-300 break-all space-y-2">
+                </div>
+            </div>
+
+            <div class="border-t border-slate-800 pt-3">
+                <p class="text-[11px] text-slate-500 mb-2">
+                    <strong class="text-amber-400">Custom mail (Zoho Mail, cPanel-hosted, or anything with a
+                        REST API):</strong>
+                    Apps Script can't speak raw IMAP/SMTP to an arbitrary server, so this needs the client's
+                    provider (or a small relay in front of it) to expose three REST endpoints — list unread,
+                    get one message, and send.
+                </p>
+                <input type="email" id="customMailAddress" placeholder="mailbox@client-domain.com"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white mb-2" />
+                <input type="text" id="customMailListUrl"
+                    placeholder="List unread URL — GET, returns { threads: [{id}] }"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white mb-2" />
+                <input type="text" id="customMailGetUrl"
+                    placeholder="Get message URL — GET ?id=... (optional but recommended)"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white mb-2" />
+                <input type="text" id="customMailSendUrl" placeholder="Send URL — POST { to, subject, htmlBody, cc }"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white mb-2" />
+                <input type="text" id="customMailApiKey"
+                    placeholder="API key (sent as Authorization: Bearer ..., optional)"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white mb-2" />
+                <button onclick="submitConnectCustomMail()"
+                    class="w-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium py-2 rounded">
+                    Connect Custom Mail
+                </button>
+            </div>
+
+            <div class="border-t border-slate-800 pt-3">
+                <p class="text-[11px] text-slate-500 mb-2">
+                    <strong class="text-slate-400">Manual connect (just register the address, no live
+                        connection):</strong>
+                    useful for record-keeping only — the agent won't be able to read or send from this mailbox
+                    until it's connected via one of the options above.
                 </p>
                 <input type="email" id="connectEmailAddress" placeholder="mailbox@client-domain.com"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white mb-2" />
                 <button onclick="submitConnectEmail(event)"
-                    class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium py-2 rounded">
+                    class="w-full bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium py-2 rounded">
                     Connect Manually
                 </button>
             </div>
@@ -6013,6 +6056,12 @@
             return "₦" + n.toLocaleString("en-NG");
         }
 
+        function providerBadge(provider) {
+            const p = String(provider || "gmail").toLowerCase();
+            const label = p === "microsoft" ? "Outlook" : p === "custom" ? "Custom" : "Gmail";
+            const cls = p === "microsoft" ? "text-blue-400" : p === "custom" ? "text-amber-400" : "text-emerald-400";
+            return `<span class="${cls} text-[10px] border border-current rounded px-1 py-0.5">${label}</span>`;
+        }
         function badge(status) {
             const s = String(status || "").toLowerCase();
             const map = {
@@ -10121,6 +10170,51 @@
             tbody.innerHTML = rows;
         }
 
+        async function generateMicrosoftOAuthLink() {
+            const clientId = document.getElementById('connectEmailClientId').value;
+            const mailboxLabel = document.getElementById('connectEmailLabel').value.trim();
+            if (!clientId) { showToast('Select a client.', 'error'); return; }
+
+            const res = await executeSecureBridgeCall('agent', 'agent-start-microsoft-auth', { clientId, mailboxLabel });
+            const box = document.getElementById('msOauthLinkResult');
+            if (!res.success) { showToast(res.message || 'Failed to generate link.', 'error'); return; }
+
+            box.classList.remove('hidden');
+            box.innerHTML = `
+    <p class="text-blue-400">Send this to ${escapeHtml(res.clientName || clientId)} — they authorize, and the mailbox is created automatically once they finish:</p>
+    <p class="font-mono text-[10px]">${escapeHtml(res.authUrl)}</p>
+    <div class="flex gap-2">
+      <button onclick="navigator.clipboard.writeText('${res.authUrl}').then(()=>showToast('Copied!','success'))"
+        class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Copy Link</button>
+      <a href="${res.authUrl}" target="_blank" class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Open</a>
+    </div>
+    `;
+        }
+
+        function submitConnectCustomMail() {
+            const clientId = document.getElementById('connectEmailClientId').value;
+            const mailboxLabel = document.getElementById('connectEmailLabel').value.trim();
+            const emailAddress = document.getElementById('customMailAddress').value.trim();
+            const listUrl = document.getElementById('customMailListUrl').value.trim();
+            const getUrl = document.getElementById('customMailGetUrl').value.trim();
+            const sendUrl = document.getElementById('customMailSendUrl').value.trim();
+            const apiKey = document.getElementById('customMailApiKey').value.trim();
+            if (!clientId) { showToast('Select a client.', 'error'); return; }
+            if (!emailAddress || !listUrl || !sendUrl) { showToast('Email address, list URL, and send URL are required.', 'error'); return; }
+
+            executeSecureBridgeCall('agent', 'agent-connect-custom-mail', {
+                clientId, emailAddress, mailboxLabel: mailboxLabel || emailAddress, listUrl, getUrl, sendUrl, apiKey
+            }).then(res => {
+                if (res.success) {
+                    showToast('✅ ' + (res.message || 'Custom mail connected.'), 'success');
+                    document.getElementById('modalConnectEmail').classList.add('hidden');
+                    loadAgentMailboxesUI();
+                } else {
+                    showToast('❌ ' + (res.message || 'Connection failed.'), 'error');
+                }
+            });
+        }
+
         function submitConnectEmail(event) {
             event.preventDefault();
             const clientId = document.getElementById('connectEmailClientId').value;
@@ -10166,8 +10260,14 @@
         async function openConnectEmailModal() {
             await populateAllClientsSelector('connectEmailClientId');
             document.getElementById('oauthLinkResult').classList.add('hidden');
+            document.getElementById('msOauthLinkResult').classList.add('hidden');
             document.getElementById('connectEmailAddress').value = '';
             document.getElementById('connectEmailLabel').value = '';
+            document.getElementById('customMailAddress').value = '';
+            document.getElementById('customMailListUrl').value = '';
+            document.getElementById('customMailGetUrl').value = '';
+            document.getElementById('customMailSendUrl').value = '';
+            document.getElementById('customMailApiKey').value = '';
             document.getElementById('modalConnectEmail').classList.remove('hidden');
         }
 
@@ -11708,7 +11808,12 @@ ${a.Status === 'Pending Review' ? `
                 });
             }
             if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Test'; }
-            showToast(res.message || (res.success ? 'Confirmed.' : 'Test failed.'), res.success ? 'success' : 'error');
+            if (!res.success) { showToast(res.message || 'Test failed.', 'error'); return; }
+            showModalContent('Test Result: ' + escapeHtml(assetType), `
+        <div class="text-xs text-slate-300 space-y-3">
+            <p>${escapeHtml(res.message || '')}</p>
+            ${res.docUrl ? `<a href="${escapeHtml(res.docUrl)}" target="_blank" class="inline-block text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-white"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open Test Document</a>` : ''}
+        </div>`);
         }
 
         /** Removes a bad or unwanted sample/letterhead/logo entry from the list and trashes its Drive file. */
@@ -11843,7 +11948,7 @@ ${a.Status === 'Pending Review' ? `
     <tr id="mbxRow_${escapeHtml(m.MailboxID)}">
     <td class="p-3 font-mono text-slate-500">${escapeHtml(m.MailboxID)}</td>
     <td class="p-3">${escapeHtml(m.Label)}</td>
-    <td class="p-3">${linked ? escapeHtml(m.EmailAddress) + ' <span class="text-emerald-400">●</span>' : '<span class="text-slate-600">Not linked</span>'}</td>
+    <td class="p-3">${linked ? escapeHtml(m.EmailAddress) + ' <span class="text-emerald-400">●</span> ' + providerBadge(m.Provider) : '<span class="text-slate-600">Not linked</span>'}</td>
     <td class="p-3 text-slate-500">${fmtDate(m.CreatedAt)}</td>
     <td class="p-3 text-center">${m.IsExtra === true || m.IsExtra === 'TRUE' ? 'Yes' : 'No'}</td>
     <td class="p-3 text-center">${badge(m.Status)}</td>
@@ -12802,6 +12907,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 ? 'Include a "provider" field: sendgrid, mailgun, or webhook — each needs different fields.'
                 : 'This integration type is stored but has no automated consumer yet.';
         }
+
         const _origInitMap = {
             'agent-approvals': loadAgentApprovals,
             'agent-compliance-frameworks': () => { populateAgentClientSelector('compFrameworksClientSelector'); },
