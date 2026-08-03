@@ -3055,6 +3055,10 @@
                                         class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white border border-slate-700">
                                         <i class="fa-solid fa-palette"></i> Branding
                                     </button>
+                                    <button onclick="openClientDocTogglesModal()"
+                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white border border-slate-700">
+                                        <i class="fa-solid fa-sliders"></i> Client Dashboard
+                                    </button>
                                 </div>
                             </div>
                             <div id="docStudioTestResults"
@@ -5004,8 +5008,7 @@
                 <div class="border-t border-slate-800 pt-3">
                     <label class="block text-slate-500 mb-1">Brand colors</label>
                     <div class="flex items-center gap-2 mb-2">
-                        <input id="brandingPrimary" type="color" value="#CC5500"
-                            class="h-8 w-10 bg-transparent border-0">
+                        <input id="brandingPrimary" type="color" value="#CC5500" class="h-8 w-10 bg-transparent border-0">
                         <input id="brandingPrimaryHex" type="text" placeholder="#RRGGBB primary"
                             class="flex-1 bg-slate-950 border border-slate-700 rounded p-2 text-white font-mono text-[11px]">
                     </div>
@@ -5021,8 +5024,7 @@
                     </div>
                     <div class="flex gap-2">
                         <button onclick="saveBrandingColors()"
-                            class="text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-white">Save
-                            Colors</button>
+                            class="text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-white">Save Colors</button>
                         <button onclick="resolveBrandingColorsNow()"
                             class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white border border-slate-700">Re-detect
                             Now</button>
@@ -5034,11 +5036,25 @@
                 </div>
 
                 <div class="border-t border-slate-800 pt-3">
-                    <label class="block text-slate-500 mb-1"><i class="fa-solid fa-check-double"></i> Proof of use —
-                        documents this letterhead/logo actually appeared in</label>
+                    <label class="block text-slate-500 mb-1"><i class="fa-solid fa-check-double"></i> Proof of use — documents this letterhead/logo actually appeared in</label>
                     <div id="brandingUsageHistory" class="text-[11px] max-h-32 overflow-auto"></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div id="modalClientDocToggles"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white"><i class="fa-solid fa-sliders"></i> Client Dashboard —
+                    Document Visibility</h3>
+                <button onclick="document.getElementById('modalClientDocToggles').classList.add('hidden')"
+                    class="text-slate-400 hover:text-white text-sm font-bold">&times;</button>
+            </div>
+            <p class="text-[11px] text-slate-500">Controls which document types this client can generate themselves
+                from their dashboard. Off = hidden from their list entirely (they can still request it through you).</p>
+            <div id="clientDocTogglesList" class="space-y-1 max-h-96 overflow-auto text-xs"></div>
         </div>
     </div>
 
@@ -5329,16 +5345,13 @@
                 </p>
                 <input type="email" id="customMailAddress" placeholder="mailbox@client-domain.com"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white mb-2" />
-                <input type="text" id="customMailListUrl"
-                    placeholder="List unread URL — GET, returns { threads: [{id}] }"
+                <input type="text" id="customMailListUrl" placeholder="List unread URL — GET, returns { threads: [{id}] }"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white mb-2" />
-                <input type="text" id="customMailGetUrl"
-                    placeholder="Get message URL — GET ?id=... (optional but recommended)"
+                <input type="text" id="customMailGetUrl" placeholder="Get message URL — GET ?id=... (optional but recommended)"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white mb-2" />
                 <input type="text" id="customMailSendUrl" placeholder="Send URL — POST { to, subject, htmlBody, cc }"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white mb-2" />
-                <input type="text" id="customMailApiKey"
-                    placeholder="API key (sent as Authorization: Bearer ..., optional)"
+                <input type="text" id="customMailApiKey" placeholder="API key (sent as Authorization: Bearer ..., optional)"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white mb-2" />
                 <button onclick="submitConnectCustomMail()"
                     class="w-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium py-2 rounded">
@@ -11690,6 +11703,38 @@ ${a.Status === 'Pending Review' ? `
             document.getElementById('modalDocStudioSamples').classList.add('hidden');
         }
 
+        async function openClientDocTogglesModal() {
+            const clientId = document.getElementById('docStudioClientId')?.value;
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            document.getElementById('modalClientDocToggles').classList.remove('hidden');
+            document.getElementById('modalClientDocToggles').dataset.clientId = clientId;
+            await loadClientDocToggles(clientId);
+        }
+
+        async function loadClientDocToggles(clientId) {
+            const listEl = document.getElementById('clientDocTogglesList');
+            listEl.innerHTML = '<span class="text-slate-600">Loading…</span>';
+            const res = await executeSecureBridgeCall('agent', 'agent-get-client-doc-toggles', { clientId });
+            if (!res.success || !res.docTypes?.length) {
+                listEl.innerHTML = '<span class="text-slate-600">No self-service document types configured.</span>';
+                return;
+            }
+            listEl.innerHTML = res.docTypes.map(d => `
+        <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded px-3 py-2">
+            <span class="text-slate-200">${escapeHtml(d.label)}</span>
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+                <span class="${d.enabled ? 'text-emerald-400' : 'text-slate-600'}">${d.enabled ? 'Visible' : 'Hidden'}</span>
+                <input type="checkbox" ${d.enabled ? 'checked' : ''} onchange="toggleClientDocVisibility('${escapeHtml(clientId)}','${escapeHtml(d.docType)}', this.checked)" class="w-4 h-4 accent-emerald-500">
+            </label>
+        </div>`).join('');
+        }
+
+        async function toggleClientDocVisibility(clientId, docType, enabled) {
+            const res = await executeSecureBridgeCall('agent', 'agent-set-client-doc-visibility', { clientId, docType, enabled });
+            if (!res.success) showToast(res.message || 'Failed to update.', 'error');
+            loadClientDocToggles(clientId);
+        }
+
         async function openBrandingModal() {
             const clientId = document.getElementById('docStudioClientId')?.value;
             if (!clientId) { showToast('Select a client first.', 'error'); return; }
@@ -11955,8 +12000,8 @@ ${a.Status === 'Pending Review' ? `
     <td class="p-3 text-center">${isPrivate ? '<span class="text-amber-400"><i class="fa-solid fa-lock"></i> Private</span>' : '<span class="text-slate-500"><i class="fa-solid fa-lock-open"></i> Open</span>'}</td>
     <td class="p-3 text-center">
       ${linked
-                        ? `<button id="confirmBtn_${escapeHtml(m.MailboxID)}" onclick="confirmMailboxLink('${escapeHtml(m.MailboxID)}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-medium py-1 px-2 rounded"><i class="fa-solid fa-check-double"></i> Confirm</button>`
-                        : `<span class="text-slate-600 text-[11px]">Link email first</span>`}
+                    ? `<button id="confirmBtn_${escapeHtml(m.MailboxID)}" onclick="confirmMailboxLink('${escapeHtml(m.MailboxID)}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-medium py-1 px-2 rounded"><i class="fa-solid fa-check-double"></i> Confirm</button>`
+                    : `<span class="text-slate-600 text-[11px]">Link email first</span>`}
       ${m.LastVerifyStatus ? `<div class="text-[10px] mt-1 ${m.LastVerifyStatus === 'Confirmed' ? 'text-emerald-400' : 'text-red-400'}">${escapeHtml(m.LastVerifyStatus)}${m.LastVerifyDurationMs ? ' — ' + (Math.round(m.LastVerifyDurationMs / 100) / 10) + 's' : ''}</div>` : ''}
     </td>
     <td class="p-3 text-center"><button onclick="viewMailboxData('${escapeHtml(m.MailboxID)}','${escapeHtml(m.Label)}',${isPrivate})" class="text-blue-400 hover:text-blue-300 text-xs"><i class="fa-solid fa-eye"></i> View</button></td>
