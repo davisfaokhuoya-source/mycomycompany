@@ -546,8 +546,10 @@
                 <!-- EMAIL ACTIVITY -->
                 <section id="view-emailactivity" class="view flex-1 h-full flex-col overflow-hidden space-y-4">
                     <div class="flex justify-between items-center shrink-0">
-                        <p class="text-xs text-slate-400 max-w-2xl">Every message the agent has seen in your
-                            connected mailbox, what it decided, and what it replied with — 50 per page.</p>
+                        <p class="text-xs text-slate-400 max-w-2xl">Every message the agent has actually replied
+                            to in your connected mailbox(es), and what it replied with — 50 per page. Messages
+                            that correctly needed no reply (newsletters, bank alerts, notifications, etc.) aren't
+                            shown here.</p>
                         <button onclick="loadEmailActivity(1)"
                             class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white shrink-0">
                             <i class="fa-solid fa-rotate"></i> Refresh
@@ -1004,7 +1006,7 @@
                 <td class="p-3 text-slate-400 align-top">${escapeHtml(m.bodySummary || '—')}</td>
                 <td class="p-3 text-slate-400 align-top">${m.aiReply ? escapeHtml(m.aiReply) : '<span class="text-slate-600">—</span>'}</td>
                 <td class="p-3 text-center align-top ${statusColor(m.status)}">${escapeHtml(m.status || '—')}</td>
-            </tr>`).join('') : '<tr><td class="p-3 text-slate-600" colspan="5">No mailbox activity yet.</td></tr>';
+            </tr>`).join('') : '<tr><td class="p-3 text-slate-600" colspan="5">No replies sent yet.</td></tr>';
 
             pageInfo.textContent = `Page ${res.page} of ${res.totalPages} — ${res.total} total`;
             prevBtn.disabled = !res.hasPrev;
@@ -1641,6 +1643,7 @@
             callGateway('clientportal', 'clientPortalMarkAllNotificationsRead', {}).then(() => pollClientNotifications());
         }
     </script>
+
 </body>
 
 </html>
