@@ -2205,6 +2205,7 @@
                                 <option value="agent-tasks">Active Tasks</option>
                                 <option value="agent-approvals">Pending Approvals</option>
                                 <option value="agent-mailboxes">Mailboxes</option>
+                                <option value="agent-whatsapp">WhatsApp</option>
                                 <option value="agent-scheduling">Scheduling</option>
                                 <option value="agent-doc-studio">Document Studio</option>
                                 <option value="agent-ai-console">AI Actions Console</option>
@@ -2285,6 +2286,7 @@
                         <button class="agent-subview-link" data-target-view="agent-social-calendar">Social
                             Calendar</button>
                         <button class="agent-subview-link" data-target-view="agent-mailboxes">Mailboxes</button>
+                        <button class="agent-subview-link" data-target-view="agent-whatsapp">WhatsApp</button>
                         <button class="agent-subview-link" data-target-view="agent-scheduling">Scheduling</button>
                         <button class="agent-subview-link" data-target-view="agent-doc-studio">Document
                             Studio</button>
@@ -3244,6 +3246,47 @@
                                     </tr>
                                 </thead>
                                 <tbody id="agentMailboxesTableBody" class="divide-y divide-slate-800/50 text-slate-300">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- WHATSAPP -->
+                    <div id="view-agent-whatsapp"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">WhatsApp Business</h3>
+                                <p class="text-xs text-slate-400">Connect a client's WhatsApp Business number
+                                    (Meta Cloud API) so the agent can read and auto-reply to their inbound
+                                    messages.</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <select id="whatsappClientSelector" onchange="loadAgentWhatsAppUI()"
+                                    class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white min-w-[200px]">
+                                    <option value="">Select a client…</option>
+                                </select>
+                                <button onclick="openConnectWhatsAppModal()"
+                                    class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded shadow"><i
+                                        class="fa-brands fa-whatsapp"></i> Connect WhatsApp</button>
+                            </div>
+                        </div>
+                        <div
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead
+                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                    <tr>
+                                        <th class="p-3">WhatsApp ID</th>
+                                        <th class="p-3">Label</th>
+                                        <th class="p-3">Number</th>
+                                        <th class="p-3">Connected</th>
+                                        <th class="p-3 text-center">Status</th>
+                                        <th class="p-3 text-center">Test Send</th>
+                                        <th class="p-3 text-center">Disconnect</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="agentWhatsAppTableBody" class="divide-y divide-slate-800/50 text-slate-300">
                                 </tbody>
                             </table>
                         </div>
@@ -5008,7 +5051,8 @@
                 <div class="border-t border-slate-800 pt-3">
                     <label class="block text-slate-500 mb-1">Brand colors</label>
                     <div class="flex items-center gap-2 mb-2">
-                        <input id="brandingPrimary" type="color" value="#CC5500" class="h-8 w-10 bg-transparent border-0">
+                        <input id="brandingPrimary" type="color" value="#CC5500"
+                            class="h-8 w-10 bg-transparent border-0">
                         <input id="brandingPrimaryHex" type="text" placeholder="#RRGGBB primary"
                             class="flex-1 bg-slate-950 border border-slate-700 rounded p-2 text-white font-mono text-[11px]">
                     </div>
@@ -5024,7 +5068,8 @@
                     </div>
                     <div class="flex gap-2">
                         <button onclick="saveBrandingColors()"
-                            class="text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-white">Save Colors</button>
+                            class="text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-white">Save
+                            Colors</button>
                         <button onclick="resolveBrandingColorsNow()"
                             class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white border border-slate-700">Re-detect
                             Now</button>
@@ -5036,7 +5081,8 @@
                 </div>
 
                 <div class="border-t border-slate-800 pt-3">
-                    <label class="block text-slate-500 mb-1"><i class="fa-solid fa-check-double"></i> Proof of use — documents this letterhead/logo actually appeared in</label>
+                    <label class="block text-slate-500 mb-1"><i class="fa-solid fa-check-double"></i> Proof of use —
+                        documents this letterhead/logo actually appeared in</label>
                     <div id="brandingUsageHistory" class="text-[11px] max-h-32 overflow-auto"></div>
                 </div>
             </div>
@@ -5345,13 +5391,16 @@
                 </p>
                 <input type="email" id="customMailAddress" placeholder="mailbox@client-domain.com"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white mb-2" />
-                <input type="text" id="customMailListUrl" placeholder="List unread URL — GET, returns { threads: [{id}] }"
+                <input type="text" id="customMailListUrl"
+                    placeholder="List unread URL — GET, returns { threads: [{id}] }"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white mb-2" />
-                <input type="text" id="customMailGetUrl" placeholder="Get message URL — GET ?id=... (optional but recommended)"
+                <input type="text" id="customMailGetUrl"
+                    placeholder="Get message URL — GET ?id=... (optional but recommended)"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white mb-2" />
                 <input type="text" id="customMailSendUrl" placeholder="Send URL — POST { to, subject, htmlBody, cc }"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white mb-2" />
-                <input type="text" id="customMailApiKey" placeholder="API key (sent as Authorization: Bearer ..., optional)"
+                <input type="text" id="customMailApiKey"
+                    placeholder="API key (sent as Authorization: Bearer ..., optional)"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white mb-2" />
                 <button onclick="submitConnectCustomMail()"
                     class="w-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium py-2 rounded">
@@ -5373,6 +5422,58 @@
                     Connect Manually
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- CONNECT WHATSAPP -->
+    <div id="modalConnectWhatsApp"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white"><i class="fa-brands fa-whatsapp text-emerald-500"></i>
+                    Connect Client WhatsApp</h3>
+                <button onclick="document.getElementById('modalConnectWhatsApp').classList.add('hidden')"
+                    class="text-slate-400 hover:text-white">&times;</button>
+            </div>
+            <p class="text-[11px] text-slate-500">From Meta's App Dashboard → WhatsApp → API Setup for this
+                client's number: copy the Phone Number ID and a permanent access token (a System User token,
+                not the 24-hour temporary one). Set this app's webhook URL and a Verify Token of your choosing
+                in Meta's webhook config — enter that same Verify Token below so the handshake succeeds.</p>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Client</label>
+                <select id="connectWhatsAppClientId"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></select>
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Label</label>
+                <input type="text" id="connectWhatsAppLabel" placeholder="e.g. Main Support Line"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Phone Number ID</label>
+                <input type="text" id="connectWhatsAppPhoneNumberId" placeholder="e.g. 109876543210987"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Display Phone Number</label>
+                <input type="text" id="connectWhatsAppDisplayNumber" placeholder="e.g. +234 800 000 0000"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Access Token</label>
+                <input type="password" id="connectWhatsAppAccessToken" placeholder="System User access token"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Verify Token</label>
+                <input type="text" id="connectWhatsAppVerifyToken"
+                    placeholder="Same value entered in Meta's webhook config"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+            </div>
+            <button onclick="submitConnectWhatsApp(event)"
+                class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 rounded">
+                Connect WhatsApp
+            </button>
         </div>
     </div>
 
@@ -6244,6 +6345,7 @@
                 },
                 'agent-access-control': () => { populateAllClientsSelector('accessControlClientSelector', loadAccessControlPanel); },
                 'agent-mailboxes': () => { populateAllClientsSelector('mailboxesClientSelector', loadAgentMailboxesUI); },
+                'agent-whatsapp': () => { populateAllClientsSelector('whatsappClientSelector', loadAgentWhatsAppUI); },
                 'agent-scheduling': () => { populateAllClientsSelector('schedulingClientSelector', loadSchedulingMailboxes); },
                 'agent-va-clients': loadVAClientsUI,
                 'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector').then(loadIntegrationsUI); },
@@ -11323,6 +11425,14 @@ ${a.Status === 'Pending Review' ? `
         let DOC_STUDIO_CATALOG = null;
         let DOC_STUDIO_SPEC = null;
         const DOC_STUDIO_TABLE_STATE = {};
+        // Per-client self-service visibility state for the currently selected client in
+        // Document Studio — powers the inline on/off toggle on each catalog tile so admin
+        // doesn't have to open the separate "Client Dashboard" modal just to flip one
+        // document on/off. Keyed by docType; only docTypes present here are toggleable
+        // (the full 64-type catalog includes admin-only/internal document types that were
+        // never meant to be client-self-service in the first place).
+        let DOC_STUDIO_VISIBILITY_MAP = {};
+        let DOC_STUDIO_VISIBILITY_CLIENT = null;
 
         async function loadDocStudio() {
             await populateAgentClientSelector('docStudioClientId', null);
@@ -11344,11 +11454,23 @@ ${a.Status === 'Pending Review' ? `
             renderDocStudioCatalog();
         }
 
-        function onDocStudioClientChange() {
+        /** Loads (or reloads) the on/off visibility state for the given client's self-service catalog, so renderDocStudioCatalog() can paint each tile's toggle in the correct current state. */
+        async function loadDocStudioVisibilityMap(clientId) {
+            DOC_STUDIO_VISIBILITY_MAP = {};
+            DOC_STUDIO_VISIBILITY_CLIENT = clientId || null;
+            if (!clientId) return;
+            const res = await executeSecureBridgeCall('agent', 'agent-get-client-doc-toggles', { clientId });
+            if (res.success && res.docTypes) {
+                res.docTypes.forEach(d => { DOC_STUDIO_VISIBILITY_MAP[d.docType] = !!d.enabled; });
+            }
+        }
+
+        async function onDocStudioClientChange() {
             const clientId = document.getElementById('docStudioClientId')?.value;
             const client = AGENT_CLIENTS_CACHE[clientId];
             const indSel = document.getElementById('docStudioIndustry');
             if (client && client.Industry && indSel) indSel.value = client.Industry;
+            await loadDocStudioVisibilityMap(clientId);
             renderDocStudioCatalog();
         }
 
@@ -11376,16 +11498,49 @@ ${a.Status === 'Pending Review' ? `
                 return '<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-900/50 text-emerald-300 border border-emerald-800">Auto-send</span>';
             };
 
-            grid.innerHTML = filtered.length ? filtered.map(d => `
+            grid.innerHTML = filtered.length ? filtered.map(d => {
+                const clientSelected = !!DOC_STUDIO_VISIBILITY_CLIENT;
+                const isToggleable = clientSelected && Object.prototype.hasOwnProperty.call(DOC_STUDIO_VISIBILITY_MAP, d.id);
+                const isOn = DOC_STUDIO_VISIBILITY_MAP[d.id] !== false;
+                // Toggle sits on top of the tile and stops propagation so clicking it
+                // never also triggers the tile's own onclick (which opens the generate
+                // modal) — flipping visibility and generating a document are two
+                // different actions that happen to live on the same card.
+                const toggleHtml = !clientSelected ? '' : (isToggleable ? `
+                    <label onclick="event.stopPropagation()" class="flex items-center gap-1 shrink-0 cursor-pointer select-none" title="${isOn ? 'Visible on client dashboard — click to hide' : 'Hidden from client dashboard — click to show'}">
+                        <input type="checkbox" ${isOn ? 'checked' : ''} onchange="event.stopPropagation(); toggleClientDocVisibilityInline('${escapeHtml(d.id)}', this.checked)" class="w-3.5 h-3.5 accent-emerald-500">
+                    </label>` : `<span class="text-[9px] text-slate-700" title="Not a client self-service document type">—</span>`);
+
+                return `
                 <button onclick="openGenerateDocumentModal('${escapeHtml(d.id)}')"
-                    class="text-left bg-slate-950 border border-slate-800 hover:border-emerald-700 rounded-lg p-3 space-y-1.5 transition-colors">
+                    class="text-left bg-slate-950 border ${clientSelected && isToggleable && !isOn ? 'border-slate-900 opacity-60' : 'border-slate-800'} hover:border-emerald-700 rounded-lg p-3 space-y-1.5 transition-colors">
                     <div class="flex justify-between items-start gap-2">
                         <span class="text-xs font-bold text-white">${escapeHtml(d.label)}</span>
-                        ${riskBadge(d.riskTier)}
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            ${riskBadge(d.riskTier)}
+                            ${toggleHtml}
+                        </div>
                     </div>
                     <div class="text-[10px] text-slate-500 font-mono">${escapeHtml(d.category || '')} · ${(d.industries || []).map(escapeHtml).join(', ')}</div>
                 </button>
-            `).join('') : `<div class="col-span-3 text-center text-xs text-slate-500 py-8">No document types match this filter.</div>`;
+            `;
+            }).join('') : `<div class="col-span-3 text-center text-xs text-slate-500 py-8">No document types match this filter.</div>`;
+        }
+
+        /** Inline flip from a Document Studio tile's own toggle — same backend call the modal uses, just scoped to the currently selected client and re-rendering only the grid (not the whole modal) for a snappier feel. */
+        async function toggleClientDocVisibilityInline(docType, enabled) {
+            const clientId = DOC_STUDIO_VISIBILITY_CLIENT;
+            if (!clientId) return;
+            DOC_STUDIO_VISIBILITY_MAP[docType] = enabled; // optimistic
+            renderDocStudioCatalog();
+            const res = await executeSecureBridgeCall('agent', 'agent-set-client-doc-visibility', { clientId, docType, enabled });
+            if (!res.success) {
+                DOC_STUDIO_VISIBILITY_MAP[docType] = !enabled; // revert on failure
+                renderDocStudioCatalog();
+                showToast(res.message || 'Failed to update visibility.', 'error');
+                return;
+            }
+            showToast(docType + ' is now ' + (enabled ? 'visible' : 'hidden') + ' on this client\'s dashboard.', 'success');
         }
 
         async function openGenerateDocumentModal(docId) {
@@ -11732,6 +11887,8 @@ ${a.Status === 'Pending Review' ? `
         async function toggleClientDocVisibility(clientId, docType, enabled) {
             const res = await executeSecureBridgeCall('agent', 'agent-set-client-doc-visibility', { clientId, docType, enabled });
             if (!res.success) showToast(res.message || 'Failed to update.', 'error');
+            if (DOC_STUDIO_VISIBILITY_CLIENT === clientId) DOC_STUDIO_VISIBILITY_MAP[docType] = enabled;
+            renderDocStudioCatalog();
             loadClientDocToggles(clientId);
         }
 
@@ -12000,14 +12157,79 @@ ${a.Status === 'Pending Review' ? `
     <td class="p-3 text-center">${isPrivate ? '<span class="text-amber-400"><i class="fa-solid fa-lock"></i> Private</span>' : '<span class="text-slate-500"><i class="fa-solid fa-lock-open"></i> Open</span>'}</td>
     <td class="p-3 text-center">
       ${linked
-                    ? `<button id="confirmBtn_${escapeHtml(m.MailboxID)}" onclick="confirmMailboxLink('${escapeHtml(m.MailboxID)}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-medium py-1 px-2 rounded"><i class="fa-solid fa-check-double"></i> Confirm</button>`
-                    : `<span class="text-slate-600 text-[11px]">Link email first</span>`}
+                        ? `<button id="confirmBtn_${escapeHtml(m.MailboxID)}" onclick="confirmMailboxLink('${escapeHtml(m.MailboxID)}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-medium py-1 px-2 rounded"><i class="fa-solid fa-check-double"></i> Confirm</button>`
+                        : `<span class="text-slate-600 text-[11px]">Link email first</span>`}
       ${m.LastVerifyStatus ? `<div class="text-[10px] mt-1 ${m.LastVerifyStatus === 'Confirmed' ? 'text-emerald-400' : 'text-red-400'}">${escapeHtml(m.LastVerifyStatus)}${m.LastVerifyDurationMs ? ' — ' + (Math.round(m.LastVerifyDurationMs / 100) / 10) + 's' : ''}</div>` : ''}
     </td>
     <td class="p-3 text-center"><button onclick="viewMailboxData('${escapeHtml(m.MailboxID)}','${escapeHtml(m.Label)}',${isPrivate})" class="text-blue-400 hover:text-blue-300 text-xs"><i class="fa-solid fa-eye"></i> View</button></td>
     <td class="p-3 text-center"><button onclick="deleteMailboxRow('${escapeHtml(clientId)}','${escapeHtml(m.MailboxID)}','${escapeHtml(m.Label)}')" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button></td>
     </tr>`;
             }).join('');
+        }
+
+        // =====================================================================
+        // WHATSAPP — admin connection management, mirrors the mailbox
+        // panel/modal above but for a client's WhatsApp Business number.
+        // =====================================================================
+        async function loadAgentWhatsAppUI() {
+            const clientId = document.getElementById('whatsappClientSelector')?.value;
+            const tbody = document.getElementById('agentWhatsAppTableBody');
+            if (!clientId) { tbody.innerHTML = emptyRow('Select a client.', 7); return; }
+            showTableSkeleton('agentWhatsAppTableBody', 7);
+            const res = await executeSecureBridgeCall('agent', 'agent-list-whatsapp-connections', { clientId });
+            if (!res.success || !res.connections?.length) { tbody.innerHTML = emptyRow('No WhatsApp number connected.', 7); return; }
+            tbody.innerHTML = res.connections.map(w => `
+    <tr id="waRow_${escapeHtml(w.whatsAppId)}">
+    <td class="p-3 font-mono text-slate-500">${escapeHtml(w.whatsAppId)}</td>
+    <td class="p-3">${escapeHtml(w.label)}</td>
+    <td class="p-3">${escapeHtml(w.displayPhoneNumber || w.phoneNumberId)}</td>
+    <td class="p-3 text-slate-500">${fmtDate(w.connectedAt)}</td>
+    <td class="p-3 text-center">${badge(w.status)}</td>
+    <td class="p-3 text-center"><button onclick="testSendWhatsApp('${escapeHtml(clientId)}','${escapeHtml(w.whatsAppId)}')" class="text-indigo-400 hover:text-indigo-300 text-xs"><i class="fa-solid fa-flask"></i> Test</button></td>
+    <td class="p-3 text-center"><button onclick="disconnectWhatsApp('${escapeHtml(clientId)}','${escapeHtml(w.whatsAppId)}','${escapeHtml(w.label)}')" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-plug-circle-xmark"></i></button></td>
+    </tr>`).join('');
+        }
+
+        async function openConnectWhatsAppModal() {
+            await populateAllClientsSelector('connectWhatsAppClientId');
+            ['connectWhatsAppLabel', 'connectWhatsAppPhoneNumberId', 'connectWhatsAppDisplayNumber',
+                'connectWhatsAppAccessToken', 'connectWhatsAppVerifyToken'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('modalConnectWhatsApp').classList.remove('hidden');
+        }
+
+        async function submitConnectWhatsApp(event) {
+            event.preventDefault();
+            const clientId = document.getElementById('connectWhatsAppClientId').value;
+            const label = document.getElementById('connectWhatsAppLabel').value.trim();
+            const phoneNumberId = document.getElementById('connectWhatsAppPhoneNumberId').value.trim();
+            const displayPhoneNumber = document.getElementById('connectWhatsAppDisplayNumber').value.trim();
+            const accessToken = document.getElementById('connectWhatsAppAccessToken').value.trim();
+            const verifyToken = document.getElementById('connectWhatsAppVerifyToken').value.trim();
+            if (!clientId || !phoneNumberId || !accessToken) {
+                showToast('Client, Phone Number ID, and Access Token are required.', 'error'); return;
+            }
+            const res = await executeSecureBridgeCall('agent', 'agent-connect-whatsapp',
+                { clientId, label, phoneNumberId, displayPhoneNumber, accessToken, verifyToken });
+            if (!res.success) { showToast(res.message || 'Failed to connect WhatsApp.', 'error'); return; }
+            showToast('WhatsApp connected.', 'success');
+            document.getElementById('modalConnectWhatsApp').classList.add('hidden');
+            document.getElementById('whatsappClientSelector').value = clientId;
+            loadAgentWhatsAppUI();
+        }
+
+        async function disconnectWhatsApp(clientId, whatsAppId, label) {
+            if (!confirm(`Disconnect WhatsApp "${label}"? The agent will stop replying on this number immediately.`)) return;
+            const res = await executeSecureBridgeCall('agent', 'agent-disconnect-whatsapp', { clientId, whatsAppId });
+            if (!res.success) { showToast(res.message || 'Failed to disconnect.', 'error'); return; }
+            showToast('WhatsApp disconnected.', 'success');
+            loadAgentWhatsAppUI();
+        }
+
+        async function testSendWhatsApp(clientId, whatsAppId) {
+            const toNumber = prompt('Send a test WhatsApp message to (include country code, e.g. 2348001234567):');
+            if (!toNumber) return;
+            const res = await executeSecureBridgeCall('agent', 'agent-test-whatsapp-processing', { clientId, whatsAppId, toNumber });
+            showToast(res.success ? 'Test message sent.' : (res.message || 'Test failed.'), res.success ? 'success' : 'error');
         }
 
         const MAILBOX_VIEW_TABS = [
@@ -12962,6 +13184,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 populateAIConsoleActions();
             },
             'agent-mailboxes': () => { populateAllClientsSelector('mailboxesClientSelector'); },
+            'agent-whatsapp': () => { populateAllClientsSelector('whatsappClientSelector'); },
             'agent-scheduling': () => { populateAllClientsSelector('schedulingClientSelector'); },
             'agent-va-clients': loadVAClientsUI,
             'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector'); }

@@ -231,6 +231,9 @@
                 <button class="nav-link" data-view="emailactivity" onclick="showView('emailactivity', this)">
                     <i class="fa-solid fa-envelope-open-text w-4"></i> Email Activity
                 </button>
+                <button class="nav-link" data-view="integrations" onclick="showView('integrations', this)">
+                    <i class="fa-solid fa-plug w-4"></i> Integrations
+                </button>
             </nav>
 
             <div class="p-3 border-t border-slate-800">
@@ -586,6 +589,38 @@
                     </div>
                 </section>
 
+                <!-- INTEGRATIONS -->
+                <section id="view-integrations"
+                    class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
+                    <p class="text-xs text-slate-400 max-w-2xl">Everything currently connected to your account.
+                        Revoking a connection here stops it immediately — the agent will no longer read from or send
+                        through it until you reconnect it with our team.</p>
+
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
+                                class="fa-solid fa-envelope text-slate-500"></i> Mailboxes</h3>
+                        <div id="integrationsMailboxList" class="space-y-2 text-xs"></div>
+                    </div>
+
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
+                                class="fa-brands fa-whatsapp text-slate-500"></i> WhatsApp</h3>
+                        <div id="integrationsWhatsAppList" class="space-y-2 text-xs"></div>
+                    </div>
+
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
+                                class="fa-solid fa-share-nodes text-slate-500"></i> Social Media</h3>
+                        <div id="integrationsSocialList" class="space-y-2 text-xs"></div>
+                    </div>
+
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
+                                class="fa-solid fa-database text-slate-500"></i> CRM</h3>
+                        <div id="integrationsCrmList" class="space-y-2 text-xs"></div>
+                    </div>
+                </section>
+
             </div>
         </main>
     </div>
@@ -701,7 +736,7 @@
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             if (btn) btn.classList.add('active');
 
-            const titles = { overview: 'Overview', documents: 'My Documents', generate: 'Generate a Document', chat: 'Live Chat', social: 'Social Calendar', appointments: 'Appointments', emailactivity: 'Email Activity' };
+            const titles = { overview: 'Overview', documents: 'My Documents', generate: 'Generate a Document', chat: 'Live Chat', social: 'Social Calendar', appointments: 'Appointments', emailactivity: 'Email Activity', integrations: 'Integrations' };
             document.getElementById('pageTitle').textContent = titles[name] || name;
 
             if (name === 'documents') loadDocuments();
@@ -709,6 +744,7 @@
             if (name === 'social') loadSocialCalendar();
             if (name === 'appointments') loadAppointments();
             if (name === 'emailactivity') loadEmailActivity(1);
+            if (name === 'integrations') loadIntegrationsPanel();
             if (name === 'chat') {
                 loadChat();
                 startChatPolling();
@@ -1003,6 +1039,64 @@
             const res = await callGateway('clientportal', 'clientPortalSetMailboxPrivacy', { mailboxId, isPrivate });
             if (!res.success) { alert(res.message || 'Failed to update privacy.'); }
             loadMailboxPrivacyPanel();
+        }
+
+        // =====================================================================
+        // INTEGRATIONS — mailbox / social media / CRM connections the client
+        // can see and revoke themselves.
+        // =====================================================================
+        async function loadIntegrationsPanel() {
+            const mbxEl = document.getElementById('integrationsMailboxList');
+            const waEl = document.getElementById('integrationsWhatsAppList');
+            const socEl = document.getElementById('integrationsSocialList');
+            const crmEl = document.getElementById('integrationsCrmList');
+            mbxEl.innerHTML = waEl.innerHTML = socEl.innerHTML = crmEl.innerHTML = '<p class="text-slate-500">Loading…</p>';
+
+            const res = await callGateway('clientportal', 'clientPortalListIntegrations', {});
+            if (!res.success) {
+                const msg = `<p class="text-slate-600">${escapeHtml(res.message || 'Could not load integrations.')}</p>`;
+                mbxEl.innerHTML = waEl.innerHTML = socEl.innerHTML = crmEl.innerHTML = msg;
+                return;
+            }
+
+            const row = (label, sub, onRevoke) => `
+                <div class="flex items-center justify-between bg-slate-900 border border-slate-800 rounded px-3 py-2">
+                    <div>
+                        <div class="text-slate-200 font-medium">${escapeHtml(label)}</div>
+                        ${sub ? `<div class="text-slate-500 text-[10px]">${escapeHtml(sub)}</div>` : ''}
+                    </div>
+                    <button onclick="${onRevoke}"
+                        class="text-[10px] px-2.5 py-1 bg-red-900/40 hover:bg-red-900/70 border border-red-800 rounded text-red-300">
+                        Revoke
+                    </button>
+                </div>`;
+
+            mbxEl.innerHTML = (res.mailboxes || []).length
+                ? res.mailboxes.map(m => row(m.label || m.emailAddress || m.mailboxId, m.emailAddress,
+                    `revokeIntegration('mailbox', { mailboxId: '${escapeHtml(m.mailboxId)}' }, '${escapeHtml(m.label || m.emailAddress || 'this mailbox')}')`)).join('')
+                : '<p class="text-slate-600">No mailboxes connected.</p>';
+
+            waEl.innerHTML = (res.whatsapp || []).length
+                ? res.whatsapp.map(w => row(w.label || w.displayPhoneNumber || w.whatsAppId, w.displayPhoneNumber,
+                    `revokeIntegration('whatsapp', { whatsAppId: '${escapeHtml(w.whatsAppId)}' }, '${escapeHtml(w.label || w.displayPhoneNumber || 'this WhatsApp number')}')`)).join('')
+                : '<p class="text-slate-600">No WhatsApp number connected.</p>';
+
+            socEl.innerHTML = (res.social || []).length
+                ? res.social.map(s => row(s.pageName || s.platform, s.platform,
+                    `revokeIntegration('social', { type: '${escapeHtml(s.platform)}' }, '${escapeHtml(s.pageName || s.platform)}')`)).join('')
+                : '<p class="text-slate-600">No social media accounts connected.</p>';
+
+            crmEl.innerHTML = (res.crm || []).length
+                ? res.crm.map(c => row(c.label || c.type, c.type,
+                    `revokeIntegration('crm', { type: '${escapeHtml(c.type)}' }, '${escapeHtml(c.label || c.type)}')`)).join('')
+                : '<p class="text-slate-600">No CRM connected.</p>';
+        }
+
+        async function revokeIntegration(category, idFields, displayLabel) {
+            if (!confirm(`Revoke "${displayLabel}"? The agent will stop using it immediately — you'll need to reconnect it with our team to restore it.`)) return;
+            const res = await callGateway('clientportal', 'clientPortalRevokeIntegration', { category, ...idFields });
+            if (!res.success) { alert(res.message || 'Failed to revoke.'); }
+            loadIntegrationsPanel();
         }
 
         function applyAppointmentFilters() {
