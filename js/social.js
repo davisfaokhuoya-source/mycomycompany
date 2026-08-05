@@ -20,7 +20,7 @@ function navbar() {
             <div class="navbar-nav ms-auto py-0">
                 <a href="index.html" class="nav-item nav-link">Home</a>
                 <a href="about.html" class="nav-item nav-link">About</a>
-                <a href="info.html" class="nav-item nav-link">Info</a>
+                <a href="intro.html" class="nav-item nav-link">Intro</a>
 
                 <div class="nav-item dropdown">
                     <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Portals</a>
