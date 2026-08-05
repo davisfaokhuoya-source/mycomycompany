@@ -1,18 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // =========================================================================
-    // THE VICTORIAS LTD — COMPREHENSIVE POLICY DOCUMENT
-    // Effective Date: January 1, 2026 | Version: 2.1 | Last Updated: July 7, 2026
-    // Reviewed Annually
-    // Governing Law: Nigeria (NDPA 2023, NDPR 2019, FCCPA, CAMA 2020,
-    //   Cybercrimes Act 2015, Consumer Protection Council Act, ISA 1999)
-    //   + Global alignment: GDPR, ISO/IEC 27001, UN Guidelines for Business & HR
-    // [CHANGED v2.1] Added Section 12 (Professional Assessment & Certification
-    //   Portal — thevictorias.com.ng/trainings) and Section 13 (Nigerian Market
-    //   Entry & Local Support — thevictorias.com.ng/localsupport), which were
-    //   previously covered only in passing under Section 1.2 and Section 8.6.
-    // =========================================================================
-
     const policiesData = [
 
         // =====================================================================
@@ -122,6 +109,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     (b) We reserve the right to use anonymised, non-identifiable versions of completed work as portfolio samples unless you request otherwise in writing;<br>
                     (c) For software or web development deliverables, specific IP terms will be set out in the project contract and take precedence over this general clause;<br>
                     (d) We do not transfer ownership of third-party licensed assets (e.g., stock photography, licensed fonts) used in your deliverable. Usage rights for such assets are governed by the respective licences.`
+                },
+                {
+                    id: 'client-6',
+                    title: '2.6 AI Agent Communications & Connected Integrations',
+                    content: `Where you engage our AI-assisted business support services, our AI agent may connect to and act on communication channels and business systems you authorise, in order to assist with your own customer communications and operations. This includes:<br><br>
+                    <strong>(a) Connected Channels:</strong> Email mailbox(es), WhatsApp Business number(s), social media accounts, and CRM connections, each connected only with your (or your authorised representative's) explicit action.<br><br>
+                    <strong>(b) What the Agent Does:</strong> On connected channels, our AI agent may read incoming messages sent to your business, draft responses grounded in the business context and information you have provided us, and — depending on your chosen preference (automatic or manual review) — send those responses on your behalf or hold them for your review first.<br><br>
+                    <strong>(c) Your Control:</strong> You may, at any time and without needing to contact us, view every service currently connected to your account and revoke any of them individually from the <strong>Integrations</strong> panel of your client dashboard. Revoking a connection stops the agent from reading or sending through it immediately. You may also mark a mailbox or WhatsApp number as private, which excludes its activity from admin visibility while keeping the agent's ability to respond intact.<br><br>
+                    <strong>(d) Your Responsibility:</strong> You are responsible for the accuracy of the business information you provide us to ground the AI agent's responses, and for reviewing connected-channel activity periodically. The Victorias Ltd. is not liable for consequences arising from inaccurate or outdated business information you supplied.<br><br>
+                    <strong>(e) Safeguards:</strong> The AI agent is designed to withhold sensitive information (such as payment card numbers, passwords, or confidential credentials) that appears in an inbound message or would otherwise appear in a drafted reply, escalating such messages for your manual review instead of auto-sending. See Section 5.7 for WhatsApp-specific data handling.`
                 }
             ]
         },
@@ -282,6 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <strong>Trainees / Certification Portal Users (thevictorias.com.ng/trainings):</strong> Full name, email address, phone number, state of residence, payment confirmation records, assessment attempts, scores, and issued certificate records (which may be made publicly searchable for verification — see Section 12.5).<br><br>
                     <strong>Market Entry / Local Support Clients (thevictorias.com.ng/localsupport):</strong> Brand company details, authorised contact information, and — where distributor sourcing is engaged — distributor candidate business information gathered during vetting (see Section 13.2).<br><br>
                     <strong>Website Visitors:</strong> IP address, browser type, pages visited, and session duration — collected through standard web analytics tools for performance improvement purposes only.<br><br>
+                    <strong>AI Agent-Assisted Communications:</strong> Where you connect a mailbox, WhatsApp Business number, social media account, or CRM to our AI agent (see Section 2.6), we process the content of inbound messages sent to those channels, sender identity (email address, WhatsApp number, or social handle), and the AI-drafted or sent reply content, in order to provide the auto-response service you've enabled. See Section 5.7 for WhatsApp-specific handling.<br><br>
                     <strong>Legal Basis for Processing (NDPA 2023, Article 25):</strong><br>
                     — <em>Contract Performance:</em> Processing necessary to deliver the service you engaged;<br>
                     — <em>Consent:</em> Where you have expressly consented (e.g., marketing communications);<br>
@@ -301,8 +299,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <strong>We share your data only with:</strong><br>
                     (a) Government agencies and regulatory bodies, strictly as required for service delivery (e.g., CAC, FIRS, SCUML);<br>
                     (b) Our authorised service providers and processors (e.g., email service providers, payment processors), bound by data processing agreements;<br>
-                    (c) Professional advisors (lawyers, auditors) under strict confidentiality obligations;<br>
-                    (d) Law enforcement or courts, where required by a valid legal order.<br><br>
+                    (c) Where you have connected the relevant channel yourself (see Section 2.6), the underlying platform operators needed to deliver AI-assisted communication — including <strong>Meta Platforms, Inc.</strong> (via the WhatsApp Business Platform, for WhatsApp messaging), your email provider, and any social media or CRM platform you've connected — each acting as a processor strictly to transmit and receive the messages you've authorised;<br>
+                    (d) Professional advisors (lawyers, auditors) under strict confidentiality obligations;<br>
+                    (e) Law enforcement or courts, where required by a valid legal order.<br><br>
                     <strong>We do not:</strong> Sell, rent, or trade your personal data to any third party for marketing or commercial purposes. We do not share your data with advertisers.`
                 },
                 {
@@ -344,6 +343,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     (c) We will immediately isolate, investigate, and remediate the breach;<br>
                     (d) A full incident report will be compiled and retained for 3 years.<br><br>
                     Potential penalties under NDPA 2023 for data breaches can reach ₦10,000,000 or 2% of annual gross revenue, whichever is higher — reflecting the seriousness with which we treat data security.`
+                },
+                {
+                    id: 'data-7',
+                    title: '5.7 WhatsApp Business Messaging & AI-Assisted Communication',
+                    content: `Where you connect a WhatsApp Business number to our AI agent (see Section 2.6), the following applies in addition to Sections 5.1–5.6:<br><br>
+                    <strong>(a) Platform & Processor:</strong> WhatsApp messaging is delivered through the WhatsApp Business Platform, operated by <strong>Meta Platforms, Inc.</strong> Messages sent and received through your connected number pass through Meta's infrastructure under Meta's own terms and privacy practices, in addition to this policy. We do not control, and are not responsible for, Meta's handling of data in transit through its platform.<br><br>
+                    <strong>(b) Data Processed:</strong> We process the WhatsApp number and available profile name of anyone who messages your connected number, the text content of their inbound message, and the AI-drafted or sent reply — solely to provide the auto-response service and maintain your WhatsApp Activity Log (visible in your client dashboard's Integrations panel).<br><br>
+                    <strong>(c) AI-Drafted Replies:</strong> Replies are drafted using the business context and information you have provided us, and are checked for sensitive information (e.g., card numbers, passwords) before sending — any message containing such content is withheld from automatic sending and flagged for your manual review instead.<br><br>
+                    <strong>(d) Your Choice — Automatic or Manual Review:</strong> By default, routine replies are sent automatically. You may switch this to manual review at any time, in which case drafted replies are held for your approval before being sent.<br><br>
+                    <strong>(e) Access Credentials:</strong> The access token used to send messages on your behalf is encrypted at rest and is never displayed to you, our staff, or any third party after initial connection — only the connection's status and identifying details (number, label) are shown.<br><br>
+                    <strong>(f) Retention:</strong> WhatsApp activity log entries are retained on the same 30-day basis as other platform messages (Section 5.4), unless you or we are required to retain specific records for longer under applicable law (e.g., an active dispute).<br><br>
+                    <strong>(g) Revocation:</strong> You may disconnect your WhatsApp number at any time from the Integrations panel of your client dashboard. Once disconnected, the agent immediately stops reading or replying to messages sent to that number; historical activity log entries are retained per Section 5.4 for record-keeping purposes.`
                 }
             ]
         },
