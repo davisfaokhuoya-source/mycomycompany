@@ -881,25 +881,48 @@
                         : escapeHtml(d.status || '—'));
                 const actionHtml = isPending
                     ? `<button onclick="approveDocumentSend('${escapeHtml(d.queueId)}', this)"
-                           class="text-xs px-2 py-1 bg-amber-900/60 hover:bg-amber-800 rounded text-amber-200">
-                           <i class="fa-solid fa-paper-plane"></i> Approve &amp; Send (1 email)
-                       </button>`
-                    : `<button onclick="downloadDocument('${escapeHtml(d.docId)}')"
-                           class="text-xs px-2 py-1 bg-emerald-900 hover:bg-emerald-800 rounded text-emerald-200">
-                           <i class="fa-solid fa-download"></i> Open
-                       </button>`;
+                   class="text-xs px-2 py-1 bg-amber-900/60 hover:bg-amber-800 rounded text-amber-200">
+                   <i class="fa-solid fa-paper-plane"></i> Approve &amp; Send (1 email)
+               </button>`
+                    : `<div class="flex gap-1.5 justify-center">
+                   <button onclick="downloadDocument('${escapeHtml(d.docId)}')"
+                       class="text-xs px-2 py-1 bg-emerald-900 hover:bg-emerald-800 rounded text-emerald-200">
+                       <i class="fa-solid fa-download"></i> Download
+                   </button>
+                   <button onclick="openSendDocumentPrompt('${escapeHtml(d.docId)}', '${escapeHtml((d.title || '').replace(/'/g, ''))}', this)"
+                       class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-200">
+                       <i class="fa-solid fa-paper-plane"></i> Send
+                   </button>
+               </div>`;
                 return `
-            <tr>
-                <td class="p-3 text-white">${escapeHtml(d.title || '—')}</td>
-                <td class="p-3">${escapeHtml(d.type || '—')}</td>
-                <td class="p-3 text-slate-500">${fmtDate(d.createdAt)}</td>
-                <td class="p-3">${d.generatedBy === 'Client' ? '<span class="text-emerald-400">Self-generated</span>' : '<span class="text-blue-400">Delivered by team</span>'}</td>
-                <td class="p-3">${statusHtml}</td>
-                <td class="p-3 text-center">${actionHtml}</td>
-            </tr>`;
+    <tr>
+        <td class="p-3 text-white">${escapeHtml(d.title || '—')}</td>
+        <td class="p-3">${escapeHtml(d.type || '—')}</td>
+        <td class="p-3 text-slate-500">${fmtDate(d.createdAt)}</td>
+        <td class="p-3">${d.generatedBy === 'Client' ? '<span class="text-emerald-400">Self-generated</span>' : '<span class="text-blue-400">Delivered by team</span>'}</td>
+        <td class="p-3">${statusHtml}</td>
+        <td class="p-3 text-center">${actionHtml}</td>
+    </tr>`;
             }).join('') : '<tr><td class="p-3 text-slate-600" colspan="6">No documents match your filters.</td></tr>';
         }
+        async function openSendDocumentPrompt(docId, title, btnEl) {
+            const mbxRes = await callGateway('clientportal', 'clientPortalListMailboxes');
+            const hasMailbox = mbxRes.success && (mbxRes.mailboxes || []).some(m => m.status === 'Active');
+            const costNote = hasMailbox
+                ? 'This sends from your connected mailbox — 1 email credit.'
+                : 'No mailbox is linked yet, so this sends from our admin email (noreply) — 1.5 email credits.';
+            const recipient = prompt(`Send "${title}" to which email address?\n\n${costNote}`);
+            if (!recipient) return;
 
+            setBtnBusy(btnEl, true, { busyLabel: 'Sending…' });
+            const res = await callGateway('clientportal', 'clientPortalSendDocument', { docId, recipientEmail: recipient.trim() });
+            setBtnBusy(btnEl, false);
+            if (res.success) {
+                showToast ? showToast(res.message || 'Sent.', 'success') : alert(res.message || 'Sent.');
+            } else {
+                showToast ? showToast(res.message || 'Send failed.', 'error') : alert(res.message || 'Send failed.');
+            }
+        }
         /** Approves sending a reference document (e.g. a receipt) — this is the client's own
          *  explicit send action, and it uses one email credit from the plan. */
         async function approveDocumentSend(queueId, btnEl) {
