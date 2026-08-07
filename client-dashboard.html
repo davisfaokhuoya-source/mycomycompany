@@ -482,12 +482,35 @@
                                 class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white">
                                 <i class="fa-solid fa-check-double"></i> Approve All
                             </button>
+                            <button onclick="toggleSocialPerformancePanel()"
+                                class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">
+                                <i class="fa-solid fa-chart-line"></i> Performance
+                            </button>
                             <button onclick="loadSocialCalendar()"
                                 class="text-xs px-2 py-1.5 text-slate-500 hover:text-slate-300">
                                 <i class="fa-solid fa-rotate"></i>
                             </button>
                         </div>
                     </div>
+
+                    <!-- Performance summary — how this client's published posts have actually
+                         done (impressions/engagement). Same data the agent studies to improve
+                         future posts for this client and, in aggregate, for every client. -->
+                    <div id="socialPerformancePanel"
+                        class="directive-panel shrink-0 bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <p class="text-xs font-semibold text-white"><i
+                                    class="fa-solid fa-chart-line text-emerald-400"></i> Post Performance</p>
+                            <button onclick="loadSocialPerformance()"
+                                class="text-[10px] text-slate-500 hover:text-slate-300">
+                                <i class="fa-solid fa-rotate"></i> Refresh
+                            </button>
+                        </div>
+                        <div id="socialPerformanceSummary" class="text-xs text-slate-400">Loading…</div>
+                        <div id="socialPerformanceList" class="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar">
+                        </div>
+                    </div>
+
                     <div id="socialCalendarList" class="flex-1 overflow-y-auto custom-scrollbar space-y-2">
                         <p class="text-slate-500 text-xs">Loading your social calendar…</p>
                     </div>
@@ -881,48 +904,25 @@
                         : escapeHtml(d.status || '—'));
                 const actionHtml = isPending
                     ? `<button onclick="approveDocumentSend('${escapeHtml(d.queueId)}', this)"
-                   class="text-xs px-2 py-1 bg-amber-900/60 hover:bg-amber-800 rounded text-amber-200">
-                   <i class="fa-solid fa-paper-plane"></i> Approve &amp; Send (1 email)
-               </button>`
-                    : `<div class="flex gap-1.5 justify-center">
-                   <button onclick="downloadDocument('${escapeHtml(d.docId)}')"
-                       class="text-xs px-2 py-1 bg-emerald-900 hover:bg-emerald-800 rounded text-emerald-200">
-                       <i class="fa-solid fa-download"></i> Download
-                   </button>
-                   <button onclick="openSendDocumentPrompt('${escapeHtml(d.docId)}', '${escapeHtml((d.title || '').replace(/'/g, ''))}', this)"
-                       class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-200">
-                       <i class="fa-solid fa-paper-plane"></i> Send
-                   </button>
-               </div>`;
+                           class="text-xs px-2 py-1 bg-amber-900/60 hover:bg-amber-800 rounded text-amber-200">
+                           <i class="fa-solid fa-paper-plane"></i> Approve &amp; Send (1 email)
+                       </button>`
+                    : `<button onclick="downloadDocument('${escapeHtml(d.docId)}')"
+                           class="text-xs px-2 py-1 bg-emerald-900 hover:bg-emerald-800 rounded text-emerald-200">
+                           <i class="fa-solid fa-download"></i> Open
+                       </button>`;
                 return `
-    <tr>
-        <td class="p-3 text-white">${escapeHtml(d.title || '—')}</td>
-        <td class="p-3">${escapeHtml(d.type || '—')}</td>
-        <td class="p-3 text-slate-500">${fmtDate(d.createdAt)}</td>
-        <td class="p-3">${d.generatedBy === 'Client' ? '<span class="text-emerald-400">Self-generated</span>' : '<span class="text-blue-400">Delivered by team</span>'}</td>
-        <td class="p-3">${statusHtml}</td>
-        <td class="p-3 text-center">${actionHtml}</td>
-    </tr>`;
+            <tr>
+                <td class="p-3 text-white">${escapeHtml(d.title || '—')}</td>
+                <td class="p-3">${escapeHtml(d.type || '—')}</td>
+                <td class="p-3 text-slate-500">${fmtDate(d.createdAt)}</td>
+                <td class="p-3">${d.generatedBy === 'Client' ? '<span class="text-emerald-400">Self-generated</span>' : '<span class="text-blue-400">Delivered by team</span>'}</td>
+                <td class="p-3">${statusHtml}</td>
+                <td class="p-3 text-center">${actionHtml}</td>
+            </tr>`;
             }).join('') : '<tr><td class="p-3 text-slate-600" colspan="6">No documents match your filters.</td></tr>';
         }
-        async function openSendDocumentPrompt(docId, title, btnEl) {
-            const mbxRes = await callGateway('clientportal', 'clientPortalListMailboxes');
-            const hasMailbox = mbxRes.success && (mbxRes.mailboxes || []).some(m => m.status === 'Active');
-            const costNote = hasMailbox
-                ? 'This sends from your connected mailbox — 1 email credit.'
-                : 'No mailbox is linked yet, so this sends from our admin email (noreply) — 1.5 email credits.';
-            const recipient = prompt(`Send "${title}" to which email address?\n\n${costNote}`);
-            if (!recipient) return;
 
-            setBtnBusy(btnEl, true, { busyLabel: 'Sending…' });
-            const res = await callGateway('clientportal', 'clientPortalSendDocument', { docId, recipientEmail: recipient.trim() });
-            setBtnBusy(btnEl, false);
-            if (res.success) {
-                showToast ? showToast(res.message || 'Sent.', 'success') : alert(res.message || 'Sent.');
-            } else {
-                showToast ? showToast(res.message || 'Send failed.', 'error') : alert(res.message || 'Send failed.');
-            }
-        }
         /** Approves sending a reference document (e.g. a receipt) — this is the client's own
          *  explicit send action, and it uses one email credit from the plan. */
         async function approveDocumentSend(queueId, btnEl) {
@@ -1084,43 +1084,84 @@
                 return;
             }
 
-            const row = (label, sub, onRevoke) => `
-                <div class="flex items-center justify-between bg-slate-900 border border-slate-800 rounded px-3 py-2">
-                    <div>
-                        <div class="text-slate-200 font-medium">${escapeHtml(label)}</div>
-                        ${sub ? `<div class="text-slate-500 text-[10px]">${escapeHtml(sub)}</div>` : ''}
-                    </div>
-                    <button onclick="${onRevoke}"
+            // A connection can be Active, or revoked/disconnected. Mailbox,
+            // WhatsApp, and CRM connections keep their credentials on revoke,
+            // so they can be reconnected instantly from here. Social platform
+            // connections don't — those need to go through Connect again
+            // with our team, so we show that distinction instead of a
+            // (non-functional) Reconnect button for them.
+            const isRevoked = (status) => {
+                const s = String(status || '').trim().toLowerCase();
+                return s === 'revoked' || s === 'disconnected';
+            };
+
+            const row = (label, sub, status, onRevoke, onReconnect) => {
+                const revoked = isRevoked(status);
+                const action = revoked
+                    ? (onReconnect
+                        ? `<button onclick="${onReconnect}"
+                            class="text-[10px] px-2.5 py-1 bg-emerald-900/40 hover:bg-emerald-900/70 border border-emerald-800 rounded text-emerald-300">
+                            Reconnect
+                        </button>`
+                        : `<span class="text-[10px] text-slate-500">Contact our team to reconnect</span>`)
+                    : `<button onclick="${onRevoke}"
                         class="text-[10px] px-2.5 py-1 bg-red-900/40 hover:bg-red-900/70 border border-red-800 rounded text-red-300">
                         Revoke
-                    </button>
+                    </button>`;
+                return `
+                <div class="flex items-center justify-between bg-slate-900 border border-slate-800 rounded px-3 py-2">
+                    <div>
+                        <div class="text-slate-200 font-medium flex items-center gap-2">
+                            ${escapeHtml(label)}
+                            ${revoked
+                        ? `<span class="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-900/50 text-red-300 border border-red-800">Revoked</span>`
+                        : `<span class="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-emerald-900/40 text-emerald-300 border border-emerald-800">Active</span>`}
+                        </div>
+                        ${sub ? `<div class="text-slate-500 text-[10px]">${escapeHtml(sub)}</div>` : ''}
+                    </div>
+                    ${action}
                 </div>`;
+            };
 
             mbxEl.innerHTML = (res.mailboxes || []).length
-                ? res.mailboxes.map(m => row(m.label || m.emailAddress || m.mailboxId, m.emailAddress,
-                    `revokeIntegration('mailbox', { mailboxId: '${escapeHtml(m.mailboxId)}' }, '${escapeHtml(m.label || m.emailAddress || 'this mailbox')}')`)).join('')
+                ? res.mailboxes.map(m => row(m.label || m.emailAddress || m.mailboxId, m.emailAddress, m.status,
+                    `revokeIntegration('mailbox', { mailboxId: '${escapeHtml(m.mailboxId)}' }, '${escapeHtml(m.label || m.emailAddress || 'this mailbox')}')`,
+                    `reconnectIntegration('mailbox', { mailboxId: '${escapeHtml(m.mailboxId)}' }, '${escapeHtml(m.label || m.emailAddress || 'this mailbox')}')`)).join('')
                 : '<p class="text-slate-600">No mailboxes connected.</p>';
 
             waEl.innerHTML = (res.whatsapp || []).length
-                ? res.whatsapp.map(w => row(w.label || w.displayPhoneNumber || w.whatsAppId, w.displayPhoneNumber,
-                    `revokeIntegration('whatsapp', { whatsAppId: '${escapeHtml(w.whatsAppId)}' }, '${escapeHtml(w.label || w.displayPhoneNumber || 'this WhatsApp number')}')`)).join('')
+                ? res.whatsapp.map(w => row(w.label || w.displayPhoneNumber || w.whatsAppId, w.displayPhoneNumber, w.status,
+                    `revokeIntegration('whatsapp', { whatsAppId: '${escapeHtml(w.whatsAppId)}' }, '${escapeHtml(w.label || w.displayPhoneNumber || 'this WhatsApp number')}')`,
+                    `reconnectIntegration('whatsapp', { whatsAppId: '${escapeHtml(w.whatsAppId)}' }, '${escapeHtml(w.label || w.displayPhoneNumber || 'this WhatsApp number')}')`)).join('')
                 : '<p class="text-slate-600">No WhatsApp number connected.</p>';
 
             socEl.innerHTML = (res.social || []).length
-                ? res.social.map(s => row(s.pageName || s.platform, s.platform,
-                    `revokeIntegration('social', { type: '${escapeHtml(s.platform)}' }, '${escapeHtml(s.pageName || s.platform)}')`)).join('')
+                ? res.social.map(s => row(s.pageName || s.platform, s.platform, s.status,
+                    `revokeIntegration('social', { type: '${escapeHtml(s.platform)}' }, '${escapeHtml(s.pageName || s.platform)}')`,
+                    null /* social reconnects require going through Connect again with our team */)).join('')
                 : '<p class="text-slate-600">No social media accounts connected.</p>';
 
             crmEl.innerHTML = (res.crm || []).length
-                ? res.crm.map(c => row(c.label || c.type, c.type,
-                    `revokeIntegration('crm', { type: '${escapeHtml(c.type)}' }, '${escapeHtml(c.label || c.type)}')`)).join('')
+                ? res.crm.map(c => row(c.label || c.type, c.type, c.status,
+                    `revokeIntegration('crm', { type: '${escapeHtml(c.type)}' }, '${escapeHtml(c.label || c.type)}')`,
+                    `reconnectIntegration('crm', { type: '${escapeHtml(c.type)}' }, '${escapeHtml(c.label || c.type)}')`)).join('')
                 : '<p class="text-slate-600">No CRM connected.</p>';
         }
 
         async function revokeIntegration(category, idFields, displayLabel) {
-            if (!confirm(`Revoke "${displayLabel}"? The agent will stop using it immediately — you'll need to reconnect it with our team to restore it.`)) return;
+            const canReconnectSelf = category !== 'social';
+            const warning = canReconnectSelf
+                ? `Revoke "${displayLabel}"? The agent will stop using it immediately. It'll be marked Revoked here and you can reconnect it yourself any time.`
+                : `Revoke "${displayLabel}"? The agent will stop using it immediately — you'll need to reconnect it with our team to restore it.`;
+            if (!confirm(warning)) return;
             const res = await callGateway('clientportal', 'clientPortalRevokeIntegration', { category, ...idFields });
             if (!res.success) { alert(res.message || 'Failed to revoke.'); }
+            loadIntegrationsPanel();
+        }
+
+        async function reconnectIntegration(category, idFields, displayLabel) {
+            const res = await callGateway('clientportal', 'clientPortalReconnectIntegration', { category, ...idFields });
+            if (!res.success) { alert(res.message || `Could not reconnect "${displayLabel}".`); }
             loadIntegrationsPanel();
         }
 
@@ -1537,6 +1578,52 @@
             const reason = prompt('Optional: let your account team know why (or leave blank):') || '';
             const res = await callGateway('clientportal', 'clientPortalRejectSocialPost', { postId, reason });
             if (res.success) loadSocialCalendar();
+        }
+
+        function toggleSocialPerformancePanel() {
+            const panel = document.getElementById('socialPerformancePanel');
+            const wasOpen = panel.classList.contains('open');
+            panel.classList.toggle('open', !wasOpen);
+            if (!wasOpen) loadSocialPerformance();
+        }
+
+        async function loadSocialPerformance() {
+            const summaryEl = document.getElementById('socialPerformanceSummary');
+            const listEl = document.getElementById('socialPerformanceList');
+            summaryEl.textContent = 'Loading…';
+            listEl.innerHTML = '';
+            const res = await callGateway('clientportal', 'clientPortalGetSocialPerformance', { limit: 10 });
+            if (!res.success) {
+                summaryEl.textContent = res.message || 'Performance data isn\'t available yet.';
+                return;
+            }
+            const s = res.summary || {};
+            if (!s.totalPosts) {
+                summaryEl.textContent = 'No results yet — this fills in once your published posts start getting impressions and engagement.';
+                return;
+            }
+            const platformBits = Object.keys(s.byPlatform || {})
+                .map(p => `${escapeHtml(p)}: ${s.byPlatform[p].avgEngagementRate}% avg (${s.byPlatform[p].sampleSize} posts)`)
+                .join(' · ');
+            summaryEl.innerHTML = `
+                <span class="text-white font-medium">${s.totalPosts} posts tracked</span> ·
+                ${s.avgEngagementRate}% avg engagement rate
+                ${platformBits ? `<div class="text-slate-500 mt-1">${platformBits}</div>` : ''}
+                <div class="text-slate-600 mt-1 text-[10px]">These results are also what your account team's agent studies to sharpen future posts for you.</div>`;
+
+            const records = res.records || [];
+            listEl.innerHTML = records.length ? records.map(r => `
+                <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-[11px]">
+                    <div class="text-slate-300">
+                        <span class="font-medium text-white">${escapeHtml(r.Platform || '')}</span>
+                        <span class="text-slate-500">· ${escapeHtml(r.PostType || '')} · ${fmtDate(r.PublishedAt)}</span>
+                    </div>
+                    <div class="text-slate-400 flex gap-2">
+                        <span><i class="fa-regular fa-eye"></i> ${r.Impressions || 0}</span>
+                        <span><i class="fa-regular fa-heart"></i> ${r.Likes || 0}</span>
+                        <span class="text-emerald-400 font-medium">${r.EngagementRate || 0}%</span>
+                    </div>
+                </div>`).join('') : '';
         }
 
         async function approveSocialBatch() {
