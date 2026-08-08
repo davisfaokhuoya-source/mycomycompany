@@ -2329,7 +2329,8 @@
                                         <th class="p-3">Company Name</th>
                                         <th class="p-3">Contact Email</th>
                                         <th class="p-3">Industry</th>
-                                        <th class="p-3">Subscription Tier</th>
+                                        <th class="p-3">Ops Tier</th>
+                                        <th class="p-3">Digital Tier</th>
                                         <th class="p-3">Status</th>
                                         <th class="p-3 text-center">Actions</th>
                                     </tr>
@@ -2350,16 +2351,10 @@
                                 <p class="text-xs text-slate-400">Update client tiers, pricing, and service allocations.
                                 </p>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <button onclick="openManagePricingModal()"
-                                    class="bg-amber-600 hover:bg-amber-500 text-xs text-white font-medium py-1.5 px-3 rounded transition-colors flex items-center gap-1">
-                                    <i class="fa-solid fa-tags"></i> Manage Pricing
-                                </button>
-                                <button onclick="loadAgentSubscriptions()"
-                                    class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700 transition-colors flex items-center gap-1">
-                                    <i class="fa-solid fa-arrows-rotate"></i> Refresh
-                                </button>
-                            </div>
+                            <button onclick="loadAgentSubscriptions()"
+                                class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700 transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                            </button>
                         </div>
                         <div class="grid grid-cols-4 gap-4 shrink-0">
                             <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col">
@@ -2394,7 +2389,8 @@
                                     <tr>
                                         <th class="p-3">Client ID</th>
                                         <th class="p-3">Company</th>
-                                        <th class="p-3">Current Tier</th>
+                                        <th class="p-3">Ops Suite</th>
+                                        <th class="p-3">Digital Suite</th>
                                         <th class="p-3">Hours/Month</th>
                                         <th class="p-3">Emails/Month</th>
                                         <th class="p-3">Proposals/Month</th>
@@ -4307,22 +4303,110 @@
                         </select>
                     </div>
                 </div>
+                <div class="pt-2 border-t border-slate-800">
+                    <p class="text-[10px] uppercase tracking-wide text-slate-500 mb-2">Choose Ops, Digital, or both — a
+                        client can run on both suites at once</p>
+                </div>
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">Subscription Tier</label>
-                    <select id="agentTier" required
+                    <label class="block text-xs text-slate-400 mb-1">Ops Suite Tier <span
+                            class="text-slate-600">(back-office: VA hours, mailboxes, proposals, CRM)</span></label>
+                    <select id="agentOpsTier" onchange="onAgentRegisterTierChange()"
                         class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
-                        <option value="">Loading current pricing…</option>
+                        <option value="">— None —</option>
+                    </select>
+                    <p id="agentOpsTierSummary" class="text-[10px] text-slate-500 mt-1"></p>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Digital Suite Tier <span
+                            class="text-slate-600">(front-office: content, LinkedIn, ABM, SEO)</span></label>
+                    <select id="agentDigitalTier" onchange="onAgentRegisterTierChange()"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                        <option value="">— None —</option>
+                    </select>
+                    <p id="agentDigitalTierSummary" class="text-[10px] text-slate-500 mt-1"></p>
+                </div>
+                <div class="pt-2 border-t border-slate-800">
+                    <label class="block text-xs text-slate-400 mb-1">— OR — Register as a fully bespoke package <span
+                            class="text-slate-600">(instead of the tiers above, not in addition to)</span></label>
+                    <select id="agentTier"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                        <option value="">— Not custom —</option>
+                        <option value="custom">Custom Tier (Bespoke)</option>
                     </select>
                     <p id="quotedTierNote" class="hidden text-[10px] text-amber-400 mt-1"></p>
                 </div>
                 <div id="customTierFields" class="hidden space-y-3 pt-3 border-t border-slate-800">
                     <h4 class="text-xs font-bold text-emerald-400">Custom Tier Details</h4>
-                    <div id="customTierFieldsGrid" class="grid grid-cols-2 gap-3"></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Hours/Month</label>
+                            <input type="number" id="agentCustomHours" placeholder="50"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Emails/Month</label>
+                            <input type="number" id="agentCustomEmails" placeholder="150"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Proposals/Month</label>
+                            <input type="number" id="agentCustomProposals" placeholder="2"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Monthly Price (₦)</label>
+                            <input type="number" id="agentCustomPrice" placeholder="1000000"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                        </div>
+                    </div>
                 </div>
                 <div id="enterpriseTierFields" class="hidden space-y-3 pt-3 border-t border-slate-800">
                     <h4 class="text-xs font-bold text-amber-400">Enterprise Service Limits (optional — can also be set
                         later from Subscriptions)</h4>
-                    <div id="enterpriseTierFieldsGrid" class="grid grid-cols-2 gap-3"></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1">Hours/mo</label>
+                            <input type="number" id="entHours" placeholder="e.g. 40"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1">Emails/mo</label>
+                            <input type="number" id="entEmails" placeholder="e.g. 500"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1">Proposals/mo</label>
+                            <input type="number" id="entProposals" placeholder="e.g. 10"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1">Mailboxes</label>
+                            <input type="number" id="entMailboxes" placeholder="e.g. 2"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1">CRM syncs/mo</label>
+                            <input type="number" id="entCrmSyncs" placeholder="e.g. 10"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1">Compliance checks/mo</label>
+                            <input type="number" id="entComplianceChecks" placeholder="e.g. 4"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1">Docs/mo</label>
+                            <input type="number" id="entDocsPerMonth" placeholder="e.g. 20"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-amber-400 mb-1">Price (₦/mo)</label>
+                            <input type="number" id="entPriceNgn" placeholder="e.g. 150000"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        </div>
+                    </div>
                 </div>
                 <button type="submit"
                     class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded transition-colors shadow">
@@ -4331,41 +4415,6 @@
             </form>
         </div>
     </div>
-    <!-- MODAL: Manage Pricing (single source of truth for every tier/add-on price) -->
-    <div id="modalManagePricing"
-        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
-        <div
-            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-3xl w-full flex flex-col space-y-4 max-h-[85vh]">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-2 shrink-0">
-                <div>
-                    <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
-                        <i class="fa-solid fa-tags text-amber-400"></i> Manage Pricing
-                    </h3>
-                    <p class="text-[10px] text-slate-500 mt-0.5">Prices set here apply everywhere immediately —
-                        Register Client, Update Tier, and Add Suite all read live from this list.</p>
-                </div>
-                <button onclick="closeManagePricingModal()"
-                    class="text-slate-400 hover:text-white transition-colors text-sm font-bold">&times;</button>
-            </div>
-            <div class="flex-1 overflow-auto custom-scrollbar bg-slate-950 border border-slate-800 rounded-lg">
-                <table class="w-full text-left border-collapse text-xs">
-                    <thead
-                        class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
-                        <tr>
-                            <th class="p-2">Item</th>
-                            <th class="p-2 text-center">Category</th>
-                            <th class="p-2">Unit</th>
-                            <th class="p-2">Price (₦)</th>
-                            <th class="p-2 text-center">Status</th>
-                            <th class="p-2 text-center">&nbsp;</th>
-                        </tr>
-                    </thead>
-                    <tbody id="pricingMgmtTableBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
     <!-- ===================================================================
          CLIENT PORTAL LOGIN MANAGEMENT MODAL (NEW)
          Lets admin enable/reset/revoke the client's dashboard login and set
@@ -4513,9 +4562,7 @@
                     <option value="digital">Digital Suite</option>
                 </select>
                 <select id="addSuiteTier"
-                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
-                    <option value="">Loading current pricing…</option>
-                </select>
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></select>
                 <button onclick="submitAddSuite()"
                     class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 rounded">
                     Add Suite
@@ -4540,14 +4587,47 @@
                     <input type="text" id="updateTierClientName" readonly
                         class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-400" />
                 </div>
+                <p class="text-[10px] uppercase tracking-wide text-slate-500">A client can run an Ops tier and a Digital
+                    tier at the same time — leave either at "No change" to touch only one suite.</p>
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">New Tier</label>
-                    <select id="updateTierValue" onchange="toggleUpdateTierCustomFields()" required
+                    <label class="block text-xs text-slate-400 mb-1">Ops Suite Tier</label>
+                    <select id="updateTierOpsValue"
                         class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
-                        <option value="">Loading current pricing…</option>
+                        <option value="">No change</option>
+                    </select>
+                    <p id="updateTierOpsSummary" class="text-[10px] text-slate-500 mt-1"></p>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Digital Suite Tier</label>
+                    <select id="updateTierDigitalValue"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
+                        <option value="">No change</option>
+                    </select>
+                    <p id="updateTierDigitalSummary" class="text-[10px] text-slate-500 mt-1"></p>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">— OR — Switch to a fully bespoke package <span
+                            class="text-slate-600">(replaces the Ops tier slot)</span></label>
+                    <select id="updateTierValue" onchange="toggleUpdateTierCustomFields()"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
+                        <option value="">— Not custom —</option>
+                        <option value="custom">Custom / Bespoke Package</option>
                     </select>
                     <div id="updateTierCustomFields" class="hidden space-y-2 pt-2 border-t border-slate-800">
-                        <div id="updateTierCustomFieldsGrid" class="grid grid-cols-2 gap-2"></div>
+                        <input type="text" id="updateTierCustomLabel" placeholder="Package label"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="number" id="updateTierCustomHours" placeholder="Hours"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                            <input type="number" id="updateTierCustomEmails" placeholder="Emails"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                            <input type="number" id="updateTierCustomProposals" placeholder="Proposals"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                            <input type="number" id="updateTierCustomTasks" placeholder="Tasks"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                            <input type="number" id="updateTierCustomPrice" placeholder="Price (₦)"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white col-span-2" />
+                        </div>
                     </div>
                 </div>
                 <div>
@@ -4618,7 +4698,48 @@
                 <label class="block text-xs text-slate-400 mb-1">Client</label>
                 <input type="text" id="entLimitsClientName" readonly
                     class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-400" />
-                <div id="entLimitsFieldsGrid" class="grid grid-cols-2 gap-3 pt-2"></div>
+                <div class="grid grid-cols-2 gap-3 pt-2">
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">Hours/mo</label>
+                        <input type="number" id="entLimitsHours" placeholder="e.g. 40"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">Emails/mo</label>
+                        <input type="number" id="entLimitsEmails" placeholder="e.g. 500"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">Proposals/mo</label>
+                        <input type="number" id="entLimitsProposals" placeholder="e.g. 10"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">Mailboxes</label>
+                        <input type="number" id="entLimitsMailboxes" placeholder="e.g. 2"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">CRM syncs/mo</label>
+                        <input type="number" id="entLimitsCrmSyncs" placeholder="e.g. 10"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">Compliance checks/mo</label>
+                        <input type="number" id="entLimitsComplianceChecks" placeholder="e.g. 4"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">Docs/mo</label>
+                        <input type="number" id="entLimitsDocsPerMonth" placeholder="e.g. 20"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-amber-400 mb-1">Price (₦/mo)</label>
+                        <input type="number" id="entLimitsPriceNgn" placeholder="e.g. 150000"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    </div>
+                </div>
                 <button type="submit"
                     class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded shadow">Apply
                     Limits</button>
@@ -5772,6 +5893,89 @@
 
         const NICHE_OPTIONS = INDUSTRY_OPTIONS;
         const SECTOR_OPTIONS = INDUSTRY_OPTIONS;
+
+        // ===================================================================
+        // CANONICAL TIER METADATA — single source of truth for the frontend.
+        // A client can hold ONE Ops tier AND ONE Digital tier at the same
+        // time (see AgentLib._registerClientDualSuite / _addSuiteToExistingClient),
+        // so the two suites are modelled and rendered independently everywhere
+        // in this file — never as one combined "tier" dropdown.
+        //
+        // Must stay in sync with AgentLib.gs AGENT_CONFIG.TIERS / MARKETING_TIERS.
+        // Prices below are placeholders and are OVERWRITTEN at load time from
+        // getServicePricing() (agent-get-service-pricing, backed by the live
+        // ServicePricing sheet), so the UI can never drift from what clients
+        // are actually billed — see refreshAgentTierInfoPricing().
+        // ===================================================================
+        const AGENT_TIER_INFO = {
+            starter_ops: {
+                suite: 'ops', label: 'Starter Ops', priceNgn: 250000,
+                hours: 20, emails: 50, proposals: 1, mailboxes: 1,
+                summary: '20 hrs/mo · 1 mailbox · 50 emails/mo · 1 proposal/mo · no CRM · no lead gen'
+            },
+            growth_ops: {
+                suite: 'ops', label: 'Growth Ops', priceNgn: 650000,
+                hours: 40, emails: 200, proposals: 3, mailboxes: 3,
+                summary: '40 hrs/mo · up to 3 mailboxes · 200 emails/mo · 3 proposals/mo · CRM connection · medium lead gen'
+            },
+            enterprise_ops: {
+                suite: 'ops', label: 'Enterprise Ops', priceNgn: null, priceFrom: 1360000,
+                hours: 150, emails: null, proposals: null, mailboxes: 8,
+                summary: '80–150+ hrs/mo · up to 8 mailboxes · unlimited emails/proposals · multi-CRM · lead gen included — set exact limits via Enterprise Limits'
+            },
+            digital_launch: {
+                suite: 'digital', label: 'Digital Launch', priceNgn: 250000,
+                hours: 10, socialAssets: 12,
+                summary: '10 hrs content review/mo · 12 social assets/mo · weekly LinkedIn posts · monthly content calendar'
+            },
+            digital_accelerate: {
+                suite: 'digital', label: 'Digital Accelerate', priceNgn: 400000,
+                hours: 20, socialAssets: null,
+                summary: '20 hrs content review/mo · ABM campaigns · daily LinkedIn engagement · AI outreach · SEO foundations'
+            },
+            digital_scale: {
+                suite: 'digital', label: 'Digital Scale', priceNgn: null, priceFrom: 700000,
+                hours: null, socialAssets: null,
+                summary: 'Unlimited campaigns · paid amplification · dedicated strategist · predictive lead scoring — admin-quoted'
+            }
+        };
+        const OPS_TIER_KEYS = Object.keys(AGENT_TIER_INFO).filter(k => AGENT_TIER_INFO[k].suite === 'ops');
+        const DIGITAL_TIER_KEYS = Object.keys(AGENT_TIER_INFO).filter(k => AGENT_TIER_INFO[k].suite === 'digital');
+
+        function fmtTierPrice(key) {
+            const t = AGENT_TIER_INFO[key];
+            if (!t) return '';
+            if (t.priceNgn) return '₦' + Number(t.priceNgn).toLocaleString() + '/mo';
+            if (t.priceFrom) return 'from ₦' + Number(t.priceFrom).toLocaleString() + '/mo — admin-priced';
+            return 'admin-priced';
+        }
+        function tierBadge(key) {
+            if (!key) return '<span class="text-slate-600">—</span>';
+            return badge(AGENT_TIER_INFO[key]?.label || key);
+        }
+        function tierOptionLabel(key) {
+            const t = AGENT_TIER_INFO[key];
+            return t.label + ' (' + fmtTierPrice(key) + ')';
+        }
+        function buildTierOptionsHtml(keys, includeNone, noneLabel) {
+            const none = includeNone ? `<option value="">${escapeHtml(noneLabel || '— None —')}</option>` : '';
+            return none + keys.map(k => `<option value="${k}">${escapeHtml(tierOptionLabel(k))}</option>`).join('');
+        }
+        async function refreshAgentTierInfoPricing() {
+            try {
+                const map = await getServicePricing();
+                if (!map) return;
+                Object.keys(AGENT_TIER_INFO).forEach(key => {
+                    const p = map[key];
+                    if (!p) return;
+                    if (AGENT_TIER_INFO[key].priceFrom !== undefined) {
+                        if (p.priceNgn) AGENT_TIER_INFO[key].priceFrom = p.priceNgn;
+                    } else if (p.priceNgn) {
+                        AGENT_TIER_INFO[key].priceNgn = p.priceNgn;
+                    }
+                });
+            } catch (_) { /* keep the built-in defaults if the call fails */ }
+        }
         let ACTIVE_AUTO_REFRESH = null;
         const ENABLE_ADMIN_AUTO_REFRESH = false;
         function startAutoRefresh(viewKey, fn, intervalMs = 30000) {
@@ -5842,197 +6046,6 @@
             const res = await executeSecureBridgeCall('agent', 'agent-get-service-pricing', {}, { silent: true });
             if (res.success && res.pricing) SERVICE_PRICING_CACHE = res.pricing;
             return SERVICE_PRICING_CACHE || {};
-        }
-
-        // =====================================================================
-        // SINGLE SOURCE OF TRUTH FOR TIER PRICING IN THE UI
-        // Every place that shows a tier price (Register Client, Update Tier,
-        // Add Suite) reads live from ServicePricing via getServicePricing().
-        // Nothing below hardcodes a ₦ amount — change the price once in
-        // Manage Pricing and every dropdown reflects it immediately.
-        // =====================================================================
-        const OPS_TIER_KEYS = ['starter_ops', 'growth_ops', 'enterprise_ops'];
-        const MARKETING_TIER_KEYS = ['digital_launch', 'digital_accelerate', 'digital_scale'];
-        const ADMIN_PRICED_TIERS = ['enterprise_ops', 'digital_scale'];
-        const TIER_BLURB = {
-            starter_ops: '20hrs, 50 emails, 1 proposal',
-            growth_ops: '40hrs, 200 emails, 3 proposals',
-            enterprise_ops: 'set limits below',
-            digital_launch: 'content review, 12 social assets, weekly LinkedIn',
-            digital_accelerate: 'fixed monthly retainer',
-            digital_scale: 'set limits below'
-        };
-
-        function formatNgnShort(n) {
-            n = parseFloat(n) || 0;
-            if (n >= 1000000) return '₦' + (Math.round((n / 1000000) * 10) / 10) + 'M';
-            if (n >= 1000) return '₦' + Math.round(n / 1000) + 'K';
-            return '₦' + n.toLocaleString();
-        }
-
-        function tierOptionLabel(key, pricing) {
-            const p = pricing[key];
-            const name = (p && p.label ? p.label.replace(/\s*\(tier\)\s*$/i, '') : key.replace(/_/g, ' '));
-            const blurb = TIER_BLURB[key] || '';
-            if (ADMIN_PRICED_TIERS.includes(key)) {
-                const from = (p && p.priceNgn) ? ` — from ${formatNgnShort(p.priceNgn)}/mo` : '';
-                return `${name} (Admin-Priced${from}${blurb ? ' — ' + blurb : ''})`;
-            }
-            const price = (p && p.priceNgn) ? formatNgnShort(p.priceNgn) + '/mo' : 'price not set';
-            return `${name} (${price}${blurb ? ': ' + blurb : ''})`;
-        }
-
-        async function tierOptionsHtml(keys, selected, includeCustom) {
-            const pricing = await getServicePricing();
-            let html = keys.map(k =>
-                `<option value="${k}" ${k === selected ? 'selected' : ''}>${escapeHtml(tierOptionLabel(k, pricing))}</option>`
-            ).join('');
-            if (includeCustom) {
-                html += `<option value="custom" ${selected === 'custom' ? 'selected' : ''}>Custom Tier (Bespoke)</option>`;
-            }
-            return html;
-        }
-
-        // =====================================================================
-        // SHARED "LIMITS & PRICING" FIELD SET
-        // One field-definition, one renderer, one collector — used by Register
-        // Client (custom + enterprise), Update Tier (custom), and Enterprise
-        // Service Limits. Previously each of those 4 forms hand-coded its own
-        // copy of the same inputs, so a fix or new field had to be made 4 times
-        // and inevitably drifted (e.g. Register's "custom" fields had no label
-        // or tasks limit while Update Tier's did). Now there is exactly one
-        // definition; every form renders and reads from it identically.
-        // =====================================================================
-        const LIMIT_FIELD_DEFS = {
-            custom: [
-                { key: 'label', type: 'text', label: 'Package Label', placeholder: 'e.g. Acme Custom', span: 2 },
-                { key: 'hours', type: 'number', label: 'Hours/Month', placeholder: '50' },
-                { key: 'emails', type: 'number', label: 'Emails/Month', placeholder: '150' },
-                { key: 'proposals', type: 'number', label: 'Proposals/Month', placeholder: '2' },
-                { key: 'tasks', type: 'number', label: 'Tasks/Month', placeholder: '10' },
-                { key: 'priceNgn', type: 'number', label: 'Monthly Price (₦)', placeholder: '1000000', span: 2, accent: true }
-            ],
-            enterprise: [
-                { key: 'hours', type: 'number', label: 'Hours/mo', placeholder: 'e.g. 40' },
-                { key: 'emails', type: 'number', label: 'Emails/mo', placeholder: 'e.g. 500' },
-                { key: 'proposals', type: 'number', label: 'Proposals/mo', placeholder: 'e.g. 10' },
-                { key: 'mailboxes', type: 'number', label: 'Mailboxes', placeholder: 'e.g. 2' },
-                { key: 'crmSyncs', type: 'number', label: 'CRM syncs/mo', placeholder: 'e.g. 10' },
-                { key: 'complianceChecks', type: 'number', label: 'Compliance checks/mo', placeholder: 'e.g. 4' },
-                { key: 'docsPerMonth', type: 'number', label: 'Docs/mo', placeholder: 'e.g. 20' },
-                { key: 'priceNgn', type: 'number', label: 'Price (₦/mo)', placeholder: 'e.g. 150000', accent: true }
-            ]
-        };
-        const _capitalize = s => s.charAt(0).toUpperCase() + s.slice(1);
-
-        function renderLimitFieldsHtml(prefix, kind) {
-            return LIMIT_FIELD_DEFS[kind].map(f => `
-                <div class="${f.span === 2 ? 'col-span-2' : ''}">
-                    <label class="block text-[10px] ${f.accent ? 'text-amber-400' : 'text-slate-400'} mb-1">${f.label}</label>
-                    <input type="${f.type}" id="${prefix}${_capitalize(f.key)}" placeholder="${f.placeholder}"
-                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
-                </div>`).join('');
-        }
-
-        function collectLimitFields(prefix, kind) {
-            const out = {};
-            LIMIT_FIELD_DEFS[kind].forEach(f => {
-                const el = document.getElementById(prefix + _capitalize(f.key));
-                if (!el) return;
-                const raw = el.value;
-                if (f.type === 'text') { out[f.key] = raw.trim(); return; }
-                if (raw === '') { out[f.key] = undefined; return; }
-                out[f.key] = f.key === 'priceNgn' ? (parseFloat(raw) || 0) : (parseInt(raw) || undefined);
-            });
-            return out;
-        }
-
-        // ---- Manage Pricing modal ----
-        function openManagePricingModal() {
-            document.getElementById('modalManagePricing').classList.remove('hidden');
-            loadPricingManagementTable();
-        }
-        function closeManagePricingModal() {
-            document.getElementById('modalManagePricing').classList.add('hidden');
-        }
-        async function loadPricingManagementTable(forceRefresh) {
-            const tbody = document.getElementById('pricingMgmtTableBody');
-            if (!tbody) return;
-            tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-500"><i class="fa-solid fa-spinner fa-spin"></i> Loading current pricing…</td></tr>';
-            const pricing = await getServicePricing(forceRefresh !== false);
-            const entries = Object.entries(pricing);
-            if (!entries.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-500">No pricing items found.</td></tr>';
-                return;
-            }
-            const order = { Tier: 0, 'Add-on': 1 };
-            entries.sort((a, b) => (order[a[1].category] ?? 2) - (order[b[1].category] ?? 2) || a[0].localeCompare(b[0]));
-
-            let html = '';
-            let lastCategory = null;
-            entries.forEach(([key, item]) => {
-                if (item.category !== lastCategory) {
-                    lastCategory = item.category;
-                    html += `<tr class="bg-slate-900/60"><td colspan="5" class="px-2 py-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-500">${escapeHtml(lastCategory || 'Other')}</td></tr>`;
-                }
-                html += `
-                <tr data-item-key="${escapeHtml(key)}">
-                    <td class="p-2">
-                        <div class="text-white">${escapeHtml(item.label || key)}</div>
-                        <div class="text-[10px] text-slate-500 font-mono">${escapeHtml(key)}</div>
-                    </td>
-                    <td class="p-2 text-center">${badge(item.category || '—')}</td>
-                    <td class="p-2 text-slate-500">${escapeHtml(item.unit || '—')}</td>
-                    <td class="p-2">
-                        <div class="flex items-center gap-1">
-                            <span class="text-slate-500">₦</span>
-                            <input type="number" min="0" step="1" value="${parseFloat(item.priceNgn) || 0}"
-                                oninput="markPricingRowDirty('${escapeHtml(key)}')"
-                                class="w-28 bg-slate-950 border border-slate-800 rounded p-1.5 text-xs text-white pricing-price-input" />
-                        </div>
-                    </td>
-                    <td class="p-2 text-center">
-                        <label class="inline-flex items-center gap-1 cursor-pointer">
-                            <input type="checkbox" ${item.active !== false ? 'checked' : ''}
-                                onchange="markPricingRowDirty('${escapeHtml(key)}')" class="pricing-active-input" />
-                            <span class="text-[10px] text-slate-400">Active</span>
-                        </label>
-                    </td>
-                    <td class="p-2 text-center">
-                        <button onclick="savePricingRow('${escapeHtml(key)}')" disabled
-                            class="text-xs px-2 py-1 bg-slate-800 text-slate-500 rounded cursor-not-allowed transition-colors pricing-save-btn">Saved</button>
-                    </td>
-                </tr>`;
-            });
-            tbody.innerHTML = html;
-        }
-        function markPricingRowDirty(itemKey) {
-            const row = document.querySelector(`#pricingMgmtTableBody tr[data-item-key="${CSS.escape(itemKey)}"]`);
-            if (!row) return;
-            const btn = row.querySelector('.pricing-save-btn');
-            if (!btn) return;
-            btn.disabled = false;
-            btn.textContent = 'Save';
-            btn.className = 'text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white transition-colors pricing-save-btn';
-        }
-        async function savePricingRow(itemKey) {
-            const row = document.querySelector(`#pricingMgmtTableBody tr[data-item-key="${CSS.escape(itemKey)}"]`);
-            if (!row) return;
-            const priceNgn = parseFloat(row.querySelector('.pricing-price-input').value) || 0;
-            const active = row.querySelector('.pricing-active-input').checked;
-            const btn = row.querySelector('.pricing-save-btn');
-            if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
-            const res = await executeSecureBridgeCall('agent', 'agent-set-service-pricing', { itemKey, priceNgn, active });
-            if (res.success) {
-                SERVICE_PRICING_CACHE = null; // every open tier dropdown re-fetches, so the new price shows up immediately everywhere
-                if (btn) {
-                    btn.textContent = 'Saved';
-                    btn.className = 'text-xs px-2 py-1 bg-slate-800 text-slate-500 rounded cursor-not-allowed transition-colors pricing-save-btn';
-                }
-            } else {
-                if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
-                showToast(res.message || 'Update failed.', 'error');
-            }
         }
 
         function setBtnBusy(el, busy, opts = {}) {
@@ -8879,27 +8892,31 @@
 
         async function loadAgentClients() {
             const tbodyId = 'agentClientsTableBody';
-            showTableSkeleton(tbodyId, 7);
+            showTableSkeleton(tbodyId, 8);
 
             const res = await executeSecureBridgeCall('agent', 'agent-get-clients', { page: 1 });
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
 
             if (!res.success || !res.data?.length) {
-                tbody.innerHTML = emptyRow('No clients registered yet.', 7);
+                tbody.innerHTML = emptyRow('No clients registered yet.', 8);
                 return;
             }
 
             tbody.innerHTML = res.data.map(c => {
                 const cid = escapeHtml(c.ClientID || '');
                 const ddId = 'dd-client-' + cid.replace(/[^a-zA-Z0-9_-]/g, '');
+                const isCustom = String(c.Tier).toLowerCase() === 'custom';
+                const opsTier = c.OpsTier || (OPS_TIER_KEYS.includes(c.Tier) ? c.Tier : '');
+                const digitalTier = c.DigitalTier || (DIGITAL_TIER_KEYS.includes(c.Tier) ? c.Tier : '');
                 return `
         <tr>
             <td class="p-3 font-mono text-slate-500">${escapeHtml(c.ClientID || c.clientID || '—')}</td>
             <td class="p-3 font-medium text-slate-200">${escapeHtml(c.CompanyName || c.companyName || '—')}</td>
             <td class="p-3 font-mono text-slate-400">${escapeHtml(c.ContactEmail || c.contactEmail || '—')}</td>
             <td class="p-3 text-slate-400">${escapeHtml(c.Industry || c.industry || '—')}</td>
-            <td class="p-3">${badge(c.Tier || 'starter_ops')}</td>
+            <td class="p-3">${isCustom ? badge('Custom') : tierBadge(opsTier)}</td>
+            <td class="p-3">${tierBadge(digitalTier)}</td>
             <td class="p-3 text-center">${badge(c.Status || 'Active')}</td>
             <td class="p-3 text-center">
     <div class="flex items-center gap-1 justify-center">
@@ -8913,7 +8930,7 @@
             More <i class="fa-solid fa-chevron-down text-[9px]"></i>
         </button>
         <div id="${ddId}" class="vh-dropdown-menu">
-            <button onclick="openAgentUpdateTierModal('${cid}', '${escapeHtml(c.CompanyName || '')}', '${escapeHtml(c.Tier || '')}')">
+            <button onclick='openAgentUpdateTierModal("${cid}", "${escapeHtml(c.CompanyName || "")}", ${JSON.stringify(c).replace(/"/g, '&quot;')})'>
                 <i class="fa-solid fa-layer-group text-slate-400 w-3"></i> Tier
             </button>
             <button onclick="toggleClientAutoPublish('${cid}', ${!(c.AutoPublishEnabled === true || c.AutoPublishEnabled === 'TRUE')})">
@@ -9056,7 +9073,7 @@
             if (!tbody) return;
 
             if (!res.success || !res.data?.length) {
-                tbody.innerHTML = emptyRow('No subscriptions found.', 9);
+                tbody.innerHTML = emptyRow('No subscriptions found.', 10);
                 return;
             }
 
@@ -9064,42 +9081,39 @@
             const active = res.data.filter(c => c.Status === 'Active').length;
             document.getElementById('kpi-agent-active').textContent = active;
 
-            const revenue = res.data.reduce((sum, c) => {
-                if (c.Tier === 'enterprise_ops' && parseFloat(c.CustomPriceNGN)) return sum + parseFloat(c.CustomPriceNGN);
-                if (pricing[c.Tier] && pricing[c.Tier].priceNgn) return sum + pricing[c.Tier].priceNgn;
-                if (c.Tier === 'digital_accelerate' || c.Tier === 'digital_scale') {
+            // A client's Ops tier and Digital tier live in separate columns
+            // (OpsTier / DigitalTier) — legacy Tier is kept only as a fallback
+            // for records created before dual-suite existed.
+            const clientOpsTier = c => c.OpsTier || (OPS_TIER_KEYS.includes(c.Tier) ? c.Tier : '');
+            const clientDigitalTier = c => c.DigitalTier || (DIGITAL_TIER_KEYS.includes(c.Tier) ? c.Tier : '');
+            const suitePrice = (c, tierKey) => {
+                if (!tierKey) return 0;
+                if (tierKey === 'enterprise_ops' || tierKey === 'digital_scale') return parseFloat(c.CustomPriceNGN) || pricing[tierKey]?.priceNgn || AGENT_TIER_INFO[tierKey]?.priceFrom || 0;
+                return pricing[tierKey]?.priceNgn ?? AGENT_TIER_INFO[tierKey]?.priceNgn ?? 0;
+            };
 
-                    return sum + (parseFloat(c.CustomPriceNGN) || 0);
-                }
+            const revenue = res.data.reduce((sum, c) => {
                 if (String(c.Tier).toLowerCase() === 'custom') return sum + (parseFloat(c.CustomPriceNGN) || 0);
-                return sum;
+                return sum + suitePrice(c, clientOpsTier(c)) + suitePrice(c, clientDigitalTier(c));
             }, 0);
             document.getElementById('kpi-agent-revenue').textContent = fmtNaira(revenue);
             document.getElementById('kpi-agent-pending').textContent = res.data.filter(c => c.Status === 'Pending').length;
 
             tbody.innerHTML = res.data.map(c => {
+                const isCustom = String(c.Tier).toLowerCase() === 'custom';
+                const opsTier = clientOpsTier(c);
+                const digitalTier = clientDigitalTier(c);
+                const opsMeta = AGENT_TIER_INFO[opsTier];
+                const digitalMeta = AGENT_TIER_INFO[digitalTier];
 
-                const tierPricing = {
-                    'starter_ops': { hours: 20, emails: 50, proposals: 1, price: pricing.starter_ops?.priceNgn ?? null },
-                    'growth_ops': { hours: 40, emails: 200, proposals: 3, price: pricing.growth_ops?.priceNgn ?? null },
-                    'enterprise_ops': { hours: 9999, emails: 9999, proposals: 9999, price: pricing.enterprise_ops?.priceNgn ?? null },
-                    'digital_launch': { hours: 10, emails: 30, proposals: 1, price: pricing.digital_launch?.priceNgn ?? null },
-                    'digital_accelerate': { hours: 20, emails: 100, proposals: 2, price: null },
-                    'digital_scale': { hours: 9999, emails: 9999, proposals: 9999, price: null },
-                    'custom': {
-                        hours: c.CustomHours || 0, emails: c.CustomEmails || 0,
-                        proposals: c.CustomProposals || 0, price: c.CustomPriceNGN || 0
-                    }
-                };
+                const hours = isCustom ? Number(c.CustomHours || 0) : (opsMeta?.hours ?? digitalMeta?.hours ?? 0);
+                const emails = isCustom ? Number(c.CustomEmails || 0) : (opsMeta?.emails ?? null);
+                const proposals = isCustom ? Number(c.CustomProposals || 0) : (opsMeta?.proposals ?? null);
+                const fmtLimit = v => (v === null || v === undefined) ? '—' : (v >= 999 ? '∞' : v);
 
-                const _baseTierInfo = tierPricing[c.Tier] || tierPricing['starter_ops'];
-                const tierInfo = {
-                    hours: (c.CustomHours !== undefined && c.CustomHours !== '' && c.CustomHours !== null) ? Number(c.CustomHours) : _baseTierInfo.hours,
-                    emails: (c.CustomEmails !== undefined && c.CustomEmails !== '' && c.CustomEmails !== null) ? Number(c.CustomEmails) : _baseTierInfo.emails,
-                    proposals: (c.CustomProposals !== undefined && c.CustomProposals !== '' && c.CustomProposals !== null) ? Number(c.CustomProposals) : _baseTierInfo.proposals,
-                    price: (c.CustomPriceNGN !== undefined && c.CustomPriceNGN !== '' && c.CustomPriceNGN !== null) ? Number(c.CustomPriceNGN) : _baseTierInfo.price,
-                    isUsd: _baseTierInfo.isUsd
-                };
+                const totalPrice = isCustom ? (parseFloat(c.CustomPriceNGN) || 0) : (suitePrice(c, opsTier) + suitePrice(c, digitalTier));
+                const hasAnyQuotePricing = (opsTier === 'enterprise_ops' && !c.CustomPriceNGN) || (digitalTier === 'digital_scale' && !c.CustomPriceNGN);
+
                 const endDate = c.EndDate || c.endDate || '—';
                 const daysLeft = c.EndDate ? Math.floor((new Date(c.EndDate) - new Date()) / 86400000) : null;
                 const expiryBadge = daysLeft !== null
@@ -9114,19 +9128,20 @@
         <tr>
             <td class="p-3 font-mono text-slate-500">${escapeHtml(c.ClientID || '')}</td>
             <td class="p-3 text-slate-300">${escapeHtml(c.CompanyName || '')}</td>
-            <td class="p-3 text-center">${badge(c.Tier || 'starter_ops')}</td>
-            <td class="p-3 text-center font-mono">${tierInfo.hours === 9999 ? '∞' : tierInfo.hours}</td>
-            <td class="p-3 text-center font-mono">${tierInfo.emails === 9999 ? '∞' : tierInfo.emails}</td>
-            <td class="p-3 text-center font-mono">${tierInfo.proposals === 9999 ? '∞' : tierInfo.proposals}</td>
-           <td class="p-3 text-right font-bold text-emerald-400">${tierInfo.isUsd ? '<span class="text-blue-400">$' + tierInfo.price + '/mo</span>' : (tierInfo.price === null ? '<span class="text-amber-400">Custom Quote</span>' : fmtNaira(tierInfo.price))}</td>
+            <td class="p-3 text-center">${isCustom ? badge('Custom') : tierBadge(opsTier)}</td>
+            <td class="p-3 text-center">${tierBadge(digitalTier)}</td>
+            <td class="p-3 text-center font-mono">${fmtLimit(hours)}</td>
+            <td class="p-3 text-center font-mono">${fmtLimit(emails)}</td>
+            <td class="p-3 text-center font-mono">${fmtLimit(proposals)}</td>
+           <td class="p-3 text-right font-bold text-emerald-400">${hasAnyQuotePricing ? '<span class="text-amber-400">Custom Quote</span>' : fmtNaira(totalPrice)}</td>
 <td class="p-3 text-center text-xs">${fmtDate(endDate)}<br>${expiryBadge}</td>
 <td class="p-3 text-center">${badge(c.Status || 'Active')}</td>
 <td class="p-3 text-center flex gap-1 justify-center">
-    <button onclick="openAgentUpdateTierModal('${escapeHtml(c.ClientID || '')}', '${escapeHtml(c.CompanyName || '')}', '${escapeHtml(c.Tier || '')}')"
-        class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Upgrade</button>
+    <button onclick='openAgentUpdateTierModal("${escapeHtml(c.ClientID || '')}", "${escapeHtml(c.CompanyName || '')}", ${JSON.stringify(c).replace(/"/g, '&quot;')})'
+        class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Edit Tier</button>
     <button onclick="openAgentRenewModal('${escapeHtml(c.ClientID || '')}', '${escapeHtml(c.CompanyName || '')}')"
         class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Renew</button>
-    ${(c.Tier === 'enterprise_ops' || c.Tier === 'digital_scale') ? `<button onclick="openAgentEnterpriseLimitsModal('${escapeHtml(c.ClientID || '')}', '${escapeHtml(c.CompanyName || '')}')" class="text-xs px-2 py-1 bg-amber-700 hover:bg-amber-600 rounded text-white">Limits</button>` : ''}
+    ${(opsTier === 'enterprise_ops' || digitalTier === 'digital_scale') ? `<button onclick="openAgentEnterpriseLimitsModal('${escapeHtml(c.ClientID || '')}', '${escapeHtml(c.CompanyName || '')}')" class="text-xs px-2 py-1 bg-amber-700 hover:bg-amber-600 rounded text-white">Limits</button>` : ''}
 </td>
         </tr>`;
             }).join('');
@@ -9330,39 +9345,51 @@
             }).join('');
         }
 
-        async function openAgentClientRegisterModal() {
+        function onAgentRegisterTierChange() {
+            const opsTier = document.getElementById('agentOpsTier').value;
+            const digitalTier = document.getElementById('agentDigitalTier').value;
+            const customFields = document.getElementById('customTierFields');
+            const enterpriseFields = document.getElementById('enterpriseTierFields');
+            const quotedNote = document.getElementById('quotedTierNote');
+
+            document.getElementById('agentOpsTierSummary').textContent = opsTier ? (AGENT_TIER_INFO[opsTier]?.summary || '') : '';
+            document.getElementById('agentDigitalTierSummary').textContent = digitalTier ? (AGENT_TIER_INFO[digitalTier]?.summary || '') : '';
+
+            const needsEnterpriseLimits = opsTier === 'enterprise_ops' || digitalTier === 'digital_scale';
+            enterpriseFields.classList.toggle('hidden', !needsEnterpriseLimits);
+            quotedNote.classList.toggle('hidden', !needsEnterpriseLimits);
+            if (needsEnterpriseLimits) {
+                quotedNote.textContent = 'This is an admin-priced tier — set exact limits above, or leave blank and configure later from Subscriptions → Limits.';
+            }
+        }
+
+        function onAgentRegisterCustomChange() {
+            const isCustom = document.getElementById('agentTier').value === 'custom';
+            document.getElementById('customTierFields').classList.toggle('hidden', !isCustom);
+            // Custom is a standalone path in the backend (_registerClient with
+            // tier:'custom'), not combinable with Ops/Digital in one call — so
+            // disable those two while Custom is selected to avoid a confusing
+            // no-op submission.
+            document.getElementById('agentOpsTier').disabled = isCustom;
+            document.getElementById('agentDigitalTier').disabled = isCustom;
+            if (isCustom) {
+                document.getElementById('agentOpsTier').value = '';
+                document.getElementById('agentDigitalTier').value = '';
+                onAgentRegisterTierChange();
+            }
+        }
+
+        function openAgentClientRegisterModal() {
             const modal = document.getElementById('modalAgentClientRegister');
             if (!modal) return;
 
-            document.getElementById('customTierFieldsGrid').innerHTML = renderLimitFieldsHtml('regCustom', 'custom');
-            document.getElementById('enterpriseTierFieldsGrid').innerHTML = renderLimitFieldsHtml('regEnt', 'enterprise');
-
-            const tierSel = document.getElementById('agentTier');
-            tierSel.innerHTML = await tierOptionsHtml([...OPS_TIER_KEYS, ...MARKETING_TIER_KEYS], 'starter_ops', true);
-
-            document.getElementById('agentTier').onchange = function () {
-                const customFields = document.getElementById('customTierFields');
-                const enterpriseFields = document.getElementById('enterpriseTierFields');
-                const quotedNote = document.getElementById('quotedTierNote');
-                customFields.classList.add('hidden');
-                enterpriseFields.classList.add('hidden');
-                quotedNote.classList.add('hidden');
-
-                if (this.value === 'custom') {
-                    customFields.classList.remove('hidden');
-                } else if (this.value === 'enterprise_ops' || this.value === 'digital_scale') {
-                    enterpriseFields.classList.remove('hidden');
-                    quotedNote.classList.remove('hidden');
-                    quotedNote.textContent = 'No fixed price — set limits above, or leave blank and configure later from Subscriptions.';
-                } else if (this.value === 'digital_accelerate') {
-                    quotedNote.classList.remove('hidden');
-                    const p = (SERVICE_PRICING_CACHE || {})['digital_accelerate'];
-                    quotedNote.textContent = 'Digital Accelerate is fixed at ' +
-                        (p ? formatNgnShort(p.priceNgn) + '/mo' : 'a fixed monthly rate') +
-                        ', billed in ₦ at the current exchange rate.';
-                }
-            };
-            document.getElementById('agentTier').dispatchEvent(new Event('change'));
+            document.getElementById('agentOpsTier').innerHTML = buildTierOptionsHtml(OPS_TIER_KEYS, true);
+            document.getElementById('agentDigitalTier').innerHTML = buildTierOptionsHtml(DIGITAL_TIER_KEYS, true);
+            document.getElementById('agentTier').onchange = onAgentRegisterCustomChange;
+            document.getElementById('customTierFields').classList.add('hidden');
+            document.getElementById('enterpriseTierFields').classList.add('hidden');
+            document.getElementById('quotedTierNote').classList.add('hidden');
+            onAgentRegisterTierChange();
 
             modal.classList.remove('hidden');
         }
@@ -9370,7 +9397,6 @@
         function openAgentEnterpriseLimitsModal(clientId, companyName) {
             document.getElementById('entLimitsClientId').value = clientId;
             document.getElementById('entLimitsClientName').value = companyName;
-            document.getElementById('entLimitsFieldsGrid').innerHTML = renderLimitFieldsHtml('entLimits', 'enterprise');
             document.getElementById('modalAgentEnterpriseLimits').classList.remove('hidden');
         }
         function closeAgentEnterpriseLimitsModal() {
@@ -9380,8 +9406,18 @@
         async function submitAgentEnterpriseLimits(event) {
             event.preventDefault();
             const clientId = document.getElementById('entLimitsClientId').value;
-            const f = collectLimitFields('entLimits', 'enterprise');
-            const payload = { clientId, ...f };
+            const num = id => parseInt(document.getElementById(id).value) || undefined;
+            const payload = {
+                clientId,
+                hours: num('entLimitsHours'),
+                emails: num('entLimitsEmails'),
+                proposals: num('entLimitsProposals'),
+                mailboxes: num('entLimitsMailboxes'),
+                crmSyncs: num('entLimitsCrmSyncs'),
+                complianceChecks: num('entLimitsComplianceChecks'),
+                docsPerMonth: num('entLimitsDocsPerMonth'),
+                priceNgn: parseFloat(document.getElementById('entLimitsPriceNgn').value) || undefined
+            };
             const btn = event.target.querySelector('button[type=submit]');
             if (btn) { btn.disabled = true; btn.textContent = 'Applying…'; }
             const res = await executeSecureBridgeCall('agent', 'agent-set-enterprise-limits', payload);
@@ -9406,32 +9442,40 @@
             const website = document.getElementById('agentWebsite').value.trim();
             const country = document.getElementById('agentCountry').value;
             const industry = document.getElementById('agentIndustry').value;
-            const tier = document.getElementById('agentTier').value;
+            const opsTier = document.getElementById('agentOpsTier').value;
+            const digitalTier = document.getElementById('agentDigitalTier').value;
+            const customTier = document.getElementById('agentTier').value; // 'custom' or ''
 
             if (!industry) { showToast('Industry is required.', 'error'); return; }
-
-            let payload = { companyName, contactEmail, phone, website, country, industry, tier };
-
-            if (tier === 'custom') {
-                const f = collectLimitFields('regCustom', 'custom');
-                payload.customLabel = f.label || (companyName + ' Custom');
-                payload.customHours = f.hours || 0;
-                payload.customEmails = f.emails || 0;
-                payload.customProposals = f.proposals || 0;
-                payload.customTasks = f.tasks || 0;
-                payload.customPriceNgn = f.priceNgn || 0;
+            if (!customTier && !opsTier && !digitalTier) {
+                showToast('Pick an Ops tier, a Digital tier, or Custom.', 'error');
+                return;
             }
 
-            if (tier === 'enterprise_ops' || tier === 'digital_scale') {
-                const f = collectLimitFields('regEnt', 'enterprise');
-                payload.customHours = f.hours;
-                payload.customEmails = f.emails;
-                payload.customProposals = f.proposals;
-                payload.customMailboxes = f.mailboxes;
-                payload.customCrmSyncs = f.crmSyncs;
-                payload.customComplianceChecks = f.complianceChecks;
-                payload.customDocsPerMonth = f.docsPerMonth;
-                payload.customPriceNgn = f.priceNgn;
+            let payload = { companyName, contactEmail, phone, website, country, industry };
+
+            if (customTier === 'custom') {
+                payload.tier = 'custom';
+                payload.customLabel = companyName + ' Custom';
+                payload.customHours = parseInt(document.getElementById('agentCustomHours').value) || 0;
+                payload.customEmails = parseInt(document.getElementById('agentCustomEmails').value) || 0;
+                payload.customProposals = parseInt(document.getElementById('agentCustomProposals').value) || 0;
+                payload.customPriceNgn = parseFloat(document.getElementById('agentCustomPrice').value) || 0;
+            } else {
+                if (opsTier) payload.opsTier = opsTier;
+                if (digitalTier) payload.digitalTier = digitalTier;
+            }
+
+            if (opsTier === 'enterprise_ops' || digitalTier === 'digital_scale') {
+                const num = id => parseInt(document.getElementById(id).value) || undefined;
+                payload.customHours = num('entHours');
+                payload.customEmails = num('entEmails');
+                payload.customProposals = num('entProposals');
+                payload.customMailboxes = num('entMailboxes');
+                payload.customCrmSyncs = num('entCrmSyncs');
+                payload.customComplianceChecks = num('entComplianceChecks');
+                payload.customDocsPerMonth = num('entDocsPerMonth');
+                payload.customPriceNgn = parseFloat(document.getElementById('entPriceNgn').value) || undefined;
             }
 
             const btn = event.target.querySelector('button[type="submit"]');
@@ -9450,18 +9494,31 @@
             }
         }
 
-        async function openAgentUpdateTierModal(clientId, companyName, currentTier) {
+        function openAgentUpdateTierModal(clientId, companyName, client) {
             const modal = document.getElementById('modalAgentUpdateTier');
             if (!modal) return;
+            client = client || {};
 
             document.getElementById('updateTierClientId').value = clientId;
             document.getElementById('updateTierClientName').value = companyName;
             document.getElementById('updateTierEffectiveDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('updateTierCustomFieldsGrid').innerHTML = renderLimitFieldsHtml('updateTierCustom', 'custom');
 
-            const tierSel = document.getElementById('updateTierValue');
-            tierSel.innerHTML = await tierOptionsHtml([...OPS_TIER_KEYS, ...MARKETING_TIER_KEYS], currentTier, true);
-            toggleUpdateTierCustomFields();
+            const opsSel = document.getElementById('updateTierOpsValue');
+            const digitalSel = document.getElementById('updateTierDigitalValue');
+            opsSel.innerHTML = buildTierOptionsHtml(OPS_TIER_KEYS, true, 'No change');
+            digitalSel.innerHTML = buildTierOptionsHtml(DIGITAL_TIER_KEYS, true, 'No change');
+            opsSel.disabled = false;
+            digitalSel.disabled = false;
+
+            const currentOps = client.OpsTier || (OPS_TIER_KEYS.includes(client.Tier) ? client.Tier : '');
+            const currentDigital = client.DigitalTier || (DIGITAL_TIER_KEYS.includes(client.Tier) ? client.Tier : '');
+            document.getElementById('updateTierOpsSummary').textContent = currentOps
+                ? 'Currently: ' + (AGENT_TIER_INFO[currentOps]?.label || currentOps) : 'No Ops suite yet.';
+            document.getElementById('updateTierDigitalSummary').textContent = currentDigital
+                ? 'Currently: ' + (AGENT_TIER_INFO[currentDigital]?.label || currentDigital) : 'No Digital suite yet.';
+
+            document.getElementById('updateTierValue').value = '';
+            document.getElementById('updateTierCustomFields').classList.add('hidden');
 
             modal.classList.remove('hidden');
         }
@@ -9832,7 +9889,7 @@
                         ? '<span class="inline-flex items-center gap-1.5 text-emerald-400"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>Online</span>'
                         : '<span class="text-slate-600">Offline</span>'}</td>
                     <td class="p-3 text-white font-medium">${escapeHtml(c.CompanyName || c.ClientID)}</td>
-                    <td class="p-3">${badge(c.Tier || '—')}</td>
+                    <td class="p-3">${tierBadge(c.OpsTier || (OPS_TIER_KEYS.includes(c.Tier) ? c.Tier : ''))} ${tierBadge(c.DigitalTier || (DIGITAL_TIER_KEYS.includes(c.Tier) ? c.Tier : ''))}</td>
                     <td class="p-3">${c.HoursUsed || 0}</td>
                     <td class="p-3">${c.EmailsUsed || 0}</td>
                     <td class="p-3">${c.ProposalsUsed || 0}</td>
@@ -11172,6 +11229,7 @@
                     switchMasterHub('career');
                     startAgentLivePolling();
                     startAdminNotifPolling();
+                    refreshAgentTierInfoPricing();
                 }
             }, 800);
         }
@@ -12756,43 +12814,69 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
 
         function toggleUpdateTierCustomFields() {
             const isCustom = document.getElementById('updateTierValue').value === 'custom';
-            const grid = document.getElementById('updateTierCustomFieldsGrid');
-            if (isCustom && !grid.innerHTML) grid.innerHTML = renderLimitFieldsHtml('updateTierCustom', 'custom');
             document.getElementById('updateTierCustomFields').classList.toggle('hidden', !isCustom);
+            document.getElementById('updateTierOpsValue').disabled = isCustom;
+            document.getElementById('updateTierDigitalValue').disabled = isCustom;
+            if (isCustom) {
+                document.getElementById('updateTierOpsValue').value = '';
+                document.getElementById('updateTierDigitalValue').value = '';
+            }
+        }
+
+        function onUpdateTierSelectChange() {
+            const ops = document.getElementById('updateTierOpsValue').value;
+            const digital = document.getElementById('updateTierDigitalValue').value;
+            document.getElementById('updateTierOpsSummary').textContent = ops ? (AGENT_TIER_INFO[ops]?.summary || '') : '';
+            document.getElementById('updateTierDigitalSummary').textContent = digital ? (AGENT_TIER_INFO[digital]?.summary || '') : '';
         }
 
         async function submitAgentUpdateTier(event) {
             event.preventDefault();
             const clientId = document.getElementById('updateTierClientId').value;
-            const newTier = document.getElementById('updateTierValue').value;
+            const customTier = document.getElementById('updateTierValue').value;
+            const opsTier = document.getElementById('updateTierOpsValue').value;
+            const digitalTier = document.getElementById('updateTierDigitalValue').value;
             const effectiveDate = document.getElementById('updateTierEffectiveDate').value;
+
+            if (customTier !== 'custom' && !opsTier && !digitalTier) {
+                showToast('Choose an Ops tier, a Digital tier, or Custom to change.', 'error');
+                return;
+            }
+
             const btn = event.target.querySelector('button[type="submit"]');
             if (btn) { btn.disabled = true; btn.textContent = 'Updating…'; }
 
-            let res;
-            if (newTier === 'custom') {
-                const f = collectLimitFields('updateTierCustom', 'custom');
-                res = await executeSecureBridgeCall('agent', 'agent-set-custom-tier', {
+            const results = [];
+            if (customTier === 'custom') {
+                results.push(await executeSecureBridgeCall('agent', 'agent-set-custom-tier', {
                     clientId,
-                    label: f.label,
-                    hours: f.hours,
-                    emails: f.emails,
-                    proposals: f.proposals,
-                    tasks: f.tasks,
-                    priceNgn: f.priceNgn || 0,
+                    label: document.getElementById('updateTierCustomLabel').value.trim(),
+                    hours: parseInt(document.getElementById('updateTierCustomHours').value) || undefined,
+                    emails: parseInt(document.getElementById('updateTierCustomEmails').value) || undefined,
+                    proposals: parseInt(document.getElementById('updateTierCustomProposals').value) || undefined,
+                    tasks: parseInt(document.getElementById('updateTierCustomTasks').value) || undefined,
+                    priceNgn: parseFloat(document.getElementById('updateTierCustomPrice').value) || 0,
                     endDate: effectiveDate
-                });
+                }));
             } else {
-                res = await executeSecureBridgeCall('agent', 'agent-update-subscription', { clientId, tier: newTier, endDate: effectiveDate });
+                // Each suite is updated independently — this is what keeps a
+                // dual-suite client's OpsTier and DigitalTier columns in sync
+                // instead of one clobbering the other (agent-update-subscription
+                // now routes through the same suite-aware logic as adding a suite).
+                if (opsTier) results.push(await executeSecureBridgeCall('agent', 'agent-update-subscription', { clientId, tier: opsTier, suite: 'ops', endDate: effectiveDate }));
+                if (digitalTier) results.push(await executeSecureBridgeCall('agent', 'agent-update-subscription', { clientId, tier: digitalTier, suite: 'digital', endDate: effectiveDate }));
             }
 
             if (btn) { btn.disabled = false; btn.textContent = 'Update Subscription Tier'; }
-            if (res.success) {
+            const allOk = results.length > 0 && results.every(r => r.success);
+            if (allOk) {
                 showToast('Subscription tier updated.', 'success');
                 closeAgentUpdateTierModal();
                 loadAgentSubscriptions();
+                loadAgentClients();
             } else {
-                showToast(res.message || 'Update failed', 'error');
+                const failMsg = results.filter(r => !r.success).map(r => r.message).join('; ');
+                showToast(failMsg || 'Update failed', 'error');
             }
         }
 
@@ -12891,11 +12975,9 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             document.getElementById('modalAddSuite').classList.remove('hidden');
         }
 
-        async function updateAddSuiteTierOptions() {
+        function updateAddSuiteTierOptions() {
             const suite = document.getElementById('addSuiteType').value;
-            const tierSel = document.getElementById('addSuiteTier');
-            tierSel.innerHTML = '<option value="">Loading current pricing…</option>';
-            tierSel.innerHTML = await tierOptionsHtml(suite === 'ops' ? OPS_TIER_KEYS : MARKETING_TIER_KEYS, null, false);
+            document.getElementById('addSuiteTier').innerHTML = buildTierOptionsHtml(suite === 'ops' ? OPS_TIER_KEYS : DIGITAL_TIER_KEYS, false);
         }
         document.addEventListener('DOMContentLoaded', () => {
             const el = document.getElementById('addSuiteType');
@@ -12906,9 +12988,17 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             const clientId = document.getElementById('modalAddSuite').dataset.clientId;
             const suite = document.getElementById('addSuiteType').value;
             const tier = document.getElementById('addSuiteTier').value;
+            if (!tier) { showToast('Choose a tier.', 'error'); return; }
+            const btn = document.querySelector('#modalAddSuite button[onclick="submitAddSuite()"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
             executeSecureBridgeCall('agent', 'agent-add-client-suite', { clientId, suite, tier }).then(res => {
+                if (btn) { btn.disabled = false; btn.textContent = 'Add Suite'; }
                 showToast(res.message || (res.success ? 'Suite added.' : 'Failed.'), res.success ? 'success' : 'error');
-                if (res.success) document.getElementById('modalAddSuite').classList.add('hidden');
+                if (res.success) {
+                    document.getElementById('modalAddSuite').classList.add('hidden');
+                    loadAgentClients();
+                    loadAgentSubscriptions();
+                }
             });
         }
 
