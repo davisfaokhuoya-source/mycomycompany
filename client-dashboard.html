@@ -434,8 +434,19 @@
                     <!-- [NEW] Populated by loadDocumentCatalog() from clientPortalDocumentCatalog — all 12 document
                          types the admin can create (including Action Plan, Strategic Plan, and Agreement), each
                          shown active/inactive per the client's own quota. -->
-                    <div id="generateCardsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
-                        <p class="text-slate-500 text-xs col-span-2">Loading your available documents…</p>
+                    <div class="max-w-5xl">
+                        <div class="relative mb-3">
+                            <i
+                                class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-[10px]"></i>
+                            <input id="genCardSearch" type="text" placeholder="Search document types…"
+                                oninput="applyGenerateCardFilter()"
+                                class="w-full sm:w-72 bg-slate-900 border border-slate-800 rounded pl-7 pr-2 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                        </div>
+                        <div id="generateCardsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <p class="text-slate-500 text-xs col-span-3">Loading your available documents…</p>
+                        </div>
+                        <p id="genCardNoMatch" class="hidden text-slate-600 text-xs mt-2">No document types match your
+                            search.</p>
                     </div>
                     <div id="generateStatus" class="max-w-3xl"></div>
                 </section>
@@ -896,7 +907,12 @@
         function renderDocumentsTable(docs) {
             const tbody = document.getElementById('documentsTableBody');
             tbody.innerHTML = docs.length ? docs.map(d => {
-                const isPending = d.status === 'Pending Client Approval';
+                // Match this loosely (case-insensitive "pending" + "approval") rather than
+                // one exact string — the backend labels this status "Pending Your Approval"
+                // (see the copy above the toggle), and a strict-equality check against a
+                // different exact string silently hid the Approve & Send button entirely.
+                const statusLc = String(d.status || '').toLowerCase();
+                const isPending = statusLc.includes('pending') && statusLc.includes('approv');
                 const statusHtml = isPending
                     ? '<span class="text-amber-400">Awaiting your approval</span>'
                     : (d.status === 'Sent' || d.status === 'Delivered'
@@ -907,10 +923,16 @@
                            class="text-xs px-2 py-1 bg-amber-900/60 hover:bg-amber-800 rounded text-amber-200">
                            <i class="fa-solid fa-paper-plane"></i> Approve &amp; Send (1 email)
                        </button>`
-                    : `<button onclick="downloadDocument('${escapeHtml(d.docId)}')"
+                    : `<div class="flex gap-1 justify-center">
+                        <button onclick="downloadDocument('${escapeHtml(d.docId)}')"
                            class="text-xs px-2 py-1 bg-emerald-900 hover:bg-emerald-800 rounded text-emerald-200">
                            <i class="fa-solid fa-download"></i> Open
-                       </button>`;
+                       </button>
+                        <button onclick="openSendDocumentModal('${escapeHtml(d.docId)}','${escapeHtml((d.title || d.type || '').replace(/'/g, "\\'"))}')"
+                           class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-200">
+                           <i class="fa-solid fa-share"></i> Send
+                       </button>
+                       </div>`;
                 return `
             <tr>
                 <td class="p-3 text-white">${escapeHtml(d.title || '—')}</td>
@@ -933,6 +955,44 @@
                 loadDocuments();
             } else {
                 if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Approve & Send (1 email)'; }
+                showToast ? showToast(res.message || 'Send failed.', 'error') : alert(res.message || 'Send failed.');
+            }
+        }
+
+        /** Lets the client send any of their own available documents out to a recipient
+         *  they choose, with their own subject and message — separate from the
+         *  Approve & Send flow above, which only fires reference docs to the client's
+         *  own saved contact. Opens a small compose modal. */
+        let SEND_DOC_TARGET = null;
+        function openSendDocumentModal(docId, title) {
+            SEND_DOC_TARGET = docId;
+            document.getElementById('sendDocTitle').textContent = title || 'this document';
+            document.getElementById('sendDocTo').value = '';
+            document.getElementById('sendDocSubject').value = title ? `${title}` : 'Document from The Victorias Ltd';
+            document.getElementById('sendDocBody').value = `Hi,\n\nPlease find ${title || 'the attached document'} enclosed.\n\nBest regards,`;
+            document.getElementById('modalSendDocument').classList.remove('hidden');
+        }
+        function closeSendDocumentModal() {
+            document.getElementById('modalSendDocument').classList.add('hidden');
+            SEND_DOC_TARGET = null;
+        }
+        async function submitSendDocument() {
+            const to = document.getElementById('sendDocTo').value.trim();
+            const subject = document.getElementById('sendDocSubject').value.trim();
+            const body = document.getElementById('sendDocBody').value.trim();
+            if (!to) { showToast ? showToast('Recipient email is required.', 'error') : alert('Recipient email is required.'); return; }
+            if (!SEND_DOC_TARGET) { closeSendDocumentModal(); return; }
+
+            const btn = document.getElementById('sendDocSubmitBtn');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ai-spinner"></span>Sending…'; }
+            const res = await callGateway('clientportal', 'clientPortalSendDocument', { docId: SEND_DOC_TARGET, to, subject, body });
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send'; }
+
+            if (res.success) {
+                showToast ? showToast(res.message || 'Sent.', 'success') : alert(res.message || 'Sent.');
+                closeSendDocumentModal();
+                loadDocuments();
+            } else {
                 showToast ? showToast(res.message || 'Send failed.', 'error') : alert(res.message || 'Send failed.');
             }
         }
@@ -1265,7 +1325,7 @@
                     // e.g. quota exhausted ("no longer available because you've used
                     // your assigned number") or not part of the current plan.
                     return `
-            <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-5 opacity-50 cursor-not-allowed select-none">
+            <div class="gen-card bg-slate-900/50 border border-slate-800 rounded-xl p-5 opacity-50 cursor-not-allowed select-none" data-label="${escapeHtml(item.label.toLowerCase())}">
                 <i class="fa-solid ${icon} text-slate-600 mb-2"></i>
                 <p class="font-semibold text-slate-400 text-sm">${escapeHtml(item.label)}</p>
                 <p class="text-[11px] text-amber-500/80 mt-1"><i class="fa-solid fa-lock"></i> ${escapeHtml(item.reason)}</p>
@@ -1281,7 +1341,7 @@
             `).join('');
 
                 return `
-            <div id="genCard-${item.docType}" class="bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-5 transition-colors">
+            <div id="genCard-${item.docType}" class="gen-card bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-5 transition-colors" data-label="${escapeHtml(item.label.toLowerCase())}">
                 <button onclick="toggleGenerateCard('${item.docType}')" class="w-full text-left">
                     <i class="fa-solid ${icon} text-emerald-400 mb-2"></i>
                     <p class="font-semibold text-white text-sm">${escapeHtml(item.label)}</p>
@@ -1300,6 +1360,20 @@
             </div>`;
             }).join('');
             container.dataset.rendered = '1';
+            applyGenerateCardFilter();
+        }
+
+        function applyGenerateCardFilter() {
+            const q = (document.getElementById('genCardSearch')?.value || '').toLowerCase().trim();
+            const cards = document.querySelectorAll('#generateCardsContainer .gen-card');
+            let visibleCount = 0;
+            cards.forEach(card => {
+                const match = !q || (card.dataset.label || '').includes(q);
+                card.classList.toggle('hidden', !match);
+                if (match) visibleCount++;
+            });
+            const noMatch = document.getElementById('genCardNoMatch');
+            if (noMatch) noMatch.classList.toggle('hidden', cards.length === 0 || visibleCount > 0);
         }
 
         function toggleGenerateCard(docType) {
@@ -1753,6 +1827,45 @@
             callGateway('clientportal', 'clientPortalMarkAllNotificationsRead', {}).then(() => pollClientNotifications());
         }
     </script>
+
+    <!-- MODAL: client-initiated document send — lets the client route any of their own
+         documents to a recipient of their choosing, with their own subject/body,
+         separate from Approve & Send (which only fires reference docs to their own
+         saved contact). -->
+    <div id="modalSendDocument"
+        class="hidden fixed inset-0 bg-slate-950/80 z-50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-md w-full space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="text-sm font-bold text-white">Send Document</h3>
+                <button onclick="closeSendDocumentModal()"
+                    class="text-slate-400 hover:text-white text-sm font-bold">&times;</button>
+            </div>
+            <p class="text-xs text-slate-400">Sending <span id="sendDocTitle" class="text-slate-200"></span></p>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">To</label>
+                <input type="email" id="sendDocTo" placeholder="recipient@example.com"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Subject</label>
+                <input type="text" id="sendDocSubject"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Message</label>
+                <textarea id="sendDocBody" rows="5"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500"></textarea>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="closeSendDocumentModal()"
+                    class="flex-1 text-xs px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded text-white">Cancel</button>
+                <button id="sendDocSubmitBtn" onclick="submitSendDocument()"
+                    class="flex-1 text-xs px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded text-white">
+                    <i class="fa-solid fa-paper-plane"></i> Send
+                </button>
+            </div>
+        </div>
+    </div>
 
 </body>
 

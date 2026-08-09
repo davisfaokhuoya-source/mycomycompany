@@ -5784,15 +5784,28 @@
                         <option value="x">X / Twitter (Digital Scale only)</option>
                     </select>
                 </div>
-                <p class="text-[10px] text-slate-500">Clicking below opens a new tab where the CLIENT logs into their
-                    own account and grants access. Nothing is typed here. TikTok, Threads, and X still need to be
-                    enabled for the client under Subscriptions → Limits before posts can be scheduled — Threads/X
-                    are only enabled on Digital Scale.</p>
+                <p class="text-[10px] text-slate-500">Generates a link where the CLIENT logs into their own account
+                    and grants access. Nothing is typed here. Copy the link below and send it to the client — don't
+                    open it yourself, since authorizing it here would connect your own account instead of theirs.
+                    TikTok, Threads, and X still need to be enabled for the client under Subscriptions → Limits
+                    before posts can be scheduled — Threads/X are only enabled on Digital Scale.</p>
                 <button type="submit"
                     class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2 rounded">
                     Get Authorization Link
                 </button>
             </form>
+            <div id="connectSocialAuthLinkResult"
+                class="hidden bg-slate-950 border border-slate-800 rounded p-3 space-y-2">
+                <p class="text-emerald-400 text-xs">Send this link to the client — they authorize, and the account
+                    connects automatically once they finish:</p>
+                <p id="connectSocialAuthLinkText" class="font-mono text-[10px] text-slate-300 break-all"></p>
+                <div class="flex gap-2">
+                    <button type="button" onclick="copyConnectSocialAuthLink()"
+                        class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Copy Link</button>
+                    <button type="button" onclick="closeConnectSocialAccountModal()"
+                        class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-white">Done</button>
+                </div>
+            </div>
         </div>
     </div>
     <div id="modalSendViaIntegration"
@@ -6108,6 +6121,22 @@
         const OPS_TIER_KEYS = Object.keys(AGENT_TIER_INFO).filter(k => AGENT_TIER_INFO[k].suite === 'ops');
         const DIGITAL_TIER_KEYS = Object.keys(AGENT_TIER_INFO).filter(k => AGENT_TIER_INFO[k].suite === 'digital');
 
+        // Single source of truth for resolving a client's Ops / Digital tier.
+        // A client's suite tier normally lives in its own OpsTier/DigitalTier
+        // column, but older records only ever set the legacy single `Tier`
+        // column — every place in the UI that decides "is this client on
+        // Enterprise Ops / Digital Scale" MUST fall back to that legacy field,
+        // or older clients silently look tier-less (e.g. "Client is not on
+        // Digital Scale" even though they are, just via the legacy column).
+        function getClientOpsTier(c) {
+            if (!c) return '';
+            return c.OpsTier || (OPS_TIER_KEYS.includes(c.Tier) ? c.Tier : '');
+        }
+        function getClientDigitalTier(c) {
+            if (!c) return '';
+            return c.DigitalTier || (DIGITAL_TIER_KEYS.includes(c.Tier) ? c.Tier : '');
+        }
+
         function fmtTierPrice(key) {
             const t = AGENT_TIER_INFO[key];
             if (!t) return '';
@@ -6115,9 +6144,55 @@
             if (t.priceFrom) return 'from ₦' + Number(t.priceFrom).toLocaleString() + '/mo — admin-priced';
             return 'admin-priced';
         }
-        function tierBadge(key) {
+        function tierBadge(key, clientId, companyName) {
             if (!key) return '<span class="text-slate-600">—</span>';
-            return badge(AGENT_TIER_INFO[key]?.label || key);
+            const label = AGENT_TIER_INFO[key]?.label || key;
+            if (!clientId) return badge(label);
+            // Clicking a tier badge shows what's consumed vs. left for that
+            // client this period, instead of making the admin hop over to
+            // the separate Quota Monitor tab and hunt for the same client.
+            return `<button type="button" onclick="openTierUsageModal('${escapeHtml(clientId)}', '${escapeHtml(companyName || '')}')"
+                class="cursor-pointer hover:opacity-80" title="View usage">${badge(label)}</button>`;
+        }
+
+        async function openTierUsageModal(clientId, companyName) {
+            showModalContent('Usage — ' + (companyName || clientId), '<i class="fa-solid fa-spinner fa-spin"></i> Loading…');
+            const q = await executeSecureBridgeCall('agent', 'agent-check-quota', { clientId });
+            if (!q.success) {
+                showModalContent('Usage — ' + (companyName || clientId),
+                    `<p class="text-slate-500 text-xs">${escapeHtml(q.message || 'Usage data unavailable' + (q.expired ? ' (subscription expired).' : '.'))}</p>`);
+                return;
+            }
+            const fmtLimit = v => (v === 999 || v === null || v === undefined) ? '∞' : v;
+            const row = (label, used, limit) => {
+                const isUnlimited = limit === 999 || limit === null || limit === undefined;
+                const pct = isUnlimited ? 0 : Math.min(((used || 0) / (limit || 1)) * 100, 100);
+                const color = pct > 95 ? 'bg-red-500' : pct > 80 ? 'bg-amber-500' : 'bg-emerald-500';
+                return `<div class="mb-3">
+                    <div class="flex justify-between text-xs text-slate-300 mb-1">
+                        <span>${escapeHtml(label)}</span>
+                        <span class="font-mono">${used ?? 0} / ${fmtLimit(limit)}${isUnlimited ? '' : ` (${fmtLimit(limit) - (used ?? 0) > 0 ? fmtLimit(limit) - (used ?? 0) : 0} left)`}</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div class="${color} h-full" style="width:${pct}%"></div>
+                    </div>
+                </div>`;
+            };
+            let body = '';
+            if (q.tierLabel) {
+                body += `<p class="text-[10px] text-blue-400 mb-3">${escapeHtml(q.tierLabel)}</p>`;
+                body += row('Content review hours', q.used?.contentReviewHours, q.limits?.contentReviewHours);
+                body += row('Social assets', q.used?.socialAssets, q.limits?.socialAssets);
+            } else {
+                body += row('Hours', q.used?.hours, q.limits?.hours);
+                body += row('Emails', q.used?.emails, q.limits?.emails);
+                body += row('Proposals', q.used?.proposals, q.limits?.proposals);
+                if (q.used?.mailboxes !== undefined || q.limits?.mailboxes !== undefined) body += row('Mailboxes', q.used?.mailboxes, q.limits?.mailboxes);
+                if (q.used?.crmSyncs !== undefined || q.limits?.crmSyncs !== undefined) body += row('CRM syncs', q.used?.crmSyncs, q.limits?.crmSyncs);
+                if (q.used?.docs !== undefined || q.limits?.docs !== undefined) body += row('Docs', q.used?.docs, q.limits?.docs);
+            }
+            if (q.periodEnd) body += `<p class="text-[10px] text-slate-500 mt-2">Resets ${escapeHtml(fmtDate(q.periodEnd))}.</p>`;
+            showModalContent('Usage — ' + (companyName || clientId), body);
         }
         function tierOptionLabel(key) {
             const t = AGENT_TIER_INFO[key];
@@ -9250,8 +9325,8 @@
             // A client's Ops tier and Digital tier live in separate columns
             // (OpsTier / DigitalTier) — legacy Tier is kept only as a fallback
             // for records created before dual-suite existed.
-            const clientOpsTier = c => c.OpsTier || (OPS_TIER_KEYS.includes(c.Tier) ? c.Tier : '');
-            const clientDigitalTier = c => c.DigitalTier || (DIGITAL_TIER_KEYS.includes(c.Tier) ? c.Tier : '');
+            const clientOpsTier = getClientOpsTier;
+            const clientDigitalTier = getClientDigitalTier;
             // NOTE: CustomPriceNGN/CustomHours/etc. are a single shared set of
             // columns on the client record (backend: _setEnterpriseServiceLimits),
             // not one set per suite. If a client is ever both enterprise_ops AND
@@ -9303,12 +9378,16 @@
         <tr>
             <td class="p-3 font-mono text-slate-500">${escapeHtml(c.ClientID || '')}</td>
             <td class="p-3 text-slate-300">${escapeHtml(c.CompanyName || '')}</td>
-            <td class="p-3 text-center">${isCustom ? badge('Custom') : tierBadge(opsTier)}</td>
-            <td class="p-3 text-center">${tierBadge(digitalTier)}</td>
+            <td class="p-3 text-center">${isCustom ? badge('Custom') : tierBadge(opsTier, c.ClientID, c.CompanyName)}</td>
+            <td class="p-3 text-center">${tierBadge(digitalTier, c.ClientID, c.CompanyName)}</td>
             <td class="p-3 text-center font-mono">${fmtLimit(hours)}</td>
             <td class="p-3 text-center font-mono">${fmtLimit(emails)}</td>
             <td class="p-3 text-center font-mono">${fmtLimit(proposals)}</td>
-           <td class="p-3 text-right font-bold text-emerald-400">${hasAnyQuotePricing ? '<span class="text-amber-400">Custom Quote</span>' : fmtNaira(totalPrice)}</td>
+           <td class="p-3 text-right font-bold text-emerald-400">${hasAnyQuotePricing
+                        ? (totalPrice > 0
+                            ? fmtNaira(totalPrice) + ' <span class="text-amber-400 text-[10px] block font-normal">+ quote pending</span>'
+                            : '<span class="text-amber-400">Custom Quote</span>')
+                        : fmtNaira(totalPrice)}</td>
 <td class="p-3 text-center text-xs">${fmtDate(endDate)}<br>${expiryBadge}</td>
 <td class="p-3 text-center">${badge(c.Status || 'Active')}</td>
 <td class="p-3 text-center flex gap-1 justify-center">
@@ -9707,7 +9786,12 @@
             document.getElementById('entLimitsClientId').value = clientId;
             document.getElementById('entLimitsClientName').value = companyName;
             client = client || {};
-            document.getElementById('entLimitsClientId').dataset.tier = client.DigitalTier || '';
+            // Resolve tiers the same fallback-aware way everywhere (OpsTier/
+            // DigitalTier columns first, legacy single `Tier` column second) —
+            // using client.DigitalTier directly here caused this modal to
+            // treat a legacy-tier Digital Scale client as if it had no
+            // Digital suite at all (spurious "not on Digital Scale" errors).
+            document.getElementById('entLimitsClientId').dataset.tier = getClientDigitalTier(client);
             const setNum = (id, val) => { document.getElementById(id).value = (val === undefined || val === null || val === '') ? '' : val; };
             setNum('entLimitsHours', client.CustomHours);
             setNum('entLimitsEmails', client.CustomEmails);
@@ -9725,8 +9809,8 @@
             // custom clients server-side (_setEnterpriseServiceLimits rejects everyone else) —
             // hide it for Launch/Accelerate so the admin only sees the social platform
             // controls below, which DO apply to every tier.
-            const opsTier = client.OpsTier || '';
-            const digitalTier = client.DigitalTier || '';
+            const opsTier = getClientOpsTier(client);
+            const digitalTier = getClientDigitalTier(client);
             const bulkLimitsEligible = opsTier === 'enterprise_ops' || digitalTier === 'digital_scale' || client.Tier === 'custom';
             document.getElementById('agentEnterpriseLimitsForm').classList.toggle('hidden', !bulkLimitsEligible);
 
@@ -9742,6 +9826,15 @@
                 loadWeeklyPlatformQuotasDisplay(clientId);
                 if (digitalTier === 'digital_accelerate') loadWhatsAppReplyQuotaStatus(clientId);
             }
+
+            // CRM Connection & Sync panel below has its own client dropdown —
+            // pre-select it to the client this modal was opened for, so the
+            // admin isn't left hunting for a second "select a client" control
+            // after already picking one to open this modal.
+            document.getElementById('crmSyncClientId').dataset.preselect = clientId;
+            populateAgentClientSelector('crmSyncClientId').then(() => {
+                document.getElementById('crmSyncStatusDisplay').innerHTML = '';
+            });
 
             document.getElementById('modalAgentEnterpriseLimits').classList.remove('hidden');
         }
@@ -9872,8 +9965,8 @@
             opsSel.disabled = false;
             digitalSel.disabled = false;
 
-            const currentOps = client.OpsTier || (OPS_TIER_KEYS.includes(client.Tier) ? client.Tier : '');
-            const currentDigital = client.DigitalTier || (DIGITAL_TIER_KEYS.includes(client.Tier) ? client.Tier : '');
+            const currentOps = getClientOpsTier(client);
+            const currentDigital = getClientDigitalTier(client);
             document.getElementById('updateTierOpsSummary').textContent = currentOps
                 ? 'Currently: ' + (AGENT_TIER_INFO[currentOps]?.label || currentOps) : 'No Ops suite yet.';
             document.getElementById('updateTierDigitalSummary').textContent = currentDigital
@@ -11010,12 +11103,22 @@
             const modal = document.getElementById('modalConnectSocialAccount');
             if (!modal) return;
             await populateAllClientsSelector('connectSocialClientId');
+            document.getElementById('connectSocialAuthLinkResult').classList.add('hidden');
+            document.getElementById('connectSocialAuthLinkText').textContent = '';
+            document.getElementById('connectSocialAccountForm').classList.remove('hidden');
             modal.classList.remove('hidden');
         }
         function closeConnectSocialAccountModal() {
             const modal = document.getElementById('modalConnectSocialAccount');
             if (modal) modal.classList.add('hidden');
             document.getElementById('connectSocialAccountForm')?.reset();
+            document.getElementById('connectSocialAuthLinkResult').classList.add('hidden');
+        }
+
+        function copyConnectSocialAuthLink() {
+            const text = document.getElementById('connectSocialAuthLinkText').textContent;
+            if (!text) return;
+            navigator.clipboard.writeText(text).then(() => showToast('Copied!', 'success'));
         }
 
         async function submitConnectSocialAccount(event) {
@@ -11032,9 +11135,11 @@
             if (btn) { btn.disabled = false; btn.textContent = 'Get Authorization Link'; }
 
             if (res.success && res.authUrl) {
-                showToast('Opening authorization window…', 'success');
-                window.open(res.authUrl, '_blank');
-                closeConnectSocialAccountModal();
+                document.getElementById('connectSocialAccountForm').classList.add('hidden');
+                document.getElementById('connectSocialAuthLinkText').textContent = res.authUrl;
+                document.getElementById('connectSocialAuthLinkResult').classList.remove('hidden');
+                navigator.clipboard.writeText(res.authUrl).then(() => showToast('Link copied — send it to the client.', 'success'))
+                    .catch(() => showToast('Link generated — click Copy Link to send it to the client.', 'success'));
             } else {
                 showToast(res.message || 'Could not build authorization link.', 'error');
             }
@@ -13292,14 +13397,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             }
         }
 
-        async function populateCrmSyncClientSelect() {
-            const sel = document.getElementById('crmSyncClientId');
-            const res = await executeSecureBridgeCall('agent', 'agent-get-all-clients', {});
-            if (res.success && res.data) {
-                sel.innerHTML = res.data.map(c => `<option value="${escapeHtml(c.ClientID)}">${escapeHtml(c.CompanyName)} (${escapeHtml(c.ClientID)})</option>`).join('');
-            }
-        }
-
         async function checkCrmSyncStatus() {
             const clientId = document.getElementById('crmSyncClientId').value;
             const display = document.getElementById('crmSyncStatusDisplay');
@@ -13328,8 +13425,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 res.success ? 'success' : 'error');
             if (res.success) checkCrmSyncStatus();
         }
-
-        populateCrmSyncClientSelect();
 
         async function openScheduledAutomationsModal() {
             showModalContent('Scheduled Automations', '<i class="fa-solid fa-spinner fa-spin"></i> Loading…');
