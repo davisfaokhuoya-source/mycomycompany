@@ -1612,6 +1612,8 @@
                 const icon = SOCIAL_PLATFORM_ICONS[p.Platform] || 'fa-share-nodes';
                 const statusColor = p.Status === 'Approved' ? 'text-emerald-400' : p.Status === 'Rejected' ? 'text-red-400' : 'text-amber-400';
                 const clientDecided = p.ClientApproved === true || p.ClientApproved === 'TRUE' || p.ClientApproved === 'Rejected';
+                const isPublished = !!p.PublishedAt;
+                const isSendable = p.Status === 'Approved' && !isPublished;
                 return `
             <div id="socPost-${escapeHtml(p.PostID)}" class="bg-slate-900 border border-slate-800 rounded-xl p-4">
                 <div class="flex items-start justify-between gap-3">
@@ -1621,23 +1623,48 @@
                         <span>· ${escapeHtml(p.DayOfWeek)} ${fmtDate(p.Date).split(',')[0]}</span>
                         <span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] uppercase">${escapeHtml(p.PostType || '')}</span>
                     </div>
-                    <span class="text-[10px] font-semibold ${statusColor} shrink-0">${escapeHtml(p.Status || 'PendingApproval')}</span>
+                    <span class="text-[10px] font-semibold ${statusColor} shrink-0">${escapeHtml(isPublished ? 'Published' : (p.Status || 'PendingApproval'))}</span>
                 </div>
+                ${isPublished ? `
                 <p class="text-xs text-slate-200 mt-2 whitespace-pre-wrap">${escapeHtml(p.Caption || '')}</p>
                 <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] text-slate-500">
                     ${p.VisualSuggestion ? `<span><i class="fa-solid fa-image"></i> ${escapeHtml(p.VisualSuggestion)}</span>` : ''}
                     ${p.Hashtags ? `<span><i class="fa-solid fa-hashtag"></i> ${escapeHtml(p.Hashtags)}</span>` : ''}
                     ${p.CTA ? `<span><i class="fa-solid fa-bullhorn"></i> ${escapeHtml(p.CTA)}</span>` : ''}
-                </div>
-                ${clientDecided ? '' : `
+                </div>` : `
+                <textarea id="cpSocCaption-${escapeHtml(p.PostID)}" class="w-full h-16 bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white mt-2">${escapeHtml(p.Caption || '')}</textarea>
+                <div class="grid grid-cols-3 gap-2 mt-2">
+                    <input id="cpSocVisual-${escapeHtml(p.PostID)}" placeholder="Visual suggestion" value="${escapeHtml(p.VisualSuggestion || '')}" class="bg-slate-950 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
+                    <input id="cpSocHashtags-${escapeHtml(p.PostID)}" placeholder="Hashtags" value="${escapeHtml(p.Hashtags || '')}" class="bg-slate-950 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
+                    <input id="cpSocCta-${escapeHtml(p.PostID)}" placeholder="CTA" value="${escapeHtml(p.CTA || '')}" class="bg-slate-950 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
+                </div>`}
+                ${isPublished ? '' : `
                 <div class="flex gap-2 justify-end mt-3 pt-2 border-t border-slate-800">
+                    <button onclick="saveSocialPostEditClient('${escapeHtml(p.PostID)}')"
+                        class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Save Edit</button>
+                    ${clientDecided ? '' : `
                     <button onclick="rejectSocialPost('${escapeHtml(p.PostID)}')"
                         class="text-xs px-3 py-1 bg-slate-800 hover:bg-red-900/50 rounded text-slate-300">Reject</button>
                     <button id="socApproveBtn-${escapeHtml(p.PostID)}" onclick="approveSocialPost('${escapeHtml(p.PostID)}')"
-                        class="text-xs px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Approve</button>
+                        class="text-xs px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Approve</button>`}
+                    ${isSendable ? `<button id="socSendNowBtn-${escapeHtml(p.PostID)}" onclick="sendSocialPostNowClient('${escapeHtml(p.PostID)}')"
+                        class="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Send Now</button>` : ''}
                 </div>`}
             </div>`;
             }).join('');
+        }
+
+        async function saveSocialPostEditClient(postId) {
+            const payload = {
+                postId,
+                caption: document.getElementById('cpSocCaption-' + postId).value,
+                visualSuggestion: document.getElementById('cpSocVisual-' + postId).value,
+                hashtags: document.getElementById('cpSocHashtags-' + postId).value,
+                cta: document.getElementById('cpSocCta-' + postId).value
+            };
+            const res = await callGateway('clientportal', 'clientPortalEditSocialPost', payload);
+            showToast(res.success ? 'Post updated — sent back for approval.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+            if (res.success) loadSocialCalendar();
         }
 
         async function approveSocialPost(postId) {
@@ -1651,6 +1678,18 @@
         async function rejectSocialPost(postId) {
             const reason = prompt('Optional: let your account team know why (or leave blank):') || '';
             const res = await callGateway('clientportal', 'clientPortalRejectSocialPost', { postId, reason });
+            if (res.success) loadSocialCalendar();
+        }
+
+        // Same publish function on the backend as the hourly queue — this just
+        // triggers it immediately instead of waiting for the post's scheduled slot.
+        async function sendSocialPostNowClient(postId) {
+            if (!confirm('Publish this post right now, immediately, instead of waiting for the queue?')) return;
+            const btn = document.getElementById('socSendNowBtn-' + postId);
+            setBtnBusy(btn, true, { busyLabel: 'Sending…' });
+            const res = await callGateway('clientportal', 'clientPortalSendSocialPostNow', { postId });
+            setBtnBusy(btn, false);
+            showToast(res.success ? 'Published.' : (res.message || 'Send failed.'), res.success ? 'success' : 'error');
             if (res.success) loadSocialCalendar();
         }
 

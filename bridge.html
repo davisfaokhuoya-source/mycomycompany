@@ -3512,6 +3512,23 @@
                                     </tbody>
                                 </table>
                             </div>
+                            <div>
+                                <span class="text-[10px] font-mono uppercase text-slate-400 block mb-2">WhatsApp
+                                    Business</span>
+                                <table
+                                    class="w-full text-left border-collapse text-xs bg-slate-950 border border-slate-800 rounded-xl">
+                                    <thead class="bg-slate-900 text-slate-400 font-mono uppercase">
+                                        <tr>
+                                            <th class="p-3">Label</th>
+                                            <th class="p-3">Number</th>
+                                            <th class="p-3 text-center">Status</th>
+                                            <th class="p-3 text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="accessWhatsAppBody" class="divide-y divide-slate-800/50 text-slate-300">
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
 
@@ -10275,11 +10292,12 @@
         async function loadAccessControlPanel() {
             const clientId = document.getElementById('accessControlClientSelector')?.value;
             if (!clientId) return;
-            const [integ, mbx, crm, soc] = await Promise.all([
+            const [integ, mbx, crm, soc, wa] = await Promise.all([
                 executeSecureBridgeCall('agent', 'agent-list-integrations', { clientId }),
                 executeSecureBridgeCall('agent', 'agent-get-mailboxes', { clientId }),
                 executeSecureBridgeCall('agent', 'agent-get-crm-sync-status', { clientId }),
-                executeSecureBridgeCall('publish', 'agent-list-social-connections', { clientId })
+                executeSecureBridgeCall('publish', 'agent-list-social-connections', { clientId }),
+                executeSecureBridgeCall('agent', 'agent-list-whatsapp-connections', { clientId })
             ]);
 
             document.getElementById('accessIntegrationsBody').innerHTML = (integ.integrations || []).map(i => `
@@ -10303,6 +10321,21 @@
         <td class="p-3 text-center">${badge(s.status)}</td>
         <td class="p-3 text-center"><button onclick="revokeAccess('social','${escapeHtml(clientId)}','${escapeHtml(s.platform)}')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Revoke</button></td></tr>
     `).join('') || emptyRow('No social accounts.', 4);
+
+            document.getElementById('accessWhatsAppBody').innerHTML = (wa.connections || []).map(w => `
+        <tr><td class="p-3">${escapeHtml(w.label || 'WhatsApp Business')}</td><td class="p-3">${escapeHtml(w.displayPhoneNumber || '—')}</td>
+        <td class="p-3 text-center">${badge(w.status)}</td>
+        <td class="p-3 text-center">${String(w.status || '').trim() === 'Disconnected'
+                    ? `<button onclick="reconnectWhatsAppAccess('${escapeHtml(clientId)}','${escapeHtml(w.whatsAppId)}')" class="text-xs px-2 py-1 bg-emerald-900 hover:bg-emerald-800 rounded text-emerald-200">Reconnect</button>`
+                    : `<button onclick="revokeAccess('whatsapp','${escapeHtml(clientId)}','${escapeHtml(w.whatsAppId)}')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Revoke</button>`}</td></tr>
+    `).join('') || emptyRow('No WhatsApp number connected.', 4);
+        }
+
+        function reconnectWhatsAppAccess(clientId, whatsAppId) {
+            executeSecureBridgeCall('agent', 'agent-reconnect-whatsapp', { clientId, whatsAppId }).then(res => {
+                showToast(res.success ? 'Reconnected.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+                if (res.success) loadAccessControlPanel();
+            });
         }
 
         function revokeAccess(kind, clientId, identifier) {
@@ -10311,6 +10344,7 @@
                 integration: ['agent', 'agent-disconnect-integration', { clientId, type: identifier }],
                 mailbox: ['agent', 'agent-remove-mailbox', { clientId, mailboxId: identifier }],
                 crm: ['agent', 'agent-disconnect-integration', { clientId, type: identifier }],
+                whatsapp: ['agent', 'agent-disconnect-whatsapp', { clientId, whatsAppId: identifier }],
                 social: ['publish', 'agent-disconnect-social-account', { clientId, platform: identifier }]
             };
             const [system, action, payload] = actionMap[kind];
@@ -13722,6 +13756,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             listEl.innerHTML = posts.map(p => {
                 const statusColor = p.Status === 'Approved' ? 'text-emerald-400' : p.Status === 'Rejected' ? 'text-red-400' : 'text-amber-400';
                 const isDecided = p.Status === 'Approved' || p.Status === 'Rejected';
+                const isSendable = p.Status === 'Approved' && !p.PublishedAt;
                 return `
         <div id="adminSocPost-${escapeHtml(p.PostID)}" class="bg-slate-950 border border-slate-800 rounded-xl p-4">
             <div class="flex items-start justify-between gap-3 mb-2">
@@ -13731,7 +13766,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                     <span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] uppercase">${escapeHtml(p.PostType || '')}</span>
                     <span class="text-[10px] text-slate-600">Admin: ${p.AdminApproved === true || p.AdminApproved === 'TRUE' ? '✓' : '—'} · Client: ${p.ClientApproved === true || p.ClientApproved === 'TRUE' ? '✓' : (p.ClientApproved === 'Rejected' ? '✗' : '—')}</span>
                 </div>
-                <span class="text-[10px] font-semibold ${statusColor}">${escapeHtml(p.Status || 'PendingApproval')}</span>
+                <span class="text-[10px] font-semibold ${statusColor}">${escapeHtml(p.PublishedAt ? 'Published' : (p.Status || 'PendingApproval'))}</span>
             </div>
             <textarea id="socCaption-${escapeHtml(p.PostID)}" class="w-full h-16 bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white">${escapeHtml(p.Caption || '')}</textarea>
             <div class="grid grid-cols-3 gap-2 mt-2">
@@ -13740,10 +13775,11 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 <input id="socCta-${escapeHtml(p.PostID)}" placeholder="CTA" value="${escapeHtml(p.CTA || '')}" class="bg-slate-900 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
             </div>
             <div class="flex gap-2 justify-end mt-3 pt-2 border-t border-slate-800">
-                <button onclick="saveSocialPostEdit('${escapeHtml(p.PostID)}')" class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Save Edit</button>
+                ${p.PublishedAt ? '' : `<button onclick="saveSocialPostEdit('${escapeHtml(p.PostID)}')" class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Save Edit</button>`}
                 ${isDecided ? '' : `
                 <button onclick="rejectSocialPostAdmin('${escapeHtml(p.PostID)}')" class="text-xs px-3 py-1 bg-slate-800 hover:bg-red-900/50 rounded text-slate-300">Reject</button>
                 <button id="socApproveBtnAdmin-${escapeHtml(p.PostID)}" onclick="approveSocialPostAdmin('${escapeHtml(p.PostID)}')" class="text-xs px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Approve</button>`}
+                ${isSendable ? `<button id="socSendNowBtnAdmin-${escapeHtml(p.PostID)}" onclick="sendSocialPostNowAdmin('${escapeHtml(p.PostID)}')" class="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Send Now</button>` : ''}
             </div>
         </div>`;
             }).join('');
@@ -13776,6 +13812,21 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             const clientId = document.getElementById('socialClientSelector').value;
             const reason = prompt('Reason for rejecting (optional):') || '';
             const res = await executeSecureBridgeCall('agent', 'agent-reject-social-post', { clientId, postId, reason }, { silent: true });
+            if (res.success) fetchAdminSocialCalendar(clientId);
+        }
+
+        // "Send Now" and the hourly queue both call the exact same backend publish
+        // function (_publishOneSocialCalendarPost) — this button does not bypass
+        // anything, it just runs that same publish immediately instead of waiting
+        // for the hourly job to pick the post up.
+        async function sendSocialPostNowAdmin(postId) {
+            const clientId = document.getElementById('socialClientSelector').value;
+            if (!confirm('Publish this post right now, immediately, instead of waiting for the queue?')) return;
+            const btn = document.getElementById('socSendNowBtnAdmin-' + postId);
+            setBtnBusy(btn, true, { busyLabel: 'Sending…' });
+            const res = await executeSecureBridgeCall('agent', 'agent-send-social-post-now', { clientId, postId }, { silent: true });
+            setBtnBusy(btn, false);
+            showToast(res.success ? 'Published.' : (res.message || 'Send failed.'), res.success ? 'success' : 'error');
             if (res.success) fetchAdminSocialCalendar(clientId);
         }
 
