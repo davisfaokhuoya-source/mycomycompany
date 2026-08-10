@@ -3180,6 +3180,11 @@
                                     class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-1.5 px-4 rounded shadow">
                                     <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Calendar
                                 </button>
+                                <button id="socialInitSheetBtn" onclick="initClientSheetUI()"
+                                    class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium py-1.5 px-3 rounded shadow"
+                                    title="Run this if you see 'Client sheet not found' — creates/repairs this client's data sheet.">
+                                    <i class="fa-solid fa-wrench"></i> Init/Repair Client Sheet
+                                </button>
                             </div>
                         </div>
 
@@ -13786,6 +13791,19 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             if (!res.success) { showToast(res.message || 'Generation failed.', 'error'); return; }
             showToast(`${res.postsGenerated} posts generated.`, 'success');
             await fetchAdminSocialCalendar(clientId);
+        }
+
+        // Creates this client's private data sheet if it doesn't exist yet, or
+        // relinks it if it exists but was lost/never got wired up. Safe to click
+        // any time — won't create a duplicate if a valid sheet is already found.
+        async function initClientSheetUI() {
+            const clientId = document.getElementById('socialClientSelector').value;
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            const btn = document.getElementById('socialInitSheetBtn');
+            setBtnBusy(btn, true, { busyLabel: 'Checking…' });
+            const res = await executeSecureBridgeCall('agent', 'agent-init-client-sheet', { clientId }, { silent: true });
+            setBtnBusy(btn, false);
+            showToast(res.success ? (res.message || 'Client sheet ready.') : (res.message || 'Failed.'), res.success ? 'success' : 'error');
         }
 
         async function setSocialFrequencyOverride() {
