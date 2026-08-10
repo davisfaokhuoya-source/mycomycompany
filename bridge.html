@@ -2235,6 +2235,7 @@
                                 <option value="" selected>Choose…</option>
                                 <option value="agent-livechat">Live Chat</option>
                                 <option value="agent-social-calendar">Social Calendar</option>
+                                <option value="agent-whatsapp">WhatsApp</option>
                                 <option value="agent-crmsync">CRM Sync</option>
                                 <option value="agent-integrations">Integrations</option>
                             </select>
@@ -2293,6 +2294,7 @@
                             Extras</button>
                         <button class="agent-subview-link" data-target-view="agent-invoices">Invoices</button>
                         <button class="agent-subview-link" data-target-view="agent-crmsync">CRM Sync</button>
+                        <button class="agent-subview-link" data-target-view="agent-whatsapp">WhatsApp</button>
                         <button class="agent-subview-link" data-target-view="agent-integrations">Integrations</button>
                     </div>
                 </div>
@@ -3408,10 +3410,6 @@
                                     class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded shadow flex items-center gap-1">
                                     <i class="fa-solid fa-plug"></i> Connect CRM
                                 </button>
-                                <button onclick="openConnectWhatsAppModal()"
-                                    class="bg-green-700 hover:bg-green-600 text-xs text-white font-medium py-1.5 px-3 rounded shadow flex items-center gap-1">
-                                    <i class="fa-brands fa-whatsapp"></i> Connect WhatsApp
-                                </button>
                             </div>
                         </div>
                         <div
@@ -3429,6 +3427,51 @@
                                     </tr>
                                 </thead>
                                 <tbody id="crmSyncTableBody" class="divide-y divide-slate-800/50 text-slate-300">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- WHATSAPP -->
+                    <div id="view-agent-whatsapp"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">WhatsApp</h3>
+                                <p class="text-xs text-slate-400">Connect a client's WhatsApp Business number so the
+                                    agent can read and reply to their inbound messages, and review that activity here.
+                                    Messages are retained for 7 days.</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <select id="whatsappClientSelector" onchange="loadWhatsAppActivityAdmin()"
+                                    class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white min-w-[200px]">
+                                    <option value="">Select a client…</option>
+                                </select>
+                                <button onclick="openConnectWhatsAppModal()"
+                                    class="bg-green-700 hover:bg-green-600 text-xs text-white font-medium py-1.5 px-3 rounded shadow flex items-center gap-1">
+                                    <i class="fa-brands fa-whatsapp"></i> Connect WhatsApp
+                                </button>
+                                <button onclick="testWhatsAppPipelineAdmin()"
+                                    class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded shadow flex items-center gap-1">
+                                    <i class="fa-solid fa-stethoscope"></i> Test Pipeline
+                                </button>
+                            </div>
+                        </div>
+                        <div
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead
+                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                    <tr>
+                                        <th class="p-3 w-1/6">From</th>
+                                        <th class="p-3 w-2/6">Message</th>
+                                        <th class="p-3 w-2/6">Agent's Reply</th>
+                                        <th class="p-3 text-center">Status</th>
+                                        <th class="p-3 text-center">When</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="whatsappActivityTableBodyAdmin"
+                                    class="divide-y divide-slate-800/50 text-slate-300">
                                 </tbody>
                             </table>
                         </div>
@@ -5756,7 +5799,7 @@
             <p class="text-[11px] text-slate-500">Requires a permanent access token generated for a System User in
                 Meta Business Suite, and this deployment's URL registered as the webhook callback (append
                 <code class="text-slate-400">?source=whatsapp_webhook</code> to it) with a verify token matching
-                <code class="text-slate-400">WHATSAPP_WEBHOOK_VERIFY_TOKEN</code> in Script Properties.
+                <code class="text-slate-400">WHATSAPP_SHARED_VERIFY_TOKEN</code> in Script Properties.
             </p>
             <div class="space-y-2">
                 <input type="text" id="waPhoneNumberId" placeholder="Phone Number ID"
@@ -6692,6 +6735,7 @@
                 'agent-va-clients': loadVAClientsUI,
                 'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector').then(loadIntegrationsUI); },
                 'agent-crmsync': () => { populateAgentClientSelector('crmSyncClientSelector').then(loadCrmSyncUI); },
+                'agent-whatsapp': () => { populateAgentClientSelector('whatsappClientSelector').then(loadWhatsAppActivityAdmin); },
                 'agent-online': loadAgentOnlineUsage,
                 'agent-livechat': () => { populateAllClientsSelector('chatClientSelector'); startChatPolling(); },
                 'agent-doc-studio': loadDocStudio,
@@ -13227,7 +13271,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         }
 
         function openConnectWhatsAppModal() {
-            const clientId = document.getElementById('crmSyncClientSelector')?.value || document.getElementById('integrationsClientSelector')?.value;
+            const clientId = document.getElementById('whatsappClientSelector')?.value || document.getElementById('crmSyncClientSelector')?.value || document.getElementById('integrationsClientSelector')?.value;
             if (!clientId) { showToast('Select a client first.', 'error'); return; }
             document.getElementById('modalConnectWhatsApp').dataset.clientId = clientId;
             document.getElementById('waPhoneNumberId').value = '';
@@ -13246,8 +13290,45 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             if (!phoneNumberId || !accessToken) { showToast('Phone Number ID and access token are required.', 'error'); return; }
             executeSecureBridgeCall('agent', 'agent-connect-whatsapp', { clientId, phoneNumberId, wabaId, displayPhoneNumber, accessToken }).then(res => {
                 showToast(res.message || (res.success ? 'Connected.' : 'Failed.'), res.success ? 'success' : 'error');
-                if (res.success) document.getElementById('modalConnectWhatsApp').classList.add('hidden');
+                if (res.success) {
+                    document.getElementById('modalConnectWhatsApp').classList.add('hidden');
+                    if (document.getElementById('whatsappClientSelector')?.value === clientId) loadWhatsAppActivityAdmin();
+                }
             });
+        }
+
+        async function loadWhatsAppActivityAdmin() {
+            const clientId = document.getElementById('whatsappClientSelector').value;
+            const tbody = document.getElementById('whatsappActivityTableBodyAdmin');
+            if (!clientId) { tbody.innerHTML = '<tr><td class="p-3 text-slate-600" colspan="5">Select a client.</td></tr>'; return; }
+            tbody.innerHTML = '<tr><td class="p-3 text-slate-500" colspan="5">Loading…</td></tr>';
+            const res = await executeSecureBridgeCall('agent', 'agent-get-whatsapp-activity', { clientId }, { silent: true });
+            if (!res.success) { tbody.innerHTML = `<tr><td class="p-3 text-red-400" colspan="5">${escapeHtml(res.message || 'Failed to load.')}</td></tr>`; return; }
+            const items = res.activity || [];
+            const statusColor = (s) => {
+                s = String(s || '').toLowerCase();
+                if (s.indexOf('flagged') !== -1) return 'text-amber-400';
+                if (s.indexOf('failed') !== -1) return 'text-red-400';
+                if (s.indexOf('skipped') !== -1) return 'text-slate-500';
+                return 'text-emerald-400';
+            };
+            tbody.innerHTML = items.length ? items.map(m => `
+        <tr>
+            <td class="p-3 text-white align-top">${escapeHtml(m.ContactName || m.FromNumber || '—')}</td>
+            <td class="p-3 text-slate-400 align-top">${escapeHtml(m.MessageText || '—')}</td>
+            <td class="p-3 text-slate-400 align-top">${m.AIReply ? escapeHtml(m.AIReply) : '<span class="text-slate-600">—</span>'}</td>
+            <td class="p-3 text-center align-top ${statusColor(m.Status)}">${escapeHtml(m.Status || '—')}</td>
+            <td class="p-3 text-center align-top text-slate-500">${fmtDate(m.Timestamp)}</td>
+        </tr>`).join('') : '<tr><td class="p-3 text-slate-600" colspan="5">No WhatsApp activity in the last 7 days.</td></tr>';
+        }
+
+        async function testWhatsAppPipelineAdmin() {
+            const clientId = document.getElementById('whatsappClientSelector').value;
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            const res = await executeSecureBridgeCall('agent', 'agent-test-whatsapp-pipeline', { clientId }, { silent: true });
+            if (!res.success) { showToast(res.message || 'Test failed to run.', 'error'); return; }
+            const lines = (res.checks || []).map(c => (c.pass ? '✅ ' : '❌ ') + c.name + (c.detail ? ' — ' + c.detail : ''));
+            alert((res.ready ? 'Pipeline ready.\n\n' : 'Pipeline NOT ready yet.\n\n') + lines.join('\n'));
         }
 
         function openConnectCrmModal() {
@@ -13868,6 +13949,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             'agent-va-clients': loadVAClientsUI,
             'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector'); }
         };
+
         document.addEventListener("DOMContentLoaded", initializeModule);
     </script>
 </body>
