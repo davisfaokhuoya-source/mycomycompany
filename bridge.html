@@ -3217,10 +3217,12 @@
                             <div>
                                 <h3 class="text-lg font-bold text-white">Mailbox Management</h3>
                                 <p class="text-xs text-slate-400">Each managed mailbox gets its own
-                                    Inbox/Drafts/Scheduled-Events sheet.</p>
+                                    Inbox/Drafts/Scheduled-Events sheet. Email reply approvals are reviewed here (not
+                                    under document approvals).</p>
                             </div>
                             <div class="flex gap-2">
-                                <select id="mailboxesClientSelector" onchange="loadAgentMailboxesUI()"
+                                <select id="mailboxesClientSelector"
+                                    onchange="loadAgentMailboxesUI(); loadEmailReplyApprovals()"
                                     class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white min-w-[200px]">
                                     <option value="">Select a client…</option>
                                 </select>
@@ -3236,7 +3238,7 @@
                             </div>
                         </div>
                         <div
-                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner">
+                            class="bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner max-h-[40vh]">
                             <table class="w-full text-left border-collapse text-xs">
                                 <thead
                                     class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
@@ -3255,6 +3257,44 @@
                                 </thead>
                                 <tbody id="agentMailboxesTableBody" class="divide-y divide-slate-800/50 text-slate-300">
                                 </tbody>
+                            </table>
+                        </div>
+
+                        <div class="flex justify-between items-center shrink-0 pt-2">
+                            <div>
+                                <h4 class="text-sm font-bold text-white">Pending Email Replies</h4>
+                                <p class="text-[11px] text-slate-500">Approve, edit, or skip agent-drafted replies
+                                    before they go out.</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <select id="emailReplyApprovalsStatusFilter" onchange="loadEmailReplyApprovals()"
+                                    class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white">
+                                    <option value="Pending Review">Pending Review</option>
+                                    <option value="Approved">Approved</option>
+                                    <option value="Skipped">Skipped</option>
+                                </select>
+                                <button onclick="loadEmailReplyApprovals()"
+                                    class="text-xs px-2 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white"><i
+                                        class="fa-solid fa-rotate"></i></button>
+                            </div>
+                        </div>
+                        <div
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner min-h-[180px]">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead
+                                    class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                                    <tr>
+                                        <th class="p-3">ID</th>
+                                        <th class="p-3">Client</th>
+                                        <th class="p-3">Subject / To</th>
+                                        <th class="p-3">Draft preview</th>
+                                        <th class="p-3">Created</th>
+                                        <th class="p-3 text-center">Status</th>
+                                        <th class="p-3 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="emailReplyApprovalsTableBody"
+                                    class="divide-y divide-slate-800/50 text-slate-300"></tbody>
                             </table>
                         </div>
                     </div>
@@ -6771,7 +6811,10 @@
                     populateAIConsoleActions();
                 },
                 'agent-access-control': () => { populateAllClientsSelector('accessControlClientSelector', loadAccessControlPanel); },
-                'agent-mailboxes': () => { populateAllClientsSelector('mailboxesClientSelector', loadAgentMailboxesUI); },
+                'agent-mailboxes': () => {
+                    populateAllClientsSelector('mailboxesClientSelector', () => { loadAgentMailboxesUI(); loadEmailReplyApprovals(); });
+                    loadEmailReplyApprovals();
+                },
                 'agent-scheduling': () => { populateAllClientsSelector('schedulingClientSelector', loadSchedulingMailboxes); },
                 'agent-va-clients': loadVAClientsUI,
                 'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector').then(loadIntegrationsUI); },
@@ -12046,23 +12089,22 @@
         let AGENT_APPROVALS_BY_ID = {};
 
         async function loadAgentApprovals() {
+            // Document approvals only — email replies live under Mailbox Management.
             showTableSkeleton('agentApprovalsTableBody', 7);
             const status = document.getElementById('approvalsStatusFilter')?.value || 'Pending Review';
-            const res = await executeSecureBridgeCall('agent', 'agent-get-pending-approvals', { status });
+            const res = await executeSecureBridgeCall('agent', 'agent-get-pending-approvals', {
+                status, excludeTypes: ['Email Reply', 'Email']
+            });
             const tbody = document.getElementById('agentApprovalsTableBody');
             AGENT_APPROVALS_BY_ID = {};
-            if (!res.success || !res.data?.length) { tbody.innerHTML = emptyRow('No approvals found.', 7); return; }
+            if (!res.success || !res.data?.length) { tbody.innerHTML = emptyRow('No document approvals found.', 7); return; }
             res.data.forEach(a => { AGENT_APPROVALS_BY_ID[a.ApprovalID] = a; });
             tbody.innerHTML = res.data.map(a => {
-                const isEmailReply = a.DeliverableType === 'Email Reply' || a.DeliverableType === 'Email';
-                let emailPayload = {};
-                if (isEmailReply) { try { emailPayload = a.Payload ? JSON.parse(a.Payload) : {}; } catch (_) { emailPayload = {}; } }
                 return `
   <tr><td class="p-3 font-mono text-slate-500">${escapeHtml(a.ApprovalID)}</td>
   <td class="p-3 font-mono">${escapeHtml(a.ClientID)}</td>
   <td class="p-3">${badge(a.DeliverableType)}</td>
   <td class="p-3">${escapeHtml(a.Title)}
-    ${isEmailReply ? ` — <span class="text-slate-500">to ${escapeHtml(a.RecipientEmail || emailPayload.to || '')}</span>` : ''}
     ${a.DocURL && a.DocURL.startsWith('http') ? ` — <a href="${escapeHtml(a.DocURL)}" target="_blank" class="text-blue-400 underline">download</a>` : ''}
     ${a.GoogleDocURL && a.GoogleDocURL.startsWith('http') ? ` — <a href="${escapeHtml(a.GoogleDocURL)}" target="_blank" class="text-amber-400 underline">edit</a>` : ''}
     ${a.FiledCorrectly === 'Yes' ? '' : (a.FiledCorrectly ? ` <span class="text-red-400 text-[10px]">⚠ ${escapeHtml(a.FiledCorrectly)}</span>` : '')}
@@ -12070,16 +12112,48 @@
   <td class="p-3 text-slate-500">${fmtDate(a.CreatedAt)}</td>
   <td class="p-3 text-center">${badge(a.Status)}</td>
   <td class="p-3 text-center flex gap-1 justify-center">
-${a.Status === 'Pending Review' && isEmailReply ? `
-<button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Approved')" class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Approve & Send</button>
-<button onclick="openEditEmailReplyModal('${escapeHtml(a.ApprovalID)}')" class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit & Send</button>
-<button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Skipped')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Skip</button>` : ''}
-${a.Status === 'Pending Review' && !isEmailReply ? `
+${a.Status === 'Pending Review' ? `
 <button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Approved')" class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Approve & Send</button>
 <button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Rejected')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Reject</button>
 <button onclick="openReplacePendingDocModal('${escapeHtml(a.ApprovalID)}')" class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Upload Replacement</button>` : ''}
 <button onclick="repairApprovalDelivery('${escapeHtml(a.ApprovalID)}')" class="text-xs px-2 py-1 bg-amber-700 hover:bg-amber-600 rounded text-white">Repair & Resend</button>
 </td></tr>`;
+            }).join('');
+        }
+
+        async function loadEmailReplyApprovals() {
+            const tbody = document.getElementById('emailReplyApprovalsTableBody');
+            if (!tbody) return;
+            showTableSkeleton('emailReplyApprovalsTableBody', 7);
+            const status = document.getElementById('emailReplyApprovalsStatusFilter')?.value || 'Pending Review';
+            const res = await executeSecureBridgeCall('agent', 'agent-get-pending-approvals', {
+                status, onlyEmailReplies: true
+            });
+            if (!res.success || !res.data?.length) {
+                tbody.innerHTML = emptyRow('No pending email replies.', 7);
+                return;
+            }
+            res.data.forEach(a => { AGENT_APPROVALS_BY_ID[a.ApprovalID] = a; });
+            tbody.innerHTML = res.data.map(a => {
+                let emailPayload = {};
+                try { emailPayload = a.Payload ? JSON.parse(a.Payload) : {}; } catch (_) { emailPayload = {}; }
+                return `
+  <tr>
+    <td class="p-3 font-mono text-slate-500">${escapeHtml(a.ApprovalID)}</td>
+    <td class="p-3 font-mono">${escapeHtml(a.ClientID)}</td>
+    <td class="p-3">${escapeHtml(a.Title)}
+      <div class="text-slate-500 text-[10px]">to ${escapeHtml(a.RecipientEmail || emailPayload.to || '')}</div>
+    </td>
+    <td class="p-3 text-slate-400 max-w-xs truncate" title="${escapeHtml((emailPayload.body || '').slice(0, 500))}">${escapeHtml((emailPayload.body || '').slice(0, 120))}</td>
+    <td class="p-3 text-slate-500">${fmtDate(a.CreatedAt)}</td>
+    <td class="p-3 text-center">${badge(a.Status)}</td>
+    <td class="p-3 text-center flex gap-1 justify-center flex-wrap">
+      ${a.Status === 'Pending Review' ? `
+      <button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Approved')" class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Approve & Send</button>
+      <button onclick="openEditEmailReplyModal('${escapeHtml(a.ApprovalID)}')" class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit & Send</button>
+      <button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Skipped')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Skip</button>` : ''}
+    </td>
+  </tr>`;
             }).join('');
         }
 
@@ -12113,7 +12187,11 @@ ${a.Status === 'Pending Review' && !isEmailReply ? `
                 editedTo, editedSubject, editedBody
             }).then(res => {
                 showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
-                if (res.success) { closeEditEmailReplyModal(); loadAgentApprovals(); }
+                if (res.success) {
+                    closeEditEmailReplyModal();
+                    loadAgentApprovals();
+                    if (typeof loadEmailReplyApprovals === 'function') loadEmailReplyApprovals();
+                }
             });
         }
         function skipEditedEmailReply() {
@@ -12158,7 +12236,10 @@ ${a.Status === 'Pending Review' && !isEmailReply ? `
             if (decision === 'Skipped' && !confirm('Skip this reply? Nothing will be sent to the client.')) return;
             executeSecureBridgeCall('agent', 'agent-approve-and-send', { approvalId, decision, reviewedBy: CURRENT_ADMIN_IDENTITY, reviewNotes }).then(res => {
                 showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
-                if (res.success) loadAgentApprovals();
+                if (res.success) {
+                    loadAgentApprovals();
+                    if (typeof loadEmailReplyApprovals === 'function') loadEmailReplyApprovals();
+                }
             });
         }
 
@@ -14053,11 +14134,15 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 document.getElementById('aiConsoleCategory').innerHTML = Object.keys(AI_ACTION_CATALOG).map(c => `<option value="${c}">${c}</option>`).join('');
                 populateAIConsoleActions();
             },
-            'agent-mailboxes': () => { populateAllClientsSelector('mailboxesClientSelector'); },
+            'agent-mailboxes': () => {
+                populateAllClientsSelector('mailboxesClientSelector');
+                if (typeof loadEmailReplyApprovals === 'function') loadEmailReplyApprovals();
+            },
             'agent-scheduling': () => { populateAllClientsSelector('schedulingClientSelector'); },
             'agent-va-clients': loadVAClientsUI,
             'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector'); }
         };
+
         document.addEventListener("DOMContentLoaded", initializeModule);
     </script>
 </body>
