@@ -2934,6 +2934,7 @@
                                     <option value="Pending Review">Pending Review</option>
                                     <option value="Approved">Approved</option>
                                     <option value="Rejected">Rejected</option>
+                                    <option value="Skipped">Skipped</option>
                                 </select>
                                 <button onclick="loadAgentApprovals()"
                                     class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700"><i
@@ -5383,6 +5384,40 @@
         </div>
     </div>
 
+    <div id="modalEditEmailReply"
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <h3 class="text-sm font-bold text-white">Review Reply</h3>
+            <p class="text-xs text-slate-400">Edit the subject or body if needed, then send. Nothing goes to the
+                client until you click Send.</p>
+            <div class="space-y-1">
+                <label class="text-xs text-slate-500">To</label>
+                <input type="text" id="editEmailReplyTo"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs text-slate-500">Subject</label>
+                <input type="text" id="editEmailReplySubject"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs text-slate-500">Body</label>
+                <textarea id="editEmailReplyBody" rows="10"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></textarea>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="closeEditEmailReplyModal()"
+                    class="flex-1 text-xs px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded text-white">Cancel</button>
+                <button onclick="skipEditedEmailReply()"
+                    class="flex-1 text-xs px-3 py-2 bg-red-900 hover:bg-red-800 rounded text-red-200">Skip — Don't
+                    Send</button>
+                <button onclick="submitEditedEmailReply()"
+                    class="flex-1 text-xs px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Send</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL: Create Invoice -->
     <div id="modalCreateInvoice"
         class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
@@ -6574,6 +6609,7 @@
                 approved: ["#eaf3de", "#3b6d11"],
                 processed: ["#e1f5ee", "#0f6e56"],
                 rejected: ["#fcebeb", "#a32d2d"],
+                skipped: ["#f1f5f9", "#475569"],
                 active: ["#e6f1fb", "#185fa5"],
                 verified: ["#eaf3de", "#3b6d11"],
                 "new prospect": ["#fef3c7", "#92400e"],
@@ -12007,17 +12043,26 @@
             else showToast(res.message || 'Failed.', 'error');
         }
 
+        let AGENT_APPROVALS_BY_ID = {};
+
         async function loadAgentApprovals() {
             showTableSkeleton('agentApprovalsTableBody', 7);
             const status = document.getElementById('approvalsStatusFilter')?.value || 'Pending Review';
             const res = await executeSecureBridgeCall('agent', 'agent-get-pending-approvals', { status });
             const tbody = document.getElementById('agentApprovalsTableBody');
+            AGENT_APPROVALS_BY_ID = {};
             if (!res.success || !res.data?.length) { tbody.innerHTML = emptyRow('No approvals found.', 7); return; }
-            tbody.innerHTML = res.data.map(a => `
+            res.data.forEach(a => { AGENT_APPROVALS_BY_ID[a.ApprovalID] = a; });
+            tbody.innerHTML = res.data.map(a => {
+                const isEmailReply = a.DeliverableType === 'Email Reply' || a.DeliverableType === 'Email';
+                let emailPayload = {};
+                if (isEmailReply) { try { emailPayload = a.Payload ? JSON.parse(a.Payload) : {}; } catch (_) { emailPayload = {}; } }
+                return `
   <tr><td class="p-3 font-mono text-slate-500">${escapeHtml(a.ApprovalID)}</td>
   <td class="p-3 font-mono">${escapeHtml(a.ClientID)}</td>
   <td class="p-3">${badge(a.DeliverableType)}</td>
   <td class="p-3">${escapeHtml(a.Title)}
+    ${isEmailReply ? ` — <span class="text-slate-500">to ${escapeHtml(a.RecipientEmail || emailPayload.to || '')}</span>` : ''}
     ${a.DocURL && a.DocURL.startsWith('http') ? ` — <a href="${escapeHtml(a.DocURL)}" target="_blank" class="text-blue-400 underline">download</a>` : ''}
     ${a.GoogleDocURL && a.GoogleDocURL.startsWith('http') ? ` — <a href="${escapeHtml(a.GoogleDocURL)}" target="_blank" class="text-amber-400 underline">edit</a>` : ''}
     ${a.FiledCorrectly === 'Yes' ? '' : (a.FiledCorrectly ? ` <span class="text-red-400 text-[10px]">⚠ ${escapeHtml(a.FiledCorrectly)}</span>` : '')}
@@ -12025,12 +12070,57 @@
   <td class="p-3 text-slate-500">${fmtDate(a.CreatedAt)}</td>
   <td class="p-3 text-center">${badge(a.Status)}</td>
   <td class="p-3 text-center flex gap-1 justify-center">
-${a.Status === 'Pending Review' ? `
+${a.Status === 'Pending Review' && isEmailReply ? `
+<button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Approved')" class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Approve & Send</button>
+<button onclick="openEditEmailReplyModal('${escapeHtml(a.ApprovalID)}')" class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Edit & Send</button>
+<button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Skipped')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Skip</button>` : ''}
+${a.Status === 'Pending Review' && !isEmailReply ? `
 <button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Approved')" class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Approve & Send</button>
 <button onclick="resolveApproval('${escapeHtml(a.ApprovalID)}','Rejected')" class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Reject</button>
 <button onclick="openReplacePendingDocModal('${escapeHtml(a.ApprovalID)}')" class="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Upload Replacement</button>` : ''}
 <button onclick="repairApprovalDelivery('${escapeHtml(a.ApprovalID)}')" class="text-xs px-2 py-1 bg-amber-700 hover:bg-amber-600 rounded text-white">Repair & Resend</button>
-</td></tr>`).join('');
+</td></tr>`;
+            }).join('');
+        }
+
+        let EDIT_EMAIL_REPLY_TARGET = null;
+        function openEditEmailReplyModal(approvalId) {
+            const a = AGENT_APPROVALS_BY_ID[approvalId];
+            if (!a) { showToast('Approval not found — refresh and try again.', 'error'); return; }
+            let p = {};
+            try { p = a.Payload ? JSON.parse(a.Payload) : {}; } catch (_) { p = {}; }
+            EDIT_EMAIL_REPLY_TARGET = approvalId;
+            document.getElementById('editEmailReplyTo').value = a.RecipientEmail || p.to || '';
+            document.getElementById('editEmailReplySubject').value = p.subject || a.Title || '';
+            document.getElementById('editEmailReplyBody').value = p.body || '';
+            document.getElementById('modalEditEmailReply').classList.remove('hidden');
+        }
+        function closeEditEmailReplyModal() {
+            document.getElementById('modalEditEmailReply').classList.add('hidden');
+            EDIT_EMAIL_REPLY_TARGET = null;
+        }
+        function submitEditedEmailReply() {
+            if (!EDIT_EMAIL_REPLY_TARGET) return;
+            const editedTo = document.getElementById('editEmailReplyTo').value.trim();
+            const editedSubject = document.getElementById('editEmailReplySubject').value.trim();
+            const editedBody = document.getElementById('editEmailReplyBody').value;
+            if (!editedTo || !editedSubject || !editedBody.trim()) {
+                showToast('To, subject, and body are all required.', 'error');
+                return;
+            }
+            executeSecureBridgeCall('agent', 'agent-approve-and-send', {
+                approvalId: EDIT_EMAIL_REPLY_TARGET, decision: 'Approved', reviewedBy: CURRENT_ADMIN_IDENTITY,
+                editedTo, editedSubject, editedBody
+            }).then(res => {
+                showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+                if (res.success) { closeEditEmailReplyModal(); loadAgentApprovals(); }
+            });
+        }
+        function skipEditedEmailReply() {
+            if (!EDIT_EMAIL_REPLY_TARGET) return;
+            const target = EDIT_EMAIL_REPLY_TARGET;
+            closeEditEmailReplyModal();
+            resolveApproval(target, 'Skipped');
         }
 
         let REPLACE_PENDING_DOC_TARGET = null;
@@ -12065,6 +12155,7 @@ ${a.Status === 'Pending Review' ? `
 
         function resolveApproval(approvalId, decision) {
             const reviewNotes = decision === 'Rejected' ? (prompt('Reason for rejection (optional):') || '') : '';
+            if (decision === 'Skipped' && !confirm('Skip this reply? Nothing will be sent to the client.')) return;
             executeSecureBridgeCall('agent', 'agent-approve-and-send', { approvalId, decision, reviewedBy: CURRENT_ADMIN_IDENTITY, reviewNotes }).then(res => {
                 showToast(res.success ? res.message : (res.message || 'Failed.'), res.success ? 'success' : 'error');
                 if (res.success) loadAgentApprovals();
@@ -13967,7 +14058,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             'agent-va-clients': loadVAClientsUI,
             'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector'); }
         };
-
         document.addEventListener("DOMContentLoaded", initializeModule);
     </script>
 </body>
