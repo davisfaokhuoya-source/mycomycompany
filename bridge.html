@@ -3589,9 +3589,9 @@
                         <div class="flex justify-between items-center shrink-0 flex-wrap gap-2">
                             <div>
                                 <h3 class="text-lg font-bold text-white">WhatsApp</h3>
-                                <p class="text-xs text-slate-400">Multi-number lines (up to 10), departments for
-                                    handoff,
-                                    agent vs team roles, Embedded Signup, activity (7 days), and weekly stats.</p>
+                                <p class="text-xs text-slate-400">One Cloud API inbox per client + up to 10 linked staff
+                                    WhatsApp numbers for referrals. Embedded Signup, activity (7 days), weekly stats.
+                                </p>
                             </div>
                             <div class="flex gap-2 flex-wrap">
                                 <select id="whatsappClientSelector" onchange="onWhatsAppClientChanged()"
@@ -3615,9 +3615,10 @@
 
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 shrink-0">
                             <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
-                                <p class="text-[10px] font-mono uppercase text-slate-500">Number limit</p>
+                                <p class="text-[10px] font-mono uppercase text-slate-500">Max team referral numbers
+                                    (0–10)</p>
                                 <div class="flex gap-2 items-center">
-                                    <input type="number" id="waMaxNumbersInput" min="0" max="10" value="1"
+                                    <input type="number" id="waMaxNumbersInput" min="0" max="10" value="3"
                                         class="w-20 bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white" />
                                     <button onclick="saveWhatsAppNumbersLimit()"
                                         class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">Save</button>
@@ -13747,58 +13748,75 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 return;
             }
             tbody.innerHTML = '<tr><td class="p-2 text-slate-500" colspan="5">Loading…</td></tr>';
-            const res = await executeSecureBridgeCall('agent', 'agent-list-whatsapp-connections', { clientId }, { silent: true });
-            if (!res.success) {
-                tbody.innerHTML = `<tr><td class="p-2 text-red-400" colspan="5">${escapeHtml(res.message || 'Failed')}</td></tr>`;
-                return;
+            const [apiRes, teamRes] = await Promise.all([
+                executeSecureBridgeCall('agent', 'agent-list-whatsapp-connections', { clientId }, { silent: true }),
+                executeSecureBridgeCall('agent', 'agent-list-whatsapp-team-links', { clientId }, { silent: true })
+            ]);
+            const apiRows = (apiRes.success && apiRes.connections) ? apiRes.connections.filter(w => {
+                const s = String(w.status || '').toLowerCase();
+                return s !== 'disconnected' && s !== 'pending';
+            }) : [];
+            const teamRows = (teamRes.success && teamRes.links) ? teamRes.links : [];
+            if (usage) usage.textContent = 'API: ' + apiRows.length + '/1 · Team links: ' + (teamRes.used || teamRows.length) + '/' + (teamRes.limit || '—');
+
+            let html = '';
+            if (apiRows.length) {
+                apiRows.forEach(w => {
+                    const id = w.whatsAppId || w.WhatsAppID;
+                    html += `<tr class="bg-emerald-950/20">
+                      <td class="p-2"><div class="text-white">${escapeHtml(w.label || 'API inbox')}</div>
+                        <div class="text-slate-500 text-[10px]">${escapeHtml(w.displayPhoneNumber || w.phoneNumberId || '')}</div></td>
+                      <td class="p-2 text-emerald-400 text-[11px]" colspan="2">Cloud API (agent reads &amp; replies)</td>
+                      <td class="p-2 text-center text-slate-400">${escapeHtml(w.status || '—')}</td>
+                      <td class="p-2 text-center">
+                        <button onclick="disconnectWhatsAppAdmin('${escapeHtml(id)}')"
+                          class="text-[10px] px-2 py-1 bg-red-900/50 hover:bg-red-900 rounded text-red-200">Disconnect API</button>
+                      </td>
+                    </tr>`;
+                });
+            } else {
+                html += '<tr><td class="p-2 text-slate-600" colspan="5">No API number — use Embedded Signup or Manual Connect.</td></tr>';
             }
-            const rows = res.connections || [];
-            const used = rows.filter(w => String(w.status || w.Status || '').toLowerCase() !== 'disconnected' && String(w.status || w.Status || '').toLowerCase() !== 'pending').length;
-            if (usage) usage.textContent = used + ' active number(s)';
-            if (!rows.length) {
-                tbody.innerHTML = '<tr><td class="p-2 text-slate-600" colspan="5">No WhatsApp numbers connected.</td></tr>';
-                return;
+            if (teamRows.length) {
+                teamRows.forEach(w => {
+                    html += `<tr>
+                      <td class="p-2"><div class="text-white">${escapeHtml(w.label || w.contactName || 'Team')}</div>
+                        <div class="text-slate-500 text-[10px]">+${escapeHtml(w.phoneE164 || '')}</div></td>
+                      <td class="p-2">
+                        <select onchange="updateTeamLinkDeptAdmin('${escapeHtml(w.linkId)}', this.value)"
+                          class="bg-slate-900 border border-slate-800 rounded px-1 py-1 text-[11px] text-white">
+                          ${['general', 'sales', 'admin', 'support', 'billing', 'operations'].map(d =>
+                        `<option value="${d}" ${d === (w.department || 'general') ? 'selected' : ''}>${d}</option>`).join('')}
+                        </select>
+                      </td>
+                      <td class="p-2 text-amber-300 text-[11px]">Team referral link</td>
+                      <td class="p-2 text-center text-slate-400">${escapeHtml(w.status || 'Active')}</td>
+                      <td class="p-2 text-center">
+                        <button onclick="removeTeamLinkAdmin('${escapeHtml(w.linkId)}')"
+                          class="text-[10px] px-2 py-1 bg-red-900/50 hover:bg-red-900 rounded text-red-200">Remove</button>
+                      </td>
+                    </tr>`;
+                });
+            } else {
+                html += '<tr><td class="p-2 text-slate-600" colspan="5">No team referral numbers linked yet.</td></tr>';
             }
-            tbody.innerHTML = rows.map(w => {
-                const id = w.whatsAppId || w.WhatsAppID;
-                const dept = w.department || w.Department || 'general';
-                const role = w.lineRole || w.LineRole || 'agent_line';
-                const label = w.label || w.Label || 'WhatsApp';
-                const phone = w.displayPhoneNumber || w.DisplayPhoneNumber || w.phoneNumberId || w.PhoneNumberId || '—';
-                const status = w.status || w.Status || '—';
-                return `<tr>
-                  <td class="p-2"><div class="text-white">${escapeHtml(label)}</div><div class="text-slate-500 text-[10px]">${escapeHtml(phone)}</div></td>
-                  <td class="p-2">
-                    <select onchange="updateWhatsAppLineMetaAdmin('${escapeHtml(id)}', this.value, null)"
-                      class="bg-slate-900 border border-slate-800 rounded px-1 py-1 text-[11px] text-white">
-                      ${['general', 'sales', 'admin', 'support', 'billing', 'operations'].map(d =>
-                    `<option value="${d}" ${d === dept ? 'selected' : ''}>${d}</option>`).join('')}
-                    </select>
-                  </td>
-                  <td class="p-2">
-                    <select onchange="updateWhatsAppLineMetaAdmin('${escapeHtml(id)}', null, this.value)"
-                      class="bg-slate-900 border border-slate-800 rounded px-1 py-1 text-[11px] text-white">
-                      <option value="agent_line" ${role === 'agent_line' ? 'selected' : ''}>agent_line</option>
-                      <option value="team_line" ${role === 'team_line' ? 'selected' : ''}>team_line</option>
-                    </select>
-                  </td>
-                  <td class="p-2 text-center text-slate-400">${escapeHtml(status)}</td>
-                  <td class="p-2 text-center">
-                    <button onclick="disconnectWhatsAppAdmin('${escapeHtml(id)}')"
-                      class="text-[10px] px-2 py-1 bg-red-900/50 hover:bg-red-900 rounded text-red-200">Disconnect</button>
-                  </td>
-                </tr>`;
-            }).join('');
+            tbody.innerHTML = html;
         }
 
-        async function updateWhatsAppLineMetaAdmin(whatsAppId, department, lineRole) {
+        async function updateTeamLinkDeptAdmin(linkId, department) {
             const clientId = document.getElementById('whatsappClientSelector')?.value;
-            if (!clientId || !whatsAppId) return;
-            const payload = { clientId, whatsAppId };
-            if (department) payload.department = department;
-            if (lineRole) payload.lineRole = lineRole;
-            const res = await executeSecureBridgeCall('agent', 'agent-set-whatsapp-line-meta', payload, { silent: true });
-            showToast(res.success ? 'Line updated.' : (res.message || 'Failed'), res.success ? 'success' : 'error');
+            if (!clientId || !linkId) return;
+            const res = await executeSecureBridgeCall('agent', 'agent-update-whatsapp-team-link', { clientId, linkId, department }, { silent: true });
+            showToast(res.success ? 'Team link updated.' : (res.message || 'Failed'), res.success ? 'success' : 'error');
+        }
+
+        async function removeTeamLinkAdmin(linkId) {
+            const clientId = document.getElementById('whatsappClientSelector')?.value;
+            if (!clientId || !linkId) return;
+            if (!confirm('Remove this team WhatsApp link?')) return;
+            const res = await executeSecureBridgeCall('agent', 'agent-remove-whatsapp-team-link', { clientId, linkId }, { silent: true });
+            showToast(res.message || (res.success ? 'Removed.' : 'Failed'), res.success ? 'success' : 'error');
+            if (res.success) loadWhatsAppNumbersAdmin();
         }
 
         async function disconnectWhatsAppAdmin(whatsAppId) {
