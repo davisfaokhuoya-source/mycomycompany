@@ -1,5 +1,5 @@
 // ====================== 1. CONFIG ======================
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbx4Ftqr-C_OOMQxqvVi5r_WEHBEhXDx21m8cDada3B9wdU7G5lnr316qtLy9dPYINMg/exec";
+const WEBAPP_URL = "https://api.thevictorias.com.ng";
 
 // ====================== 2. NAVBAR ======================
 function navbar() {
