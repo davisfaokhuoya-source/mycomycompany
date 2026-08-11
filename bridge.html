@@ -3589,22 +3589,23 @@
                         <div class="flex justify-between items-center shrink-0 flex-wrap gap-2">
                             <div>
                                 <h3 class="text-lg font-bold text-white">WhatsApp</h3>
-                                <p class="text-xs text-slate-400">One Cloud API inbox per client + up to 10 linked staff
-                                    WhatsApp numbers for referrals. Embedded Signup, activity (7 days), weekly stats.
-                                </p>
+                                <p class="text-xs text-slate-400">Add multiple Cloud API numbers (+) for a client, plus
+                                    up to 10 staff
+                                    WhatsApp links for referrals. Clients can revoke API numbers and filter activity by
+                                    line.</p>
                             </div>
                             <div class="flex gap-2 flex-wrap">
                                 <select id="whatsappClientSelector" onchange="onWhatsAppClientChanged()"
                                     class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white min-w-[200px]">
                                     <option value="">Select a client…</option>
                                 </select>
+                                <button onclick="openConnectWhatsAppModal()" title="Add another Cloud API number"
+                                    class="bg-green-700 hover:bg-green-600 text-xs text-white font-medium py-1.5 px-3 rounded shadow flex items-center gap-1">
+                                    <i class="fa-solid fa-plus"></i> Add API number
+                                </button>
                                 <button onclick="generateWhatsAppSignupLinkAdmin()"
                                     class="bg-emerald-700 hover:bg-emerald-600 text-xs text-white font-medium py-1.5 px-3 rounded shadow flex items-center gap-1">
                                     <i class="fa-solid fa-link"></i> Embedded Signup Link
-                                </button>
-                                <button onclick="openConnectWhatsAppModal()"
-                                    class="bg-green-700 hover:bg-green-600 text-xs text-white font-medium py-1.5 px-3 rounded shadow flex items-center gap-1">
-                                    <i class="fa-brands fa-whatsapp"></i> Manual Connect
                                 </button>
                                 <button onclick="testWhatsAppPipelineAdmin()"
                                     class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded shadow flex items-center gap-1">
@@ -3615,13 +3616,22 @@
 
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 shrink-0">
                             <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
-                                <p class="text-[10px] font-mono uppercase text-slate-500">Max team referral numbers
-                                    (0–10)</p>
-                                <div class="flex gap-2 items-center">
-                                    <input type="number" id="waMaxNumbersInput" min="0" max="10" value="3"
-                                        class="w-20 bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white" />
+                                <p class="text-[10px] font-mono uppercase text-slate-500">Limits</p>
+                                <div class="flex flex-wrap gap-2 items-center">
+                                    <label class="text-[10px] text-slate-500">API max
+                                        <input type="number" id="waMaxApiInput" min="1" max="10" value="3"
+                                            class="ml-1 w-14 bg-slate-900 border border-slate-800 rounded px-1.5 py-1 text-xs text-white" />
+                                    </label>
+                                    <button onclick="saveWhatsAppApiLimit()"
+                                        class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-white">Save
+                                        API</button>
+                                    <label class="text-[10px] text-slate-500">Team max
+                                        <input type="number" id="waMaxNumbersInput" min="0" max="10" value="3"
+                                            class="ml-1 w-14 bg-slate-900 border border-slate-800 rounded px-1.5 py-1 text-xs text-white" />
+                                    </label>
                                     <button onclick="saveWhatsAppNumbersLimit()"
-                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">Save</button>
+                                        class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-white">Save
+                                        team</button>
                                     <span id="waNumbersUsageLabel" class="text-[11px] text-slate-400"></span>
                                 </div>
                             </div>
@@ -13757,7 +13767,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 return s !== 'disconnected' && s !== 'pending';
             }) : [];
             const teamRows = (teamRes.success && teamRes.links) ? teamRes.links : [];
-            if (usage) usage.textContent = 'API: ' + apiRows.length + '/1 · Team links: ' + (teamRes.used || teamRows.length) + '/' + (teamRes.limit || '—');
+            if (usage) usage.textContent = 'API: ' + apiRows.length + ' · Team links: ' + (teamRes.used || teamRows.length) + '/' + (teamRes.limit || '—');
 
             let html = '';
             if (apiRows.length) {
@@ -13834,6 +13844,15 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             const maxNumbers = parseInt(document.getElementById('waMaxNumbersInput').value, 10);
             const res = await executeSecureBridgeCall('agent', 'agent-set-whatsapp-numbers-limit', { clientId, maxNumbers });
             showToast(res.message || (res.success ? 'Limit saved.' : 'Failed'), res.success ? 'success' : 'error');
+            if (res.success) loadWhatsAppNumbersAdmin();
+        }
+
+        async function saveWhatsAppApiLimit() {
+            const clientId = document.getElementById('whatsappClientSelector')?.value;
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            const maxApiNumbers = parseInt(document.getElementById('waMaxApiInput').value, 10);
+            const res = await executeSecureBridgeCall('agent', 'agent-set-whatsapp-api-limit', { clientId, maxApiNumbers });
+            showToast(res.message || (res.success ? 'API limit saved.' : 'Failed'), res.success ? 'success' : 'error');
             if (res.success) loadWhatsAppNumbersAdmin();
         }
 
