@@ -852,25 +852,27 @@
         // BRIDGE CALL — same wire format the admin dashboard uses, just against
         // the "clientportal" system with the client's own session token.
         // =====================================================================
-        async function callGateway(system, action, extra = {}) {
-            if (!GW_URL) { showLoginError('Missing Gateway URL.'); return { success: false }; }
+        async function callGateway(system, action, extra = {}, signal) {
+            if (!GW_URL) { showLoginError('Missing Gateway URL.'); return { success: false, message: 'Missing Gateway URL.' }; }
             try {
                 const body = { system, action, token: SESSION_TOKEN, clientId: CLIENT_ID, ...extra };
-                const res = await fetch(GW_URL, {
+                const fetchOpts = {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(body),
                     redirect: 'follow'
-                });
+                };
+                if (signal) fetchOpts.signal = signal;
+                const res = await fetch(GW_URL, fetchOpts);
                 const text = await res.text();
                 const jsonStart = text.indexOf('{');
                 return JSON.parse(jsonStart !== -1 ? text.substring(jsonStart) : text || '{}');
             } catch (e) {
+                if (e && e.name === 'AbortError') throw e;
                 console.error(e);
                 return { success: false, message: 'Connection error: ' + e.toString() };
             }
         }
-
         function escapeHtml(str) {
             return String(str ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
         }
@@ -1132,52 +1134,119 @@
         /** Approves sending a reference document (e.g. a receipt) — this is the client's own
          *  explicit send action, and it uses one email credit from the plan. */
         async function approveDocumentSend(queueId, btnEl) {
-            if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Sending…'; }
-            const res = await callGateway('clientportal', 'clientPortalApproveDocumentSend', { queueId });
-            if (res.success) {
-                showToast ? showToast(res.message || 'Sent.', 'success') : alert(res.message || 'Sent.');
-                loadDocuments();
-            } else {
-                if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Approve & Send (1 email)'; }
-                showToast ? showToast(res.message || 'Send failed.', 'error') : alert(res.message || 'Send failed.');
+            if (btnEl) {
+                if (btnEl.dataset.origHtml === undefined) btnEl.dataset.origHtml = btnEl.innerHTML;
+                btnEl.disabled = true;
+                btnEl.innerHTML = '<span class="ai-spinner"></span>Sending…';
+            }
+            try {
+                const res = await Promise.race([
+                    callGateway('clientportal', 'clientPortalApproveDocumentSend', { queueId }),
+                    new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Timed out — the email may still have been sent. Refresh My Documents.')), 90000)
+                    )
+                ]);
+                if (res && res.success) {
+                    if (typeof showToast === 'function') showToast(res.message || 'Sent.', 'success');
+                    else alert(res.message || 'Sent.');
+                    loadDocuments();
+                } else {
+                    const msg = (res && res.message) || 'Send failed.';
+                    if (typeof showToast === 'function') showToast(msg, 'error');
+                    else alert(msg);
+                }
+            } catch (e) {
+                const msg = e && e.message ? e.message : String(e);
+                if (typeof showToast === 'function') showToast(msg, 'error');
+                else alert(msg);
+            } finally {
+                if (btnEl) {
+                    btnEl.disabled = false;
+                    btnEl.innerHTML = btnEl.dataset.origHtml || 'Approve & Send (1 email)';
+                    delete btnEl.dataset.origHtml;
+                }
             }
         }
-
         /** Lets the client send any of their own available documents out to a recipient
          *  they choose, with their own subject and message — separate from the
          *  Approve & Send flow above, which only fires reference docs to the client's
          *  own saved contact. Opens a small compose modal. */
         let SEND_DOC_TARGET = null;
+
         function openSendDocumentModal(docId, title) {
             SEND_DOC_TARGET = docId;
             document.getElementById('sendDocTitle').textContent = title || 'this document';
             document.getElementById('sendDocTo').value = '';
             document.getElementById('sendDocSubject').value = title ? `${title}` : 'Document from The Victorias Ltd';
             document.getElementById('sendDocBody').value = `Hi,\n\nPlease find ${title || 'the attached document'} enclosed.\n\nBest regards,`;
+            const openBtn = document.getElementById('sendDocSubmitBtn');
+            if (openBtn) {
+                openBtn.disabled = false;
+                openBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send';
+            }
             document.getElementById('modalSendDocument').classList.remove('hidden');
         }
         function closeSendDocumentModal() {
             document.getElementById('modalSendDocument').classList.add('hidden');
             SEND_DOC_TARGET = null;
+            const closeBtn = document.getElementById('sendDocSubmitBtn');
+            if (closeBtn) {
+                closeBtn.disabled = false;
+                closeBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send';
+            }
         }
         async function submitSendDocument() {
             const to = document.getElementById('sendDocTo').value.trim();
             const subject = document.getElementById('sendDocSubject').value.trim();
             const body = document.getElementById('sendDocBody').value.trim();
-            if (!to) { showToast ? showToast('Recipient email is required.', 'error') : alert('Recipient email is required.'); return; }
+            if (!to) {
+                if (typeof showToast === 'function') showToast('Recipient email is required.', 'error');
+                else alert('Recipient email is required.');
+                return;
+            }
             if (!SEND_DOC_TARGET) { closeSendDocumentModal(); return; }
 
             const btn = document.getElementById('sendDocSubmitBtn');
-            if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ai-spinner"></span>Sending…'; }
-            const res = await callGateway('clientportal', 'clientPortalSendDocument', { docId: SEND_DOC_TARGET, to, subject, body });
-            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send'; }
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="ai-spinner"></span>Sending…';
+            }
 
-            if (res.success) {
-                showToast ? showToast(res.message || 'Sent.', 'success') : alert(res.message || 'Sent.');
-                closeSendDocumentModal();
-                loadDocuments();
-            } else {
-                showToast ? showToast(res.message || 'Send failed.', 'error') : alert(res.message || 'Send failed.');
+            const timeoutMs = 90000;
+            try {
+                const res = await Promise.race([
+                    callGateway('clientportal', 'clientPortalSendDocument', {
+                        docId: SEND_DOC_TARGET, to, subject, body
+                    }),
+                    new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error(
+                            'Send timed out after ' + (timeoutMs / 1000) +
+                            's. The email may still have gone out — check the recipient and refresh My Documents.'
+                        )), timeoutMs)
+                    )
+                ]);
+
+                if (res && res.success) {
+                    if (typeof showToast === 'function') showToast(res.message || 'Sent.', 'success');
+                    else alert(res.message || 'Sent.');
+                    closeSendDocumentModal();
+                    if (typeof loadDocuments === 'function') loadDocuments();
+                } else {
+                    const msg = (res && res.message) || 'Send failed.';
+                    if (typeof showToast === 'function') showToast(msg, 'error');
+                    else alert(msg);
+                }
+            } catch (e) {
+                const msg = (e && e.name === 'AbortError')
+                    ? 'Send timed out. The email may still have been delivered — refresh My Documents or check with the recipient.'
+                    : ('Send error: ' + (e && e.message ? e.message : String(e)));
+                if (typeof showToast === 'function') showToast(msg, 'error');
+                else alert(msg);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send';
+                }
             }
         }
 
