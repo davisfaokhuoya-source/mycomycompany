@@ -324,6 +324,115 @@
                         </div>
                     </div>
 
+                    <!-- Channel work: email + WhatsApp visibility -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+                            <div class="flex items-center justify-between gap-2">
+                                <p class="text-sm font-semibold text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-envelope text-emerald-400"></i> Email agent work
+                                </p>
+                                <button type="button"
+                                    onclick="showView('emailactivity', document.querySelector('.nav-link[data-view=emailactivity]'))"
+                                    class="text-[10px] text-emerald-400 hover:text-emerald-300">Open mailbox →</button>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-center">
+                                <div class="bg-slate-950 border border-slate-800 rounded-lg p-2">
+                                    <p id="ovEmailInbound" class="text-lg font-bold text-white">—</p>
+                                    <p class="text-[9px] uppercase text-slate-500">Handled (page)</p>
+                                </div>
+                                <div class="bg-slate-950 border border-slate-800 rounded-lg p-2">
+                                    <p id="ovEmailReplied" class="text-lg font-bold text-emerald-400">—</p>
+                                    <p class="text-[9px] uppercase text-slate-500">Replied / sent</p>
+                                </div>
+                                <div class="bg-slate-950 border border-slate-800 rounded-lg p-2">
+                                    <p id="ovEmailPending" class="text-lg font-bold text-amber-400">—</p>
+                                    <p class="text-[9px] uppercase text-slate-500">Needs approval</p>
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-slate-500">Plan quota: <span id="ovEmailQuota"
+                                    class="text-slate-300">—</span>. The agent reads inbound mail, classifies, drafts or
+                                auto-sends routine replies, and escalates appointments.</p>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+                            <div class="flex items-center justify-between gap-2">
+                                <p class="text-sm font-semibold text-white flex items-center gap-2">
+                                    <i class="fa-brands fa-whatsapp text-emerald-400"></i> WhatsApp agent work
+                                </p>
+                                <button type="button"
+                                    onclick="showView('whatsappactivity', document.querySelector('.nav-link[data-view=whatsappactivity]'))"
+                                    class="text-[10px] text-emerald-400 hover:text-emerald-300">Open WhatsApp →</button>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-center">
+                                <div class="bg-slate-950 border border-slate-800 rounded-lg p-2">
+                                    <p id="ovWaInbound" class="text-lg font-bold text-white">—</p>
+                                    <p class="text-[9px] uppercase text-slate-500">Inbound (7d)</p>
+                                </div>
+                                <div class="bg-slate-950 border border-slate-800 rounded-lg p-2">
+                                    <p id="ovWaReplied" class="text-lg font-bold text-emerald-400">—</p>
+                                    <p class="text-[9px] uppercase text-slate-500">Agent replied</p>
+                                </div>
+                                <div class="bg-slate-950 border border-slate-800 rounded-lg p-2">
+                                    <p id="ovWaHandoff" class="text-lg font-bold text-amber-400">—</p>
+                                    <p class="text-[9px] uppercase text-slate-500">Team handoffs</p>
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-slate-500">Numbers: <span id="ovWaNumbers"
+                                    class="text-slate-300">—</span>. Connect extra lines under Integrations and assign
+                                departments so the agent can route serious chats to your team.</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-semibold text-white flex items-center gap-2">
+                                    <i class="fa-brands fa-whatsapp text-green-400"></i> WhatsApp numbers &amp; linking
+                                </p>
+                                <p class="text-[11px] text-slate-500 mt-1 max-w-xl">Link up to the number of lines your
+                                    plan allows (admin can raise this to 10). First line is usually the AI agent; extra
+                                    lines can be team handoff lines by department.</p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" onclick="clientConnectWhatsApp()"
+                                    class="text-xs px-3 py-1.5 bg-green-700 hover:bg-green-600 rounded text-white">
+                                    <i class="fa-solid fa-plus"></i> Connect WhatsApp number
+                                </button>
+                                <button type="button"
+                                    onclick="showView('integrations', document.querySelector('.nav-link[data-view=integrations]'))"
+                                    class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">Manage
+                                    all lines</button>
+                            </div>
+                        </div>
+                        <p id="ovWaConnectHint" class="hidden text-[11px] text-emerald-300 break-all"></p>
+                        <div id="ovWaNumbersList" class="space-y-2 text-xs text-slate-400">Loading numbers…</div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+                        <p class="text-sm font-semibold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-route text-emerald-400"></i> When the agent refers a chat to your team
+                        </p>
+                        <p class="text-[11px] text-slate-400 leading-relaxed">Your AI agent answers routine questions on
+                            <span class="text-slate-200">agent lines</span>. It hands the conversation to one of your
+                            linked <span class="text-slate-200">team lines</span> (by department) when any of these
+                            apply:</p>
+                        <ul class="text-[11px] text-slate-400 space-y-1.5 list-disc pl-5">
+                            <li><span class="text-slate-200">Serious buyer / high intent</span> — ready to purchase,
+                                request a quote with budget, or book a paid engagement.</li>
+                            <li><span class="text-slate-200">Appointment / demo request</span> — wants a call, meeting,
+                                or site visit that needs a human calendar.</li>
+                            <li><span class="text-slate-200">Complaint or sensitive matter</span> — billing disputes,
+                                legal, safety, or reputation risk.</li>
+                            <li><span class="text-slate-200">Explicit human request</span> — “speak to someone”, “call
+                                me”, “transfer to sales/support”.</li>
+                            <li><span class="text-slate-200">Agent uncertainty</span> — the request is outside policy,
+                                needs a decision only your staff can make, or the AI is not confident.</li>
+                        </ul>
+                        <p class="text-[11px] text-slate-500">Routing uses the <span
+                                class="text-slate-300">department</span> on each team line (sales, support, billing,
+                            admin, operations). If no matching department is linked, the agent uses any available team
+                            line. Assign departments under Integrations after you connect numbers.</p>
+                    </div>
+
                     <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
                         <div class="flex justify-between items-center mb-3">
                             <p class="text-xs font-mono uppercase text-slate-500 tracking-wide">Self-Service Documents
@@ -713,15 +822,54 @@
 
                 <!-- WHATSAPP ACTIVITY -->
                 <section id="view-whatsappactivity" class="view flex-1 h-full flex-col overflow-hidden space-y-4">
-                    <div class="flex justify-between items-center shrink-0">
-                        <p class="text-xs text-slate-400 max-w-2xl">Inbound WhatsApp messages the agent has handled on
-                            your connected number(s), and the reply it sent (or drafted). Newest first.</p>
-                        <button onclick="loadWhatsAppActivity(1)"
-                            class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white shrink-0">
-                            <i class="fa-solid fa-rotate"></i> Refresh
-                        </button>
+                    <div class="flex justify-between items-center shrink-0 flex-wrap gap-2">
+                        <p class="text-xs text-slate-400 max-w-2xl">Inbound WhatsApp the agent handled on your linked
+                            number(s), replies, and team handoffs. Newest first.</p>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="clientConnectWhatsApp()"
+                                class="text-xs px-3 py-1.5 bg-green-700 hover:bg-green-600 rounded text-white shrink-0">
+                                <i class="fa-solid fa-plus"></i> Link number
+                            </button>
+                            <button onclick="loadWhatsAppActivity(1); loadWhatsAppActivityHeaderStats();"
+                                class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white shrink-0">
+                                <i class="fa-solid fa-rotate"></i> Refresh
+                            </button>
+                        </div>
                     </div>
-                    <div class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 shrink-0">
+                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-3 text-center">
+                            <p id="waActInbound" class="text-lg font-bold text-white">—</p>
+                            <p class="text-[9px] uppercase text-slate-500">Inbound 7d</p>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-3 text-center">
+                            <p id="waActReplied" class="text-lg font-bold text-emerald-400">—</p>
+                            <p class="text-[9px] uppercase text-slate-500">Replied</p>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-3 text-center">
+                            <p id="waActHandoff" class="text-lg font-bold text-amber-400">—</p>
+                            <p class="text-[9px] uppercase text-slate-500">Handoffs</p>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-3 text-center">
+                            <p id="waActNumbers" class="text-lg font-bold text-white">—</p>
+                            <p class="text-[9px] uppercase text-slate-500">Numbers linked</p>
+                        </div>
+                    </div>
+                    <details class="bg-slate-900 border border-slate-800 rounded-xl p-3 shrink-0">
+                        <summary class="text-xs font-semibold text-white cursor-pointer">When does the agent refer to my
+                            team WhatsApp?</summary>
+                        <ul class="mt-2 text-[11px] text-slate-400 space-y-1 list-disc pl-5">
+                            <li>Serious buyer / purchase intent or quote with budget</li>
+                            <li>Appointment, demo, or call request</li>
+                            <li>Complaints, billing disputes, sensitive topics</li>
+                            <li>Customer asks for a human or a specific department</li>
+                            <li>Outside agent policy or low AI confidence</li>
+                        </ul>
+                        <p class="mt-2 text-[11px] text-slate-500">Handoffs go to a <strong
+                                class="text-slate-300">team_line</strong> number matching the department (sales,
+                            support, billing…). Set roles under Integrations.</p>
+                    </details>
+                    <div
+                        class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar min-h-0">
                         <table class="w-full text-left border-collapse text-xs">
                             <thead
                                 class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
@@ -971,7 +1119,8 @@
             if (name === 'social') loadSocialCalendar();
             if (name === 'appointments') loadAppointments();
             if (name === 'emailactivity') loadEmailActivity(1);
-            if (name === 'whatsappactivity') loadWhatsAppActivity(1);
+            if (name === 'whatsappactivity') { loadWhatsAppActivity(1); loadWhatsAppActivityHeaderStats(); }
+            if (name === 'overview') loadOverview();
             if (name === 'integrations') loadIntegrationsPanel();
             if (name === 'donate') prefillDonationForm();
             if (name === 'billing') {
@@ -1066,6 +1215,13 @@
                 <span class="text-slate-500 text-[10px]">${fmtDate(d.createdAt)}</span>
             </div>
         `).join('') : '<p class="text-slate-600">No documents yet.</p>';
+
+                const eq = document.getElementById('ovEmailQuota');
+                if (eq) {
+                    const eu = u.emailsUsed || 0;
+                    const el = lim.emails;
+                    eq.textContent = (el === 999 || el === undefined) ? (eu + ' sent / Unlimited') : (eu + ' / ' + el + ' sent this period');
+                }
             } catch (e) {
                 // [NEW] A thrown error here used to abort silently mid-function,
                 // leaving every stat frozen on its placeholder markup with no
@@ -1073,6 +1229,75 @@
                 console.error('loadOverview render error:', e);
                 const list = document.getElementById('recentDocsList');
                 if (list) list.innerHTML = `<p class="text-red-400">Couldn't render dashboard data: ${escapeHtml(e.message || e.toString())}</p>`;
+            }
+
+            // Channel activity (best-effort; does not block main dashboard)
+            loadOverviewChannelStats();
+        }
+
+        async function loadOverviewChannelStats() {
+            try {
+                const emailRes = await callGateway('clientportal', 'clientPortalGetEmailActivity', { page: 1 });
+                if (emailRes && emailRes.success) {
+                    const items = emailRes.activity || emailRes.records || emailRes.items || [];
+                    let replied = 0, pending = 0;
+                    items.forEach(function (m) {
+                        const s = String(m.Status || m.status || m.Action || '').toLowerCase();
+                        if (s.indexOf('sent') !== -1 || s.indexOf('repli') !== -1 || s.indexOf('auto') !== -1) replied++;
+                        if (s.indexOf('pending') !== -1 || s.indexOf('approval') !== -1 || s.indexOf('draft') !== -1) pending++;
+                    });
+                    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+                    set('ovEmailInbound', items.length ? String(items.length) : (emailRes.total != null ? String(emailRes.total) : '0'));
+                    set('ovEmailReplied', String(replied));
+                    set('ovEmailPending', String(pending));
+                }
+            } catch (_) { }
+
+            try {
+                const wa = await callGateway('clientportal', 'clientPortalGetWhatsAppWeeklyReport', {});
+                if (wa && wa.success) {
+                    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+                    set('ovWaInbound', String(wa.inbound || 0));
+                    set('ovWaReplied', String(wa.replied || 0));
+                    set('ovWaHandoff', String(wa.handedOff || 0));
+                    set('ovWaNumbers', (wa.numbersUsed || 0) + ' / ' + (wa.numbersLimit || 0) + ' linked');
+                }
+            } catch (_) { }
+
+            try {
+                const listRes = await callGateway('clientportal', 'clientPortalListWhatsAppNumbers', {});
+                const box = document.getElementById('ovWaNumbersList');
+                if (!box) return;
+                if (!listRes.success) {
+                    box.innerHTML = `<p class="text-red-400">${escapeHtml(listRes.message || 'Could not load numbers.')}</p>`;
+                    return;
+                }
+                const conns = listRes.connections || [];
+                if (document.getElementById('ovWaNumbers') && listRes.limit != null) {
+                    document.getElementById('ovWaNumbers').textContent = (listRes.used || 0) + ' / ' + (listRes.limit || 0) + ' linked';
+                }
+                if (!conns.length) {
+                    box.innerHTML = '<p class="text-slate-600">No WhatsApp numbers linked yet. Click <strong class="text-slate-300">Connect WhatsApp number</strong> to open Meta Embedded Signup (uses one slot of your allowance).</p>';
+                    return;
+                }
+                box.innerHTML = conns.map(function (w) {
+                    const role = (w.lineRole || 'agent_line') === 'team_line' ? 'Team handoff' : 'AI agent';
+                    const dept = w.department || 'general';
+                    return `<div class="flex flex-wrap items-center justify-between gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+                        <div>
+                            <span class="text-slate-200 font-medium">${escapeHtml(w.label || w.displayPhoneNumber || w.whatsAppId || 'WhatsApp')}</span>
+                            <span class="text-slate-500 text-[10px] ml-2">${escapeHtml(w.displayPhoneNumber || w.phoneNumberId || '')}</span>
+                        </div>
+                        <div class="flex gap-2 text-[10px]">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 uppercase">${escapeHtml(dept)}</span>
+                            <span class="px-1.5 py-0.5 rounded ${role === 'Team handoff' ? 'bg-amber-900/40 text-amber-300' : 'bg-emerald-900/40 text-emerald-300'}">${role}</span>
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">${escapeHtml(w.status || '')}</span>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (_) {
+                const box = document.getElementById('ovWaNumbersList');
+                if (box) box.innerHTML = '<p class="text-slate-600">WhatsApp numbers unavailable right now.</p>';
             }
         }
 
@@ -1666,16 +1891,28 @@
 
         async function clientConnectWhatsApp() {
             const hint = document.getElementById('clientWaSignupHint');
+            const ovHint = document.getElementById('ovWaConnectHint');
             const res = await callGateway('clientportal', 'clientPortalGenerateWhatsAppSignupLink', {});
             if (!res.success) {
                 alert(res.message || 'Could not start WhatsApp connection.');
                 return;
             }
-            if (hint) {
-                hint.classList.remove('hidden');
-                hint.innerHTML = `Open this link to connect a number (valid ~30 min): <a class="underline text-emerald-300" href="${escapeHtml(res.signupUrl)}" target="_blank" rel="noopener">${escapeHtml(res.signupUrl)}</a>`;
-            }
+            const html = `Open this link to connect a number (valid ~30 min): <a class="underline text-emerald-300" href="${escapeHtml(res.signupUrl)}" target="_blank" rel="noopener">${escapeHtml(res.signupUrl)}</a>`;
+            if (hint) { hint.classList.remove('hidden'); hint.innerHTML = html; }
+            if (ovHint) { ovHint.classList.remove('hidden'); ovHint.innerHTML = html; }
             if (res.signupUrl) window.open(res.signupUrl, '_blank', 'noopener');
+        }
+
+        async function loadWhatsAppActivityHeaderStats() {
+            try {
+                const wa = await callGateway('clientportal', 'clientPortalGetWhatsAppWeeklyReport', {});
+                if (!wa.success) return;
+                const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+                set('waActInbound', String(wa.inbound || 0));
+                set('waActReplied', String(wa.replied || 0));
+                set('waActHandoff', String(wa.handedOff || 0));
+                set('waActNumbers', (wa.numbersUsed || 0) + '/' + (wa.numbersLimit || 0));
+            } catch (_) { }
         }
 
         async function clientSetWhatsAppMeta(whatsAppId, department, lineRole) {
