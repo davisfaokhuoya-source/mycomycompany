@@ -864,9 +864,55 @@
                 };
                 if (signal) fetchOpts.signal = signal;
                 const res = await fetch(GW_URL, fetchOpts);
-                const text = await res.text();
-                const jsonStart = text.indexOf('{');
-                return JSON.parse(jsonStart !== -1 ? text.substring(jsonStart) : text || '{}');
+                const raw = await res.text();
+
+                // Cloudflare / proxy may return plain text like "error code: 524" instead of JSON
+                // when the Apps Script origin times out. Never feed that to JSON.parse.
+                const trimmed = (raw || '').trim();
+                const cfMatch = trimmed.match(/^error code:\s*(\d+)\s*$/i);
+                if (cfMatch) {
+                    const code = cfMatch[1];
+                    const hints = {
+                        '524': 'The server timed out (Cloudflare 524). The action may still complete in the background — refresh in a minute, or try again.',
+                        '522': 'Could not reach the server (Cloudflare 522). Check that the gateway is up.',
+                        '523': 'Origin is unreachable (Cloudflare 523).',
+                        '502': 'Bad gateway (502). The worker or Apps Script may be overloaded.',
+                        '504': 'Gateway timeout (504). Try again shortly.'
+                    };
+                    return {
+                        success: false,
+                        message: hints[code] || ('Upstream error code ' + code + '. Please try again.'),
+                        httpStatus: res.status,
+                        cloudflareCode: code
+                    };
+                }
+
+                // HTML error pages (CF or GAS) — extract a short message instead of throwing
+                if (trimmed.startsWith('<') || /<!DOCTYPE/i.test(trimmed)) {
+                    return {
+                        success: false,
+                        message: 'Server returned an HTML error page (HTTP ' + res.status + '). The gateway may be down or timed out.',
+                        httpStatus: res.status
+                    };
+                }
+
+                const jsonStart = trimmed.indexOf('{');
+                if (jsonStart === -1) {
+                    return {
+                        success: false,
+                        message: 'Unexpected server response (HTTP ' + res.status + '): ' + trimmed.slice(0, 120),
+                        httpStatus: res.status
+                    };
+                }
+                try {
+                    return JSON.parse(trimmed.substring(jsonStart));
+                } catch (parseErr) {
+                    return {
+                        success: false,
+                        message: 'Invalid JSON from server (HTTP ' + res.status + '): ' + trimmed.slice(0, 120),
+                        httpStatus: res.status
+                    };
+                }
             } catch (e) {
                 if (e && e.name === 'AbortError') throw e;
                 console.error(e);
@@ -1744,11 +1790,23 @@
             if (alreadyRendered) container.style.opacity = '0.6';
             else container.innerHTML = `<p class="text-slate-500 text-xs col-span-2">Loading your available documents…</p>`;
 
-            const res = await callGateway('clientportal', 'clientPortalDocumentCatalog');
+            let res;
+            try {
+                res = await callGateway('clientportal', 'clientPortalDocumentCatalog');
+            } catch (e) {
+                res = { success: false, message: (e && e.message) ? e.message : String(e) };
+            }
             container.style.opacity = '1';
 
-            if (!res.success) {
-                container.innerHTML = `<p class="text-red-400 text-xs col-span-2">${escapeHtml(res.message || 'Could not load documents.')}</p>`;
+            if (!res || !res.success) {
+                const msg = (res && res.message) || 'Could not load documents.';
+                container.innerHTML = `<div class="col-span-2 space-y-2">
+                    <p class="text-red-400 text-xs">${escapeHtml(msg)}</p>
+                    <button onclick="loadDocumentCatalog()"
+                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">
+                        <i class="fa-solid fa-rotate"></i> Retry
+                    </button>
+                </div>`;
                 return;
             }
 
