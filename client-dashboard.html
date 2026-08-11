@@ -678,9 +678,24 @@
                     </div>
 
                     <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                        <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
-                                class="fa-brands fa-whatsapp text-slate-500"></i> WhatsApp</h3>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
+                                    class="fa-brands fa-whatsapp text-slate-500"></i> WhatsApp</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" onclick="clientConnectWhatsApp()"
+                                    class="text-[10px] px-2.5 py-1 bg-green-800 hover:bg-green-700 rounded text-white">
+                                    <i class="fa-solid fa-plus"></i> Connect number
+                                </button>
+                                <button type="button" onclick="clientBuyWhatsAppPack()"
+                                    class="text-[10px] px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded text-white">
+                                    Buy 50 messages ($8)
+                                </button>
+                            </div>
+                        </div>
+                        <p id="clientWaUsageLabel" class="text-[11px] text-slate-500"></p>
+                        <p id="clientWaWeeklyLabel" class="text-[11px] text-slate-400"></p>
                         <div id="integrationsWhatsAppList" class="space-y-2 text-xs"></div>
+                        <p id="clientWaSignupHint" class="hidden text-[11px] text-emerald-300 break-all"></p>
                     </div>
 
                     <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
@@ -852,73 +867,25 @@
         // BRIDGE CALL — same wire format the admin dashboard uses, just against
         // the "clientportal" system with the client's own session token.
         // =====================================================================
-        async function callGateway(system, action, extra = {}, signal) {
-            if (!GW_URL) { showLoginError('Missing Gateway URL.'); return { success: false, message: 'Missing Gateway URL.' }; }
+        async function callGateway(system, action, extra = {}) {
+            if (!GW_URL) { showLoginError('Missing Gateway URL.'); return { success: false }; }
             try {
                 const body = { system, action, token: SESSION_TOKEN, clientId: CLIENT_ID, ...extra };
-                const fetchOpts = {
+                const res = await fetch(GW_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(body),
                     redirect: 'follow'
-                };
-                if (signal) fetchOpts.signal = signal;
-                const res = await fetch(GW_URL, fetchOpts);
-                const raw = await res.text();
-
-                // Cloudflare / proxy may return plain text like "error code: 524" instead of JSON
-                // when the Apps Script origin times out. Never feed that to JSON.parse.
-                const trimmed = (raw || '').trim();
-                const cfMatch = trimmed.match(/^error code:\s*(\d+)\s*$/i);
-                if (cfMatch) {
-                    const code = cfMatch[1];
-                    const hints = {
-                        '524': 'The server timed out (Cloudflare 524). The action may still complete in the background — refresh in a minute, or try again.',
-                        '522': 'Could not reach the server (Cloudflare 522). Check that the gateway is up.',
-                        '523': 'Origin is unreachable (Cloudflare 523).',
-                        '502': 'Bad gateway (502). The worker or Apps Script may be overloaded.',
-                        '504': 'Gateway timeout (504). Try again shortly.'
-                    };
-                    return {
-                        success: false,
-                        message: hints[code] || ('Upstream error code ' + code + '. Please try again.'),
-                        httpStatus: res.status,
-                        cloudflareCode: code
-                    };
-                }
-
-                // HTML error pages (CF or GAS) — extract a short message instead of throwing
-                if (trimmed.startsWith('<') || /<!DOCTYPE/i.test(trimmed)) {
-                    return {
-                        success: false,
-                        message: 'Server returned an HTML error page (HTTP ' + res.status + '). The gateway may be down or timed out.',
-                        httpStatus: res.status
-                    };
-                }
-
-                const jsonStart = trimmed.indexOf('{');
-                if (jsonStart === -1) {
-                    return {
-                        success: false,
-                        message: 'Unexpected server response (HTTP ' + res.status + '): ' + trimmed.slice(0, 120),
-                        httpStatus: res.status
-                    };
-                }
-                try {
-                    return JSON.parse(trimmed.substring(jsonStart));
-                } catch (parseErr) {
-                    return {
-                        success: false,
-                        message: 'Invalid JSON from server (HTTP ' + res.status + '): ' + trimmed.slice(0, 120),
-                        httpStatus: res.status
-                    };
-                }
+                });
+                const text = await res.text();
+                const jsonStart = text.indexOf('{');
+                return JSON.parse(jsonStart !== -1 ? text.substring(jsonStart) : text || '{}');
             } catch (e) {
-                if (e && e.name === 'AbortError') throw e;
                 console.error(e);
                 return { success: false, message: 'Connection error: ' + e.toString() };
             }
         }
+
         function escapeHtml(str) {
             return String(str ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
         }
@@ -1180,119 +1147,52 @@
         /** Approves sending a reference document (e.g. a receipt) — this is the client's own
          *  explicit send action, and it uses one email credit from the plan. */
         async function approveDocumentSend(queueId, btnEl) {
-            if (btnEl) {
-                if (btnEl.dataset.origHtml === undefined) btnEl.dataset.origHtml = btnEl.innerHTML;
-                btnEl.disabled = true;
-                btnEl.innerHTML = '<span class="ai-spinner"></span>Sending…';
-            }
-            try {
-                const res = await Promise.race([
-                    callGateway('clientportal', 'clientPortalApproveDocumentSend', { queueId }),
-                    new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error('Timed out — the email may still have been sent. Refresh My Documents.')), 90000)
-                    )
-                ]);
-                if (res && res.success) {
-                    if (typeof showToast === 'function') showToast(res.message || 'Sent.', 'success');
-                    else alert(res.message || 'Sent.');
-                    loadDocuments();
-                } else {
-                    const msg = (res && res.message) || 'Send failed.';
-                    if (typeof showToast === 'function') showToast(msg, 'error');
-                    else alert(msg);
-                }
-            } catch (e) {
-                const msg = e && e.message ? e.message : String(e);
-                if (typeof showToast === 'function') showToast(msg, 'error');
-                else alert(msg);
-            } finally {
-                if (btnEl) {
-                    btnEl.disabled = false;
-                    btnEl.innerHTML = btnEl.dataset.origHtml || 'Approve & Send (1 email)';
-                    delete btnEl.dataset.origHtml;
-                }
+            if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Sending…'; }
+            const res = await callGateway('clientportal', 'clientPortalApproveDocumentSend', { queueId });
+            if (res.success) {
+                showToast ? showToast(res.message || 'Sent.', 'success') : alert(res.message || 'Sent.');
+                loadDocuments();
+            } else {
+                if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Approve & Send (1 email)'; }
+                showToast ? showToast(res.message || 'Send failed.', 'error') : alert(res.message || 'Send failed.');
             }
         }
+
         /** Lets the client send any of their own available documents out to a recipient
          *  they choose, with their own subject and message — separate from the
          *  Approve & Send flow above, which only fires reference docs to the client's
          *  own saved contact. Opens a small compose modal. */
         let SEND_DOC_TARGET = null;
-
         function openSendDocumentModal(docId, title) {
             SEND_DOC_TARGET = docId;
             document.getElementById('sendDocTitle').textContent = title || 'this document';
             document.getElementById('sendDocTo').value = '';
             document.getElementById('sendDocSubject').value = title ? `${title}` : 'Document from The Victorias Ltd';
             document.getElementById('sendDocBody').value = `Hi,\n\nPlease find ${title || 'the attached document'} enclosed.\n\nBest regards,`;
-            const openBtn = document.getElementById('sendDocSubmitBtn');
-            if (openBtn) {
-                openBtn.disabled = false;
-                openBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send';
-            }
             document.getElementById('modalSendDocument').classList.remove('hidden');
         }
         function closeSendDocumentModal() {
             document.getElementById('modalSendDocument').classList.add('hidden');
             SEND_DOC_TARGET = null;
-            const closeBtn = document.getElementById('sendDocSubmitBtn');
-            if (closeBtn) {
-                closeBtn.disabled = false;
-                closeBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send';
-            }
         }
         async function submitSendDocument() {
             const to = document.getElementById('sendDocTo').value.trim();
             const subject = document.getElementById('sendDocSubject').value.trim();
             const body = document.getElementById('sendDocBody').value.trim();
-            if (!to) {
-                if (typeof showToast === 'function') showToast('Recipient email is required.', 'error');
-                else alert('Recipient email is required.');
-                return;
-            }
+            if (!to) { showToast ? showToast('Recipient email is required.', 'error') : alert('Recipient email is required.'); return; }
             if (!SEND_DOC_TARGET) { closeSendDocumentModal(); return; }
 
             const btn = document.getElementById('sendDocSubmitBtn');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = '<span class="ai-spinner"></span>Sending…';
-            }
+            if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ai-spinner"></span>Sending…'; }
+            const res = await callGateway('clientportal', 'clientPortalSendDocument', { docId: SEND_DOC_TARGET, to, subject, body });
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send'; }
 
-            const timeoutMs = 90000;
-            try {
-                const res = await Promise.race([
-                    callGateway('clientportal', 'clientPortalSendDocument', {
-                        docId: SEND_DOC_TARGET, to, subject, body
-                    }),
-                    new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error(
-                            'Send timed out after ' + (timeoutMs / 1000) +
-                            's. The email may still have gone out — check the recipient and refresh My Documents.'
-                        )), timeoutMs)
-                    )
-                ]);
-
-                if (res && res.success) {
-                    if (typeof showToast === 'function') showToast(res.message || 'Sent.', 'success');
-                    else alert(res.message || 'Sent.');
-                    closeSendDocumentModal();
-                    if (typeof loadDocuments === 'function') loadDocuments();
-                } else {
-                    const msg = (res && res.message) || 'Send failed.';
-                    if (typeof showToast === 'function') showToast(msg, 'error');
-                    else alert(msg);
-                }
-            } catch (e) {
-                const msg = (e && e.name === 'AbortError')
-                    ? 'Send timed out. The email may still have been delivered — refresh My Documents or check with the recipient.'
-                    : ('Send error: ' + (e && e.message ? e.message : String(e)));
-                if (typeof showToast === 'function') showToast(msg, 'error');
-                else alert(msg);
-            } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send';
-                }
+            if (res.success) {
+                showToast ? showToast(res.message || 'Sent.', 'success') : alert(res.message || 'Sent.');
+                closeSendDocumentModal();
+                loadDocuments();
+            } else {
+                showToast ? showToast(res.message || 'Send failed.', 'error') : alert(res.message || 'Send failed.');
             }
         }
 
@@ -1672,11 +1572,8 @@
                     `reconnectIntegration('mailbox', { mailboxId: '${escapeHtml(m.mailboxId)}' }, '${escapeHtml(m.label || m.emailAddress || 'this mailbox')}')`)).join('')
                 : '<p class="text-slate-600">No mailboxes connected.</p>';
 
-            waEl.innerHTML = (res.whatsapp || []).length
-                ? res.whatsapp.map(w => row(w.label || w.displayPhoneNumber || w.whatsAppId, w.displayPhoneNumber, w.status,
-                    `revokeIntegration('whatsapp', { whatsAppId: '${escapeHtml(w.whatsAppId)}' }, '${escapeHtml(w.label || w.displayPhoneNumber || 'this WhatsApp number')}')`,
-                    `reconnectIntegration('whatsapp', { whatsAppId: '${escapeHtml(w.whatsAppId)}' }, '${escapeHtml(w.label || w.displayPhoneNumber || 'this WhatsApp number')}')`)).join('')
-                : '<p class="text-slate-600">No WhatsApp number connected.</p>';
+            // Prefer dedicated multi-number list (dept + role); fall back to integrations payload
+            loadClientWhatsAppNumbersPanel();
 
             socEl.innerHTML = (res.social || []).length
                 ? res.social.map(s => row(s.pageName || s.platform, s.platform, s.status,
@@ -1706,6 +1603,101 @@
             const res = await callGateway('clientportal', 'clientPortalReconnectIntegration', { category, ...idFields });
             if (!res.success) { alert(res.message || `Could not reconnect "${displayLabel}".`); }
             loadIntegrationsPanel();
+        }
+
+        async function loadClientWhatsAppNumbersPanel() {
+            const waEl = document.getElementById('integrationsWhatsAppList');
+            const usageEl = document.getElementById('clientWaUsageLabel');
+            const weeklyEl = document.getElementById('clientWaWeeklyLabel');
+            if (!waEl) return;
+            const res = await callGateway('clientportal', 'clientPortalListWhatsAppNumbers', {});
+            if (!res.success) {
+                waEl.innerHTML = `<p class="text-red-400">${escapeHtml(res.message || 'Could not load WhatsApp numbers.')}</p>`;
+                return;
+            }
+            if (usageEl) {
+                usageEl.textContent = (res.used || 0) + ' / ' + (res.limit || 0) + ' numbers used' +
+                    (res.canAdd ? ' — you can connect another.' : ' — limit reached (ask your account team to raise it).');
+            }
+            const conns = res.connections || [];
+            if (!conns.length) {
+                waEl.innerHTML = '<p class="text-slate-600">No WhatsApp number connected yet. Click “Connect number” to open Meta Embedded Signup.</p>';
+            } else {
+                waEl.innerHTML = conns.map(w => {
+                    const id = w.whatsAppId;
+                    const dept = w.department || 'general';
+                    const role = w.lineRole || 'agent_line';
+                    return `
+                    <div class="bg-slate-900 border border-slate-800 rounded px-3 py-2 space-y-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <div>
+                                <div class="text-slate-200 font-medium">${escapeHtml(w.label || w.displayPhoneNumber || id || 'WhatsApp')}</div>
+                                <div class="text-slate-500 text-[10px]">${escapeHtml(w.displayPhoneNumber || w.phoneNumberId || '')} · ${escapeHtml(w.status || '')}</div>
+                            </div>
+                            <button onclick="revokeIntegration('whatsapp', { whatsAppId: '${escapeHtml(id)}' }, '${escapeHtml(w.label || w.displayPhoneNumber || 'this number')}')"
+                                class="text-[10px] px-2.5 py-1 bg-red-900/40 hover:bg-red-900/70 border border-red-800 rounded text-red-300">Revoke</button>
+                        </div>
+                        <div class="flex flex-wrap gap-2 items-center">
+                            <label class="text-[10px] text-slate-500">Dept
+                                <select onchange="clientSetWhatsAppMeta('${escapeHtml(id)}', this.value, null)"
+                                    class="ml-1 bg-slate-950 border border-slate-800 rounded px-1 py-0.5 text-[11px] text-white">
+                                    ${['general', 'sales', 'admin', 'support', 'billing', 'operations'].map(d =>
+                        `<option value="${d}" ${d === dept ? 'selected' : ''}>${d}</option>`).join('')}
+                                </select>
+                            </label>
+                            <label class="text-[10px] text-slate-500">Role
+                                <select onchange="clientSetWhatsAppMeta('${escapeHtml(id)}', null, this.value)"
+                                    class="ml-1 bg-slate-950 border border-slate-800 rounded px-1 py-0.5 text-[11px] text-white">
+                                    <option value="agent_line" ${role === 'agent_line' ? 'selected' : ''}>AI agent</option>
+                                    <option value="team_line" ${role === 'team_line' ? 'selected' : ''}>Team handoff</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+            try {
+                const wk = await callGateway('clientportal', 'clientPortalGetWhatsAppWeeklyReport', {});
+                if (weeklyEl && wk.success) {
+                    weeklyEl.textContent = `Last 7 days: ${wk.inbound || 0} inbound · ${wk.replied || 0} replied · ${wk.handedOff || 0} handed off`;
+                }
+            } catch (_) { }
+        }
+
+        async function clientConnectWhatsApp() {
+            const hint = document.getElementById('clientWaSignupHint');
+            const res = await callGateway('clientportal', 'clientPortalGenerateWhatsAppSignupLink', {});
+            if (!res.success) {
+                alert(res.message || 'Could not start WhatsApp connection.');
+                return;
+            }
+            if (hint) {
+                hint.classList.remove('hidden');
+                hint.innerHTML = `Open this link to connect a number (valid ~30 min): <a class="underline text-emerald-300" href="${escapeHtml(res.signupUrl)}" target="_blank" rel="noopener">${escapeHtml(res.signupUrl)}</a>`;
+            }
+            if (res.signupUrl) window.open(res.signupUrl, '_blank', 'noopener');
+        }
+
+        async function clientSetWhatsAppMeta(whatsAppId, department, lineRole) {
+            const payload = { whatsAppId };
+            if (department) payload.department = department;
+            if (lineRole) payload.lineRole = lineRole;
+            const res = await callGateway('clientportal', 'clientPortalSetWhatsAppLineMeta', payload);
+            if (!res.success) alert(res.message || 'Could not update line.');
+        }
+
+        async function clientBuyWhatsAppPack() {
+            if (!confirm('Buy 50 agent WhatsApp read/reply messages for $8 (converted to NGN at billing)?')) return;
+            const res = await callGateway('clientportal', 'clientPortalBuyWhatsAppMessagePack', {});
+            if (!res.success) {
+                alert(res.message || 'Could not start purchase.');
+                return;
+            }
+            if (res.paymentLink) {
+                window.location.href = res.paymentLink;
+            } else {
+                alert(res.message || ('Invoice ' + (res.invoiceId || '') + ' created.'));
+            }
         }
 
         function applyAppointmentFilters() {
@@ -1790,23 +1782,11 @@
             if (alreadyRendered) container.style.opacity = '0.6';
             else container.innerHTML = `<p class="text-slate-500 text-xs col-span-2">Loading your available documents…</p>`;
 
-            let res;
-            try {
-                res = await callGateway('clientportal', 'clientPortalDocumentCatalog');
-            } catch (e) {
-                res = { success: false, message: (e && e.message) ? e.message : String(e) };
-            }
+            const res = await callGateway('clientportal', 'clientPortalDocumentCatalog');
             container.style.opacity = '1';
 
-            if (!res || !res.success) {
-                const msg = (res && res.message) || 'Could not load documents.';
-                container.innerHTML = `<div class="col-span-2 space-y-2">
-                    <p class="text-red-400 text-xs">${escapeHtml(msg)}</p>
-                    <button onclick="loadDocumentCatalog()"
-                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">
-                        <i class="fa-solid fa-rotate"></i> Retry
-                    </button>
-                </div>`;
+            if (!res.success) {
+                container.innerHTML = `<p class="text-red-400 text-xs col-span-2">${escapeHtml(res.message || 'Could not load documents.')}</p>`;
                 return;
             }
 
