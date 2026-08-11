@@ -237,6 +237,9 @@
                 <button class="nav-link" data-view="integrations" onclick="showView('integrations', this)">
                     <i class="fa-solid fa-plug w-4"></i> Integrations
                 </button>
+                <button class="nav-link" data-view="billing" onclick="showView('billing', this)">
+                    <i class="fa-solid fa-credit-card w-4"></i> Billing &amp; Renewal
+                </button>
                 <button class="nav-link" data-view="donate" onclick="showView('donate', this)">
                     <i class="fa-solid fa-heart w-4"></i> Support Us
                 </button>
@@ -339,6 +342,21 @@
                     <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
                         <p class="text-xs font-mono uppercase text-slate-500 tracking-wide mb-3">Recent Documents</p>
                         <div id="recentDocsList" class="space-y-2 text-xs text-slate-400">Loading…</div>
+                    </div>
+
+                    <div
+                        class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <p class="text-sm font-semibold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-credit-card text-emerald-400"></i> Billing &amp; Renewal
+                            </p>
+                            <p class="text-xs text-slate-400 mt-1 max-w-md">Renew your subscription, apply a discount
+                                code from your account team, and pay securely.</p>
+                        </div>
+                        <button onclick="showView('billing', document.querySelector('.nav-link[data-view=billing]'))"
+                            class="shrink-0 bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium py-2.5 px-5 rounded-lg flex items-center gap-2">
+                            <i class="fa-solid fa-arrow-right"></i> Open billing
+                        </button>
                     </div>
 
                     <div
@@ -717,6 +735,49 @@
                     </div>
                 </section>
 
+                <!-- BILLING & RENEWAL -->
+                <section id="view-billing" class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
+                    <div class="max-w-lg mx-auto w-full space-y-4 pt-2">
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+                            <div>
+                                <h3 class="text-base font-bold text-white">Renew subscription</h3>
+                                <p class="text-xs text-slate-400 mt-1">Choose a term, optionally apply a discount code
+                                    from your account team, then continue to secure payment.</p>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Renewal term</label>
+                                <select id="renewMonths"
+                                    class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                                    <option value="1">1 month</option>
+                                    <option value="3">3 months</option>
+                                    <option value="6">6 months</option>
+                                    <option value="12">12 months</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Discount code (optional)</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="renewDiscountCode" placeholder="e.g. WELCOME20"
+                                        class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white uppercase font-mono focus:outline-none focus:border-emerald-500" />
+                                    <button type="button" onclick="previewRenewalDiscount()"
+                                        class="text-xs px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white shrink-0">Preview</button>
+                                </div>
+                                <p id="renewDiscountPreview" class="text-[11px] text-slate-500 mt-1.5"></p>
+                            </div>
+                            <button id="renewSubmitBtn" onclick="submitRenewal()"
+                                class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium py-2.5 rounded-lg shadow">
+                                Continue to payment
+                            </button>
+                            <p id="renewError" class="hidden text-xs text-red-400 text-center"></p>
+                            <p id="renewSuccess" class="hidden text-xs text-emerald-400 text-center"></p>
+                            <p class="text-[11px] text-slate-500 leading-relaxed">Pay-as-you-go accounts should top up
+                                via their account manager instead of renewing a subscription term. Privacy Policy: <a
+                                    href="https://thevictorias.com.ng/policy" target="_blank"
+                                    class="text-emerald-400 hover:underline">thevictorias.com.ng/policy</a></p>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- DONATE / SUPPORT US -->
                 <section id="view-donate" class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
                     <div class="max-w-lg mx-auto w-full space-y-4 pt-2">
@@ -887,7 +948,7 @@
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             if (btn) btn.classList.add('active');
 
-            const titles = { overview: 'Overview', documents: 'My Documents', generate: 'Generate a Document', chat: 'Live Chat', social: 'Social Calendar', appointments: 'Appointments', emailactivity: 'Email Activity', whatsappactivity: 'WhatsApp Activity', integrations: 'Integrations', donate: 'Support Us' };
+            const titles = { overview: 'Overview', documents: 'My Documents', generate: 'Generate a Document', chat: 'Live Chat', social: 'Social Calendar', appointments: 'Appointments', emailactivity: 'Email Activity', whatsappactivity: 'WhatsApp Activity', integrations: 'Integrations', billing: 'Billing & Renewal', donate: 'Support Us' };
             document.getElementById('pageTitle').textContent = titles[name] || name;
 
             if (name === 'documents') loadDocuments();
@@ -898,6 +959,12 @@
             if (name === 'whatsappactivity') loadWhatsAppActivity(1);
             if (name === 'integrations') loadIntegrationsPanel();
             if (name === 'donate') prefillDonationForm();
+            if (name === 'billing') {
+                const err = document.getElementById('renewError');
+                const ok = document.getElementById('renewSuccess');
+                if (err) err.classList.add('hidden');
+                if (ok) ok.classList.add('hidden');
+            }
             if (name === 'chat') {
                 loadChat();
                 startChatPolling();
@@ -1267,6 +1334,85 @@
                 const emailEl = document.getElementById('donateEmail');
                 if (nameEl && !nameEl.value) nameEl.value = document.getElementById('companyNameLabel')?.textContent || '';
             } catch (_) { }
+        }
+
+        async function previewRenewalDiscount() {
+            const previewEl = document.getElementById('renewDiscountPreview');
+            const code = (document.getElementById('renewDiscountCode')?.value || '').trim();
+            const months = parseInt(document.getElementById('renewMonths')?.value || '1', 10);
+            if (!previewEl) return;
+            if (!code) {
+                previewEl.textContent = 'Enter a code to preview savings.';
+                previewEl.className = 'text-[11px] text-slate-500 mt-1.5';
+                return;
+            }
+            previewEl.textContent = 'Checking code…';
+            previewEl.className = 'text-[11px] text-slate-400 mt-1.5';
+            try {
+                const res = await callGateway('clientportal', 'clientPortalPreviewDiscountCode', {
+                    code: code,
+                    months: months
+                });
+                if (!res.success) {
+                    previewEl.textContent = res.message || 'Code not valid for this term.';
+                    previewEl.className = 'text-[11px] text-red-400 mt-1.5';
+                    return;
+                }
+                const pct = res.percentOff != null ? res.percentOff : (res.discount && res.discount.percentOff);
+                const savings = res.savings != null ? res.savings : (res.discount && res.discount.savings);
+                const finalAmt = res.discountedAmount != null ? res.discountedAmount : res.amountNgn;
+                previewEl.textContent = (pct ? (pct + '% off') : 'Discount applied') +
+                    (savings != null ? (' — save ₦' + Number(savings).toLocaleString()) : '') +
+                    (finalAmt != null ? (' · pay ₦' + Number(finalAmt).toLocaleString()) : '');
+                previewEl.className = 'text-[11px] text-emerald-400 mt-1.5';
+            } catch (e) {
+                previewEl.textContent = 'Could not preview code.';
+                previewEl.className = 'text-[11px] text-red-400 mt-1.5';
+            }
+        }
+
+        async function submitRenewal() {
+            const errEl = document.getElementById('renewError');
+            const okEl = document.getElementById('renewSuccess');
+            const btn = document.getElementById('renewSubmitBtn');
+            if (errEl) errEl.classList.add('hidden');
+            if (okEl) okEl.classList.add('hidden');
+            const months = parseInt(document.getElementById('renewMonths')?.value || '1', 10);
+            const discountCode = (document.getElementById('renewDiscountCode')?.value || '').trim();
+            if (btn) { btn.disabled = true; btn.textContent = 'Creating invoice…'; }
+            try {
+                const res = await callGateway('clientportal', 'clientPortalInitiateRenewal', {
+                    months,
+                    discountCode: discountCode || undefined
+                });
+                if (!res.success) {
+                    if (errEl) {
+                        errEl.textContent = res.message || 'Could not start renewal.';
+                        errEl.classList.remove('hidden');
+                    }
+                    return;
+                }
+                if (okEl) {
+                    okEl.textContent = 'Invoice ' + (res.invoiceId || '') +
+                        (res.amountNgn != null ? (' · ₦' + Number(res.amountNgn).toLocaleString()) : '') +
+                        (res.discount ? (' · code ' + res.discount.code) : '') +
+                        ' — opening payment…';
+                    okEl.classList.remove('hidden');
+                }
+                if (res.paymentLink) {
+                    window.location.href = res.paymentLink;
+                } else if (errEl) {
+                    errEl.textContent = 'Payment link missing. Contact support with invoice: ' + (res.invoiceId || '—');
+                    errEl.classList.remove('hidden');
+                }
+            } catch (e) {
+                if (errEl) {
+                    errEl.textContent = e.message || 'Renewal failed.';
+                    errEl.classList.remove('hidden');
+                }
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'Continue to payment'; }
+            }
         }
 
         async function submitDonation() {
