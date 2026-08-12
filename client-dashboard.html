@@ -569,11 +569,12 @@
                         class="max-w-3xl rounded-lg border border-slate-700 bg-slate-800/60 p-4 flex items-start justify-between gap-4">
                         <div>
                             <div class="text-sm font-semibold text-white">Auto-send receipts & confirmations</div>
-                            <p class="text-xs text-slate-400 mt-1 max-w-xl">When on, lightweight documents (receipts,
-                                payment confirmations) email straight to the recipient the moment they're generated.
-                                When off, they're generated and held in <span class="text-slate-300">My
-                                    Documents</span> — tagged "Pending Your Approval" — until you click Approve &
-                                Send yourself.</p>
+                            <p class="text-xs text-slate-400 mt-1 max-w-xl"><strong class="text-slate-300">On:</strong>
+                                email the recipient as soon as the document is generated.
+                                <strong class="text-slate-300">Off:</strong> generate only and hold in
+                                <span class="text-slate-300">My Documents</span> as "Pending Your Approval" until
+                                you click Approve &amp; Send.
+                            </p>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
                             <input type="checkbox" id="autoSendToggle" class="sr-only peer"
@@ -2282,7 +2283,15 @@
             }
 
             if (res.success) {
-                statusEl.innerHTML = `<p class="text-xs text-emerald-400 mt-2"><i class="fa-solid fa-circle-check"></i> Done — check "My Documents" for your file.</p>`;
+                const sent = res.delivery === 'sent' || res.autoApproved;
+                const held = res.heldForClientApproval || res.delivery === 'awaiting_client_approval';
+                let doneMsg = 'Done — check "My Documents" for your file.';
+                if (sent) {
+                    doneMsg = 'Done — document generated and emailed to the recipient (auto-send is on).';
+                } else if (held) {
+                    doneMsg = 'Done — held in My Documents for your approval. Open My Documents → Approve & Send when ready.';
+                }
+                statusEl.innerHTML = `<p class="text-xs text-emerald-400 mt-2"><i class="fa-solid fa-circle-check"></i> ${doneMsg}</p>`;
                 toggleGenerateCard(docType); // collapse the panel back down
                 loadOverview();
                 loadDocumentCatalog(); // silently refresh so a now-exhausted card greys itself out
