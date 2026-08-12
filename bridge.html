@@ -12957,15 +12957,21 @@ ${a.Status === 'Pending Review' ? `
                     This is a blank template — fill it exactly rather than writing a new one
                 </label>
                 <div>
-                    <label class="block text-slate-500 mb-1">Fields found (role tells the AI how to treat each one)</label>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-slate-500">Fields found (role = how AI treats each one)</label>
+                        <button type="button" onclick="dsReviewAddField()" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-emerald-400">+ Add field</button>
+                    </div>
+                    <p class="text-[10px] text-slate-600 mb-1">Use − to remove a field the AI should not keep. Only remaining fields are saved on Confirm.</p>
                     <div id="dsReviewFields" class="space-y-1 max-h-48 overflow-auto custom-scrollbar">
                         ${(res.columns || []).map((c, i) => `
-                            <div class="flex items-center gap-2">
-                                <input value="${escapeHtml(c)}" data-field-index="${i}" data-field-name
+                            <div class="flex items-center gap-2 ds-review-field-row">
+                                <input value="${escapeHtml(c)}" data-field-name
                                     class="flex-1 bg-slate-900 border border-slate-800 rounded p-1 text-[11px]">
-                                <select data-field-index="${i}" data-field-role class="bg-slate-900 border border-slate-800 rounded p-1 text-[11px]">
+                                <select data-field-role class="bg-slate-900 border border-slate-800 rounded p-1 text-[11px]">
                                     ${roleOptions.map(r => `<option value="${r}" ${roles[c] === r ? 'selected' : (r === 'data_field' && !roles[c] ? 'selected' : '')}>${r}</option>`).join('')}
                                 </select>
+                                <button type="button" onclick="this.closest('.ds-review-field-row').remove()" title="Remove field"
+                                    class="text-red-400 text-xs px-1.5 hover:bg-slate-800 rounded">−</button>
                             </div>`).join('')}
                     </div>
                 </div>
@@ -12977,14 +12983,36 @@ ${a.Status === 'Pending Review' ? `
         }
 
         /** Persists the admin's (possibly edited) review of the AI's proposal — the last step of the human-in-the-loop setup. */
+        function dsReviewAddField() {
+            const wrap = document.getElementById('dsReviewFields');
+            if (!wrap) return;
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2 ds-review-field-row';
+            row.innerHTML = `
+                <input value="" data-field-name placeholder="New field name"
+                    class="flex-1 bg-slate-900 border border-slate-800 rounded p-1 text-[11px]">
+                <select data-field-role class="bg-slate-900 border border-slate-800 rounded p-1 text-[11px]">
+                    <option value="data_field" selected>data_field</option>
+                    <option value="boilerplate">boilerplate</option>
+                    <option value="signature_block">signature_block</option>
+                </select>
+                <button type="button" onclick="this.closest('.ds-review-field-row').remove()" title="Remove field"
+                    class="text-red-400 text-xs px-1.5 hover:bg-slate-800 rounded">−</button>`;
+            wrap.appendChild(row);
+        }
+
         async function confirmDocStudioReview() {
             if (!DOC_STUDIO_PENDING_REVIEW) return;
-            const columns = [...document.querySelectorAll('[data-field-name]')].map(el => el.value.trim()).filter(Boolean);
+            // Pair name + role from each remaining row (removed rows are gone from DOM)
+            const columns = [];
             const fieldRoles = {};
-            document.querySelectorAll('[data-field-role]').forEach(sel => {
-                const idx = sel.getAttribute('data-field-index');
-                const name = columns[idx];
-                if (name) fieldRoles[name] = sel.value;
+            document.querySelectorAll('#dsReviewFields .ds-review-field-row').forEach(row => {
+                const nameEl = row.querySelector('[data-field-name]');
+                const roleEl = row.querySelector('[data-field-role]');
+                const name = (nameEl && nameEl.value || '').trim();
+                if (!name) return;
+                columns.push(name);
+                fieldRoles[name] = (roleEl && roleEl.value) || 'data_field';
             });
             const isBlankTemplate = document.getElementById('dsReviewIsBlank').checked;
             const catalogId = document.getElementById('dsReviewCatalogId').value;

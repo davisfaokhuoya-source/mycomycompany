@@ -2176,14 +2176,29 @@
                 <p class="text-[11px] text-amber-500/80 mt-1"><i class="fa-solid fa-lock"></i> ${escapeHtml(item.reason)}</p>
             </div>`;
                 }
-                // [ACTIVE] Clickable card -> expands to a dynamically-built
-                // instruction panel matching this doc type's own field schema.
-                const fieldsHtml = (item.fields || []).map(f => `
-                <label class="block text-[10px] text-slate-400 mt-2">${escapeHtml(f.label)}${f.required ? ' <span class="text-red-400">*</span>' : ''}</label>
-                ${f.type === 'textarea'
-                        ? `<textarea id="genInput-${item.docType}-${f.key}" class="w-full h-16 bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></textarea>`
-                        : `<input type="text" id="genInput-${item.docType}-${f.key}" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />`}
-            `).join('');
+                // [ACTIVE] Dynamic fields: catalog defaults OR trained template columns.
+                // Table fields get +/− row controls; client can also add an extra field.
+                const trainedNote = item.trainedFrom
+                    ? `<p class="text-[10px] text-emerald-500/90 mb-1"><i class="fa-solid fa-graduation-cap"></i> Using fields from your trained format (${escapeHtml(item.trainedFrom)})</p>`
+                    : '';
+                const fieldsHtml = (item.fields || []).map(f => {
+                    if (f.type === 'table') {
+                        return `<div class="mt-2" data-table-field="${escapeHtml(item.docType)}|${escapeHtml(f.key)}">
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="text-[10px] text-slate-400">${escapeHtml(f.label)}${f.required ? ' <span class="text-red-400">*</span>' : ''}</label>
+                                <button type="button" onclick="clientGenAddTableRow('${escapeHtml(item.docType)}','${escapeHtml(f.key)}')"
+                                    class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-emerald-400">+ Row</button>
+                            </div>
+                            <div id="genTable-${item.docType}-${f.key}" class="space-y-1"></div>
+                        </div>`;
+                    }
+                    if (f.type === 'textarea') {
+                        return `<label class="block text-[10px] text-slate-400 mt-2">${escapeHtml(f.label)}${f.required ? ' <span class="text-red-400">*</span>' : ''}</label>
+                            <textarea id="genInput-${item.docType}-${f.key}" data-gen-key="${escapeHtml(f.key)}" class="w-full h-16 bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></textarea>`;
+                    }
+                    return `<label class="block text-[10px] text-slate-400 mt-2">${escapeHtml(f.label)}${f.required ? ' <span class="text-red-400">*</span>' : ''}</label>
+                        <input type="text" id="genInput-${item.docType}-${f.key}" data-gen-key="${escapeHtml(f.key)}" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />`;
+                }).join('');
 
                 return `
             <div id="genCard-${item.docType}" class="gen-card bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-5 transition-colors" data-label="${escapeHtml(item.label.toLowerCase())}">
@@ -2193,7 +2208,11 @@
                     <p class="text-[11px] text-slate-500 mt-1">${item.remaining === 'Unlimited' ? 'Unlimited this period' : `${item.used}/${item.limit} used this period`}</p>
                 </button>
                 <div id="genPanel-${item.docType}" class="directive-panel mt-3 pt-3 border-t border-slate-800 space-y-1">
+                    ${trainedNote}
                     ${fieldsHtml || '<p class="text-[11px] text-slate-500">No extra instructions needed — sent as-is.</p>'}
+                    <div id="genExtraFields-${item.docType}" class="space-y-1"></div>
+                    <button type="button" onclick="clientGenAddExtraField('${escapeHtml(item.docType)}')"
+                        class="text-[10px] mt-2 px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">+ Add field</button>
                     <div class="flex gap-2 justify-end pt-2">
                         <button onclick="toggleGenerateCard('${item.docType}')"
                             class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Cancel</button>
@@ -2206,6 +2225,12 @@
             }).join('');
             container.dataset.rendered = '1';
             applyGenerateCardFilter();
+            // Seed one empty line-item row for each table field so +/− is obvious
+            (res.catalog || []).forEach(item => {
+                (item.fields || []).forEach(f => {
+                    if (f.type === 'table') clientGenAddTableRow(item.docType, f.key);
+                });
+            });
         }
 
         function applyGenerateCardFilter() {
@@ -2242,6 +2267,67 @@
             }
         }
 
+        const CLIENT_GEN_TABLE_STATE = {}; // docType|key -> [{description, qty, amount}]
+        let CLIENT_GEN_EXTRA_SEQ = 0;
+
+        function clientGenAddTableRow(docType, key) {
+            const id = docType + '|' + key;
+            if (!CLIENT_GEN_TABLE_STATE[id]) CLIENT_GEN_TABLE_STATE[id] = [];
+            CLIENT_GEN_TABLE_STATE[id].push({ description: '', qty: '1', amount: '' });
+            clientGenRenderTable(docType, key);
+        }
+
+        function clientGenRemoveTableRow(docType, key, idx) {
+            const id = docType + '|' + key;
+            if (!CLIENT_GEN_TABLE_STATE[id]) return;
+            CLIENT_GEN_TABLE_STATE[id].splice(idx, 1);
+            clientGenRenderTable(docType, key);
+        }
+
+        function clientGenRenderTable(docType, key) {
+            const id = docType + '|' + key;
+            const rows = CLIENT_GEN_TABLE_STATE[id] || [];
+            const wrap = document.getElementById('genTable-' + docType + '-' + key);
+            if (!wrap) return;
+            if (!rows.length) {
+                wrap.innerHTML = '<p class="text-[10px] text-slate-600">No line items yet — click + Row.</p>';
+                return;
+            }
+            wrap.innerHTML = rows.map((r, i) => `
+                <div class="flex gap-1 items-center">
+                    <input placeholder="Description" value="${escapeHtml(r.description || '')}"
+                        onchange="CLIENT_GEN_TABLE_STATE['${id}'][${i}].description=this.value"
+                        class="flex-1 bg-slate-950 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
+                    <input placeholder="Qty" value="${escapeHtml(r.qty || '')}"
+                        onchange="CLIENT_GEN_TABLE_STATE['${id}'][${i}].qty=this.value"
+                        class="w-12 bg-slate-950 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
+                    <input placeholder="Amount" value="${escapeHtml(r.amount || '')}"
+                        onchange="CLIENT_GEN_TABLE_STATE['${id}'][${i}].amount=this.value"
+                        class="w-20 bg-slate-950 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
+                    <button type="button" onclick="clientGenRemoveTableRow('${escapeHtml(docType)}','${escapeHtml(key)}',${i})"
+                        class="text-red-400 text-xs px-1.5 hover:bg-slate-800 rounded" title="Remove row">−</button>
+                </div>`).join('');
+        }
+
+        function clientGenAddExtraField(docType) {
+            const wrap = document.getElementById('genExtraFields-' + docType);
+            if (!wrap) return;
+            const n = ++CLIENT_GEN_EXTRA_SEQ;
+            const div = document.createElement('div');
+            div.className = 'flex gap-1 items-end mt-1';
+            div.innerHTML = `
+                <div class="flex-1">
+                    <label class="block text-[10px] text-slate-400">Field name</label>
+                    <input data-extra-label class="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-[11px] text-white" placeholder="e.g. Reference" />
+                </div>
+                <div class="flex-1">
+                    <label class="block text-[10px] text-slate-400">Value</label>
+                    <input data-extra-value class="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
+                </div>
+                <button type="button" onclick="this.parentElement.remove()" class="text-red-400 text-xs px-1.5 mb-1 hover:bg-slate-800 rounded">−</button>`;
+            wrap.appendChild(div);
+        }
+
         async function submitGenerateDocument(docType) {
             const spec = DOC_CATALOG_CACHE[docType];
             const fields = (spec && spec.fields) || [];
@@ -2249,6 +2335,18 @@
             const statusEl = document.getElementById('generateStatus');
 
             for (const f of fields) {
+                if (f.type === 'table') {
+                    const id = docType + '|' + f.key;
+                    const rows = (CLIENT_GEN_TABLE_STATE[id] || []).filter(r => (r.description || r.amount || '').toString().trim());
+                    if (f.required && !rows.length) {
+                        statusEl.innerHTML = `<p class="text-xs text-amber-400 mt-2"><i class="fa-solid fa-triangle-exclamation"></i> Add at least one row for "${escapeHtml(f.label)}".</p>`;
+                        return;
+                    }
+                    if (rows.length) payload[f.key] = rows;
+                    // also map common alias for structured receipt builder
+                    if (rows.length && !payload.lineItems) payload.lineItems = rows;
+                    continue;
+                }
                 const el = document.getElementById(`genInput-${docType}-${f.key}`);
                 const val = el ? el.value.trim() : '';
                 if (f.required && !val) {
@@ -2258,6 +2356,17 @@
                 }
                 if (val) payload[f.key] = val;
             }
+
+            // Extra fields added via + Add field
+            document.querySelectorAll('#genExtraFields-' + docType + ' > div').forEach(row => {
+                const label = row.querySelector('[data-extra-label]')?.value?.trim();
+                const value = row.querySelector('[data-extra-value]')?.value?.trim();
+                if (label && value) {
+                    const key = label.replace(/[^a-zA-Z0-9]+(.)/g, (_, c) => c.toUpperCase()).replace(/[^a-zA-Z0-9]/g, '');
+                    const k = key ? (key.charAt(0).toLowerCase() + key.slice(1)) : ('extra' + Math.random().toString(36).slice(2, 6));
+                    payload[k] = value;
+                }
+            });
 
             const cardEl = document.getElementById('genCard-' + docType);
             const sendBtn = document.getElementById('genSendBtn-' + docType);
