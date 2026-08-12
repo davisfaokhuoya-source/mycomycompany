@@ -1081,22 +1081,41 @@
         // BRIDGE CALL — same wire format the admin dashboard uses, just against
         // the "clientportal" system with the client's own session token.
         // =====================================================================
+        /** Strip internal infra wording from errors shown to clients. */
+        function clientFriendlyError(msg) {
+            const m = String(msg || '');
+            if (/timed out|timeout|524|apps script gateway|worker/i.test(m)) {
+                return 'This is taking longer than usual. Refresh the page in a moment — your documents may already be ready under My Documents.';
+            }
+            if (/ReferenceError|TypeError|forcedCatalogId|at Object\.|\.gs:/i.test(m)) {
+                return 'Something went wrong on our side. Please try again or contact support.';
+            }
+            return m || 'Something went wrong. Please try again.';
+        }
+
         async function callGateway(system, action, extra = {}) {
             if (!GW_URL) { showLoginError('Missing Gateway URL.'); return { success: false }; }
             try {
                 const body = { system, action, token: SESSION_TOKEN, clientId: CLIENT_ID, ...extra };
+                const controller = new AbortController();
+                const t = setTimeout(() => controller.abort(), 55000); // fail soft before 90s wall
                 const res = await fetch(GW_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(body),
-                    redirect: 'follow'
+                    redirect: 'follow',
+                    signal: controller.signal
                 });
+                clearTimeout(t);
                 const text = await res.text();
                 const jsonStart = text.indexOf('{');
                 return JSON.parse(jsonStart !== -1 ? text.substring(jsonStart) : text || '{}');
             } catch (e) {
                 console.error(e);
-                return { success: false, message: 'Connection error: ' + e.toString() };
+                if (e && e.name === 'AbortError') {
+                    return { success: false, message: clientFriendlyError('timeout') };
+                }
+                return { success: false, message: clientFriendlyError(e.toString()) };
             }
         }
 
@@ -2145,6 +2164,8 @@
 
         async function loadDocumentCatalog() {
             const container = document.getElementById('generateCardsContainer');
+            const statusEl = document.getElementById('generateStatus');
+            if (statusEl) statusEl.innerHTML = ''; // never leave prior job/timeout noise on this tab
             // Silent refresh: if cards are already rendered, just dim them slightly
             // instead of replacing with a "Loading…" wall — keeps the tab usable
             // and avoids a jarring blank-then-repaint flash on every revisit.
@@ -2156,7 +2177,7 @@
             container.style.opacity = '1';
 
             if (!res.success) {
-                container.innerHTML = `<p class="text-red-400 text-xs col-span-2">${escapeHtml(res.message || 'Could not load documents.')}</p>`;
+                container.innerHTML = `<p class="text-red-400 text-xs col-span-2">${escapeHtml(clientFriendlyError(res.message || 'Could not load documents.'))}</p>`;
                 return;
             }
 
