@@ -1507,15 +1507,19 @@
 
             const btn = document.getElementById('sendDocSubmitBtn');
             if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ai-spinner"></span>Sending…'; }
-            const res = await callGateway('clientportal', 'clientPortalSendDocument', { docId: SEND_DOC_TARGET, to, subject, body });
-            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send'; }
+            let res;
+            try {
+                res = await callGateway('clientportal', 'clientPortalSendDocument', { docId: SEND_DOC_TARGET, to, subject, body });
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send'; }
+            }
 
-            if (res.success) {
-                showToast ? showToast(res.message || 'Sent.', 'success') : alert(res.message || 'Sent.');
-                closeSendDocumentModal();
-                loadDocuments();
+            if (res && res.success) {
+                showToast ? showToast(res.message || 'Document sent.', 'success') : alert(res.message || 'Document sent.');
+                closeSendDocumentModal(); // always close on success
+                try { loadDocuments(); } catch (e) { }
             } else {
-                showToast ? showToast(res.message || 'Send failed.', 'error') : alert(res.message || 'Send failed.');
+                showToast ? showToast(clientFriendlyError((res && res.message) || 'Send failed.'), 'error') : alert(res.message || 'Send failed.');
             }
         }
 
@@ -2206,9 +2210,10 @@
                     if (f.type === 'table') {
                         return `<div class="mt-2" data-table-field="${escapeHtml(item.docType)}|${escapeHtml(f.key)}">
                             <div class="flex items-center justify-between mb-1">
-                                <label class="text-[10px] text-slate-400">${escapeHtml(f.label)}${f.required ? ' <span class="text-red-400">*</span>' : ''}</label>
+                                <label class="text-[10px] text-slate-400">${escapeHtml(f.label)}${f.required ? ' <span class="text-red-400">*</span>' : ''}
+                                    <span class="text-slate-600"> — each + adds a full row (all linked fields)</span></label>
                                 <button type="button" onclick="clientGenAddTableRow('${escapeHtml(item.docType)}','${escapeHtml(f.key)}')"
-                                    class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-emerald-400">+ Row</button>
+                                    class="text-[10px] px-2 py-0.5 bg-emerald-900/50 hover:bg-emerald-800 border border-emerald-700 rounded text-emerald-300">+ Add line</button>
                             </div>
                             <div id="genTable-${item.docType}-${f.key}" class="space-y-1"></div>
                         </div>`;
@@ -2288,13 +2293,34 @@
             }
         }
 
-        const CLIENT_GEN_TABLE_STATE = {}; // docType|key -> [{description, qty, amount}]
+        const CLIENT_GEN_TABLE_STATE = {}; // docType|key -> [{ colKey: value, ... }]
+        const CLIENT_GEN_TABLE_COLS = {};  // docType|key -> [{ key, label }]
         let CLIENT_GEN_EXTRA_SEQ = 0;
 
+        function clientGenTableColumns(docType, key) {
+            const id = docType + '|' + key;
+            if (CLIENT_GEN_TABLE_COLS[id]) return CLIENT_GEN_TABLE_COLS[id];
+            const spec = DOC_CATALOG_CACHE[docType];
+            const fd = (spec && spec.fields || []).find(f => f.key === key);
+            const cols = (fd && fd.columns && fd.columns.length)
+                ? fd.columns
+                : [
+                    { key: 'description', label: 'Description' },
+                    { key: 'qty', label: 'Qty' },
+                    { key: 'amount', label: 'Amount' }
+                ];
+            CLIENT_GEN_TABLE_COLS[id] = cols;
+            return cols;
+        }
+
+        /** + adds ONE chained row: every related column together (description + qty + amount). */
         function clientGenAddTableRow(docType, key) {
             const id = docType + '|' + key;
+            const cols = clientGenTableColumns(docType, key);
             if (!CLIENT_GEN_TABLE_STATE[id]) CLIENT_GEN_TABLE_STATE[id] = [];
-            CLIENT_GEN_TABLE_STATE[id].push({ description: '', qty: '1', amount: '' });
+            const row = {};
+            cols.forEach(c => { row[c.key] = (c.key === 'qty') ? '1' : ''; });
+            CLIENT_GEN_TABLE_STATE[id].push(row);
             clientGenRenderTable(docType, key);
         }
 
@@ -2307,26 +2333,27 @@
 
         function clientGenRenderTable(docType, key) {
             const id = docType + '|' + key;
+            const cols = clientGenTableColumns(docType, key);
             const rows = CLIENT_GEN_TABLE_STATE[id] || [];
             const wrap = document.getElementById('genTable-' + docType + '-' + key);
             if (!wrap) return;
             if (!rows.length) {
-                wrap.innerHTML = '<p class="text-[10px] text-slate-600">No line items yet — click + Row.</p>';
+                wrap.innerHTML = '<p class="text-[10px] text-slate-600">No rows yet — click + Row to add description, qty and amount together.</p>';
                 return;
             }
-            wrap.innerHTML = rows.map((r, i) => `
-                <div class="flex gap-1 items-center">
-                    <input placeholder="Description" value="${escapeHtml(r.description || '')}"
-                        onchange="CLIENT_GEN_TABLE_STATE['${id}'][${i}].description=this.value"
-                        class="flex-1 bg-slate-950 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
-                    <input placeholder="Qty" value="${escapeHtml(r.qty || '')}"
-                        onchange="CLIENT_GEN_TABLE_STATE['${id}'][${i}].qty=this.value"
-                        class="w-12 bg-slate-950 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
-                    <input placeholder="Amount" value="${escapeHtml(r.amount || '')}"
-                        onchange="CLIENT_GEN_TABLE_STATE['${id}'][${i}].amount=this.value"
-                        class="w-20 bg-slate-950 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
+            const header = `<div class="flex gap-1 text-[9px] text-slate-500 mb-0.5">${cols.map(c =>
+                `<span class="${c.key === 'description' ? 'flex-1' : (c.key === 'qty' ? 'w-12' : 'w-20')}">${escapeHtml(c.label)}</span>`
+            ).join('')}<span class="w-6"></span></div>`;
+            wrap.innerHTML = header + rows.map((r, i) => `
+                <div class="flex gap-1 items-center mb-1 p-1.5 bg-slate-950/80 border border-slate-800 rounded">
+                    ${cols.map(c => {
+                const w = c.key === 'description' ? 'flex-1' : (c.key === 'qty' ? 'w-12' : 'w-20');
+                return `<input placeholder="${escapeHtml(c.label)}" value="${escapeHtml(r[c.key] || '')}"
+                            onchange="CLIENT_GEN_TABLE_STATE['${id}'][${i}]['${c.key}']=this.value"
+                            class="${w} bg-slate-900 border border-slate-700 rounded p-1.5 text-[11px] text-white" />`;
+            }).join('')}
                     <button type="button" onclick="clientGenRemoveTableRow('${escapeHtml(docType)}','${escapeHtml(key)}',${i})"
-                        class="text-red-400 text-xs px-1.5 hover:bg-slate-800 rounded" title="Remove row">−</button>
+                        class="text-red-400 text-xs px-1.5 hover:bg-slate-800 rounded" title="Remove this row">−</button>
                 </div>`).join('');
         }
 
@@ -2358,14 +2385,19 @@
             for (const f of fields) {
                 if (f.type === 'table') {
                     const id = docType + '|' + f.key;
-                    const rows = (CLIENT_GEN_TABLE_STATE[id] || []).filter(r => (r.description || r.amount || '').toString().trim());
+                    const cols = clientGenTableColumns(docType, f.key);
+                    const rows = (CLIENT_GEN_TABLE_STATE[id] || []).filter(r => {
+                        // keep row if any column has a value
+                        return cols.some(col => (r[col.key] || '').toString().trim());
+                    });
                     if (f.required && !rows.length) {
-                        statusEl.innerHTML = `<p class="text-xs text-amber-400 mt-2"><i class="fa-solid fa-triangle-exclamation"></i> Add at least one row for "${escapeHtml(f.label)}".</p>`;
+                        statusEl.innerHTML = `<p class="text-xs text-amber-400 mt-2"><i class="fa-solid fa-triangle-exclamation"></i> Add at least one line for "${escapeHtml(f.label)}" (use + Add line).</p>`;
                         return;
                     }
-                    if (rows.length) payload[f.key] = rows;
-                    // also map common alias for structured receipt builder
-                    if (rows.length && !payload.lineItems) payload.lineItems = rows;
+                    if (rows.length) {
+                        payload[f.key] = rows;
+                        payload.lineItems = rows; // always alias for structured builders
+                    }
                     continue;
                 }
                 const el = document.getElementById(`genInput-${docType}-${f.key}`);
