@@ -5420,17 +5420,27 @@
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Asset type</label>
-                    <select id="dsUploadAssetType"
+                    <select id="dsUploadAssetType" onchange="onDsUploadAssetTypeChange()"
                         class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
-                        <option value="sample">Sample document (has real data in it)</option>
-                        <option value="blank_template">Blank template (an empty form — AI fills it exactly)</option>
-                        <option value="letterhead">Letterhead (used at the top of official documents)</option>
-                        <option value="logo">Logo</option>
+                        <option value="sample">Filled sample (has real data — teaches field layout)</option>
+                        <option value="blank_template">Blank template (empty form — filled on generate)</option>
+                        <option value="letterhead">Letterhead (letters only)</option>
+                        <option value="logo">Logo (centred above title on non-letter docs)</option>
                     </select>
                 </div>
+                <div id="dsUploadCatalogWrap">
+                    <label class="block text-xs text-slate-400 mb-1">Document type this trains <span
+                            class="text-red-400">*</span></label>
+                    <select id="dsUploadCatalogId" required
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
+                        <option value="">Loading catalog…</option>
+                    </select>
+                    <p class="text-[10px] text-slate-500 mt-1">Must match a generatable type (e.g. Receipt). Generation
+                        for that type will use this training.</p>
+                </div>
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">What is this document? (optional hint)</label>
-                    <input type="text" id="dsUploadHint" placeholder="e.g. our Term 2 report card"
+                    <label class="block text-xs text-slate-400 mb-1">Extra hint (optional)</label>
+                    <input type="text" id="dsUploadHint" placeholder="e.g. Term 2 layout, bilingual headers"
                         class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
                 </div>
                 <div>
@@ -12838,6 +12848,36 @@ ${a.Status === 'Pending Review' ? `
             document.getElementById('dsUploadResult').classList.add('hidden');
             const preselected = document.getElementById('docStudioClientId')?.value;
             if (preselected) document.getElementById('dsUploadClientId').value = preselected;
+            populateDsUploadCatalogDropdown();
+            onDsUploadAssetTypeChange();
+        }
+
+        async function populateDsUploadCatalogDropdown() {
+            const sel = document.getElementById('dsUploadCatalogId');
+            if (!sel) return;
+            if (!DOC_STUDIO_CATALOG || !DOC_STUDIO_CATALOG.length) {
+                try {
+                    const res = await executeSecureBridgeCall('agent', 'agent-list-catalog-documents', {});
+                    DOC_STUDIO_CATALOG = (res.success && res.documentTypes) ? res.documentTypes : [];
+                } catch (e) { DOC_STUDIO_CATALOG = DOC_STUDIO_CATALOG || []; }
+            }
+            const opts = ['<option value="">— Select document type —</option>']
+                .concat((DOC_STUDIO_CATALOG || []).map(d =>
+                    `<option value="${escapeHtml(d.id)}">${escapeHtml(d.label || d.id)} (${escapeHtml(d.id)})</option>`
+                ));
+            sel.innerHTML = opts.join('');
+        }
+
+        function onDsUploadAssetTypeChange() {
+            const t = document.getElementById('dsUploadAssetType')?.value;
+            const wrap = document.getElementById('dsUploadCatalogWrap');
+            const sel = document.getElementById('dsUploadCatalogId');
+            const needsDoc = (t === 'sample' || t === 'blank_template');
+            if (wrap) wrap.style.display = needsDoc ? '' : 'none';
+            if (sel) {
+                sel.required = !!needsDoc;
+                if (!needsDoc) sel.value = '';
+            }
         }
         function closeDocStudioUploadModal() {
             document.getElementById('modalDocStudioUpload').classList.add('hidden');
@@ -12852,16 +12892,22 @@ ${a.Status === 'Pending Review' ? `
             event.preventDefault();
             const clientId = document.getElementById('dsUploadClientId').value;
             const assetType = document.getElementById('dsUploadAssetType').value;
+            const catalogId = (document.getElementById('dsUploadCatalogId')?.value || '').trim();
             const docHint = document.getElementById('dsUploadHint').value.trim();
             const file = document.getElementById('dsUploadFile').files[0];
             if (!clientId || !file) { showToast('Client and a file are required.', 'error'); return; }
+            if ((assetType === 'sample' || assetType === 'blank_template') && !catalogId) {
+                showToast('Select which document type this trains (e.g. Receipt).', 'error');
+                return;
+            }
 
             const btn = event.target.querySelector('button[type="submit"]');
             if (btn) { btn.disabled = true; btn.textContent = 'Analyzing…'; }
             try {
                 const base64Data = await fileToBase64(file);
                 let res = await executeSecureBridgeCall('agent', 'agent-analyze-document-sample', {
-                    clientId, assetType, fileName: file.name, mimeType: file.type, base64Data, docHint
+                    clientId, assetType, catalogId: catalogId || undefined,
+                    fileName: file.name, mimeType: file.type, base64Data, docHint
                 });
                 // This action now runs as a background job (Drive upload + OCR + AI
                 // analysis routinely takes longer than the old 50s synchronous limit),
