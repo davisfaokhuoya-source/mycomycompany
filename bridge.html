@@ -6463,11 +6463,28 @@
         // Digital Scale" even though they are, just via the legacy column).
         function getClientOpsTier(c) {
             if (!c) return '';
-            return c.OpsTier || (OPS_TIER_KEYS.includes(c.Tier) ? c.Tier : '');
+            const raw = c.OpsTier || c.opsTier || '';
+            if (raw && OPS_TIER_KEYS.includes(String(raw))) return String(raw);
+            if (c.Tier && OPS_TIER_KEYS.includes(String(c.Tier))) return String(c.Tier);
+            return '';
         }
         function getClientDigitalTier(c) {
             if (!c) return '';
-            return c.DigitalTier || (DIGITAL_TIER_KEYS.includes(c.Tier) ? c.Tier : '');
+            // Prefer explicit DigitalTier; also accept MarketingTier and legacy Tier
+            const candidates = [c.DigitalTier, c.digitalTier, c.MarketingTier, c.marketingTier, c.Tier];
+            for (let i = 0; i < candidates.length; i++) {
+                let k = String(candidates[i] || '').trim();
+                if (!k) continue;
+                // Normalize "Digital Scale" → digital_scale
+                const norm = k.toLowerCase().replace(/\s+/g, '_');
+                if (DIGITAL_TIER_KEYS.includes(k)) return k;
+                if (DIGITAL_TIER_KEYS.includes(norm)) return norm;
+                if (norm === 'digitalscale') return 'digital_scale';
+            }
+            return '';
+        }
+        function isDigitalScaleClient(c) {
+            return getClientDigitalTier(c) === 'digital_scale';
         }
 
         function fmtTierPrice(key) {
@@ -6481,18 +6498,19 @@
             if (!key) return '<span class="text-slate-600">—</span>';
             const label = AGENT_TIER_INFO[key]?.label || key;
             if (!clientId) return badge(label);
-            // Clicking a tier badge shows what's consumed vs. left for that
-            // client this period, instead of making the admin hop over to
-            // the separate Quota Monitor tab and hunt for the same client.
-            return `<button type="button" onclick="openTierUsageModal('${escapeHtml(clientId)}', '${escapeHtml(companyName || '')}')"
-                class="cursor-pointer hover:opacity-80" title="View usage">${badge(label)}</button>`;
+            // Pass suite so Digital badges show digital usage, Ops show ops usage
+            const suite = (AGENT_TIER_INFO[key] && AGENT_TIER_INFO[key].suite) || (DIGITAL_TIER_KEYS.includes(key) ? 'digital' : 'ops');
+            return `<button type="button" onclick="openTierUsageModal('${escapeHtml(clientId)}', '${escapeHtml(companyName || '')}', '${suite}')"
+                class="cursor-pointer hover:opacity-80" title="View ${suite} usage">${badge(label)}</button>`;
         }
 
-        async function openTierUsageModal(clientId, companyName) {
-            showModalContent('Usage — ' + (companyName || clientId), '<i class="fa-solid fa-spinner fa-spin"></i> Loading…');
-            const q = await executeSecureBridgeCall('agent', 'agent-check-quota', { clientId });
+        async function openTierUsageModal(clientId, companyName, suite) {
+            suite = suite || 'ops';
+            const suiteTitle = suite === 'digital' ? 'Digital usage' : 'Ops usage';
+            showModalContent(suiteTitle + ' — ' + (companyName || clientId), '<i class="fa-solid fa-spinner fa-spin"></i> Loading…');
+            const q = await executeSecureBridgeCall('agent', 'agent-check-quota', { clientId, suite });
             if (!q.success) {
-                showModalContent('Usage — ' + (companyName || clientId),
+                showModalContent(suiteTitle + ' — ' + (companyName || clientId),
                     `<p class="text-slate-500 text-xs">${escapeHtml(q.message || 'Usage data unavailable' + (q.expired ? ' (subscription expired).' : '.'))}</p>`);
                 return;
             }
@@ -6511,21 +6529,31 @@
                     </div>
                 </div>`;
             };
-            let body = '';
-            if (q.tierLabel) {
-                body += `<p class="text-[10px] text-blue-400 mb-3">${escapeHtml(q.tierLabel)}</p>`;
+            const isDigital = suite === 'digital' || q.suite === 'digital' || !!q.tierLabel
+                || (q.used && (q.used.contentReviewHours !== undefined || q.used.socialAssets !== undefined));
+            let body = `<p class="text-[10px] uppercase tracking-wide mb-2 ${isDigital ? 'text-violet-400' : 'text-emerald-400'}">${isDigital ? 'Digital suite' : 'Ops suite'}</p>`;
+            if (isDigital) {
+                body += `<p class="text-[10px] text-blue-400 mb-3">${escapeHtml(q.tierLabel || q.tier || 'Digital')}</p>`;
                 body += row('Content review hours', q.used?.contentReviewHours, q.limits?.contentReviewHours);
                 body += row('Social assets', q.used?.socialAssets, q.limits?.socialAssets);
+                if (q.used?.linkedinPosts !== undefined || q.limits?.linkedinPosts !== undefined)
+                    body += row('LinkedIn / social posts (mo)', q.used?.linkedinPosts, q.limits?.linkedinPosts);
+                if (q.used?.socialAccounts !== undefined || q.limits?.socialAccounts !== undefined)
+                    body += row('Social accounts', q.used?.socialAccounts, q.limits?.socialAccounts);
             } else {
+                if (q.tierLabel) body += `<p class="text-[10px] text-blue-400 mb-3">${escapeHtml(q.tierLabel)}</p>`;
                 body += row('Hours', q.used?.hours, q.limits?.hours);
                 body += row('Emails', q.used?.emails, q.limits?.emails);
                 body += row('Proposals', q.used?.proposals, q.limits?.proposals);
                 if (q.used?.mailboxes !== undefined || q.limits?.mailboxes !== undefined) body += row('Mailboxes', q.used?.mailboxes, q.limits?.mailboxes);
+                if (q.used?.crmAccounts !== undefined || q.limits?.crmAccounts !== undefined) body += row('CRM accounts', q.used?.crmAccounts, q.limits?.crmAccounts);
                 if (q.used?.crmSyncs !== undefined || q.limits?.crmSyncs !== undefined) body += row('CRM syncs', q.used?.crmSyncs, q.limits?.crmSyncs);
+                if (q.used?.documents !== undefined || q.limits?.documents !== undefined) body += row('Documents', q.used?.documents, q.limits?.documents);
                 if (q.used?.docs !== undefined || q.limits?.docs !== undefined) body += row('Docs', q.used?.docs, q.limits?.docs);
+                if (q.used?.tasks !== undefined || q.limits?.tasks !== undefined) body += row('Tasks', q.used?.tasks, q.limits?.tasks);
             }
-            if (q.periodEnd) body += `<p class="text-[10px] text-slate-500 mt-2">Resets ${escapeHtml(fmtDate(q.periodEnd))}.</p>`;
-            showModalContent('Usage — ' + (companyName || clientId), body);
+            if (q.periodEnd || q.expiresOn) body += `<p class="text-[10px] text-slate-500 mt-2">Resets ${escapeHtml(fmtDate(q.periodEnd || q.expiresOn))}.</p>`;
+            showModalContent(suiteTitle + ' — ' + (companyName || clientId), body);
         }
         function tierOptionLabel(key) {
             const t = AGENT_TIER_INFO[key];
@@ -10191,26 +10219,67 @@
             event.preventDefault();
             const clientId = document.getElementById('entLimitsClientId').value;
             const num = id => parseInt(document.getElementById(id).value) || undefined;
-            const payload = {
-                clientId,
-                hours: num('entLimitsHours'),
-                emails: num('entLimitsEmails'),
-                proposals: num('entLimitsProposals'),
-                mailboxes: num('entLimitsMailboxes'),
-                crmSyncs: num('entLimitsCrmSyncs'),
-                complianceChecks: num('entLimitsComplianceChecks'),
-                docsPerMonth: num('entLimitsDocsPerMonth'),
-                socialPostsPerWeek: num('entLimitsSocialPostsPerWeek'),
-                socialAccounts: num('entLimitsSocialAccounts'),
-                socialAssets: num('entLimitsSocialAssets'),
-                priceNgn: parseFloat(document.getElementById('entLimitsPriceNgn').value) || undefined
-            };
+            // Resolve suite from the client this modal was opened for. Sending hours
+            // without suite: forced the backend into "ops" and rejected pure Digital Scale clients.
+            const cached = (typeof AGENT_CLIENTS_CACHE !== 'undefined' && AGENT_CLIENTS_CACHE)
+                ? (AGENT_CLIENTS_CACHE[clientId] || Object.values(AGENT_CLIENTS_CACHE).find(x => x && String(x.ClientID) === String(clientId)))
+                : null;
+            const opsTier = getClientOpsTier(cached || {});
+            const digitalTier = getClientDigitalTier(cached || { DigitalTier: document.getElementById('entLimitsClientId').dataset.tier });
+            const results = [];
             const btn = event.target.querySelector('button[type=submit]');
             if (btn) { btn.disabled = true; btn.textContent = 'Applying…'; }
-            const res = await executeSecureBridgeCall('agent', 'agent-set-enterprise-limits', payload);
+
+            if (opsTier === 'enterprise_ops') {
+                results.push(await executeSecureBridgeCall('agent', 'agent-set-enterprise-limits', {
+                    clientId, suite: 'ops',
+                    hours: num('entLimitsHours'),
+                    emails: num('entLimitsEmails'),
+                    proposals: num('entLimitsProposals'),
+                    mailboxes: num('entLimitsMailboxes'),
+                    crmSyncs: num('entLimitsCrmSyncs'),
+                    complianceChecks: num('entLimitsComplianceChecks'),
+                    docsPerMonth: num('entLimitsDocsPerMonth'),
+                    socialPostsPerWeek: num('entLimitsSocialPostsPerWeek'),
+                    socialAccounts: num('entLimitsSocialAccounts'),
+                    socialAssets: num('entLimitsSocialAssets'),
+                    priceNgn: parseFloat(document.getElementById('entLimitsPriceNgn').value) || undefined
+                }));
+            }
+            if (digitalTier === 'digital_scale') {
+                results.push(await executeSecureBridgeCall('agent', 'agent-set-enterprise-limits', {
+                    clientId, suite: 'digital',
+                    socialPostsPerWeek: num('entLimitsSocialPostsPerWeek'),
+                    socialAccounts: num('entLimitsSocialAccounts'),
+                    socialAssets: num('entLimitsSocialAssets'),
+                    priceNgn: parseFloat(document.getElementById('entLimitsPriceNgn').value) || undefined
+                }));
+            }
+            if (!results.length) {
+                // Fallback: trust dataset tier
+                const t = document.getElementById('entLimitsClientId').dataset.tier || '';
+                results.push(await executeSecureBridgeCall('agent', 'agent-set-enterprise-limits', {
+                    clientId,
+                    suite: t === 'digital_scale' ? 'digital' : 'ops',
+                    hours: num('entLimitsHours'),
+                    emails: num('entLimitsEmails'),
+                    proposals: num('entLimitsProposals'),
+                    mailboxes: num('entLimitsMailboxes'),
+                    crmSyncs: num('entLimitsCrmSyncs'),
+                    complianceChecks: num('entLimitsComplianceChecks'),
+                    docsPerMonth: num('entLimitsDocsPerMonth'),
+                    socialPostsPerWeek: num('entLimitsSocialPostsPerWeek'),
+                    socialAccounts: num('entLimitsSocialAccounts'),
+                    socialAssets: num('entLimitsSocialAssets'),
+                    priceNgn: parseFloat(document.getElementById('entLimitsPriceNgn').value) || undefined
+                }));
+            }
+
             if (btn) { btn.disabled = false; btn.textContent = 'Apply Limits'; }
-            showToast(res.success ? 'Enterprise limits updated.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
-            if (res.success) { closeAgentEnterpriseLimitsModal(); loadAgentSubscriptions(); loadAgentClients(); }
+            const allOk = results.every(r => r && r.success);
+            const failMsg = results.filter(r => !r.success).map(r => r.message).join('; ');
+            showToast(allOk ? 'Enterprise limits updated.' : (failMsg || 'Failed.'), allOk ? 'success' : 'error');
+            if (allOk) { closeAgentEnterpriseLimitsModal(); loadAgentSubscriptions(); loadAgentClients(); }
         }
 
         function closeAgentClientRegisterModal() {
@@ -14440,12 +14509,24 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
 
             const btn = document.getElementById('socialGenerateBtn');
             setBtnBusy(btn, true, { busyLabel: 'Generating…' });
-            const res = await executeSecureBridgeCall('agent', 'agent-generate-social-calendar',
+            let res = await executeSecureBridgeCall('agent', 'agent-generate-social-calendar',
                 { clientId, monthOffset, topics }, { silent: true });
+
+            // If backend ever queues this as a job, wait for completion
+            if (res && res.queued && res.jobId && typeof resolveAdminJobResult === 'function') {
+                showToast('Calendar generation started…', 'info');
+                res = await resolveAdminJobResult(res);
+            }
             setBtnBusy(btn, false);
 
-            if (!res.success) { showToast(res.message || 'Generation failed.', 'error'); return; }
-            showToast(`${res.postsGenerated} posts generated.`, 'success');
+            if (!res || !res.success) {
+                showToast((res && res.message) || 'Generation failed.', 'error');
+                return;
+            }
+            const n = (res.postsGenerated != null)
+                ? res.postsGenerated
+                : (Array.isArray(res.calendar) ? res.calendar.length : 0);
+            showToast((n || 0) + ' posts generated.', 'success');
             await fetchAdminSocialCalendar(clientId);
         }
 
@@ -14529,6 +14610,14 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 <input id="socHashtags-${escapeHtml(p.PostID)}" placeholder="Hashtags" value="${escapeHtml(p.Hashtags || '')}" class="bg-slate-900 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
                 <input id="socCta-${escapeHtml(p.PostID)}" placeholder="CTA" value="${escapeHtml(p.CTA || '')}" class="bg-slate-900 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
             </div>
+            ${p.ImageURL ? `<div class="mt-2"><img src="${escapeHtml(p.ImageURL)}" alt="post media" class="max-h-24 rounded border border-slate-800 object-cover" onerror="this.style.display='none'"/></div>` : `<p class="text-[10px] text-slate-600 mt-1">No image attached — upload one below for photo/video platforms.</p>`}
+            <div class="flex flex-wrap items-center gap-2 mt-2">
+                <input type="file" id="socFile-${escapeHtml(p.PostID)}" accept="image/*,video/*" class="text-[10px] text-slate-400 max-w-[180px]" />
+                <button type="button" onclick="uploadSocialPostImageAdmin('${escapeHtml(p.PostID)}','${escapeHtml(p.Platform || '')}')"
+                    class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-200">Upload &amp; attach</button>
+                <button type="button" onclick="pickSocialPostImageAdmin('${escapeHtml(p.PostID)}','${escapeHtml(p.Platform || '')}')"
+                    class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-200">Choose existing</button>
+            </div>
             <div class="flex gap-2 justify-end mt-3 pt-2 border-t border-slate-800">
                 ${p.PublishedAt ? '' : `<button onclick="saveSocialPostEdit('${escapeHtml(p.PostID)}')" class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Save Edit</button>`}
                 ${isDecided ? '' : `
@@ -14538,6 +14627,85 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             </div>
         </div>`;
             }).join('');
+        }
+
+        function fileToBase64(file) {
+            return new Promise(function (resolve, reject) {
+                const reader = new FileReader();
+                reader.onload = function () {
+                    const s = String(reader.result || '');
+                    const i = s.indexOf(',');
+                    resolve(i >= 0 ? s.slice(i + 1) : s);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function uploadSocialPostImageAdmin(postId, platform) {
+            const clientId = document.getElementById('socialClientSelector').value;
+            const input = document.getElementById('socFile-' + postId);
+            if (!input || !input.files || !input.files[0]) {
+                showToast('Choose a file first.', 'error');
+                return;
+            }
+            const file = input.files[0];
+            const base64Data = await fileToBase64(file);
+            const assetType = (file.type || '').indexOf('video/') === 0 ? 'video' : 'image';
+            showToast('Uploading…', 'info');
+            const up = await executeSecureBridgeCall('agent', 'agent-upload-social-asset', {
+                clientId,
+                platform: (platform || 'instagram').toLowerCase(),
+                fileName: file.name,
+                mimeType: file.type || 'image/jpeg',
+                base64Data,
+                assetType
+            }, { silent: true });
+            if (!up.success) {
+                showToast(up.message || 'Upload failed.', 'error');
+                return;
+            }
+            const imageId = up.imageId || up.ImageID || (up.record && up.record.ImageID);
+            if (!imageId) {
+                showToast('Uploaded but no imageId returned — try Choose existing.', 'error');
+                await fetchAdminSocialCalendar(clientId);
+                return;
+            }
+            const att = await executeSecureBridgeCall('agent', 'agent-attach-social-image', {
+                clientId, postId, imageId
+            }, { silent: true });
+            showToast(att.success ? 'Image attached.' : (att.message || 'Attach failed.'), att.success ? 'success' : 'error');
+            if (att.success) await fetchAdminSocialCalendar(clientId);
+        }
+
+        async function pickSocialPostImageAdmin(postId, platform) {
+            const clientId = document.getElementById('socialClientSelector').value;
+            const res = await executeSecureBridgeCall('agent', 'agent-list-social-assets', {
+                clientId, platform: (platform || '').toLowerCase()
+            }, { silent: true });
+            if (!res.success) {
+                showToast(res.message || 'Could not list assets.', 'error');
+                return;
+            }
+            const images = (res.images || res.assets || []).filter(function (i) {
+                return String(i.Status || '') === 'Available' || !i.Status;
+            });
+            if (!images.length) {
+                showToast('No available assets for this platform. Upload one first.', 'error');
+                return;
+            }
+            const lines = images.map(function (img, idx) {
+                return (idx + 1) + '. ' + (img.FileName || img.ImageID) + ' (' + (img.Platform || '') + ')';
+            }).join('\n');
+            const pick = prompt('Enter number to attach:\n' + lines, '1');
+            const n = parseInt(pick, 10);
+            if (!n || n < 1 || n > images.length) return;
+            const imageId = images[n - 1].ImageID;
+            const att = await executeSecureBridgeCall('agent', 'agent-attach-social-image', {
+                clientId, postId, imageId
+            }, { silent: true });
+            showToast(att.success ? 'Image attached.' : (att.message || 'Attach failed.'), att.success ? 'success' : 'error');
+            if (att.success) await fetchAdminSocialCalendar(clientId);
         }
 
         async function saveSocialPostEdit(postId) {
