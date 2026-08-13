@@ -137,6 +137,36 @@
         .directive-panel.open {
             display: block;
         }
+
+        #clientToastHost {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-width: min(22rem, calc(100vw - 2rem));
+            pointer-events: none;
+        }
+        .client-toast {
+            pointer-events: auto;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid #1e293b;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-size: 0.8rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+            animation: toast-in 0.2s ease-out;
+        }
+        .client-toast.success { border-color: #065f46; background: #064e3b; color: #d1fae5; }
+        .client-toast.error { border-color: #7f1d1d; background: #7f1d1d; color: #fee2e2; }
+        .client-toast.info { border-color: #1e3a5f; background: #0c1a2e; color: #bfdbfe; }
+        @keyframes toast-in {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 
@@ -349,9 +379,7 @@
                                     <p class="text-[9px] uppercase text-slate-500">Needs approval</p>
                                 </div>
                             </div>
-                            <p class="text-[11px] text-slate-500">Plan quota: <span id="ovEmailQuota"
-                                    class="text-slate-300">—</span>. The agent reads inbound mail, classifies, drafts or
-                                auto-sends routine replies, and escalates appointments.</p>
+                            <p class="text-[11px] text-slate-500">Plan quota: <span id="ovEmailQuota" class="text-slate-300">—</span>. The agent reads inbound mail, classifies, drafts or auto-sends routine replies, and escalates appointments.</p>
                         </div>
                         <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
                             <div class="flex items-center justify-between gap-2">
@@ -376,9 +404,7 @@
                                     <p class="text-[9px] uppercase text-slate-500">Team handoffs</p>
                                 </div>
                             </div>
-                            <p class="text-[11px] text-slate-500">Numbers: <span id="ovWaNumbers"
-                                    class="text-slate-300">—</span>. Connect extra lines under Integrations and assign
-                                departments so the agent can route serious chats to your team.</p>
+                            <p class="text-[11px] text-slate-500">Numbers: <span id="ovWaNumbers" class="text-slate-300">—</span>. Connect extra lines under Integrations and assign departments so the agent can route serious chats to your team.</p>
                         </div>
                     </div>
 
@@ -386,14 +412,9 @@
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <div>
                                 <p class="text-sm font-semibold text-white flex items-center gap-2">
-                                    <i class="fa-brands fa-whatsapp text-green-400"></i> WhatsApp: API inbox + team
-                                    referrals
+                                    <i class="fa-brands fa-whatsapp text-green-400"></i> WhatsApp: API inbox + team referrals
                                 </p>
-                                <p class="text-[11px] text-slate-500 mt-1 max-w-xl"><strong
-                                        class="text-slate-300">One</strong> Business API number connects to our platform
-                                    (agent reads &amp; replies). Separately link up to <strong class="text-slate-300">10
-                                        staff WhatsApp numbers</strong> so the agent can message them when referring a
-                                    customer.</p>
+                                <p class="text-[11px] text-slate-500 mt-1 max-w-xl"><strong class="text-slate-300">One</strong> Business API number connects to our platform (agent reads &amp; replies). Separately link up to <strong class="text-slate-300">10 staff WhatsApp numbers</strong> so the agent can message them when referring a customer.</p>
                             </div>
                             <div class="flex flex-wrap gap-2">
                                 <button type="button" onclick="clientConnectWhatsApp()"
@@ -402,16 +423,14 @@
                                 </button>
                                 <button type="button"
                                     onclick="showView('integrations', document.querySelector('.nav-link[data-view=integrations]'))"
-                                    class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">Add
-                                    team numbers</button>
+                                    class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">Add team numbers</button>
                             </div>
                         </div>
                         <p id="ovWaConnectHint" class="hidden text-[11px] text-emerald-300 break-all"></p>
                         <div>
                             <p class="text-[10px] font-mono uppercase text-slate-500 mb-1">API inbox (agent)</p>
                             <div id="ovWaApiBox" class="text-xs text-slate-400 mb-3">Loading…</div>
-                            <p class="text-[10px] font-mono uppercase text-slate-500 mb-1">Linked team WhatsApp
-                                (referrals)</p>
+                            <p class="text-[10px] font-mono uppercase text-slate-500 mb-1">Linked team WhatsApp (referrals)</p>
                             <div id="ovWaNumbersList" class="space-y-2 text-xs text-slate-400">Loading…</div>
                         </div>
                     </div>
@@ -420,24 +439,15 @@
                         <p class="text-sm font-semibold text-white flex items-center gap-2">
                             <i class="fa-solid fa-route text-emerald-400"></i> When the agent refers a chat to your team
                         </p>
-                        <p class="text-[11px] text-slate-400 leading-relaxed">The agent answers routine chats on your
-                            <span class="text-slate-200">API WhatsApp number</span>. On referral it <span
-                                class="text-slate-200">sends a WhatsApp message from that API number to a linked staff
-                                number</span> (by department) with the customer’s details:</p>
+                        <p class="text-[11px] text-slate-400 leading-relaxed">The agent answers routine chats on your <span class="text-slate-200">API WhatsApp number</span>. On referral it <span class="text-slate-200">sends a WhatsApp message from that API number to a linked staff number</span> (by department) with the customer’s details:</p>
                         <ul class="text-[11px] text-slate-400 space-y-1.5 list-disc pl-5">
-                            <li><span class="text-slate-200">Serious buyer / high intent</span> — ready to purchase,
-                                quote with budget, or paid engagement.</li>
-                            <li><span class="text-slate-200">Appointment / demo request</span> — call, meeting, or visit
-                                needing a human.</li>
-                            <li><span class="text-slate-200">Complaint or sensitive matter</span> — billing disputes,
-                                legal, safety, reputation.</li>
-                            <li><span class="text-slate-200">Explicit human request</span> — “speak to someone”,
-                                “transfer to sales/support”.</li>
-                            <li><span class="text-slate-200">Agent uncertainty</span> — outside policy or only your
-                                staff can decide.</li>
+                            <li><span class="text-slate-200">Serious buyer / high intent</span> — ready to purchase, quote with budget, or paid engagement.</li>
+                            <li><span class="text-slate-200">Appointment / demo request</span> — call, meeting, or visit needing a human.</li>
+                            <li><span class="text-slate-200">Complaint or sensitive matter</span> — billing disputes, legal, safety, reputation.</li>
+                            <li><span class="text-slate-200">Explicit human request</span> — “speak to someone”, “transfer to sales/support”.</li>
+                            <li><span class="text-slate-200">Agent uncertainty</span> — outside policy or only your staff can decide.</li>
                         </ul>
-                        <p class="text-[11px] text-slate-500">Tag each linked number with a department. The agent picks
-                            a matching staff WhatsApp; if none match, any active linked number.</p>
+                        <p class="text-[11px] text-slate-500">Tag each linked number with a department. The agent picks a matching staff WhatsApp; if none match, any active linked number.</p>
                     </div>
 
                     <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
@@ -460,14 +470,12 @@
                         <div id="recentDocsList" class="space-y-2 text-xs text-slate-400">Loading…</div>
                     </div>
 
-                    <div
-                        class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div>
                             <p class="text-sm font-semibold text-white flex items-center gap-2">
                                 <i class="fa-solid fa-credit-card text-emerald-400"></i> Billing &amp; Renewal
                             </p>
-                            <p class="text-xs text-slate-400 mt-1 max-w-md">Renew your subscription, apply a discount
-                                code from your account team, and pay securely.</p>
+                            <p class="text-xs text-slate-400 mt-1 max-w-md">Renew your subscription, apply a discount code from your account team, and pay securely.</p>
                         </div>
                         <button onclick="showView('billing', document.querySelector('.nav-link[data-view=billing]'))"
                             class="shrink-0 bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium py-2.5 px-5 rounded-lg flex items-center gap-2">
@@ -475,14 +483,12 @@
                         </button>
                     </div>
 
-                    <div
-                        class="bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-800/40 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-800/40 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div>
                             <p class="text-sm font-semibold text-white flex items-center gap-2">
                                 <i class="fa-solid fa-heart text-emerald-400"></i> Support The Victorias
                             </p>
-                            <p class="text-xs text-slate-400 mt-1 max-w-md">Your donation helps us keep building tools
-                                that power Nigerian businesses. Secure checkout via Flutterwave.</p>
+                            <p class="text-xs text-slate-400 mt-1 max-w-md">Your donation helps us keep building tools that power Nigerian businesses. Secure checkout via Flutterwave.</p>
                         </div>
                         <button onclick="showView('donate', document.querySelector('.nav-link[data-view=donate]'))"
                             class="shrink-0 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 px-5 rounded-lg shadow flex items-center gap-2">
@@ -573,8 +579,7 @@
                                 email the recipient as soon as the document is generated.
                                 <strong class="text-slate-300">Off:</strong> generate only and hold in
                                 <span class="text-slate-300">My Documents</span> as "Pending Your Approval" until
-                                you click Approve &amp; Send.
-                            </p>
+                                you click Approve &amp; Send.</p>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
                             <input type="checkbox" id="autoSendToggle" class="sr-only peer"
@@ -809,9 +814,7 @@
                                 </button>
                             </div>
                         </div>
-                        <p class="text-[11px] text-slate-500">1) Connect <strong class="text-slate-300">one</strong>
-                            Business API number (agent inbox). 2) Link staff phones (up to your limit) for referrals —
-                            the agent messages them from the API number.</p>
+                        <p class="text-[11px] text-slate-500">1) Connect <strong class="text-slate-300">one</strong> Business API number (agent inbox). 2) Link staff phones (up to your limit) for referrals — the agent messages them from the API number.</p>
                         <p id="clientWaUsageLabel" class="text-[11px] text-slate-500"></p>
                         <p id="clientWaWeeklyLabel" class="text-[11px] text-slate-400"></p>
                         <div id="integrationsWhatsAppApi" class="space-y-2 text-xs"></div>
@@ -829,8 +832,7 @@
                                 </div>
                                 <div>
                                     <label class="text-[10px] text-slate-500">Department</label>
-                                    <select id="waTeamDept"
-                                        class="block bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white">
+                                    <select id="waTeamDept" class="block bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white">
                                         <option value="sales">sales</option>
                                         <option value="support">support</option>
                                         <option value="admin">admin</option>
@@ -840,8 +842,7 @@
                                     </select>
                                 </div>
                                 <button type="button" onclick="clientAddTeamWhatsApp()"
-                                    class="text-[10px] px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white">Add
-                                    team number</button>
+                                    class="text-[10px] px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white">Add team number</button>
                             </div>
                             <div id="integrationsWhatsAppList" class="space-y-2 text-xs"></div>
                         </div>
@@ -864,15 +865,13 @@
                 <!-- WHATSAPP ACTIVITY -->
                 <section id="view-whatsappactivity" class="view flex-1 h-full flex-col overflow-hidden space-y-4">
                     <div class="flex justify-between items-center shrink-0 flex-wrap gap-2">
-                        <p class="text-xs text-slate-400 max-w-2xl">Messages &amp; replies on your API numbers, plus
-                            referrals to linked team WhatsApp. Filter by number type or specific line.</p>
+                        <p class="text-xs text-slate-400 max-w-2xl">Messages &amp; replies on your API numbers, plus referrals to linked team WhatsApp. Filter by number type or specific line.</p>
                         <div class="flex gap-2">
                             <button type="button" onclick="clientConnectWhatsApp()"
                                 class="text-xs px-3 py-1.5 bg-green-700 hover:bg-green-600 rounded text-white shrink-0">
                                 <i class="fa-solid fa-plus"></i> Connect API number
                             </button>
-                            <button
-                                onclick="loadWhatsAppActivity(1); loadWhatsAppActivityHeaderStats(); populateWhatsAppActivityFilters();"
+                            <button onclick="loadWhatsAppActivity(1); loadWhatsAppActivityHeaderStats(); populateWhatsAppActivityFilters();"
                                 class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white shrink-0">
                                 <i class="fa-solid fa-rotate"></i> Refresh
                             </button>
@@ -896,8 +895,7 @@
                             <p class="text-[9px] uppercase text-slate-500">API + team links</p>
                         </div>
                     </div>
-                    <div
-                        class="flex flex-wrap gap-2 items-center shrink-0 bg-slate-950 border border-slate-800 rounded-xl p-3">
+                    <div class="flex flex-wrap gap-2 items-center shrink-0 bg-slate-950 border border-slate-800 rounded-xl p-3">
                         <label class="text-[10px] text-slate-500">Type
                             <select id="waFilterLinkType" onchange="loadWhatsAppActivity(1)"
                                 class="ml-1 bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white">
@@ -920,8 +918,7 @@
                         </label>
                     </div>
                     <details class="bg-slate-900 border border-slate-800 rounded-xl p-3 shrink-0">
-                        <summary class="text-xs font-semibold text-white cursor-pointer">When does the agent refer to my
-                            team WhatsApp?</summary>
+                        <summary class="text-xs font-semibold text-white cursor-pointer">When does the agent refer to my team WhatsApp?</summary>
                         <ul class="mt-2 text-[11px] text-slate-400 space-y-1 list-disc pl-5">
                             <li>Serious buyer / purchase intent or quote with budget</li>
                             <li>Appointment, demo, or call request</li>
@@ -929,15 +926,11 @@
                             <li>Customer asks for a human or a specific department</li>
                             <li>Outside agent policy or low AI confidence</li>
                         </ul>
-                        <p class="mt-2 text-[11px] text-slate-500">Referrals are sent <strong
-                                class="text-slate-300">from your API number to a linked staff WhatsApp</strong> (by
-                            department). Manage links under Integrations.</p>
+                        <p class="mt-2 text-[11px] text-slate-500">Referrals are sent <strong class="text-slate-300">from your API number to a linked staff WhatsApp</strong> (by department). Manage links under Integrations.</p>
                     </details>
-                    <div
-                        class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar min-h-0">
+                    <div class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar min-h-0">
                         <table class="w-full text-left border-collapse text-xs">
-                            <thead
-                                class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
+                            <thead class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
                                 <tr>
                                     <th class="p-3">From</th>
                                     <th class="p-3">When</th>
@@ -947,18 +940,15 @@
                                     <th class="p-3">Line</th>
                                 </tr>
                             </thead>
-                            <tbody id="whatsappActivityTableBody" class="divide-y divide-slate-800/50 text-slate-300">
-                            </tbody>
+                            <tbody id="whatsappActivityTableBody" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
                         </table>
                     </div>
                     <div class="flex justify-between items-center shrink-0 text-xs text-slate-400">
                         <span id="whatsappActivityPageInfo"></span>
                         <div class="flex gap-2">
-                            <button id="whatsappActivityPrevBtn"
-                                onclick="loadWhatsAppActivity(WHATSAPP_ACTIVITY_PAGE - 1)"
+                            <button id="whatsappActivityPrevBtn" onclick="loadWhatsAppActivity(WHATSAPP_ACTIVITY_PAGE - 1)"
                                 class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white disabled:opacity-40 disabled:cursor-not-allowed">Prev</button>
-                            <button id="whatsappActivityNextBtn"
-                                onclick="loadWhatsAppActivity(WHATSAPP_ACTIVITY_PAGE + 1)"
+                            <button id="whatsappActivityNextBtn" onclick="loadWhatsAppActivity(WHATSAPP_ACTIVITY_PAGE + 1)"
                                 class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
                         </div>
                     </div>
@@ -970,8 +960,7 @@
                         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
                             <div>
                                 <h3 class="text-base font-bold text-white">Renew subscription</h3>
-                                <p class="text-xs text-slate-400 mt-1">Choose a term, optionally apply a discount code
-                                    from your account team, then continue to secure payment.</p>
+                                <p class="text-xs text-slate-400 mt-1">Choose a term, optionally apply a discount code from your account team, then continue to secure payment.</p>
                             </div>
                             <div>
                                 <label class="block text-xs text-slate-400 mb-1">Renewal term</label>
@@ -999,10 +988,7 @@
                             </button>
                             <p id="renewError" class="hidden text-xs text-red-400 text-center"></p>
                             <p id="renewSuccess" class="hidden text-xs text-emerald-400 text-center"></p>
-                            <p class="text-[11px] text-slate-500 leading-relaxed">Pay-as-you-go accounts should top up
-                                via their account manager instead of renewing a subscription term. Privacy Policy: <a
-                                    href="https://thevictorias.com.ng/policy" target="_blank"
-                                    class="text-emerald-400 hover:underline">thevictorias.com.ng/policy</a></p>
+                            <p class="text-[11px] text-slate-500 leading-relaxed">Pay-as-you-go accounts should top up via their account manager instead of renewing a subscription term. Privacy Policy: <a href="https://thevictorias.com.ng/policy" target="_blank" class="text-emerald-400 hover:underline">thevictorias.com.ng/policy</a></p>
                         </div>
                     </div>
                 </section>
@@ -1012,13 +998,11 @@
                     <div class="max-w-lg mx-auto w-full space-y-4 pt-2">
                         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
                             <div class="text-center">
-                                <div
-                                    class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-3">
+                                <div class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-3">
                                     <i class="fa-solid fa-heart text-emerald-400 text-lg"></i>
                                 </div>
                                 <h3 class="text-base font-bold text-white">Support The Victorias</h3>
-                                <p class="text-xs text-slate-400 mt-1">Secure one-time donation via Flutterwave. Minimum
-                                    ₦100.</p>
+                                <p class="text-xs text-slate-400 mt-1">Secure one-time donation via Flutterwave. Minimum ₦100.</p>
                             </div>
                             <div>
                                 <label class="block text-xs text-slate-400 mb-1">Your name</label>
@@ -1033,14 +1017,10 @@
                             <div>
                                 <label class="block text-xs text-slate-400 mb-1">Amount (₦)</label>
                                 <div class="flex flex-wrap gap-2 mb-2">
-                                    <button type="button" onclick="document.getElementById('donateAmount').value=1000"
-                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦1,000</button>
-                                    <button type="button" onclick="document.getElementById('donateAmount').value=5000"
-                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦5,000</button>
-                                    <button type="button" onclick="document.getElementById('donateAmount').value=10000"
-                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦10,000</button>
-                                    <button type="button" onclick="document.getElementById('donateAmount').value=25000"
-                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦25,000</button>
+                                    <button type="button" onclick="document.getElementById('donateAmount').value=1000" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦1,000</button>
+                                    <button type="button" onclick="document.getElementById('donateAmount').value=5000" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦5,000</button>
+                                    <button type="button" onclick="document.getElementById('donateAmount').value=10000" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦10,000</button>
+                                    <button type="button" onclick="document.getElementById('donateAmount').value=25000" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦25,000</button>
                                 </div>
                                 <input type="number" id="donateAmount" min="100" step="100" placeholder="e.g. 5000"
                                     class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500" />
@@ -1055,8 +1035,7 @@
                                 <i class="fa-solid fa-lock"></i> Continue to Flutterwave
                             </button>
                             <p id="donateError" class="hidden text-xs text-red-400 text-center"></p>
-                            <p class="text-[10px] text-slate-600 text-center">You’ll be redirected to Flutterwave’s
-                                secure checkout. We never see your card details.</p>
+                            <p class="text-[10px] text-slate-600 text-center">You’ll be redirected to Flutterwave’s secure checkout. We never see your card details.</p>
                         </div>
                     </div>
                 </section>
@@ -1064,6 +1043,8 @@
             </div>
         </main>
     </div>
+
+    <div id="clientToastHost" aria-live="polite" aria-atomic="true"></div>
 
     <script>
         // =====================================================================
@@ -1077,12 +1058,31 @@
         let EMAIL_ACTIVITY_PAGE = 1;
         let WHATSAPP_ACTIVITY_PAGE = 1;
 
+        // Never surface raw script/stack traces on the client UI
+        window.addEventListener('error', function (ev) {
+            try { console.error('client-dashboard error', ev && ev.error ? ev.error : ev); } catch (_) {}
+            try {
+                if (typeof notifyUser === 'function') {
+                    notifyUser('Something went wrong on this page. You can keep working or refresh.', 'error');
+                }
+            } catch (_) {}
+            return true;
+        });
+        window.addEventListener('unhandledrejection', function (ev) {
+            try { console.error('client-dashboard rejection', ev && ev.reason); } catch (_) {}
+            try {
+                if (typeof notifyUser === 'function') {
+                    notifyUser(clientFriendlyError((ev && ev.reason && (ev.reason.message || ev.reason)) || 'Request failed.'), 'error');
+                }
+            } catch (_) {}
+        });
+
         // =====================================================================
         // BRIDGE CALL — same wire format the admin dashboard uses, just against
         // the "clientportal" system with the client's own session token.
         // =====================================================================
         /** Strip internal infra wording from errors shown to clients. */
-        function clientFriendlyError(msg) {
+                function clientFriendlyError(msg) {
             const m = String(msg || '');
             if (/timed out|timeout|524|apps script gateway|worker/i.test(m)) {
                 return 'This is taking longer than usual. Refresh the page in a moment — your documents may already be ready under My Documents.';
@@ -1093,7 +1093,30 @@
             return m || 'Something went wrong. Please try again.';
         }
 
-        async function callGateway(system, action, extra = {}) {
+        /** Non-blocking status toast. Always defined so send/approve paths never throw. */
+        function showToast(message, type) {
+            const host = document.getElementById('clientToastHost');
+            if (!host) {
+                try { alert(message); } catch (_) {}
+                return;
+            }
+            const el = document.createElement('div');
+            el.className = 'client-toast ' + (type === 'success' ? 'success' : type === 'error' ? 'error' : 'info');
+            el.textContent = String(message || '');
+            host.appendChild(el);
+            setTimeout(function () {
+                el.style.opacity = '0';
+                el.style.transition = 'opacity 0.25s';
+                setTimeout(function () { try { el.remove(); } catch (_) {} }, 280);
+            }, 4200);
+        }
+        function notifyUser(message, type) {
+            try { showToast(message, type || 'info'); } catch (_) {
+                try { alert(message); } catch (__) {}
+            }
+        }
+
+async function callGateway(system, action, extra = {}) {
             if (!GW_URL) { showLoginError('Missing Gateway URL.'); return { success: false }; }
             try {
                 const body = { system, action, token: SESSION_TOKEN, clientId: CLIENT_ID, ...extra };
@@ -1175,9 +1198,12 @@
             document.getElementById('loginView').classList.add('hidden');
             document.getElementById('mainView').classList.remove('hidden');
             document.getElementById('gwUrl').value = GW_URL;
+            // Primary dashboard only first — channel stats / presence / notifs
+            // load in staggered batches so the main thread is not hit with 4–5
+            // concurrent gateway round-trips on every login.
             loadOverview();
-            startPresencePing();
-            startClientNotifPolling();
+            setTimeout(function () { try { startPresencePing(); } catch (_) {} }, 800);
+            setTimeout(function () { try { startClientNotifPolling(); } catch (_) {} }, 1600);
         }
 
         // Restore a saved session on page load
@@ -1253,79 +1279,175 @@
             }
         }
 
-        async function loadOverview() {
-            const res = await callGateway('clientportal', 'clientPortalDashboard');
-            if (!res.success) { showLoginError(res.message || 'Session expired.'); logoutClient(); return; }
-
-            try {
-                document.getElementById('companyNameLabel').textContent = res.companyName || CLIENT_ID;
-                document.getElementById('tierLabel').textContent = (res.tier || '').replace(/_/g, ' ');
-                // [NEW] Plan price — server already resolved base vs. custom
-                // override; frontend just displays whatever it says.
-                const pricing = res.pricing;
-                if (pricing) {
-                    document.getElementById('planLabel').textContent = pricing.label || (res.tier || '').replace(/_/g, ' ');
-                    document.getElementById('planPrice').textContent = pricing.priceNgn
-                        ? '₦' + Number(pricing.priceNgn).toLocaleString() + ' /mo'
-                        : 'Contact Sales';
-                    document.getElementById('planCustomBadge').classList.toggle('hidden', !pricing.isCustom);
-                }
-                const u = res.usage || {};
-                // [CHANGED] limits now come from the backend's real _checkQuota (same
-                // source of truth the admin dashboard uses) instead of being absent —
-                // older gateway deployments without this field fall back gracefully.
-                const lim = res.limits || {};
-
-                renderQuotaStat('statEmails', 'barEmails', u.emailsUsed || 0, lim.emails ?? '—');
-                renderQuotaStat('statProposals', 'barProposals', u.proposalsUsed || 0, lim.proposals ?? '—');
-                renderQuotaStat('statDocuments', 'barDocuments', u.documentsUsed || 0, lim.documents ?? '—');
-
-                // Hours ring — now reflects the real limit instead of an arbitrary
-                // "visual only" percentage.
-                const hoursUsed = parseFloat(u.hoursUsed) || 0;
-                const hoursLimit = lim.hours;
-                const hoursUnlimited = hoursLimit === 999 || hoursLimit === undefined;
-                document.getElementById('statHours').textContent = hoursUnlimited ? `${hoursUsed} / Unlimited` : `${hoursUsed} / ${hoursLimit}`;
-                const ring = document.getElementById('ringHours');
+        function applyOverviewPayload(res) {
+            if (!res || !res.success) return;
+            document.getElementById('companyNameLabel').textContent = res.companyName || CLIENT_ID;
+            document.getElementById('tierLabel').textContent = (res.tier || '').replace(/_/g, ' ');
+            const pricing = res.pricing;
+            if (pricing) {
+                document.getElementById('planLabel').textContent = pricing.label || (res.tier || '').replace(/_/g, ' ');
+                document.getElementById('planPrice').textContent = pricing.priceNgn
+                    ? '₦' + Number(pricing.priceNgn).toLocaleString() + ' /mo'
+                    : 'Contact Sales';
+                document.getElementById('planCustomBadge').classList.toggle('hidden', !pricing.isCustom);
+            }
+            const u = res.usage || {};
+            const lim = res.limits || {};
+            renderQuotaStat('statEmails', 'barEmails', u.emailsUsed || 0, lim.emails ?? '—');
+            renderQuotaStat('statProposals', 'barProposals', u.proposalsUsed || 0, lim.proposals ?? '—');
+            renderQuotaStat('statDocuments', 'barDocuments', u.documentsUsed || 0, lim.documents ?? '—');
+            const hoursUsed = parseFloat(u.hoursUsed) || 0;
+            const hoursLimit = lim.hours;
+            const hoursUnlimited = hoursLimit === 999 || hoursLimit === undefined;
+            const hoursDisp = (Math.round(hoursUsed * 100) / 100);
+            document.getElementById('statHours').textContent = hoursUnlimited
+                ? (hoursDisp + ' / Unlimited')
+                : (hoursDisp + ' / ' + hoursLimit);
+            const ring = document.getElementById('ringHours');
+            if (ring) {
                 const circumference = 175.9;
                 const pct = hoursUnlimited ? 6 : Math.min(100, (hoursUsed / Math.max(1, hoursLimit)) * 100);
                 ring.style.strokeDashoffset = circumference - (circumference * pct / 100);
-
-                const pd = res.portalDocs || { used: 0, limit: 10 };
-                const limitLabel = pd.limit >= 999 ? 'Unlimited' : `${pd.used} / ${pd.limit} used`;
-                document.getElementById('portalDocsBadge').textContent = limitLabel;
+            }
+            const pd = res.portalDocs || { used: 0, limit: 10 };
+            const badge = document.getElementById('portalDocsBadge');
+            if (badge) badge.textContent = pd.limit >= 999 ? 'Unlimited' : (pd.used + ' / ' + pd.limit + ' used');
+            const bar = document.getElementById('portalDocsBar');
+            if (bar) {
                 const pdPct = pd.limit >= 999 ? 8 : Math.min(100, (pd.used / Math.max(1, pd.limit)) * 100);
-                document.getElementById('portalDocsBar').style.width = pdPct + '%';
-
-                const list = document.getElementById('recentDocsList');
+                bar.style.width = pdPct + '%';
+            }
+            const list = document.getElementById('recentDocsList');
+            if (list) {
                 const docs = res.recentDocuments || [];
-                list.innerHTML = docs.length ? docs.map(d => `
-            <div class="flex justify-between items-center bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-                <span class="text-slate-200">${escapeHtml(d.title || d.type)}</span>
-                <span class="text-slate-500 text-[10px]">${fmtDate(d.createdAt)}</span>
-            </div>
-        `).join('') : '<p class="text-slate-600">No documents yet.</p>';
+                list.innerHTML = docs.length ? docs.map(function (d) {
+                    return '<div class="flex justify-between items-center bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">'
+                        + '<span class="text-slate-200">' + escapeHtml(d.title || d.type) + '</span>'
+                        + '<span class="text-slate-500 text-[10px]">' + fmtDate(d.createdAt) + '</span></div>';
+                }).join('') : '<p class="text-slate-600">No documents yet.</p>';
+            }
+            const eq = document.getElementById('ovEmailQuota');
+            if (eq) {
+                const eu = u.emailsUsed || 0;
+                const el = lim.emails;
+                eq.textContent = (el === 999 || el === undefined)
+                    ? (eu + ' sent / Unlimited')
+                    : (eu + ' / ' + el + ' sent this period');
+            }
+        }
 
-                const eq = document.getElementById('ovEmailQuota');
-                if (eq) {
-                    const eu = u.emailsUsed || 0;
-                    const el = lim.emails;
-                    eq.textContent = (el === 999 || el === undefined) ? (eu + ' sent / Unlimited') : (eu + ' / ' + el + ' sent this period');
+        function applyOverviewChannelFromBundle(res) {
+            if (!res) return;
+            const set = function (id, v) {
+                const el = document.getElementById(id);
+                if (el) el.textContent = v;
+            };
+            if (res.emailStats) {
+                set('ovEmailInbound', String(res.emailStats.inbound != null ? res.emailStats.inbound : '0'));
+                set('ovEmailReplied', String(res.emailStats.replied != null ? res.emailStats.replied : '0'));
+                set('ovEmailPending', String(res.emailStats.pending != null ? res.emailStats.pending : '0'));
+            }
+            if (res.whatsappStats) {
+                set('ovWaInbound', String(res.whatsappStats.inbound || 0));
+                set('ovWaReplied', String(res.whatsappStats.replied || 0));
+                set('ovWaHandoff', String(res.whatsappStats.handedOff || 0));
+                set('ovWaNumbers', (res.whatsappStats.numbersUsed || 0) + ' / ' + (res.whatsappStats.numbersLimit || 0) + ' linked');
+            }
+            const listRes = res.whatsappNumbers;
+            if (!listRes) return;
+            try {
+                renderOverviewWhatsAppBoxes(listRes);
+            } catch (e) {
+                console.error('WA overview boxes', e);
+            }
+        }
+
+        function renderOverviewWhatsAppBoxes(listRes) {
+            const apiBox = document.getElementById('ovWaApiBox');
+            const box = document.getElementById('ovWaNumbersList');
+            if (!listRes || listRes.success === false) {
+                if (box) box.innerHTML = '<p class="text-slate-600">WhatsApp numbers unavailable right now.</p>';
+                return;
+            }
+            const api = (listRes.apiConnections || listRes.connections || [])[0];
+            if (apiBox) {
+                apiBox.innerHTML = api
+                    ? ('<div class="text-slate-200"><span class="font-medium">' + escapeHtml(api.label || 'Business API') + '</span>'
+                        + '<span class="text-slate-500 text-[10px] ml-2">' + escapeHtml(api.displayPhoneNumber || api.displayPhone || api.phoneNumberId || '') + '</span>'
+                        + '<span class="ml-2 text-[9px] uppercase text-emerald-400">' + escapeHtml(api.status || 'Active') + '</span></div>')
+                    : '<p class="text-slate-600">No API number connected yet — connect one so the agent can read and reply.</p>';
+            }
+            const ovNums = document.getElementById('ovWaNumbers');
+            if (ovNums) {
+                ovNums.textContent =
+                    (listRes.teamUsed != null ? listRes.teamUsed : listRes.used || 0) + ' / ' +
+                    (listRes.teamLimit != null ? listRes.teamLimit : listRes.limit || 0) + ' team links' +
+                    (api ? ' · API connected' : ' · API missing');
+            }
+            const links = listRes.teamLinks || [];
+            if (!box) return;
+            if (!links.length) {
+                box.innerHTML = '<p class="text-slate-600">No staff WhatsApp numbers linked. Add them under Integrations (e.g. sales +234…).</p>';
+                return;
+            }
+            box.innerHTML = links.map(function (w) {
+                return '<div class="flex flex-wrap items-center justify-between gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">'
+                    + '<div><span class="text-slate-200 font-medium">' + escapeHtml(w.label || w.contactName || 'Team') + '</span>'
+                    + '<span class="text-slate-500 text-[10px] ml-2">+' + escapeHtml(w.phoneE164 || w.phone || '') + '</span></div>'
+                    + '<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] uppercase">' + escapeHtml(w.department || 'general') + '</span></div>';
+            }).join('');
+        }
+
+        async function loadOverview() {
+            let res = null;
+            try {
+                // Prefer single GAS execution (bundle). Fall back to legacy dashboard if
+                // the library has not been updated yet.
+                res = await callGateway('clientportal', 'clientPortalOverviewBundle', {});
+                if (!res || res.success === false) {
+                    const msg = (res && res.message) || '';
+                    if (/unknown action|not found|invalid action|overviewbundle/i.test(msg) || !res) {
+                        res = await callGateway('clientportal', 'clientPortalDashboard', {});
+                    }
                 }
             } catch (e) {
-                // [NEW] A thrown error here used to abort silently mid-function,
-                // leaving every stat frozen on its placeholder markup with no
-                // indication anything was wrong. Now it's surfaced clearly.
-                console.error('loadOverview render error:', e);
-                const list = document.getElementById('recentDocsList');
-                if (list) list.innerHTML = `<p class="text-red-400">Couldn't render dashboard data: ${escapeHtml(e.message || e.toString())}</p>`;
+                console.error('loadOverview fetch', e);
+                try {
+                    res = await callGateway('clientportal', 'clientPortalDashboard', {});
+                } catch (e2) {
+                    notifyUser('Could not load overview. Please refresh.', 'error');
+                    return;
+                }
             }
 
-            // Channel activity (best-effort; does not block main dashboard)
-            loadOverviewChannelStats();
+            if (!res || !res.success) {
+                const msg = clientFriendlyError((res && res.message) || 'Session expired.');
+                if (/session|token|unauthor|expired|invalid client/i.test(String(res && res.message || ''))) {
+                    showLoginError(msg);
+                    logoutClient();
+                } else {
+                    notifyUser(msg, 'error');
+                }
+                return;
+            }
+
+            try {
+                applyOverviewPayload(res);
+            } catch (e) {
+                console.error('loadOverview render error:', e);
+                const list = document.getElementById('recentDocsList');
+                if (list) list.innerHTML = '<p class="text-slate-500">Dashboard data is temporarily unavailable. Try Refresh.</p>';
+            }
+
+            if (res.bundled) {
+                try { applyOverviewChannelFromBundle(res); } catch (e) { console.error(e); }
+            } else {
+                setTimeout(function () { try { loadOverviewChannelStats(); } catch (_) {} }, 400);
+            }
         }
 
         async function loadOverviewChannelStats() {
+            // Sequential, not parallel — Apps Script + Worker prefer fewer concurrent hits
             try {
                 const emailRes = await callGateway('clientportal', 'clientPortalGetEmailActivity', { page: 1 });
                 if (emailRes && emailRes.success) {
@@ -1341,7 +1463,7 @@
                     set('ovEmailReplied', String(replied));
                     set('ovEmailPending', String(pending));
                 }
-            } catch (_) { }
+            } catch (_) {}
 
             try {
                 const wa = await callGateway('clientportal', 'clientPortalGetWhatsAppWeeklyReport', {});
@@ -1352,14 +1474,14 @@
                     set('ovWaHandoff', String(wa.handedOff || 0));
                     set('ovWaNumbers', (wa.numbersUsed || 0) + ' / ' + (wa.numbersLimit || 0) + ' linked');
                 }
-            } catch (_) { }
+            } catch (_) {}
 
             try {
                 const listRes = await callGateway('clientportal', 'clientPortalListWhatsAppNumbers', {});
                 const apiBox = document.getElementById('ovWaApiBox');
                 const box = document.getElementById('ovWaNumbersList');
                 if (!listRes.success) {
-                    if (box) box.innerHTML = `<p class="text-red-400">${escapeHtml(listRes.message || 'Could not load.')}</p>`;
+                    if (box) box.innerHTML = `<p class="text-slate-500">WhatsApp numbers unavailable right now.</p>`;
                     return;
                 }
                 const api = (listRes.apiConnections || listRes.connections || [])[0];
@@ -1408,7 +1530,7 @@
             const tbody = document.getElementById('documentsTableBody');
             tbody.innerHTML = '<tr><td class="p-3 text-slate-500" colspan="6">Loading…</td></tr>';
             const res = await callGateway('clientportal', 'clientPortalListDocuments');
-            if (!res.success) { tbody.innerHTML = `<tr><td class="p-3 text-red-400" colspan="6">${escapeHtml(res.message || 'Failed to load.')}</td></tr>`; return; }
+            if (!res.success) { tbody.innerHTML = `<tr><td class="p-3 text-slate-500" colspan="6">${escapeHtml(clientFriendlyError(res.message || 'Failed to load.'))}</td></tr>`; return; }
 
             // The gateway now returns one flat list — team deliverables, self-generated
             // docs, AND reference-only docs (receipts, payment confirmations, etc.) all
@@ -1473,11 +1595,11 @@
             if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Sending…'; }
             const res = await callGateway('clientportal', 'clientPortalApproveDocumentSend', { queueId });
             if (res.success) {
-                showToast ? showToast(res.message || 'Sent.', 'success') : alert(res.message || 'Sent.');
+                notifyUser(res.message || 'Sent.', 'success');
                 loadDocuments();
             } else {
                 if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Approve & Send (1 email)'; }
-                showToast ? showToast(res.message || 'Send failed.', 'error') : alert(res.message || 'Send failed.');
+                notifyUser(res.message || 'Send failed.', 'error');
             }
         }
 
@@ -1502,24 +1624,28 @@
             const to = document.getElementById('sendDocTo').value.trim();
             const subject = document.getElementById('sendDocSubject').value.trim();
             const body = document.getElementById('sendDocBody').value.trim();
-            if (!to) { showToast ? showToast('Recipient email is required.', 'error') : alert('Recipient email is required.'); return; }
+            if (!to) { notifyUser('Recipient email is required.', 'error'); return; }
             if (!SEND_DOC_TARGET) { closeSendDocumentModal(); return; }
 
             const btn = document.getElementById('sendDocSubmitBtn');
             if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ai-spinner"></span>Sending…'; }
-            let res;
+            let res = { success: false, message: 'Send failed.' };
             try {
-                res = await callGateway('clientportal', 'clientPortalSendDocument', { docId: SEND_DOC_TARGET, to, subject, body });
+                res = await callGateway('clientportal', 'clientPortalSendDocument', {
+                    docId: SEND_DOC_TARGET, to, subject, body
+                }) || res;
+            } catch (e) {
+                res = { success: false, message: clientFriendlyError(e && e.message ? e.message : e) };
             } finally {
                 if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send'; }
             }
 
             if (res && res.success) {
-                showToast ? showToast(res.message || 'Document sent.', 'success') : alert(res.message || 'Document sent.');
-                closeSendDocumentModal(); // always close on success
-                try { loadDocuments(); } catch (e) { }
+                closeSendDocumentModal();
+                notifyUser(res.message || ('Document sent to ' + to + '.'), 'success');
+                try { loadDocuments(); } catch (e) {}
             } else {
-                showToast ? showToast(clientFriendlyError((res && res.message) || 'Send failed.'), 'error') : alert(res.message || 'Send failed.');
+                notifyUser(clientFriendlyError((res && res.message) || 'Send failed.'), 'error');
             }
         }
 
@@ -1715,7 +1841,7 @@
                 const nameEl = document.getElementById('donateName');
                 const emailEl = document.getElementById('donateEmail');
                 if (nameEl && !nameEl.value) nameEl.value = document.getElementById('companyNameLabel')?.textContent || '';
-            } catch (_) { }
+            } catch (_) {}
         }
 
         async function previewRenewalDiscount() {
@@ -2023,7 +2149,7 @@
                 if (weeklyEl && wk.success) {
                     weeklyEl.textContent = `Last 7 days: ${wk.inbound || 0} inbound · ${wk.replied || 0} replied · ${wk.handedOff || 0} referrals to team`;
                 }
-            } catch (_) { }
+            } catch (_) {}
         }
 
         async function clientAddTeamWhatsApp() {
@@ -2068,7 +2194,7 @@
                 set('waActReplied', String(wa.replied || 0));
                 set('waActHandoff', String(wa.handedOff || 0));
                 set('waActNumbers', (wa.numbersUsed || 0) + '/' + (wa.numbersLimit || 0));
-            } catch (_) { }
+            } catch (_) {}
         }
 
         async function clientSetWhatsAppMeta(whatsAppId, department, lineRole) {
@@ -2118,9 +2244,30 @@
         }
 
         async function downloadDocument(docId) {
-            const res = await callGateway('clientportal', 'clientPortalDownloadDocument', { docId });
-            if (res.success && res.downloadUrl) window.open(res.downloadUrl, '_blank');
-            else alert(res.message || 'Could not open this document.');
+            // Prefer the Drive *view* URL so the browser opens a preview tab.
+            // downloadUrl is force-download only — used as fallback.
+            try {
+                const res = await callGateway('clientportal', 'clientPortalDownloadDocument', { docId });
+                if (!res || !res.success) {
+                    notifyUser((res && res.message) || 'Could not open this document.', 'error');
+                    return;
+                }
+                let viewUrl = res.docUrl || '';
+                // Normalize Google Drive links to the viewer when possible
+                const m = String(viewUrl || res.downloadUrl || '').match(/\/d\/([a-zA-Z0-9_-]+)/);
+                if (m) {
+                    viewUrl = 'https://drive.google.com/file/d/' + m[1] + '/view';
+                } else if (!viewUrl && res.downloadUrl) {
+                    viewUrl = res.downloadUrl;
+                }
+                if (!viewUrl) {
+                    notifyUser('No file link is available for this document yet.', 'error');
+                    return;
+                }
+                window.open(viewUrl, '_blank', 'noopener,noreferrer');
+            } catch (e) {
+                notifyUser(clientFriendlyError(e && e.message ? e.message : e), 'error');
+            }
         }
 
         // =====================================================================
@@ -2320,7 +2467,7 @@
                     { key: 'description', label: 'Description' },
                     { key: 'qty', label: 'Qty' },
                     { key: 'amount', label: 'Amount' }
-                ];
+                  ];
             CLIENT_GEN_TABLE_COLS[id] = cols;
             return cols;
         }
@@ -2359,11 +2506,11 @@
             wrap.innerHTML = header + rows.map((r, i) => `
                 <div class="flex gap-1 items-center mb-1 p-1.5 bg-slate-950/80 border border-slate-800 rounded">
                     ${cols.map(c => {
-                const w = c.key === 'description' ? 'flex-1' : (c.key === 'qty' ? 'w-12' : 'w-20');
-                return `<input placeholder="${escapeHtml(c.label)}" value="${escapeHtml(r[c.key] || '')}"
+                        const w = c.key === 'description' ? 'flex-1' : (c.key === 'qty' ? 'w-12' : 'w-20');
+                        return `<input placeholder="${escapeHtml(c.label)}" value="${escapeHtml(r[c.key] || '')}"
                             onchange="CLIENT_GEN_TABLE_STATE['${id}'][${i}]['${c.key}']=this.value"
                             class="${w} bg-slate-900 border border-slate-700 rounded p-1.5 text-[11px] text-white" />`;
-            }).join('')}
+                    }).join('')}
                     <button type="button" onclick="clientGenRemoveTableRow('${escapeHtml(docType)}','${escapeHtml(key)}',${i})"
                         class="text-red-400 text-xs px-1.5 hover:bg-slate-800 rounded" title="Remove this row">−</button>
                 </div>`).join('');
@@ -2746,7 +2893,7 @@
             const res = await callGateway('clientportal', 'clientPortalTerminateJob', { jobId });
             setBtnBusy(btnEl, false);
             if (res.success) {
-                showToast ? showToast('Job terminated.', 'success') : null;
+                notifyUser('Job terminated.', 'success');
                 loadMyWork();
             } else {
                 alert(res.message || 'Could not terminate this job.');
