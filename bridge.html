@@ -3303,6 +3303,12 @@
                                     class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white">
                                     <i class="fa-solid fa-check-double"></i> Approve All
                                 </button>
+                                <button type="button" onclick="toggleSelectAllSocialPosts(true)"
+                                    class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Select
+                                    all</button>
+                                <button type="button" onclick="deleteSelectedSocialPostsAdmin()"
+                                    class="text-xs px-3 py-1.5 bg-red-900/50 hover:bg-red-900/70 rounded text-red-200">Delete
+                                    selected</button>
                                 <button onclick="loadAdminSocialCalendar()"
                                     class="text-xs px-2 py-1.5 text-slate-500 hover:text-slate-300">
                                     <i class="fa-solid fa-rotate"></i>
@@ -14618,12 +14624,19 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 <button type="button" onclick="pickSocialPostImageAdmin('${escapeHtml(p.PostID)}','${escapeHtml(p.Platform || '')}')"
                     class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-200">Choose existing</button>
             </div>
-            <div class="flex gap-2 justify-end mt-3 pt-2 border-t border-slate-800">
+            <div class="flex flex-wrap gap-2 justify-between items-center mt-3 pt-2 border-t border-slate-800">
+                <label class="flex items-center gap-1.5 text-[10px] text-slate-400 cursor-pointer">
+                    <input type="checkbox" class="soc-post-select rounded border-slate-700" data-post-id="${escapeHtml(p.PostID)}" />
+                    Select
+                </label>
+                <div class="flex flex-wrap gap-2 justify-end">
                 ${p.PublishedAt ? '' : `<button onclick="saveSocialPostEdit('${escapeHtml(p.PostID)}')" class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Save Edit</button>`}
+                ${p.PublishedAt ? '' : `<button onclick="deleteSocialPostAdmin('${escapeHtml(p.PostID)}')" class="text-xs px-3 py-1 bg-red-950/60 hover:bg-red-900/70 rounded text-red-300">Delete</button>`}
                 ${isDecided ? '' : `
                 <button onclick="rejectSocialPostAdmin('${escapeHtml(p.PostID)}')" class="text-xs px-3 py-1 bg-slate-800 hover:bg-red-900/50 rounded text-slate-300">Reject</button>
                 <button id="socApproveBtnAdmin-${escapeHtml(p.PostID)}" onclick="approveSocialPostAdmin('${escapeHtml(p.PostID)}')" class="text-xs px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Approve</button>`}
                 ${isSendable ? `<button id="socSendNowBtnAdmin-${escapeHtml(p.PostID)}" onclick="sendSocialPostNowAdmin('${escapeHtml(p.PostID)}')" class="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Send Now</button>` : ''}
+                </div>
             </div>
         </div>`;
             }).join('');
@@ -14753,6 +14766,35 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             if (res.success) fetchAdminSocialCalendar(clientId);
         }
 
+
+
+        function getSelectedSocialPostIds() {
+            return Array.from(document.querySelectorAll('.soc-post-select:checked')).map(el => el.getAttribute('data-post-id')).filter(Boolean);
+        }
+
+        async function deleteSocialPostAdmin(postId) {
+            const clientId = document.getElementById('socialClientSelector').value;
+            if (!confirm('Delete this post permanently? This cannot be undone.')) return;
+            const res = await executeSecureBridgeCall('agent', 'agent-delete-social-post', { clientId, postId }, { silent: true });
+            showToast(res.success ? 'Post deleted.' : (res.message || 'Delete failed.'), res.success ? 'success' : 'error');
+            if (res.success) fetchAdminSocialCalendar(clientId);
+        }
+
+        async function deleteSelectedSocialPostsAdmin() {
+            const clientId = document.getElementById('socialClientSelector').value;
+            const postIds = getSelectedSocialPostIds();
+            if (!postIds.length) { showToast('Select at least one post.', 'error'); return; }
+            if (!confirm('Delete ' + postIds.length + ' selected post(s)? This cannot be undone.')) return;
+            const res = await executeSecureBridgeCall('agent', 'agent-delete-social-posts', { clientId, postIds }, { silent: true });
+            showToast(res.message || (res.success ? 'Deleted.' : 'Failed.'), res.success ? 'success' : 'error');
+            if (res.deleted) fetchAdminSocialCalendar(clientId);
+        }
+
+        function toggleSelectAllSocialPosts(checked) {
+            document.querySelectorAll('.soc-post-select').forEach(el => { el.checked = !!checked; });
+        }
+
+
         async function approveSocialBatchAdmin() {
             const clientId = document.getElementById('socialClientSelector').value;
             const batchId = document.getElementById('socialAdminBatchSelector').value;
@@ -14795,6 +14837,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             'agent-va-clients': loadVAClientsUI,
             'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector'); }
         };
+
         document.addEventListener("DOMContentLoaded", initializeModule);
     </script>
 </body>
