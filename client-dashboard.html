@@ -477,8 +477,7 @@
                         <p class="text-[11px] text-slate-400 leading-relaxed">The agent answers routine chats on your
                             <span class="text-slate-200">API WhatsApp number</span>. On referral it <span
                                 class="text-slate-200">sends a WhatsApp message from that API number to a linked staff
-                                number</span> (by department) with the customer’s details:
-                        </p>
+                                number</span> (by department) with the customer’s details:</p>
                         <ul class="text-[11px] text-slate-400 space-y-1.5 list-disc pl-5">
                             <li><span class="text-slate-200">Serious buyer / high intent</span> — ready to purchase,
                                 quote with budget, or paid engagement.</li>
@@ -2258,11 +2257,63 @@
                 alert(res.message || 'Could not start WhatsApp connection.');
                 return;
             }
-            const html = `Open this link to connect a number (valid ~30 min): <a class="underline text-emerald-300" href="${escapeHtml(res.signupUrl)}" target="_blank" rel="noopener">${escapeHtml(res.signupUrl)}</a>`;
+            const html = `Open this link to connect a number (valid ~30 min). After Meta says connected, return here — we will refresh automatically.<br><a class="underline text-emerald-300" href="${escapeHtml(res.signupUrl)}" target="_blank" rel="noopener">${escapeHtml(res.signupUrl)}</a>`;
             if (hint) { hint.classList.remove('hidden'); hint.innerHTML = html; }
             if (ovHint) { ovHint.classList.remove('hidden'); ovHint.innerHTML = html; }
             if (res.signupUrl) window.open(res.signupUrl, '_blank', 'noopener');
+            // Poll for Active API number after Meta finishes (callback or system token finalize)
+            startWhatsAppConnectPolling();
         }
+
+        let _waConnectPollTimer = null;
+        function startWhatsAppConnectPolling() {
+            if (_waConnectPollTimer) clearInterval(_waConnectPollTimer);
+            let tries = 0;
+            _waConnectPollTimer = setInterval(async () => {
+                tries++;
+                try {
+                    const list = await callGateway('clientportal', 'clientPortalListWhatsAppNumbers', {});
+                    const n = (list.apiConnections || list.connections || []).length;
+                    if (list.success && n > 0) {
+                        clearInterval(_waConnectPollTimer);
+                        _waConnectPollTimer = null;
+                        if (typeof loadClientWhatsAppNumbersPanel === 'function') loadClientWhatsAppNumbersPanel();
+                        if (typeof loadOverviewChannelStats === 'function') loadOverviewChannelStats();
+                        alert('WhatsApp API number connected.');
+                        return;
+                    }
+                } catch (_) { }
+                if (tries >= 24) { // ~2 min at 5s
+                    clearInterval(_waConnectPollTimer);
+                    _waConnectPollTimer = null;
+                }
+            }, 5000);
+        }
+
+        // Meta Embedded Signup can postMessage FINISH with phone_number_id when opener is same-site
+        window.addEventListener('message', async function (event) {
+            try {
+                const data = event.data;
+                if (!data || data.type !== 'WA_EMBEDDED_SIGNUP') return;
+                const payload = data.data || data;
+                const phoneNumberId = payload.phone_number_id || payload.phoneNumberId;
+                const wabaId = payload.waba_id || payload.wabaId;
+                if (!phoneNumberId) return;
+                const res = await callGateway('clientportal', 'clientPortalCompleteWhatsAppSignup', {
+                    phoneNumberId: phoneNumberId,
+                    wabaId: wabaId || '',
+                    displayPhoneNumber: payload.display_phone_number || payload.displayPhoneNumber || ''
+                });
+                if (res.success) {
+                    if (typeof loadClientWhatsAppNumbersPanel === 'function') loadClientWhatsAppNumbersPanel();
+                    alert(res.message || 'WhatsApp connected.');
+                } else if (res.message) {
+                    console.warn('WA signup complete:', res.message);
+                }
+            } catch (e) {
+                console.warn('WA_EMBEDDED_SIGNUP handler', e);
+            }
+        });
 
         async function loadWhatsAppActivityHeaderStats() {
             try {
