@@ -2366,26 +2366,48 @@
         function startWhatsAppConnectPolling() {
             if (_waConnectPollTimer) clearInterval(_waConnectPollTimer);
             let tries = 0;
+            const hint = document.getElementById('clientWaSignupHint');
+            const ovHint = document.getElementById('ovWaConnectHint');
+            function setStatus(html) {
+                if (hint) { hint.classList.remove('hidden'); hint.innerHTML = html; }
+                if (ovHint) { ovHint.classList.remove('hidden'); ovHint.innerHTML = html; }
+            }
+            setStatus(
+                '<span class="text-slate-300">Waiting for Meta…</span> ' +
+                '<span class="text-[10px] text-slate-500">We try to detect Phone number ID automatically after share. You can still paste it and Confirm connect.</span>' +
+                renderWhatsAppFinalizePanel('')
+            );
             _waConnectPollTimer = setInterval(async () => {
                 tries++;
                 try {
-                    const list = await callGateway('clientportal', 'clientPortalListWhatsAppNumbers', {});
-                    const n = (list.apiConnections || list.connections || []).length;
-                    if (list.success && n > 0) {
+                    const auto = await callGateway('clientportal', 'clientPortalAutoCompleteWhatsAppSignup', {});
+                    if (auto && auto.success && !auto.waitingForMeta) {
                         clearInterval(_waConnectPollTimer);
                         _waConnectPollTimer = null;
                         closeWhatsAppSignupPopup();
+                        setStatus('<span class="text-emerald-300">' + escapeHtml(auto.message || 'WhatsApp API number connected.') + '</span>');
                         if (typeof loadClientWhatsAppNumbersPanel === 'function') loadClientWhatsAppNumbersPanel();
+                        if (typeof loadIntegrationsPanel === 'function') loadIntegrationsPanel();
                         if (typeof loadOverviewChannelStats === 'function') loadOverviewChannelStats();
-                        const hint = document.getElementById('clientWaSignupHint');
-                        if (hint) {
-                            hint.classList.remove('hidden');
-                            hint.innerHTML = '<span class="text-emerald-300">WhatsApp API number connected.</span>';
-                        }
                         return;
                     }
                 } catch (_) { }
-                // If popup navigated back to our domain, try to close it after Meta done
+                try {
+                    const list = await callGateway('clientportal', 'clientPortalListWhatsAppNumbers', {});
+                    const apis = (list.apiConnections || list.connections || []).filter(function (c) {
+                        const s = String(c.status || '').toLowerCase();
+                        return s === 'active' || s === 'connected';
+                    });
+                    if (list.success && apis.length > 0) {
+                        clearInterval(_waConnectPollTimer);
+                        _waConnectPollTimer = null;
+                        closeWhatsAppSignupPopup();
+                        setStatus('<span class="text-emerald-300">WhatsApp API number connected.</span>');
+                        if (typeof loadClientWhatsAppNumbersPanel === 'function') loadClientWhatsAppNumbersPanel();
+                        if (typeof loadOverviewChannelStats === 'function') loadOverviewChannelStats();
+                        return;
+                    }
+                } catch (_) { }
                 try {
                     if (_waSignupPopup && !_waSignupPopup.closed) {
                         const href = String(_waSignupPopup.location.href || '');
@@ -2393,10 +2415,15 @@
                             closeWhatsAppSignupPopup();
                         }
                     }
-                } catch (_) { /* cross-origin until redirect lands on our domain */ }
-                if (tries >= 36) { // ~3 min
+                } catch (_) { }
+                if (tries >= 36) {
                     clearInterval(_waConnectPollTimer);
                     _waConnectPollTimer = null;
+                    setStatus(
+                        '<span class="text-amber-300">Auto-detect timed out.</span> ' +
+                        '<span class="text-[10px] text-slate-400">Paste Phone number ID from Meta → API Setup, then Confirm connect.</span>' +
+                        renderWhatsAppFinalizePanel('')
+                    );
                 }
             }, 5000);
         }
