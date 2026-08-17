@@ -2100,12 +2100,8 @@
                 return;
             }
 
-            // A connection can be Active, or revoked/disconnected. Mailbox,
-            // WhatsApp, and CRM connections keep their credentials on revoke,
-            // so they can be reconnected instantly from here. Social platform
-            // connections don't — those need to go through Connect again
-            // with our team, so we show that distinction instead of a
-            // (non-functional) Reconnect button for them.
+            // Mailbox / WhatsApp / CRM: self-reconnect after revoke.
+            // Social: not self-reconnectable → revoke deletes the row (no REVOKED stub).
             const isRevoked = (status) => {
                 const s = String(status || '').trim().toLowerCase();
                 return s === 'revoked' || s === 'disconnected';
@@ -2119,7 +2115,7 @@
                             class="text-[10px] px-2.5 py-1 bg-emerald-900/40 hover:bg-emerald-900/70 border border-emerald-800 rounded text-emerald-300">
                             Reconnect
                         </button>`
-                        : `<span class="text-[10px] text-slate-500">Contact our team to reconnect</span>`)
+                        : '')
                     : `<button onclick="${onRevoke}"
                         class="text-[10px] px-2.5 py-1 bg-red-900/40 hover:bg-red-900/70 border border-red-800 rounded text-red-300">
                         Revoke
@@ -2145,13 +2141,12 @@
                     `reconnectIntegration('mailbox', { mailboxId: '${escapeHtml(m.mailboxId)}' }, '${escapeHtml(m.label || m.emailAddress || 'this mailbox')}')`)).join('')
                 : '<p class="text-slate-600">No mailboxes connected.</p>';
 
-            // Prefer dedicated multi-number list (dept + role); fall back to integrations payload
             loadClientWhatsAppNumbersPanel();
 
             socEl.innerHTML = (res.social || []).length
-                ? res.social.map(s => row(s.pageName || s.platform, s.platform, s.status,
+                ? res.social.map(s => row(s.pageName || s.platform, s.platform, s.status || 'Connected',
                     `revokeIntegration('social', { type: '${escapeHtml(s.platform)}' }, '${escapeHtml(s.pageName || s.platform)}')`,
-                    null /* social reconnects require going through Connect again with our team */)).join('')
+                    null)).join('')
                 : '<p class="text-slate-600">No social media accounts connected.</p>';
 
             crmEl.innerHTML = (res.crm || []).length
@@ -2162,10 +2157,9 @@
         }
 
         async function revokeIntegration(category, idFields, displayLabel) {
-            const canReconnectSelf = category !== 'social';
-            const warning = canReconnectSelf
-                ? `Revoke "${displayLabel}"? The agent will stop using it immediately. It'll be marked Revoked here and you can reconnect it yourself any time.`
-                : `Revoke "${displayLabel}"? The agent will stop using it immediately — you'll need to reconnect it with our team to restore it.`;
+            const warning = category === 'social'
+                ? `Remove "${displayLabel}"? It will be deleted from this account. Connect the platform again when you want it back.`
+                : `Revoke "${displayLabel}"? The agent will stop using it immediately. You can reconnect it yourself any time.`;
             if (!confirm(warning)) return;
             const res = await callGateway('clientportal', 'clientPortalRevokeIntegration', { category, ...idFields });
             if (!res.success) { alert(res.message || 'Failed to revoke.'); }
@@ -2267,16 +2261,34 @@
         let _waSignupPopup = null;
         let _waConnectPollTimer = null;
 
+        function renderWhatsAppFinalizePanel(signupUrl) {
+            const urlBit = signupUrl
+                ? `<p class="text-[11px] text-slate-400 mb-2">1) Finish Meta in the popup/link below.<br><a class="underline text-emerald-300 break-all" href="${escapeHtml(signupUrl)}" target="wa_signup_popup">${escapeHtml(signupUrl)}</a></p>`
+                : `<p class="text-[11px] text-slate-400 mb-2">1) Finish WhatsApp setup in Meta (or skip if the number is already on your WABA).</p>`;
+            return (
+                urlBit +
+                `<p class="text-[11px] text-slate-400 mb-2">2) Copy <strong class="text-slate-300">Phone number ID</strong> from Meta → WhatsApp → API Setup (long number, not the +phone).</p>` +
+                `<div class="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center mt-2">` +
+                `<input type="text" id="clientWaPhoneNumberId" placeholder="Phone number ID (required)" ` +
+                `class="flex-1 bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />` +
+                `<input type="text" id="clientWaDisplayPhone" placeholder="Display +number (optional)" ` +
+                `class="flex-1 bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />` +
+                `<button type="button" onclick="clientFinalizeWhatsAppConnect()" ` +
+                `class="text-xs px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white whitespace-nowrap">Confirm connect</button>` +
+                `</div>` +
+                `<p class="text-[10px] text-slate-500 mt-2">Same save path as admin “Add API number”. Meta’s success screen alone does not update this dashboard.</p>`
+            );
+        }
+
         async function clientConnectWhatsApp() {
             const hint = document.getElementById('clientWaSignupHint');
             const ovHint = document.getElementById('ovWaConnectHint');
-            // Pre-check limit so user sees "maximum connection reached" without opening Meta
             try {
                 const pre = await callGateway('clientportal', 'clientPortalListWhatsAppNumbers', {});
                 if (pre.success && pre.canAddApi === false) {
                     const msg = pre.message ||
                         ('Maximum connection reached (' + (pre.apiUsed || 0) + '/' + (pre.apiLimit || 0) +
-                            ' WhatsApp API numbers). Disconnect one or ask admin to raise the limit.');
+                            ' WhatsApp API numbers).');
                     alert(msg);
                     if (hint) { hint.classList.remove('hidden'); hint.innerHTML = '<span class="text-amber-300">' + escapeHtml(msg) + '</span>'; }
                     if (ovHint) { ovHint.classList.remove('hidden'); ovHint.innerHTML = '<span class="text-amber-300">' + escapeHtml(msg) + '</span>'; }
@@ -2285,32 +2297,56 @@
             } catch (_) { }
 
             const res = await callGateway('clientportal', 'clientPortalGenerateWhatsAppSignupLink', {});
-            if (!res.success) {
-                const msg = res.message || 'Could not start WhatsApp connection.';
-                alert(msg);
-                if (hint) { hint.classList.remove('hidden'); hint.innerHTML = '<span class="text-amber-300">' + escapeHtml(msg) + '</span>'; }
-                if (ovHint) { ovHint.classList.remove('hidden'); ovHint.innerHTML = '<span class="text-amber-300">' + escapeHtml(msg) + '</span>'; }
-                return;
+            // Even if signup link fails, allow finalize with Phone number ID (admin-style)
+            let signupUrl = (res && res.success && res.signupUrl) ? res.signupUrl : '';
+            if (res && !res.success && res.message) {
+                console.warn('Signup link:', res.message);
             }
-            const html = `Connecting WhatsApp… complete the steps in the popup. When Meta shows success, you should return here automatically.<br><a class="underline text-emerald-300" href="${escapeHtml(res.signupUrl)}" target="wa_signup_popup" rel="noopener">${escapeHtml(res.signupUrl)}</a>`;
+
+            const html = renderWhatsAppFinalizePanel(signupUrl);
             if (hint) { hint.classList.remove('hidden'); hint.innerHTML = html; }
             if (ovHint) { ovHint.classList.remove('hidden'); ovHint.innerHTML = html; }
 
-            // Named popup (no 'noopener') so we can close it when connection is saved
-            try {
-                _waSignupPopup = window.open(
-                    res.signupUrl,
-                    'wa_signup_popup',
-                    'width=720,height=800,menubar=no,toolbar=no,status=no,scrollbars=yes,resizable=yes'
-                );
-            } catch (_) {
-                _waSignupPopup = null;
-            }
-            if (!_waSignupPopup) {
-                // Popup blocked — user can use the link
-                if (hint) hint.innerHTML += '<br><span class="text-amber-300">Popup blocked — open the link above, then return to this tab.</span>';
+            if (signupUrl) {
+                try {
+                    _waSignupPopup = window.open(
+                        signupUrl,
+                        'wa_signup_popup',
+                        'width=720,height=800,menubar=no,toolbar=no,status=no,scrollbars=yes,resizable=yes'
+                    );
+                } catch (_) { _waSignupPopup = null; }
             }
             startWhatsAppConnectPolling();
+        }
+
+        async function clientFinalizeWhatsAppConnect() {
+            const phoneNumberId = ((document.getElementById('clientWaPhoneNumberId') || {}).value || '').trim();
+            const displayPhoneNumber = ((document.getElementById('clientWaDisplayPhone') || {}).value || '').trim();
+            if (!phoneNumberId) {
+                alert('Paste the Phone number ID from Meta → WhatsApp → API Setup.');
+                return;
+            }
+            const res = await callGateway('clientportal', 'clientPortalCompleteWhatsAppSignup', {
+                phoneNumberId: phoneNumberId,
+                displayPhoneNumber: displayPhoneNumber
+            });
+            const hint = document.getElementById('clientWaSignupHint');
+            if (!res.success) {
+                alert(res.message || 'Could not complete WhatsApp connect.');
+                if (hint) {
+                    hint.classList.remove('hidden');
+                    hint.innerHTML = '<span class="text-amber-300">' + escapeHtml(res.message || 'Failed') + '</span><br>' + renderWhatsAppFinalizePanel('');
+                }
+                return;
+            }
+            closeWhatsAppSignupPopup();
+            if (hint) {
+                hint.classList.remove('hidden');
+                hint.innerHTML = '<span class="text-emerald-300">' + escapeHtml(res.message || 'WhatsApp API number connected.') + '</span>';
+            }
+            if (typeof loadClientWhatsAppNumbersPanel === 'function') loadClientWhatsAppNumbersPanel();
+            if (typeof loadOverviewChannelStats === 'function') loadOverviewChannelStats();
+            alert(res.message || 'WhatsApp connected.');
         }
 
         function closeWhatsAppSignupPopup() {
@@ -3301,6 +3337,7 @@
             </div>
         </div>
     </div>
+
 </body>
 
 </html>
