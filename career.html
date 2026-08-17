@@ -1808,6 +1808,22 @@
                         <div id="tabContent15" class="d-none">
                             <h5><i class="fas fa-user-friends"></i> My Team</h5>
 
+                            <!-- Suspended notice when admin has not re-authorized team features -->
+                            <div id="teamFeaturesSuspendedPanel"
+                                class="d-none alert alert-warning border-0 shadow-sm mb-3" role="status">
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="fas fa-pause-circle fa-lg mt-1"></i>
+                                    <div>
+                                        <strong>Team features are temporarily suspended</strong>
+                                        <p class="mb-0 small mt-1" id="teamFeaturesSuspendedMsg">
+                                            Team roster, chat, and team performance are paused until an administrator
+                                            re-authorizes team features. Your individual work and earnings are not
+                                            affected.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div id="shadowTeamSelectorWrap" class="d-none mb-3">
                                 <label class="form-label small text-muted mb-1">Viewing team:</label>
                                 <select id="shadowTeamSelect" class="form-select form-select-sm"
@@ -2711,6 +2727,24 @@
             }
         }
 
+        /** Map backend error strings to partner-safe copy. Never surface Unauthorized. */
+        function sanitizePartnerMessage(msg, fallback) {
+            const raw = String(msg || "").trim();
+            const lower = raw.toLowerCase();
+            if (!raw) return fallback || "Something went wrong. Please try again.";
+            if (
+                lower.includes("unauthorized") ||
+                lower.includes("access denied") ||
+                lower.includes("invalid ingress") ||
+                lower.includes("not allowed") ||
+                lower.includes("admin access required") ||
+                lower.includes("unrecognized")
+            ) {
+                return fallback || "This action is not available right now. Please try again later.";
+            }
+            return raw;
+        }
+
         async function apiCall(action, body = {}, showLoading = true) {
             try {
                 if (showLoading) showLoader();
@@ -2742,6 +2776,11 @@
                         showToast("Your session expired. Please log in again.", "warning", 4000);
                         setTimeout(() => clearSession(), 1500);
                     }
+                }
+
+                // Never leave raw Unauthorized-style messages for UI consumers
+                if (data && data.success === false && data.message) {
+                    data.message = sanitizePartnerMessage(data.message, "This action is not available right now.");
                 }
                 return data;
             } catch (e) {
@@ -4369,19 +4408,68 @@
 
 
         let teamChatPollingInterval = null;
+        let teamFeaturesEnabledCache = null;
 
         const SHADOW_LEAD_EMAIL_CLIENT = "davisfaokhuoya@gmail.com";
         let shadowTeamsCache = [];
 
+        function showTeamSuspendedUI(message) {
+            const suspended = document.getElementById("teamFeaturesSuspendedPanel");
+            const emptyState = document.getElementById("myTeamEmptyState");
+            const content = document.getElementById("myTeamContent");
+            const selectorWrap = document.getElementById("shadowTeamSelectorWrap");
+            if (suspended) {
+                suspended.classList.remove("d-none");
+                const msgEl = document.getElementById("teamFeaturesSuspendedMsg");
+                if (msgEl && message) msgEl.textContent = message;
+            }
+            if (emptyState) emptyState.classList.add("d-none");
+            if (content) content.classList.add("d-none");
+            if (selectorWrap) selectorWrap.classList.add("d-none");
+            if (teamChatPollingInterval) {
+                clearInterval(teamChatPollingInterval);
+                teamChatPollingInterval = null;
+            }
+        }
+
+        function hideTeamSuspendedUI() {
+            const suspended = document.getElementById("teamFeaturesSuspendedPanel");
+            if (suspended) suspended.classList.add("d-none");
+        }
+
+        function isTeamSuspendedResponse(res) {
+            if (!res) return false;
+            if (res.teamFeaturesSuspended === true) return true;
+            if (res.teamFeaturesEnabled === false) return true;
+            const m = String(res.message || "").toLowerCase();
+            return m.includes("team features") && (m.includes("suspend") || m.includes("re-author") || m.includes("paused"));
+        }
+
         async function loadMyTeamTab() {
+            hideTeamSuspendedUI();
+
+            try {
+                const status = await apiCall("getTeamFeaturesStatus", { token: currentToken }, false);
+                if (status && status.success && status.suspended) {
+                    teamFeaturesEnabledCache = false;
+                    showTeamSuspendedUI(status.message);
+                    return;
+                }
+                if (status && status.success) teamFeaturesEnabledCache = !!status.teamFeaturesEnabled;
+            } catch (e) { /* ignore */ }
+
             if (currentUser && String(currentUser.email || "").toLowerCase() === SHADOW_LEAD_EMAIL_CLIENT) {
                 return loadShadowMyTeamTab();
             }
-            document.getElementById("shadowTeamSelectorWrap").classList.add("d-none");
+
+            const selectorWrap = document.getElementById("shadowTeamSelectorWrap");
+            if (selectorWrap) selectorWrap.classList.add("d-none");
             const emptyState = document.getElementById("myTeamEmptyState");
             const content = document.getElementById("myTeamContent");
             const perfBody = document.getElementById("myTeamPerfBody");
-            perfBody.innerHTML = `<p class="text-muted text-center py-3"><i class="fas fa-spinner fa-spin me-1"></i> Loading team performance...</p>`;
+            if (perfBody) {
+                perfBody.innerHTML = `<p class="text-muted text-center py-3"><i class="fas fa-spinner fa-spin me-1"></i> Loading team performance...</p>`;
+            }
 
             let res;
             try {
@@ -4389,28 +4477,41 @@
             } catch (e) {
                 res = null;
             }
-            if (!res || !res.success || !res.hasTeam) {
-                emptyState.classList.remove("d-none");
-                content.classList.add("d-none");
+
+            if (isTeamSuspendedResponse(res)) {
+                showTeamSuspendedUI(res && res.message);
                 return;
             }
-            emptyState.classList.add("d-none");
-            content.classList.remove("d-none");
 
-            document.getElementById("myTeamNameLabel").textContent = res.team.teamName || "Your Team";
-            document.getElementById("myTeamStateLabel").textContent = res.team.state || "";
+            if (!res || !res.success || !res.hasTeam) {
+                if (emptyState) emptyState.classList.remove("d-none");
+                if (content) content.classList.add("d-none");
+                return;
+            }
+
+            if (emptyState) emptyState.classList.add("d-none");
+            if (content) content.classList.remove("d-none");
+
+            document.getElementById("myTeamNameLabel").textContent = (res.team && res.team.teamName) || "Your Team";
+            document.getElementById("myTeamStateLabel").textContent = (res.team && res.team.state) || "";
 
             renderTeamMembersList(res.members);
 
             try {
                 const perfRes = await apiCall("getPerformanceOverview", { token: currentToken }, false);
-                if (perfRes && perfRes.success) {
+                if (isTeamSuspendedResponse(perfRes)) {
+                    if (perfBody) {
+                        perfBody.innerHTML = `<p class="text-muted mb-0">Team performance is paused while team features are suspended.</p>`;
+                    }
+                } else if (perfRes && perfRes.success) {
                     renderTeamPerf(perfRes.team, "myTeamPerfBody");
-                } else {
-                    perfBody.innerHTML = `<p class="text-danger mb-0">Unable to load team performance.</p>`;
+                } else if (perfBody) {
+                    perfBody.innerHTML = `<p class="text-muted mb-0">Team performance is not available right now.</p>`;
                 }
             } catch (e) {
-                perfBody.innerHTML = `<p class="text-danger mb-0">Unable to load team performance.</p>`;
+                if (perfBody) {
+                    perfBody.innerHTML = `<p class="text-muted mb-0">Team performance is not available right now.</p>`;
+                }
             }
 
             loadTeamChat();
@@ -4430,7 +4531,8 @@
             const emptyState = document.getElementById("myTeamEmptyState");
             const content = document.getElementById("myTeamContent");
             const selectorWrap = document.getElementById("shadowTeamSelectorWrap");
-            document.getElementById("leadEngagementCard").classList.add("d-none");
+            const leadCard = document.getElementById("leadEngagementCard");
+            if (leadCard) leadCard.classList.add("d-none");
 
             let res;
             try {
@@ -4438,24 +4540,34 @@
             } catch (e) {
                 res = null;
             }
-            if (!res || !res.success || !res.teams || !res.teams.length) {
-                selectorWrap.classList.add("d-none");
-                emptyState.textContent = "No teams linked yet.";
-                emptyState.classList.remove("d-none");
-                content.classList.add("d-none");
+
+            if (isTeamSuspendedResponse(res)) {
+                showTeamSuspendedUI(res && res.message);
                 return;
             }
 
-            emptyState.classList.add("d-none");
-            content.classList.remove("d-none");
-            selectorWrap.classList.remove("d-none");
+            if (!res || !res.success || !res.teams || !res.teams.length) {
+                if (selectorWrap) selectorWrap.classList.add("d-none");
+                if (emptyState) {
+                    emptyState.textContent = "No teams linked yet.";
+                    emptyState.classList.remove("d-none");
+                }
+                if (content) content.classList.add("d-none");
+                return;
+            }
+
+            if (emptyState) emptyState.classList.add("d-none");
+            if (content) content.classList.remove("d-none");
+            if (selectorWrap) selectorWrap.classList.remove("d-none");
 
             shadowTeamsCache = res.teams;
             const select = document.getElementById("shadowTeamSelect");
-            const prevSelected = select.value;
-            select.innerHTML = shadowTeamsCache.map(t =>
-                `<option value="${t.team.teamId}">${escapeHtml(t.team.teamName)} (${escapeHtml(t.team.state || "")})</option>`
-            ).join("");
+            const prevSelected = select ? select.value : "";
+            if (select) {
+                select.innerHTML = shadowTeamsCache.map(t =>
+                    `<option value="${t.team.teamId}">${escapeHtml(t.team.teamName)} (${escapeHtml(t.team.state || "")})</option>`
+                ).join("");
+            }
             const stillExists = shadowTeamsCache.some(t => t.team.teamId === prevSelected);
             renderShadowTeamView(stillExists ? prevSelected : shadowTeamsCache[0].team.teamId);
         }
@@ -4463,7 +4575,8 @@
         function renderShadowTeamView(teamId) {
             const entry = shadowTeamsCache.find(t => t.team.teamId === teamId);
             if (!entry) return;
-            document.getElementById("shadowTeamSelect").value = teamId;
+            const select = document.getElementById("shadowTeamSelect");
+            if (select) select.value = teamId;
             document.getElementById("myTeamNameLabel").textContent = entry.team.teamName || "Team";
             document.getElementById("myTeamStateLabel").textContent = entry.team.state || "";
 
@@ -4472,11 +4585,13 @@
             const perfBody = document.getElementById("myTeamPerfBody");
             const members = entry.members || [];
             const totalRecent = members.reduce((s, m) => s + (m.recentApprovedJobs || 0), 0);
-            perfBody.innerHTML = `
+            if (perfBody) {
+                perfBody.innerHTML = `
                 <p class="mb-1"><strong>${members.length}</strong> real member(s) &middot;
                     <strong>${totalRecent}</strong> approved job(s) combined in the last ${28} days.</p>
                 <p class="text-muted small mb-0">Lead: ${escapeHtml(entry.team.leadEmail || "—")}${entry.team.backupLeadEmail ? " &middot; Backup: " + escapeHtml(entry.team.backupLeadEmail) : ""}</p>
             `;
+            }
 
             loadShadowTeamChat(teamId);
             if (teamChatPollingInterval) clearInterval(teamChatPollingInterval);
@@ -4491,6 +4606,10 @@
                 res = await apiCall("getShadowTeamMessages", { token: currentToken, teamId }, false);
             } catch (e) {
                 res = null;
+            }
+            if (isTeamSuspendedResponse(res)) {
+                box.innerHTML = `<p class="text-muted mb-0">Team chat is paused while team features are suspended.</p>`;
+                return;
             }
             box.innerHTML = (res && res.success && res.messages && res.messages.length)
                 ? res.messages.map(m => `
@@ -4511,6 +4630,7 @@
 
         function renderTeamMembersList(members) {
             const list = document.getElementById("myTeamMembersList");
+            if (!list) return;
             list.innerHTML = (members || []).map((m, i) => `
                 <div class="d-flex align-items-center border-bottom py-2">
                     <img id="teamMemberPhoto_${i}" src=""
@@ -4540,10 +4660,11 @@
 
         async function loadTeamChat() {
             const res = await apiCall("getTeamMessages", { token: currentToken }, false);
-            if (!res.success || !res.hasTeam) return;
+            if (isTeamSuspendedResponse(res)) return;
+            if (!res || !res.success || !res.hasTeam) return;
             const box = document.getElementById("myTeamChatBox");
             if (!box) return;
-            box.innerHTML = res.messages.map(m => `
+            box.innerHTML = (res.messages || []).map(m => `
     <div class="mb-1">
       <strong class="${m.isYou ? 'text-primary' : ''}">${escapeHtml(m.fromName)}:</strong>
       <span>${escapeHtml(m.message)}</span>
@@ -4555,14 +4676,19 @@
 
         async function handleSendTeamMessage() {
             const input = document.getElementById("myTeamChatInput");
+            if (!input) return;
             const message = input.value.trim();
             if (!message) return;
             input.value = "";
             const res = await apiCall("sendTeamMessage", { token: currentToken, message }, false);
-            if (res.success) {
+            if (isTeamSuspendedResponse(res)) {
+                showTeamSuspendedUI(res && res.message);
+                return;
+            }
+            if (res && res.success) {
                 loadTeamChat();
             } else {
-                showToast(res.message || "Could not send", "error");
+                showToast(sanitizePartnerMessage(res && res.message, "Could not send message."), "error");
             }
         }
 
