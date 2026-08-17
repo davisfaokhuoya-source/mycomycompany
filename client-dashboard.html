@@ -2588,48 +2588,24 @@
             }, 5000);
         }
 
-        // Meta Embedded Signup postMessage (when SDK / same flow posts to opener)
-        window.addEventListener('message', async function (event) {
-            try {
-                const data = event.data;
-                if (!data || data.type !== 'WA_EMBEDDED_SIGNUP') return;
-                const payload = data.data || data;
-                const phoneNumberId = payload.phone_number_id || payload.phoneNumberId;
-                const wabaId = payload.waba_id || payload.wabaId;
-                if (!phoneNumberId) return;
-                const res = await callGateway('clientportal', 'clientPortalCompleteWhatsAppSignup', {
-                    phoneNumberId: phoneNumberId,
-                    wabaId: wabaId || '',
-                    displayPhoneNumber: payload.display_phone_number || payload.displayPhoneNumber || ''
-                });
-                if (res.success) {
-                    closeWhatsAppSignupPopup();
-                    if (typeof loadClientWhatsAppNumbersPanel === 'function') loadClientWhatsAppNumbersPanel();
-                    if (typeof loadOverviewChannelStats === 'function') loadOverviewChannelStats();
-                } else if (res.message) {
-                    console.warn('WA signup complete:', res.message);
-                }
-            } catch (e) {
-                console.warn('WA_EMBEDDED_SIGNUP handler', e);
-            }
-        });
+        // Session listener: ensureWaEmbeddedSignupListener_ (bound once). No second listener.
 
         // Landing from Meta redirect_uri: ?wa_signup=complete&phone_number_id=...&waba_id=...&state=...&code=...
         async function handleWhatsAppSignupReturnFromUrl() {
             try {
                 const q = new URLSearchParams(window.location.search || '');
                 const waFlag = q.get('wa_signup');
-                const phoneNumberId = q.get('phone_number_id') || q.get('phoneNumberId');
+                const phoneNumberId = q.get('phone_number_id') || q.get('phoneNumberId') || '';
                 const wabaId = q.get('waba_id') || q.get('wabaId') || '';
                 const code = q.get('code') || '';
                 const state = q.get('state') || '';
-                if (waFlag !== 'complete' && !phoneNumberId) return;
+                if (waFlag !== 'complete' && !phoneNumberId && !code && !wabaId) return;
 
-                // If this page is the popup, notify opener and close
                 if (window.opener && !window.opener.closed) {
                     try {
                         window.opener.postMessage({
                             type: 'WA_EMBEDDED_SIGNUP',
+                            event: 'FINISH',
                             data: {
                                 phone_number_id: phoneNumberId || '',
                                 waba_id: wabaId,
@@ -2640,28 +2616,24 @@
                     } catch (_) { }
                 }
 
-                if (phoneNumberId) {
-                    const res = await callGateway('clientportal', 'clientPortalCompleteWhatsAppSignup', {
-                        phoneNumberId: phoneNumberId,
-                        wabaId: wabaId,
-                        code: code,
-                        state: state
-                    });
-                    if (res.success && typeof loadClientWhatsAppNumbersPanel === 'function') {
-                        loadClientWhatsAppNumbersPanel();
-                    }
+                const res = await callGateway('clientportal', 'clientPortalCompleteWhatsAppSignup', {
+                    phoneNumberId: phoneNumberId,
+                    wabaId: wabaId,
+                    code: code,
+                    state: state
+                });
+                if (res && res.success && !res.waitingForMeta) {
+                    if (typeof loadClientWhatsAppNumbersPanel === 'function') loadClientWhatsAppNumbersPanel();
+                    if (typeof loadIntegrationsPanel === 'function') loadIntegrationsPanel();
                 } else {
-                    // Meta redirected without phone id — start polling; system token path may finalize Pending
                     startWhatsAppConnectPolling();
                 }
 
-                // Clean query so refresh does not re-run
                 try {
                     const clean = window.location.pathname + (window.location.hash || '');
                     window.history.replaceState({}, document.title, clean);
                 } catch (_) { }
 
-                // Close if we are still the Meta popup
                 if (window.opener) {
                     setTimeout(function () { try { window.close(); } catch (_) { } }, 800);
                 }
