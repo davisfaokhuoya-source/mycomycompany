@@ -7322,14 +7322,19 @@
             console.log(`✅ KPIs Updated | Paid: ${grossPaid} | Earned: ${totalEarned} | Projects: ${totalProjects}`);
         }
 
-        function openAddProjectRowModal() {
+        async function openAddProjectRowModal() {
             const modal = document.getElementById('modalAddProjectRow');
-            if (modal) {
-                modal.classList.remove('hidden');
-
-                const form = document.getElementById('addProjectRowForm');
-                if (form) form.reset();
-            }
+            if (!modal) return;
+            const form = document.getElementById('addProjectRowForm');
+            if (form) form.reset();
+            const customIn = document.getElementById('newRowServiceCustom');
+            if (customIn) { customIn.classList.add('hidden'); customIn.value = ''; customIn.removeAttribute('required'); }
+            const amt = document.getElementById('newRowAmountCharge');
+            if (amt) amt.value = '';
+            const hint = document.getElementById('newRowServiceHint');
+            if (hint) hint.textContent = '';
+            modal.classList.remove('hidden');
+            await populateAddProjectServiceSelect();
         }
 
         function closeAddProjectRowModal() {
@@ -7337,8 +7342,131 @@
             if (modal) modal.classList.add('hidden');
         }
 
+        async function populateAddProjectServiceSelect() {
+            const sel = document.getElementById('newRowServiceSelect');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">Loading services…</option>';
+            let list = [];
+            try {
+                if (typeof loadCareerServiceCatalog === 'function') {
+                    list = await loadCareerServiceCatalog();
+                }
+            } catch (e) { list = []; }
+            if (!Array.isArray(list) || !list.length) {
+                // Minimal fallback — catalog should come from backend getServiceCatalog
+                list = [
+                    { name: 'Business Name Registration', price: 40000, custom: false },
+                    { name: 'CAC - Company Registration', price: 70000, custom: false },
+                    { name: 'SCUML', price: 70000, custom: false },
+                    { name: 'BPP', price: 100000, custom: false },
+                    { name: 'PENCOM', price: 500000, custom: false },
+                    { name: 'Annual Filing', price: 50000, custom: false },
+                    { name: 'TRADEMARK', price: 100000, custom: false },
+                    { name: 'Certified True Copy', price: 15000, custom: false },
+                    { name: 'Change of Director', price: 20000, custom: false },
+                    { name: 'NGO / Incorporated Trustees', price: 200000, custom: false }
+                ];
+            }
+            sel.innerHTML = '<option value="">Select service…</option>';
+            list.forEach(function (s) {
+                const opt = document.createElement('option');
+                opt.value = s.name;
+                opt.dataset.price = (s.price == null || s.custom) ? '' : String(s.price);
+                opt.dataset.custom = (s.custom || s.price == null) ? '1' : '0';
+                opt.dataset.notes = s.notes || '';
+                const priceLabel = (s.custom || s.price == null)
+                    ? 'Custom price'
+                    : ('₦' + Number(s.price).toLocaleString());
+                opt.textContent = s.name + ' — ' + priceLabel;
+                sel.appendChild(opt);
+            });
+            // Admin free-form custom service
+            const customOpt = document.createElement('option');
+            customOpt.value = '__CUSTOM__';
+            customOpt.dataset.custom = '1';
+            customOpt.dataset.price = '';
+            customOpt.textContent = '➕ Custom service (type name + amount)';
+            sel.appendChild(customOpt);
+            onAddProjectServiceChange();
+        }
+
+        function onAddProjectServiceChange() {
+            const sel = document.getElementById('newRowServiceSelect');
+            const customIn = document.getElementById('newRowServiceCustom');
+            const hidden = document.getElementById('newRowService');
+            const amt = document.getElementById('newRowAmountCharge');
+            const hint = document.getElementById('newRowServiceHint');
+            const amtHint = document.getElementById('newRowAmountHint');
+            if (!sel) return;
+            const opt = sel.options[sel.selectedIndex];
+            const isCustomService = opt && opt.value === '__CUSTOM__';
+            const isCustomPrice = opt && (opt.dataset.custom === '1' || isCustomService);
+
+            if (customIn) {
+                if (isCustomService) {
+                    customIn.classList.remove('hidden');
+                    customIn.setAttribute('required', 'required');
+                    customIn.focus();
+                    if (hidden) hidden.value = customIn.value.trim();
+                } else {
+                    customIn.classList.add('hidden');
+                    customIn.removeAttribute('required');
+                    customIn.value = '';
+                    if (hidden) hidden.value = (opt && opt.value) ? opt.value : '';
+                }
+            } else if (hidden) {
+                hidden.value = (opt && opt.value && opt.value !== '__CUSTOM__') ? opt.value : '';
+            }
+
+            if (hint) {
+                if (!opt || !opt.value) {
+                    hint.textContent = '';
+                } else if (isCustomService) {
+                    hint.textContent = 'Enter any service name. Amount is fully custom.';
+                } else if (isCustomPrice) {
+                    hint.textContent = (opt.dataset.notes || 'Custom-priced service — enter the agreed amount.');
+                } else {
+                    hint.textContent = (opt.dataset.notes || 'List price loaded from catalog. You may still override the amount.');
+                }
+            }
+
+            if (amt) {
+                const price = opt && opt.dataset.price ? parseFloat(opt.dataset.price) : NaN;
+                if (!isCustomPrice && isFinite(price) && price > 0) {
+                    amt.value = price;
+                    if (amtHint) amtHint.textContent = 'Catalog list price auto-filled. Override if admin agreed a different fee.';
+                } else {
+                    // Keep existing number if admin already typed; otherwise clear for custom entry
+                    if (!amt.value || isCustomService) amt.value = '';
+                    if (amtHint) amtHint.textContent = 'Enter the custom amount (₦) for this service.';
+                }
+            }
+        }
+
+        // Keep hidden service name in sync when typing custom
+        document.addEventListener('input', function (e) {
+            if (e.target && e.target.id === 'newRowServiceCustom') {
+                const hidden = document.getElementById('newRowService');
+                if (hidden) hidden.value = e.target.value.trim();
+            }
+        });
+
         async function submitNewProjectRow(event) {
             event.preventDefault();
+
+            const sel = document.getElementById('newRowServiceSelect');
+            const customIn = document.getElementById('newRowServiceCustom');
+            let serviceName = '';
+            if (sel && sel.value === '__CUSTOM__') {
+                serviceName = (customIn && customIn.value.trim()) || '';
+            } else if (sel && sel.value) {
+                serviceName = sel.value.trim();
+            } else {
+                serviceName = (document.getElementById('newRowService') || {}).value || '';
+                serviceName = String(serviceName).trim();
+            }
+            const hidden = document.getElementById('newRowService');
+            if (hidden) hidden.value = serviceName;
 
             const payload = {
                 PartnerID: document.getElementById('newRowPartnerID').value.trim(),
@@ -7346,14 +7474,18 @@
                 ClientPhone: document.getElementById('newRowPhone').value.trim(),
                 ClientEmail: document.getElementById('newRowEmail').value.trim(),
                 Location: document.getElementById('newRowLocation').value.trim(),
-                Service: document.getElementById('newRowService').value.trim(),
+                Service: serviceName,
                 AmountToCharge: parseFloat(document.getElementById('newRowAmountCharge').value) || 0,
                 Urgency: document.getElementById('newRowUrgency').value,
                 Comments: document.getElementById('newRowComments').value.trim()
             };
 
-            if (!payload.PartnerID || !payload.ClientName || !payload.Service || !payload.AmountToCharge) {
-                showToast("Partner ID, Client Name, Service and Amount are required.", "error");
+            if (!payload.PartnerID || !payload.ClientName || !payload.Service) {
+                showToast("Partner ID, Client Name and Service are required.", "error");
+                return;
+            }
+            if (!(payload.AmountToCharge > 0)) {
+                showToast("Enter a valid amount to charge (₦).", "error");
                 return;
             }
 
@@ -7367,7 +7499,7 @@
 
             if (btn) {
                 btn.disabled = false;
-                btn.textContent = "Add Row to DataSheet";
+                btn.textContent = "ADD ROW TO DATASHEET";
             }
 
             if (res.success) {
