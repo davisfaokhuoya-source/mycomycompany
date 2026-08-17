@@ -476,7 +476,8 @@
                         <p class="text-[11px] text-slate-400 leading-relaxed">The agent answers routine chats on your
                             <span class="text-slate-200">API WhatsApp number</span>. On referral it <span
                                 class="text-slate-200">sends a WhatsApp message from that API number to a linked staff
-                                number</span> (by department) with the customer’s details:</p>
+                                number</span> (by department) with the customer’s details:
+                        </p>
                         <ul class="text-[11px] text-slate-400 space-y-1.5 list-disc pl-5">
                             <li><span class="text-slate-200">Serious buyer / high intent</span> — ready to purchase,
                                 quote with budget, or paid engagement.</li>
@@ -2280,33 +2281,31 @@
             );
         }
 
+        /**
+         * Option A — true Meta Embedded Signup (FB SDK + FB.login + sessionInfoVersion 3).
+         * Do NOT open business.facebook.com/messaging/whatsapp/onboard as primary —
+         * that hosted flow does not post phone_number_id back to this window.
+         */
         function loadFacebookSdk_(appId, graphVersion) {
             return new Promise(function (resolve, reject) {
-                if (window.FB) {
+                function initAndResolve() {
                     try {
                         window.FB.init({
-                            appId: appId,
+                            appId: String(appId),
+                            autoLogAppEvents: true,
                             cookie: true,
                             xfbml: true,
                             version: graphVersion || 'v21.0'
                         });
                     } catch (_) { }
                     resolve(window.FB);
+                }
+                if (window.FB) {
+                    initAndResolve();
                     return;
                 }
-                window.fbAsyncInit = function () {
-                    window.FB.init({
-                        appId: appId,
-                        cookie: true,
-                        xfbml: true,
-                        version: graphVersion || 'v21.0'
-                    });
-                    resolve(window.FB);
-                };
-                if (document.getElementById('facebook-jssdk')) {
-                    // script loading; fbAsyncInit will fire
-                    return;
-                }
+                window.fbAsyncInit = initAndResolve;
+                if (document.getElementById('facebook-jssdk')) return;
                 const s = document.createElement('script');
                 s.id = 'facebook-jssdk';
                 s.async = true;
@@ -2318,121 +2317,24 @@
             });
         }
 
-        /**
-         * Official Meta path: FB.login Embedded Signup + sessionInfoVersion 3
-         * posts WA_EMBEDDED_SIGNUP with phone_number_id + waba_id to this window.
-         * Hosted onboard URL does NOT — never use hosted URL as primary.
-         */
-        async function clientConnectWhatsApp() {
-            const hint = document.getElementById('clientWaSignupHint');
-            const ovHint = document.getElementById('ovWaConnectHint');
-            function setHint(html) {
-                if (hint) { hint.classList.remove('hidden'); hint.innerHTML = html; }
-                if (ovHint) { ovHint.classList.remove('hidden'); ovHint.innerHTML = html; }
-            }
-            try {
-                const pre = await callGateway('clientportal', 'clientPortalListWhatsAppNumbers', {});
-                if (pre.success && pre.canAddApi === false) {
-                    const msg = pre.message ||
-                        ('Maximum connection reached (' + (pre.apiUsed || 0) + '/' + (pre.apiLimit || 0) +
-                            ' WhatsApp API numbers).');
-                    alert(msg);
-                    setHint('<span class="text-amber-300">' + escapeHtml(msg) + '</span>');
-                    return;
-                }
-            } catch (_) { }
-
-            const res = await callGateway('clientportal', 'clientPortalGenerateWhatsAppSignupLink', {});
-            if (!res || !res.success) {
-                setHint('<span class="text-amber-300">' + escapeHtml((res && res.message) || 'Could not start WhatsApp connect.') + '</span>' + renderWhatsAppFinalizePanel(''));
-                return;
-            }
-
-            setHint(
-                '<span class="text-slate-300">Opening Meta Embedded Signup…</span>' +
-                '<p class="text-[10px] text-slate-500 mt-1">When Meta finishes, we capture Phone number ID automatically. Keep this tab open.</p>' +
-                renderWhatsAppFinalizePanel('')
-            );
-
-            // Ensure session listener is active before FB.login popup
-            ensureWaEmbeddedSignupListener_();
-
-            if (res.sdkMode && res.appId && res.configId) {
-                try {
-                    await loadFacebookSdk_(res.appId, res.graphVersion || 'v21.0');
-                    window.FB.login(
-                        function (fbResponse) {
-                            // Code exchange is optional backup; session postMessage is primary for IDs
-                            try {
-                                const code = fbResponse && fbResponse.authResponse && fbResponse.authResponse.code;
-                                if (code) {
-                                    window.__waLastEsCode = code;
-                                    callGateway('clientportal', 'clientPortalCompleteWhatsAppSignup', {
-                                        code: code,
-                                        state: res.state || '',
-                                        phoneNumberId: '',
-                                        wabaId: window.__waLastWabaId || ''
-                                    }).then(function (done) {
-                                        if (done && done.success && !done.waitingForMeta) {
-                                            setHint('<span class="text-emerald-300">' + escapeHtml(done.message || 'Connected.') + '</span>');
-                                            if (typeof loadClientWhatsAppNumbersPanel === 'function') loadClientWhatsAppNumbersPanel();
-                                            if (typeof loadIntegrationsPanel === 'function') loadIntegrationsPanel();
-                                        }
-                                    }).catch(function () { });
-                                }
-                            } catch (_) { }
-                        },
-                        {
-                            config_id: res.configId,
-                            response_type: 'code',
-                            override_default_response_type: true,
-                            extras: {
-                                setup: {},
-                                featureType: 'whatsapp_business_app_onboarding',
-                                sessionInfoVersion: '3',
-                                version: 'v3'
-                            }
-                        }
-                    );
-                } catch (sdkErr) {
-                    console.warn('FB SDK launch failed, falling back to hosted URL', sdkErr);
-                    if (res.signupUrl) {
-                        try {
-                            _waSignupPopup = window.open(res.signupUrl, 'wa_signup_popup',
-                                'width=720,height=800,menubar=no,toolbar=no,status=no,scrollbars=yes,resizable=yes');
-                        } catch (_) { _waSignupPopup = null; }
-                    }
-                }
-            } else if (res.signupUrl) {
-                try {
-                    _waSignupPopup = window.open(res.signupUrl, 'wa_signup_popup',
-                        'width=720,height=800,menubar=no,toolbar=no,status=no,scrollbars=yes,resizable=yes');
-                } catch (_) { _waSignupPopup = null; }
-            }
-
-            startWhatsAppConnectPolling();
-        }
-
         function ensureWaEmbeddedSignupListener_() {
             if (window.__waEsListenerBound) return;
             window.__waEsListenerBound = true;
             window.addEventListener('message', async function (event) {
                 try {
                     const origin = String(event.origin || '');
-                    if (origin.indexOf('facebook.com') === -1 && origin.indexOf('fb.com') === -1) {
-                        // still allow our own postMessage relay
-                        if (event.data && event.data.type === 'WA_EMBEDDED_SIGNUP' && event.data.data) {
-                            // from our redirect page
-                        } else {
-                            return;
-                        }
-                    }
+                    const fromFb = origin.endsWith('facebook.com') || origin.endsWith('fb.com') ||
+                        origin.indexOf('facebook.com') !== -1;
+                    const fromSelf = !!(event.data && event.data.type === 'WA_EMBEDDED_SIGNUP');
+                    if (!fromFb && !fromSelf) return;
+
                     let data = event.data;
                     if (typeof data === 'string') {
                         try { data = JSON.parse(data); } catch (_) { return; }
                     }
                     if (!data || data.type !== 'WA_EMBEDDED_SIGNUP') return;
 
+                    console.log('WA_EMBEDDED_SIGNUP', data);
                     const ev = String(data.event || '').toUpperCase();
                     const payload = data.data || {};
                     const phoneNumberId = String(
@@ -2442,15 +2344,17 @@
                         payload.waba_id || payload.wabaId || payload.wabaID || ''
                     ).trim();
                     if (wabaId) window.__waLastWabaId = wabaId;
+                    if (phoneNumberId) window.__waLastPhoneNumberId = phoneNumberId;
 
-                    if (ev.indexOf('FINISH') === -1 && !phoneNumberId && !wabaId) return;
+                    // FINISH / FINISH_ONLY_WABA / FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING
+                    if (ev && ev.indexOf('FINISH') === -1 && !phoneNumberId && !wabaId) return;
 
                     const res = await callGateway('clientportal', 'clientPortalCompleteWhatsAppSignup', {
-                        phoneNumberId: phoneNumberId,
-                        wabaId: wabaId,
+                        phoneNumberId: phoneNumberId || window.__waLastPhoneNumberId || '',
+                        wabaId: wabaId || window.__waLastWabaId || '',
                         displayPhoneNumber: payload.display_phone_number || '',
-                        code: window.__waLastEsCode || '',
-                        state: ''
+                        code: window.__waLastEsCode || payload.code || '',
+                        state: window.__waLastEsState || ''
                     });
                     const hint = document.getElementById('clientWaSignupHint');
                     const ovHint = document.getElementById('ovWaConnectHint');
@@ -2476,8 +2380,117 @@
                 }
             });
         }
-        // Bind listener early so we never miss FINISH
         try { ensureWaEmbeddedSignupListener_(); } catch (_) { }
+
+        async function clientConnectWhatsApp() {
+            const hint = document.getElementById('clientWaSignupHint');
+            const ovHint = document.getElementById('ovWaConnectHint');
+            function setHint(html) {
+                if (hint) { hint.classList.remove('hidden'); hint.innerHTML = html; }
+                if (ovHint) { ovHint.classList.remove('hidden'); ovHint.innerHTML = html; }
+            }
+            try {
+                const pre = await callGateway('clientportal', 'clientPortalListWhatsAppNumbers', {});
+                if (pre.success && pre.canAddApi === false) {
+                    const msg = pre.message ||
+                        ('Maximum connection reached (' + (pre.apiUsed || 0) + '/' + (pre.apiLimit || 0) +
+                            ' WhatsApp API numbers).');
+                    alert(msg);
+                    setHint('<span class="text-amber-300">' + escapeHtml(msg) + '</span>');
+                    return;
+                }
+            } catch (_) { }
+
+            // Creates Pending row + returns appId, configId, state for SDK
+            const res = await callGateway('clientportal', 'clientPortalGenerateWhatsAppSignupLink', {});
+            if (!res || !res.success) {
+                setHint('<span class="text-amber-300">' + escapeHtml((res && res.message) || 'Could not start WhatsApp connect.') + '</span>' + renderWhatsAppFinalizePanel(''));
+                return;
+            }
+            window.__waLastEsState = res.state || '';
+
+            if (!res.appId || !res.configId) {
+                setHint(
+                    '<span class="text-amber-300">SDK config missing. Set WHATSAPP_APP_ID and WHATSAPP_ES_CONFIG_ID in AgentLib Script Properties.</span>' +
+                    renderWhatsAppFinalizePanel('')
+                );
+                return;
+            }
+
+            setHint(
+                '<span class="text-slate-300">Opening Meta Embedded Signup (FB.login)…</span>' +
+                '<p class="text-[10px] text-slate-500 mt-1">Keep this tab open. After you click Finish, Phone number ID is captured automatically.</p>' +
+                renderWhatsAppFinalizePanel('')
+            );
+
+            ensureWaEmbeddedSignupListener_();
+
+            try {
+                await loadFacebookSdk_(res.appId, res.graphVersion || 'v21.0');
+                // Option A — exact Meta pattern (default flow so phone_number_id is returned)
+                window.FB.login(
+                    function (fbResponse) {
+                        try {
+                            if (!fbResponse || !fbResponse.authResponse) {
+                                console.warn('FB.login cancelled or no authResponse', fbResponse);
+                                setHint(
+                                    '<span class="text-amber-300">Meta signup was cancelled or blocked. Allow popups and try again.</span>' +
+                                    renderWhatsAppFinalizePanel('')
+                                );
+                                return;
+                            }
+                            const code = fbResponse.authResponse.code;
+                            if (code) {
+                                window.__waLastEsCode = code;
+                                // Send code (+ any session ids already received) to backend
+                                callGateway('clientportal', 'clientPortalCompleteWhatsAppSignup', {
+                                    code: code,
+                                    state: res.state || '',
+                                    phoneNumberId: window.__waLastPhoneNumberId || '',
+                                    wabaId: window.__waLastWabaId || ''
+                                }).then(function (done) {
+                                    if (done && done.success && !done.waitingForMeta) {
+                                        if (_waConnectPollTimer) { clearInterval(_waConnectPollTimer); _waConnectPollTimer = null; }
+                                        setHint('<span class="text-emerald-300">' + escapeHtml(done.message || 'Connected.') + '</span>');
+                                        if (typeof loadClientWhatsAppNumbersPanel === 'function') loadClientWhatsAppNumbersPanel();
+                                        if (typeof loadIntegrationsPanel === 'function') loadIntegrationsPanel();
+                                        if (typeof loadOverviewChannelStats === 'function') loadOverviewChannelStats();
+                                    } else if (done && done.waitingForMeta) {
+                                        startWhatsAppConnectPolling();
+                                    } else if (done && done.message) {
+                                        setHint('<span class="text-amber-300">' + escapeHtml(done.message) + '</span>' + renderWhatsAppFinalizePanel(''));
+                                    }
+                                }).catch(function (err) {
+                                    console.warn('complete after FB.login', err);
+                                });
+                            }
+                        } catch (e) {
+                            console.warn('FB.login callback', e);
+                        }
+                    },
+                    {
+                        config_id: res.configId,
+                        response_type: 'code',
+                        override_default_response_type: true,
+                        extras: {
+                            setup: {},
+                            featureType: '',
+                            sessionInfoVersion: '3'
+                        }
+                    }
+                );
+            } catch (sdkErr) {
+                console.error('FB SDK / FB.login failed', sdkErr);
+                setHint(
+                    '<span class="text-amber-300">Could not open Meta Embedded Signup: ' +
+                    escapeHtml(String(sdkErr && sdkErr.message || sdkErr)) +
+                    '. Check popups, App ID, and allowed domains.</span>' +
+                    renderWhatsAppFinalizePanel('')
+                );
+            }
+
+            startWhatsAppConnectPolling();
+        }
 
         async function clientFinalizeWhatsAppConnect() {
             const phoneNumberId = ((document.getElementById('clientWaPhoneNumberId') || {}).value || '').trim();
