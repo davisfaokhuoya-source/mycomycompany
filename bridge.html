@@ -874,13 +874,22 @@
                             <div>
                                 <h3 class="text-lg font-bold text-white">Teams &amp; Members</h3>
                                 <p class="text-xs text-slate-400">Every team currently formed, its Lead/Backup Lead,
-                                    and full member roster.</p>
+                                    and full member roster. Partners who leave must request rejoin or be re-added by
+                                    admin.</p>
                             </div>
-                            <button onclick="loadCareerTeamsUI()"
-                                class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium px-3 py-1.5 rounded">
-                                <i class="fa-solid fa-arrows-rotate mr-1"></i> Refresh
-                            </button>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="loadTeamJoinRequestsUI()"
+                                    class="bg-amber-800 hover:bg-amber-700 text-xs text-white font-medium px-3 py-1.5 rounded">
+                                    Join requests
+                                </button>
+                                <button onclick="loadCareerTeamsUI()"
+                                    class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium px-3 py-1.5 rounded">
+                                    <i class="fa-solid fa-arrows-rotate mr-1"></i> Refresh
+                                </button>
+                            </div>
                         </div>
+                        <div id="teamJoinRequestsBox"
+                            class="hidden bg-slate-950 border border-amber-900/40 rounded-xl p-3 space-y-2"></div>
                         <div id="careerTeamsList" class="flex-1 overflow-auto custom-scrollbar space-y-3">
                             <p class="text-xs text-slate-500 text-center py-6">Loading teams...</p>
                         </div>
@@ -4213,9 +4222,12 @@
                             id="onboardLedgerClientPhone"
                             class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
                     </div>
-                    <div><label class="block text-xs text-slate-400 mb-1">Service</label><input type="text"
-                            id="onboardLedgerService" required
-                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    <div><label class="block text-xs text-slate-400 mb-1">Service</label>
+                        <select id="onboardLedgerService" required onchange="onOnboardServiceChange()"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                            <option value="">Select service…</option>
+                        </select>
+                        <p id="onboardLedgerServiceHint" class="text-[10px] text-slate-500 mt-1"></p>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
@@ -4232,6 +4244,8 @@
                     <div><label class="block text-xs text-slate-400 mb-1">Amount Paid (₦)</label><input type="number"
                             id="onboardLedgerAmountPaid" required placeholder="0"
                             class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500" />
+                        <p class="text-[10px] text-slate-500 mt-1">Auto-filled from catalogue when service has a fixed
+                            price. Custom services: enter amount manually.</p>
                     </div>
                     <div><label class="block text-xs text-slate-400 mb-1">Payment Type</label>
                         <select id="onboardLedgerPaymentType"
@@ -6622,6 +6636,8 @@
                     system: systemTarget,
                     action: actionTarget,
                     token: SESSION_MASTER_TOKEN,
+                    // Career Hub isAdminRequest also accepts adminKey === ADMIN_SECRET / ADMIN_TOKEN
+                    adminKey: SESSION_MASTER_TOKEN,
                     ...analyticalPayload
                 };
 
@@ -7924,6 +7940,94 @@
             if (res.success) { closeGeneratePaymentLinkModal(); loadClientSubmittedProjects(); }
         }
 
+        let CAREER_SERVICE_CATALOG_CACHE = null;
+
+        async function loadCareerServiceCatalog(force) {
+            if (CAREER_SERVICE_CATALOG_CACHE && !force) return CAREER_SERVICE_CATALOG_CACHE;
+            const res = await executeSecureBridgeCall('career', 'getServiceCatalog', {});
+            if (res && res.success && Array.isArray(res.services)) {
+                CAREER_SERVICE_CATALOG_CACHE = res.services;
+            } else {
+                // Fallback list if backend not deployed yet
+                CAREER_SERVICE_CATALOG_CACHE = [
+                    { name: 'Business Name Registration', price: 40000, custom: false },
+                    { name: 'CAC - Company Registration', price: 70000, custom: false, notes: '+₦30k per extra ₦1M share capital' },
+                    { name: 'SCUML', price: 70000, custom: false },
+                    { name: 'BPP', price: 100000, custom: false },
+                    { name: 'PENCOM', price: 500000, custom: false },
+                    { name: 'Annual Filing', price: 50000, custom: false },
+                    { name: 'TRADEMARK', price: 100000, custom: false },
+                    { name: 'Certified True Copy', price: 15000, custom: false },
+                    { name: 'Change of Director', price: 20000, custom: false },
+                    { name: 'NGO / Incorporated Trustees', price: 200000, custom: false },
+                    { name: 'AI Power VA', price: null, custom: true },
+                    { name: 'Company Portfolio', price: null, custom: true },
+                    { name: 'Company Profile', price: null, custom: true },
+                    { name: 'Premium Packages - Starter Ops', price: null, custom: true },
+                    { name: 'Premium Packages - Growth Ops', price: null, custom: true },
+                    { name: 'Premium Packages - Enterprise Ops', price: null, custom: true },
+                    { name: 'Premium Packages - Digital Launch', price: null, custom: true },
+                    { name: 'Premium Packages - Digital Accelerate', price: null, custom: true },
+                    { name: 'Premium Packages - Digital Scale', price: null, custom: true }
+                ];
+            }
+            return CAREER_SERVICE_CATALOG_CACHE;
+        }
+
+        async function populateOnboardServiceSelect(preferredName) {
+            const sel = document.getElementById('onboardLedgerService');
+            if (!sel) return;
+            const list = await loadCareerServiceCatalog();
+            const prev = preferredName || sel.value || '';
+            sel.innerHTML = '<option value="">Select service…</option>';
+            list.forEach(function (s) {
+                const opt = document.createElement('option');
+                opt.value = s.name;
+                opt.dataset.price = s.price == null ? '' : String(s.price);
+                opt.dataset.custom = s.custom || s.price == null ? '1' : '0';
+                opt.dataset.notes = s.notes || '';
+                const priceLabel = (s.custom || s.price == null)
+                    ? 'Custom — contact admin'
+                    : ('₦' + Number(s.price).toLocaleString());
+                opt.textContent = s.name + ' (' + priceLabel + ')';
+                sel.appendChild(opt);
+            });
+            if (prev) {
+                sel.value = prev;
+                if (sel.value !== prev) {
+                    // free-text service from project row — add temporary option
+                    const o = document.createElement('option');
+                    o.value = prev;
+                    o.textContent = prev + ' (from project)';
+                    o.selected = true;
+                    sel.appendChild(o);
+                }
+            }
+            onOnboardServiceChange();
+        }
+
+        function onOnboardServiceChange() {
+            const sel = document.getElementById('onboardLedgerService');
+            const amt = document.getElementById('onboardLedgerAmountPaid');
+            const hint = document.getElementById('onboardLedgerServiceHint');
+            if (!sel || !amt) return;
+            const opt = sel.options[sel.selectedIndex];
+            if (!opt || !opt.value) {
+                if (hint) hint.textContent = '';
+                return;
+            }
+            const custom = opt.dataset.custom === '1';
+            const price = opt.dataset.price ? parseFloat(opt.dataset.price) : NaN;
+            if (hint) {
+                hint.textContent = custom
+                    ? 'Custom price — enter amount after agreeing with admin.'
+                    : ((opt.dataset.notes || '') + (isFinite(price) ? ' List price auto-filled; adjust if needed.' : ''));
+            }
+            if (!custom && isFinite(price) && price > 0) {
+                amt.value = price;
+            }
+        }
+
         async function submitOnboardToLedger(event) {
             event.preventDefault();
             const clientName = document.getElementById('onboardLedgerClientName')?.value?.trim();
@@ -7935,30 +8039,83 @@
             const amountPaid = document.getElementById('onboardLedgerAmountPaid')?.value;
             const paymentType = document.getElementById('onboardLedgerPaymentType')?.value;
             const paymentDate = document.getElementById('onboardLedgerPaymentDate')?.value;
+            const dataSheetRow = parseInt(document.getElementById('onboardSourceRowId')?.value || '', 10) || undefined;
 
             if (!clientName || !service || !partnerID) {
                 showToast('Client name, service, and partner ID are required.', 'error'); return;
+            }
+            if (!SESSION_MASTER_TOKEN) {
+                showToast('Session expired. Log in again on the bridge login screen.', 'error');
+                return;
             }
             const btn = event.target.querySelector('button[type=submit]');
             if (btn) { btn.disabled = true; btn.textContent = 'Processing…'; }
 
             const res = await executeSecureBridgeCall('career', 'onboard-to-ledger', {
                 clientName, clientEmail, clientPhone, service, partnerID, partnerEmail,
-                amountPaid, paymentType, paymentDate
+                amountPaid, paymentType, paymentDate,
+                dataSheetRow: dataSheetRow
             });
 
             if (btn) { btn.disabled = false; btn.textContent = 'Initialize Production Protocol & Add to Ledger'; }
 
             if (res.success) {
-
                 const tcEl = document.getElementById('onboardLedgerTrackingCode');
                 const txEl = document.getElementById('onboardLedgerTxRef');
                 if (tcEl) tcEl.value = res.trackingCode || '';
                 if (txEl) txEl.value = res.txRef || '';
-                showToast('Client onboarded! Tracking code: ' + (res.trackingCode || ''), 'success');
-                setTimeout(() => { closeOnboardToLedgerModal(); loadProductionFulfillment(); }, 1500);
+                const emailNote = res.emailSent === false ? ' (client email not sent — check Zepto)' : '';
+                showToast('Client onboarded! Tracking: ' + (res.trackingCode || '') + emailNote, 'success');
+                setTimeout(() => { closeOnboardToLedgerModal(); if (typeof loadProductionFulfillment === 'function') loadProductionFulfillment(); if (typeof loadClientSubmittedProjects === 'function') loadClientSubmittedProjects(); }, 1500);
             } else {
-                showToast(res.message || 'Onboarding failed.', 'error');
+                const msg = res.message || 'Onboarding failed.';
+                showToast(msg, 'error');
+                if (/unauthor/i.test(msg)) {
+                    showToast('Admin token rejected. Log out of bridge, log in again with the admin password that matches Career Hub ADMIN_TOKEN.', 'error');
+                }
+            }
+        }
+
+        async function loadTeamJoinRequestsUI() {
+            const box = document.getElementById('teamJoinRequestsBox');
+            if (!box) return;
+            box.classList.remove('hidden');
+            box.innerHTML = '<p class="text-xs text-slate-500">Loading join requests…</p>';
+            const res = await executeSecureBridgeCall('career', 'listTeamJoinRequests', { status: 'Pending' });
+            if (!res.success) {
+                box.innerHTML = '<p class="text-xs text-amber-300">' + escapeHtml(res.message || 'Failed to load') + '</p>';
+                return;
+            }
+            const rows = res.requests || [];
+            if (!rows.length) {
+                box.innerHTML = '<p class="text-xs text-slate-500">No pending join requests.</p>';
+                return;
+            }
+            box.innerHTML = '<p class="text-[10px] font-bold text-amber-400 mb-2">Pending team join requests</p>' +
+                rows.map(function (r) {
+                    return '<div class="flex flex-wrap items-center justify-between gap-2 border border-slate-800 rounded p-2 text-xs">' +
+                        '<div><span class="text-white font-medium">' + escapeHtml(r.name || r.email) + '</span>' +
+                        '<span class="text-slate-500 ml-2">' + escapeHtml(r.email) + '</span>' +
+                        '<div class="text-slate-400 mt-0.5">→ ' + escapeHtml(r.teamId) + '</div></div>' +
+                        '<div class="flex gap-1">' +
+                        '<button type="button" class="px-2 py-1 bg-emerald-700 hover:bg-emerald-600 rounded text-white" ' +
+                        'onclick="resolveTeamJoinRequestUI(\'' + escapeHtml(r.requestId) + '\',\'approve\')">Approve</button>' +
+                        '<button type="button" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white" ' +
+                        'onclick="resolveTeamJoinRequestUI(\'' + escapeHtml(r.requestId) + '\',\'reject\')">Reject</button>' +
+                        '</div></div>';
+                }).join('');
+        }
+
+        async function resolveTeamJoinRequestUI(requestId, decision) {
+            const res = await executeSecureBridgeCall('career', 'resolveTeamJoinRequest', {
+                requestId: requestId,
+                decision: decision,
+                adminEmail: CURRENT_ADMIN_IDENTITY || ''
+            });
+            showToast(res.success ? (res.message || 'Done') : (res.message || 'Failed'), res.success ? 'success' : 'error');
+            if (res.success) {
+                loadTeamJoinRequestsUI();
+                if (typeof loadCareerTeamsUI === 'function') loadCareerTeamsUI();
             }
         }
 
@@ -7969,11 +8126,11 @@
             if (form) form.reset();
         }
 
-        function openOnboardToLedgerModal(projectData) {
+        async function openOnboardToLedgerModal(projectData) {
             const modal = document.getElementById('modalOnboardToLedger');
             if (!modal) return;
 
-            const p = typeof projectData === 'string' ? JSON.parse(projectData) : projectData;
+            const p = typeof projectData === 'string' ? JSON.parse(projectData) : (projectData || {});
 
             document.getElementById('onboardLedgerClientName').value =
                 p.ClientName || p.clientName || p['Client Name'] || p.Name || '';
@@ -7984,14 +8141,15 @@
             document.getElementById('onboardLedgerClientPhone').value =
                 p.ClientPhone || p.clientPhone || p['Client Phone'] || p.Phone || p.phone || '';
 
-            document.getElementById('onboardLedgerService').value =
-                p.Service || p.service || p['Engaged Service'] || p.EngagedService || '';
-
             document.getElementById('onboardLedgerPartnerID').value =
                 p.PartnerID || p.partnerID || p['Partner ID'] || p.PartnerId || '';
 
             document.getElementById('onboardLedgerPartnerEmail').value =
                 p.PartnerEmail || p.partnerEmail || p['Partner Email'] || '';
+
+            const rowId = p._rowIndex || p.rowIndex || p.DataSheetRow || p.dataSheetRow || '';
+            const src = document.getElementById('onboardSourceRowId');
+            if (src) src.value = rowId ? String(rowId) : '';
 
             document.getElementById('onboardLedgerAmountPaid').value =
                 p.AmountToCharge || p.AmountPaid || p.Amount || p.amount || '';
@@ -8002,11 +8160,15 @@
             }
 
             const today = new Date().toISOString().split('T')[0];
-            document.getElementById('onboardLedgerPaymentDate').value =
-                p.PaymentDate || p.paymentDate || p.Date || p.Timestamp || today;
+            let payDate = p.PaymentDate || p.paymentDate || '';
+            if (payDate && String(payDate).indexOf('T') !== -1) payDate = String(payDate).split('T')[0];
+            document.getElementById('onboardLedgerPaymentDate').value = payDate || today;
 
             document.getElementById('onboardLedgerTrackingCode').value = '';
             document.getElementById('onboardLedgerTxRef').value = '';
+
+            const svcName = p.Service || p.service || p['Engaged Service'] || p.EngagedService || '';
+            await populateOnboardServiceSelect(svcName);
 
             modal.classList.remove('hidden');
         }
