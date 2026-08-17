@@ -2323,28 +2323,35 @@
             const phoneNumberId = ((document.getElementById('clientWaPhoneNumberId') || {}).value || '').trim();
             const displayPhoneNumber = ((document.getElementById('clientWaDisplayPhone') || {}).value || '').trim();
             if (!phoneNumberId) {
-                alert('Paste the Phone number ID from Meta → WhatsApp → API Setup.');
+                alert('Paste the Phone number ID from Meta → WhatsApp → API Setup (digits only, e.g. 1099775926558819). Meta “success” alone does not save the number.');
                 return;
             }
+            if (!/^\d{10,20}$/.test(phoneNumberId)) {
+                alert('Phone number ID should be a long number (10–20 digits), not the +phone display number.');
+                return;
+            }
+            const btn = document.querySelector('#clientWaSignupHint button[onclick*="clientFinalizeWhatsAppConnect"], #ovWaConnectHint button[onclick*="clientFinalizeWhatsAppConnect"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
             const res = await callGateway('clientportal', 'clientPortalCompleteWhatsAppSignup', {
                 phoneNumberId: phoneNumberId,
                 displayPhoneNumber: displayPhoneNumber
             });
+            if (btn) { btn.disabled = false; btn.textContent = 'Confirm connect'; }
             const hint = document.getElementById('clientWaSignupHint');
+            const ovHint = document.getElementById('ovWaConnectHint');
             if (!res.success) {
                 alert(res.message || 'Could not complete WhatsApp connect.');
-                if (hint) {
-                    hint.classList.remove('hidden');
-                    hint.innerHTML = '<span class="text-amber-300">' + escapeHtml(res.message || 'Failed') + '</span><br>' + renderWhatsAppFinalizePanel('');
-                }
+                const errHtml = '<span class="text-amber-300">' + escapeHtml(res.message || 'Failed') + '</span><br>' + renderWhatsAppFinalizePanel('');
+                if (hint) { hint.classList.remove('hidden'); hint.innerHTML = errHtml; }
+                if (ovHint) { ovHint.classList.remove('hidden'); ovHint.innerHTML = errHtml; }
                 return;
             }
             closeWhatsAppSignupPopup();
-            if (hint) {
-                hint.classList.remove('hidden');
-                hint.innerHTML = '<span class="text-emerald-300">' + escapeHtml(res.message || 'WhatsApp API number connected.') + '</span>';
-            }
+            const okHtml = '<span class="text-emerald-300">' + escapeHtml(res.message || 'WhatsApp API number connected.') + '</span>';
+            if (hint) { hint.classList.remove('hidden'); hint.innerHTML = okHtml; }
+            if (ovHint) { ovHint.classList.remove('hidden'); ovHint.innerHTML = okHtml; }
             if (typeof loadClientWhatsAppNumbersPanel === 'function') loadClientWhatsAppNumbersPanel();
+            if (typeof loadIntegrationsPanel === 'function') loadIntegrationsPanel();
             if (typeof loadOverviewChannelStats === 'function') loadOverviewChannelStats();
             alert(res.message || 'WhatsApp connected.');
         }
