@@ -8491,9 +8491,11 @@
                 .map((p, index) => {
                     const rowDataStr = JSON.stringify(p).replace(/"/g, '&quot;');
 
-                    const trackingFlag = String(p.OnboardTrackingCode || '').trim();
-                    const trackingCode = trackingFlag || p.TrackingCode || p.trackingCode || p['Tracking Code'] || '';
-                    const isOnboarded = !!trackingCode;
+                    const trackingFlag = String(p.OnboardTrackingCode || p['Onboard Tracking Code'] || '').trim();
+                    const trackingCode = trackingFlag || p.TrackingCode || p.trackingCode || p['Tracking Code'] || p.JobTrackingCode || '';
+                    const statusStr = String(p.Status || p.status || '').trim().toLowerCase();
+                    const statusOnboarded = /onboarded|in progress|successful|approved|completed|paid/.test(statusStr);
+                    const isOnboarded = !!(trackingCode) || statusOnboarded;
 
                     const clientName = p['Client Name'] || p.ClientName || p.clientName || '—';
                     const clientEmail = p['Email'] || p.ClientEmail || p.clientEmail || '—';
@@ -8558,8 +8560,11 @@
                 generatePaymentLinkFromRow(0, p);
             }
             else if (action === 'onboard') {
-                const trackingFlag = String(p.OnboardTrackingCode || '').trim();
-                if (trackingFlag || p.TrackingCode || p.trackingCode || p['Tracking Code']) {
+                const trackingFlag = String(p.OnboardTrackingCode || p['Onboard Tracking Code'] || '').trim();
+                const trackingCode = trackingFlag || p.TrackingCode || p.trackingCode || p['Tracking Code'] || p.JobTrackingCode || '';
+                const statusStr = String(p.Status || p.status || '').trim().toLowerCase();
+                const statusOnboarded = /onboarded|in progress|successful|approved|completed|paid/.test(statusStr);
+                if (trackingCode || statusOnboarded) {
                     showToast("This project is already onboarded.", "info");
                     return;
                 }
