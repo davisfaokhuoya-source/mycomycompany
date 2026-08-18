@@ -3669,9 +3669,10 @@
                                 <thead
                                     class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
                                     <tr>
-                                        <th class="p-2">Label / Number</th>
-                                        <th class="p-2">Department</th>
-                                        <th class="p-2">Role</th>
+                                        <th class="p-2">Label</th>
+                                        <th class="p-2">Phone Number ID</th>
+                                        <th class="p-2">Linked Phone</th>
+                                        <th class="p-2">Dept / Role</th>
                                         <th class="p-2 text-center">Status</th>
                                         <th class="p-2 text-center">Actions</th>
                                     </tr>
@@ -14290,26 +14291,51 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             let html = '';
             if (apiRows.length) {
                 apiRows.forEach(w => {
-                    const id = w.whatsAppId || w.WhatsAppID;
+                    const id = w.whatsAppId || w.WhatsAppID || '';
+                    const phoneId = w.phoneNumberId || w.PhoneNumberId || w.phone_number_id || '—';
+                    const linkedPhone = w.displayPhoneNumber || w.display_phone_number || w.phoneE164 || w.phone || '';
+                    const dept = w.department || 'general';
+                    const role = w.lineRole || w.role || 'agent_line';
                     html += `<tr class="bg-emerald-950/20">
-                      <td class="p-2"><div class="text-white">${escapeHtml(w.label || 'API inbox')}</div>
-                        <div class="text-slate-500 text-[10px]">${escapeHtml(w.displayPhoneNumber || w.phoneNumberId || '')}</div></td>
-                      <td class="p-2 text-emerald-400 text-[11px]" colspan="2">Cloud API (agent reads &amp; replies)</td>
+                      <td class="p-2">
+                        <div class="text-white text-xs font-medium">${escapeHtml(w.label || 'API inbox')}</div>
+                        <div class="text-emerald-500/80 text-[10px]">Cloud API</div>
+                      </td>
+                      <td class="p-2">
+                        <div class="font-mono text-[11px] text-slate-200 break-all">${escapeHtml(String(phoneId))}</div>
+                      </td>
+                      <td class="p-2">
+                        <div class="text-white text-xs">${escapeHtml(linkedPhone || '— not captured —')}</div>
+                        ${linkedPhone ? '' : `<button type="button" onclick="refreshWhatsAppPhoneMetaAdmin('${escapeHtml(id)}')"
+                          class="mt-1 text-[10px] text-emerald-400 hover:underline">Fetch from Meta</button>`}
+                      </td>
+                      <td class="p-2 text-[11px] text-slate-400">
+                        <div>${escapeHtml(dept)}</div>
+                        <div class="text-slate-500">${escapeHtml(role)}</div>
+                      </td>
                       <td class="p-2 text-center text-slate-400">${escapeHtml(w.status || '—')}</td>
                       <td class="p-2 text-center">
-                        <button onclick="disconnectWhatsAppAdmin('${escapeHtml(id)}')"
-                          class="text-[10px] px-2 py-1 bg-red-900/50 hover:bg-red-900 rounded text-red-200">Disconnect API</button>
+                        <div class="flex flex-wrap gap-1 justify-center">
+                          <button type="button" onclick="openEditWhatsAppProfileModal('${escapeHtml(id)}')"
+                            class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-100">Edit profile</button>
+                          <button type="button" onclick="refreshWhatsAppPhoneMetaAdmin('${escapeHtml(id)}')"
+                            class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-100" title="Refresh display phone from Meta">↻ Phone</button>
+                          <button type="button" onclick="disconnectWhatsAppAdmin('${escapeHtml(id)}')"
+                            class="text-[10px] px-2 py-1 bg-red-900/50 hover:bg-red-900 rounded text-red-200">Disconnect</button>
+                        </div>
                       </td>
                     </tr>`;
                 });
             } else {
-                html += '<tr><td class="p-2 text-slate-600" colspan="5">No API number — use Embedded Signup or Manual Connect.</td></tr>';
+                html += '<tr><td class="p-2 text-slate-600" colspan="6">No API number — use Embedded Signup or Manual Connect.</td></tr>';
             }
             if (teamRows.length) {
                 teamRows.forEach(w => {
                     html += `<tr>
                       <td class="p-2"><div class="text-white">${escapeHtml(w.label || w.contactName || 'Team')}</div>
-                        <div class="text-slate-500 text-[10px]">+${escapeHtml(w.phoneE164 || '')}</div></td>
+                        <div class="text-amber-400/80 text-[10px]">Team referral</div></td>
+                      <td class="p-2 text-slate-500 text-[11px]">—</td>
+                      <td class="p-2"><div class="text-white text-xs">+${escapeHtml(w.phoneE164 || '')}</div></td>
                       <td class="p-2">
                         <select onchange="updateTeamLinkDeptAdmin('${escapeHtml(w.linkId)}', this.value)"
                           class="bg-slate-900 border border-slate-800 rounded px-1 py-1 text-[11px] text-white">
@@ -14317,7 +14343,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                         `<option value="${d}" ${d === (w.department || 'general') ? 'selected' : ''}>${d}</option>`).join('')}
                         </select>
                       </td>
-                      <td class="p-2 text-amber-300 text-[11px]">Team referral link</td>
                       <td class="p-2 text-center text-slate-400">${escapeHtml(w.status || 'Active')}</td>
                       <td class="p-2 text-center">
                         <button onclick="removeTeamLinkAdmin('${escapeHtml(w.linkId)}')"
@@ -14326,7 +14351,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                     </tr>`;
                 });
             } else {
-                html += '<tr><td class="p-2 text-slate-600" colspan="5">No team referral numbers linked yet.</td></tr>';
+                html += '<tr><td class="p-2 text-slate-600" colspan="6">No team referral numbers linked yet.</td></tr>';
             }
             tbody.innerHTML = html;
         }
@@ -14354,6 +14379,99 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             const res = await executeSecureBridgeCall('agent', 'agent-disconnect-whatsapp', { clientId, whatsAppId }, { silent: true });
             showToast(res.message || (res.success ? 'Disconnected.' : 'Failed'), res.success ? 'success' : 'error');
             if (res.success) onWhatsAppClientChanged();
+        }
+
+        /** Refresh display phone number from Meta Graph and store on the connection row. */
+        async function refreshWhatsAppPhoneMetaAdmin(whatsAppId) {
+            const clientId = document.getElementById('whatsappClientSelector')?.value;
+            if (!clientId || !whatsAppId) return;
+            showToast('Fetching phone details from Meta…', 'info');
+            const res = await executeSecureBridgeCall('agent', 'agent-refresh-whatsapp-phone-meta', {
+                clientId, whatsAppId
+            }, { silent: true });
+            showToast(res.message || (res.success ? ('Linked phone: ' + (res.displayPhoneNumber || 'updated')) : 'Failed'), res.success ? 'success' : 'error');
+            if (res.success) loadWhatsAppNumbersAdmin();
+        }
+
+        async function openEditWhatsAppProfileModal(whatsAppId) {
+            const clientId = document.getElementById('whatsappClientSelector')?.value;
+            if (!clientId || !whatsAppId) {
+                showToast('Select a client and API number first.', 'error');
+                return;
+            }
+            const modal = document.getElementById('modalEditWhatsAppProfile');
+            if (!modal) return;
+            document.getElementById('waProfileWhatsAppId').value = whatsAppId;
+            document.getElementById('waProfilePhoneNumberId').textContent = 'Loading…';
+            document.getElementById('waProfileDisplayPhone').textContent = '—';
+            document.getElementById('waProfileAbout').value = '';
+            document.getElementById('waProfileDescription').value = '';
+            document.getElementById('waProfileEmail').value = '';
+            document.getElementById('waProfileAddress').value = '';
+            document.getElementById('waProfileWebsites').value = '';
+            document.getElementById('waProfilePictureUrl').value = '';
+            document.getElementById('waProfileVertical').value = '';
+            document.getElementById('waProfileLoadStatus').textContent = 'Loading profile from Meta…';
+            modal.classList.remove('hidden');
+
+            const res = await executeSecureBridgeCall('agent', 'agent-get-whatsapp-profile', {
+                clientId, whatsAppId
+            }, { silent: true });
+
+            if (!res || !res.success) {
+                document.getElementById('waProfileLoadStatus').textContent =
+                    (res && res.message) || 'Could not load profile. You can still try saving after checking the token.';
+                // Still show IDs if returned
+                if (res && res.phoneNumberId) document.getElementById('waProfilePhoneNumberId').textContent = res.phoneNumberId;
+                if (res && res.displayPhoneNumber) document.getElementById('waProfileDisplayPhone').textContent = res.displayPhoneNumber;
+                return;
+            }
+
+            document.getElementById('waProfilePhoneNumberId').textContent = res.phoneNumberId || '—';
+            document.getElementById('waProfileDisplayPhone').textContent = res.displayPhoneNumber || '— not captured —';
+            const p = res.profile || {};
+            document.getElementById('waProfileAbout').value = p.about || '';
+            document.getElementById('waProfileDescription').value = p.description || '';
+            document.getElementById('waProfileEmail').value = p.email || '';
+            document.getElementById('waProfileAddress').value = p.address || '';
+            document.getElementById('waProfileVertical').value = p.vertical || '';
+            const sites = Array.isArray(p.websites) ? p.websites : (p.websites ? [p.websites] : []);
+            document.getElementById('waProfileWebsites').value = sites.filter(Boolean).join('\n');
+            document.getElementById('waProfilePictureUrl').value = p.profile_picture_url || '';
+            document.getElementById('waProfileLoadStatus').textContent = 'Profile loaded. Edit fields and save to push changes to Meta.';
+        }
+
+        async function submitWhatsAppProfileEdit() {
+            const clientId = document.getElementById('whatsappClientSelector')?.value;
+            const whatsAppId = document.getElementById('waProfileWhatsAppId')?.value;
+            if (!clientId || !whatsAppId) {
+                showToast('Missing client or WhatsApp connection id.', 'error');
+                return;
+            }
+            const websitesRaw = (document.getElementById('waProfileWebsites').value || '').trim();
+            const websites = websitesRaw
+                ? websitesRaw.split(/\r?\n/).map(s => s.trim()).filter(Boolean).slice(0, 2)
+                : [];
+            const payload = {
+                clientId,
+                whatsAppId,
+                about: document.getElementById('waProfileAbout').value.trim(),
+                description: document.getElementById('waProfileDescription').value.trim(),
+                email: document.getElementById('waProfileEmail').value.trim(),
+                address: document.getElementById('waProfileAddress').value.trim(),
+                vertical: document.getElementById('waProfileVertical').value.trim(),
+                websites: websites,
+                profilePictureUrl: document.getElementById('waProfilePictureUrl').value.trim()
+            };
+            const btn = document.getElementById('waProfileSaveBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+            const res = await executeSecureBridgeCall('agent', 'agent-update-whatsapp-profile', payload, { silent: true });
+            if (btn) { btn.disabled = false; btn.textContent = 'Save profile to Meta'; }
+            showToast(res.message || (res.success ? 'Profile updated on Meta.' : 'Update failed'), res.success ? 'success' : 'error');
+            if (res.success) {
+                document.getElementById('modalEditWhatsAppProfile').classList.add('hidden');
+                loadWhatsAppNumbersAdmin();
+            }
         }
 
         async function saveWhatsAppNumbersLimit() {
@@ -15188,6 +15306,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 ? 'Include a "provider" field: sendgrid, mailgun, or webhook — each needs different fields.'
                 : 'This integration type is stored but has no automated consumer yet.';
         }
+
         const _origInitMap = {
             'agent-approvals': loadAgentApprovals,
             'agent-discounts': loadDiscountCodes,
@@ -15205,6 +15324,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             'agent-va-clients': loadVAClientsUI,
             'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector'); }
         };
+
         document.addEventListener("DOMContentLoaded", initializeModule);
     </script>
 </body>
