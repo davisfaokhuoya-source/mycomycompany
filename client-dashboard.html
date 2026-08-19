@@ -3081,29 +3081,69 @@
             const statusEl = document.getElementById("generateStatus");
             if (statusEl) statusEl.innerHTML = "";
             const indGrid = document.getElementById("genIndustryGrid");
-            if (indGrid && !DOC_CATALOG_LIST.length) {
-                indGrid.innerHTML = '<p class="text-slate-500 text-xs col-span-3">Loading your available documents…</p>';
-            }
+            try {
+                if (indGrid && !DOC_CATALOG_LIST.length) {
+                    indGrid.innerHTML = '<p class="text-slate-500 text-xs col-span-3">Loading your available documents…</p>';
+                }
 
-            const res = await callGateway("clientportal", "clientPortalDocumentCatalog");
-            if (!res.success) {
-                if (indGrid) indGrid.innerHTML = '<p class="text-red-400 text-xs col-span-3">' + escapeHtml(clientFriendlyError(res.message || "Could not load documents.")) + "</p>";
-                return;
-            }
+                const res = await callGateway("clientportal", "clientPortalDocumentCatalog");
+                if (!res || !res.success) {
+                    const msg = clientFriendlyError((res && res.message) || "Could not load documents.");
+                    if (indGrid) indGrid.innerHTML = '<p class="text-red-400 text-xs col-span-3">' + escapeHtml(msg) + "</p>";
+                    return;
+                }
 
-            DOC_CATALOG_CACHE = {};
-            DOC_CATALOG_LIST = res.catalog || [];
-            DOC_CATALOG_LIST.forEach(function (item) { DOC_CATALOG_CACHE[item.docType] = item; });
-
-            // Keep current browse position if still valid; else reset to industries
-            if (GEN_BROWSE.industry) {
-                const stillHas = DOC_CATALOG_LIST.some(function (item) {
-                    const inds = (item.industries || ["universal"]).map(function (x) { return String(x).toLowerCase(); });
-                    return inds.indexOf(GEN_BROWSE.industry) !== -1;
+                DOC_CATALOG_CACHE = {};
+                DOC_CATALOG_LIST = Array.isArray(res.catalog) ? res.catalog : [];
+                DOC_CATALOG_LIST.forEach(function (item) {
+                    if (item && item.docType) DOC_CATALOG_CACHE[item.docType] = item;
+                    // Normalize so older backends without industries still group under Universal
+                    if (!item.industries || !item.industries.length) item.industries = ["universal"];
+                    if (!item.category) item.category = "other";
                 });
-                if (!stillHas) GEN_BROWSE = { industry: null, category: null };
+
+                if (GEN_BROWSE.industry) {
+                    const stillHas = DOC_CATALOG_LIST.some(function (item) {
+                        const inds = (item.industries || ["universal"]).map(function (x) { return String(x).toLowerCase(); });
+                        return inds.indexOf(GEN_BROWSE.industry) !== -1;
+                    });
+                    if (!stillHas) GEN_BROWSE = { industry: null, category: null };
+                }
+                renderGenBrowse();
+            } catch (e) {
+                console.error("loadDocumentCatalog", e);
+                const msg = clientFriendlyError(e && e.message ? e.message : e);
+                if (indGrid) indGrid.innerHTML = '<p class="text-red-400 text-xs col-span-3">' + escapeHtml(msg) + "</p>";
+                notifyUser(msg, "error");
             }
-            renderGenBrowse();
+        }
+
+        async function loadAutoSendPreference() {
+            try {
+                const toggle = document.getElementById('autoSendToggle');
+                if (!toggle) return;
+                const res = await callGateway('clientportal', 'clientPortalGetAutoSendPreference');
+                if (res && res.success) toggle.checked = !!res.autoSendDocuments;
+            } catch (e) {
+                console.warn('loadAutoSendPreference', e);
+            }
+        }
+
+        async function setAutoSendPreference(enabled) {
+            const toggle = document.getElementById('autoSendToggle');
+            try {
+                if (toggle) toggle.disabled = true;
+                const res = await callGateway('clientportal', 'clientPortalSetAutoSendPreference', { enabled: !!enabled });
+                if (!res || !res.success) {
+                    if (toggle) toggle.checked = !enabled;
+                    notifyUser((res && res.message) || 'Could not save that setting — please try again.', 'error');
+                }
+            } catch (e) {
+                if (toggle) toggle.checked = !enabled;
+                notifyUser(clientFriendlyError(e && e.message ? e.message : e), 'error');
+            } finally {
+                if (toggle) toggle.disabled = false;
+            }
         }
 
         function applyGenerateCardFilter() {
