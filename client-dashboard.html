@@ -476,8 +476,7 @@
                         <p class="text-[11px] text-slate-400 leading-relaxed">The agent answers routine chats on your
                             <span class="text-slate-200">API WhatsApp number</span>. On referral it <span
                                 class="text-slate-200">sends a WhatsApp message from that API number to a linked staff
-                                number</span> (by department) with the customer’s details:
-                        </p>
+                                number</span> (by department) with the customer’s details:</p>
                         <ul class="text-[11px] text-slate-400 space-y-1.5 list-disc pl-5">
                             <li><span class="text-slate-200">Serious buyer / high intent</span> — ready to purchase,
                                 quote with budget, or paid engagement.</li>
@@ -641,19 +640,32 @@
                         </label>
                     </div>
 
-                    <!-- [NEW] Populated by loadDocumentCatalog() from clientPortalDocumentCatalog — all 12 document
-                         types the admin can create (including Action Plan, Strategic Plan, and Agreement), each
-                         shown active/inactive per the client's own quota. -->
-                    <div class="max-w-5xl">
-                        <div class="relative mb-3">
-                            <i
-                                class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-[10px]"></i>
-                            <input id="genCardSearch" type="text" placeholder="Search document types…"
-                                oninput="applyGenerateCardFilter()"
-                                class="w-full sm:w-72 bg-slate-900 border border-slate-800 rounded pl-7 pr-2 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    <!-- Browse: Industry (Universal / Schools / NGO…) → Category (Financial / Legal…) → document cards -->
+                    <div class="max-w-5xl space-y-3">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" id="genNavBack" onclick="genBrowseBack()"
+                                class="hidden text-xs px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-200">
+                                <i class="fa-solid fa-arrow-left"></i> Back
+                            </button>
+                            <p id="genNavPath" class="text-xs text-slate-400 flex-1">Choose a category to see documents
+                                for your industry.</p>
+                            <div class="relative">
+                                <i
+                                    class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-[10px]"></i>
+                                <input id="genCardSearch" type="text" placeholder="Search all documents…"
+                                    oninput="applyGenerateCardFilter()"
+                                    class="w-full sm:w-64 bg-slate-900 border border-slate-800 rounded pl-7 pr-2 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                            </div>
                         </div>
-                        <div id="generateCardsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <p class="text-slate-500 text-xs col-span-3">Loading your available documents…</p>
+                        <!-- Level 1: industries -->
+                        <div id="genIndustryGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+                        <!-- Level 2: categories within industry -->
+                        <div id="genCategoryGrid" class="hidden grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        </div>
+                        <!-- Level 3: document cards -->
+                        <div id="generateCardsContainer"
+                            class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <p class="text-slate-500 text-xs col-span-3">Loading…</p>
                         </div>
                         <p id="genCardNoMatch" class="hidden text-slate-600 text-xs mt-2">No document types match your
                             search.</p>
@@ -2766,145 +2778,336 @@
             market_research: "fa-magnifying-glass-chart", revenue_optimization: "fa-sack-dollar",
             progress_report: "fa-chart-simple", financial_report: "fa-chart-line",
             pitch_deck: "fa-display", infographic_brief: "fa-chart-pie", industry_report: "fa-industry",
-            // [NEW] icons for the 3 additional doc types now served by the backend catalog
-            action_plan: "fa-list-check", strategic_plan: "fa-chess", agreement: "fa-file-contract"
+            action_plan: "fa-list-check", strategic_plan: "fa-chess", agreement: "fa-file-contract",
+            invoice_general: "fa-file-invoice-dollar", receipt: "fa-receipt",
+            payment_confirmation: "fa-circle-check", contract: "fa-file-contract"
         };
-        let DOC_CATALOG_CACHE = {}; // docType -> catalog entry, used when building the Send payload
 
-        async function loadAutoSendPreference() {
-            const toggle = document.getElementById('autoSendToggle');
-            const res = await callGateway('clientportal', 'clientPortalGetAutoSendPreference');
-            if (res.success) toggle.checked = !!res.autoSendDocuments;
+        const INDUSTRY_META = {
+            universal: { label: "Universal / All businesses", icon: "fa-globe", hint: "Invoices, letters, contracts & reports for any company" },
+            schools: { label: "Schools & Education", icon: "fa-graduation-cap", hint: "Fees, report cards, enrollment, parent notices" },
+            ngo: { label: "NGO / Non-profit", icon: "fa-hand-holding-heart", hint: "Grants, donor letters, impact reports, MOUs" },
+            retail: { label: "Retail & Commerce", icon: "fa-store", hint: "Orders, delivery and trade documents" },
+            healthcare: { label: "Healthcare", icon: "fa-heartbeat", hint: "Clinic and patient-related documents" },
+            real_estate: { label: "Real estate", icon: "fa-building", hint: "Property and tenancy documents" },
+            professional_services: { label: "Professional services", icon: "fa-briefcase", hint: "Consulting and service firm documents" }
+        };
+
+        const CATEGORY_META = {
+            financial: { label: "Financial", icon: "fa-coins", hint: "Invoices, receipts, statements, reminders" },
+            operational: { label: "Operational", icon: "fa-gears", hint: "Status updates, SLA, incident & ROI reports" },
+            legal: { label: "Legal & compliance", icon: "fa-scale-balanced", hint: "Contracts, SOW, demand notices, agreements" },
+            letter: { label: "Letters & notices", icon: "fa-envelope-open-text", hint: "Custom letters, certificates, appeals" },
+            report: { label: "Reports & proposals", icon: "fa-chart-column", hint: "Report cards, grants, impact reports" },
+            strategy: { label: "Strategy", icon: "fa-chess", hint: "Plans, decks and strategic documents" },
+            other: { label: "Other", icon: "fa-folder", hint: "Additional document types" }
+        };
+
+        let DOC_CATALOG_CACHE = {};
+        let DOC_CATALOG_LIST = [];
+        let GEN_BROWSE = { industry: null, category: null }; // null = top level
+
+        function _industryKey(item) {
+            const inds = item.industries || ["universal"];
+            if (!inds.length) return "universal";
+            // Prefer non-universal when present for industry-specific packs
+            const specific = inds.find(function (i) { return String(i).toLowerCase() !== "universal"; });
+            return String(specific || inds[0] || "universal").toLowerCase();
         }
 
-        async function setAutoSendPreference(enabled) {
-            const toggle = document.getElementById('autoSendToggle');
-            toggle.disabled = true;
-            const res = await callGateway('clientportal', 'clientPortalSetAutoSendPreference', { enabled });
-            toggle.disabled = false;
-            if (!res.success) {
-                // Revert the visual toggle if the save failed, and let them know why.
-                toggle.checked = !enabled;
-                alert(res.message || 'Could not save that setting — please try again.');
+        function _categoryKey(item) {
+            return String(item.category || "other").toLowerCase();
+        }
+
+        function _titleCaseKey(k) {
+            return String(k || "").replace(/_/g, " ").replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+        }
+
+        function genBrowseBack() {
+            if (GEN_BROWSE.category) {
+                GEN_BROWSE.category = null;
+                renderGenBrowse();
+            } else if (GEN_BROWSE.industry) {
+                GEN_BROWSE.industry = null;
+                renderGenBrowse();
             }
         }
 
-        async function loadDocumentCatalog() {
-            const container = document.getElementById('generateCardsContainer');
-            const statusEl = document.getElementById('generateStatus');
-            if (statusEl) statusEl.innerHTML = ''; // never leave prior job/timeout noise on this tab
-            // Silent refresh: if cards are already rendered, just dim them slightly
-            // instead of replacing with a "Loading…" wall — keeps the tab usable
-            // and avoids a jarring blank-then-repaint flash on every revisit.
-            const alreadyRendered = container.dataset.rendered === '1';
-            if (alreadyRendered) container.style.opacity = '0.6';
-            else container.innerHTML = `<p class="text-slate-500 text-xs col-span-2">Loading your available documents…</p>`;
+        function genSelectIndustry(industry) {
+            GEN_BROWSE.industry = industry;
+            GEN_BROWSE.category = null;
+            const search = document.getElementById("genCardSearch");
+            if (search) search.value = "";
+            renderGenBrowse();
+        }
 
-            const res = await callGateway('clientportal', 'clientPortalDocumentCatalog');
-            container.style.opacity = '1';
+        function genSelectCategory(category) {
+            GEN_BROWSE.category = category;
+            const search = document.getElementById("genCardSearch");
+            if (search) search.value = "";
+            renderGenBrowse();
+        }
 
-            if (!res.success) {
-                container.innerHTML = `<p class="text-red-400 text-xs col-span-2">${escapeHtml(clientFriendlyError(res.message || 'Could not load documents.'))}</p>`;
+        function renderGenBrowse() {
+            const indGrid = document.getElementById("genIndustryGrid");
+            const catGrid = document.getElementById("genCategoryGrid");
+            const cards = document.getElementById("generateCardsContainer");
+            const backBtn = document.getElementById("genNavBack");
+            const pathEl = document.getElementById("genNavPath");
+            const searchQ = ((document.getElementById("genCardSearch") || {}).value || "").toLowerCase().trim();
+
+            // Global search: jump straight to matching document cards across all industries
+            if (searchQ) {
+                if (indGrid) indGrid.classList.add("hidden");
+                if (catGrid) catGrid.classList.add("hidden");
+                if (cards) cards.classList.remove("hidden");
+                if (backBtn) backBtn.classList.remove("hidden");
+                if (pathEl) pathEl.textContent = 'Search results for "' + searchQ + '"';
+                renderGenerateDocumentCards(DOC_CATALOG_LIST.filter(function (item) {
+                    const hay = (item.label + " " + item.docType + " " + (item.category || "") + " " +
+                        (item.industries || []).join(" ")).toLowerCase();
+                    return hay.indexOf(searchQ) !== -1;
+                }));
                 return;
             }
 
-            DOC_CATALOG_CACHE = {};
-            res.catalog.forEach(item => DOC_CATALOG_CACHE[item.docType] = item);
+            if (!GEN_BROWSE.industry) {
+                // Level 1 — industries that have at least one catalog item
+                if (backBtn) backBtn.classList.add("hidden");
+                if (pathEl) pathEl.textContent = "Choose a category (e.g. Universal, Schools, NGO)…";
+                if (indGrid) indGrid.classList.remove("hidden");
+                if (catGrid) catGrid.classList.add("hidden");
+                if (cards) cards.classList.add("hidden");
 
-            container.innerHTML = res.catalog.map(item => {
-                const icon = DOC_TYPE_ICONS[item.docType] || 'fa-file';
-                if (!item.available) {
-                    // [INACTIVE] Greyed out, not clickable, reason shown underneath —
-                    // e.g. quota exhausted ("no longer available because you've used
-                    // your assigned number") or not part of the current plan.
-                    return `
-            <div class="gen-card bg-slate-900/50 border border-slate-800 rounded-xl p-5 opacity-50 cursor-not-allowed select-none" data-label="${escapeHtml(item.label.toLowerCase())}">
-                <i class="fa-solid ${icon} text-slate-600 mb-2"></i>
-                <p class="font-semibold text-slate-400 text-sm">${escapeHtml(item.label)}</p>
-                <p class="text-[11px] text-amber-500/80 mt-1"><i class="fa-solid fa-lock"></i> ${escapeHtml(item.reason)}</p>
-            </div>`;
+                const byInd = {};
+                DOC_CATALOG_LIST.forEach(function (item) {
+                    // Document may appear under multiple industries
+                    const inds = (item.industries && item.industries.length) ? item.industries : ["universal"];
+                    inds.forEach(function (raw) {
+                        const k = String(raw || "universal").toLowerCase();
+                        byInd[k] = byInd[k] || [];
+                        byInd[k].push(item);
+                    });
+                });
+                // Always show universal first, then alpha
+                const keys = Object.keys(byInd).sort(function (a, b) {
+                    if (a === "universal") return -1;
+                    if (b === "universal") return 1;
+                    return a.localeCompare(b);
+                });
+                if (indGrid) {
+                    indGrid.innerHTML = keys.map(function (k) {
+                        const meta = INDUSTRY_META[k] || { label: _titleCaseKey(k), icon: "fa-folder", hint: "" };
+                        const count = byInd[k].length;
+                        const avail = byInd[k].filter(function (i) { return i.available; }).length;
+                        return (
+                            '<button type="button" onclick="genSelectIndustry(\'' + k.replace(/'/g, "\\'") + '\')" ' +
+                            'class="text-left bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-4 transition-colors">' +
+                            '<i class="fa-solid ' + meta.icon + ' text-emerald-400 mb-2"></i>' +
+                            '<p class="font-semibold text-white text-sm">' + escapeHtml(meta.label) + '</p>' +
+                            '<p class="text-[11px] text-slate-500 mt-1">' + escapeHtml(meta.hint || "") + '</p>' +
+                            '<p class="text-[10px] text-slate-400 mt-2">' + avail + " available · " + count + " types</p>" +
+                            "</button>"
+                        );
+                    }).join("") || '<p class="text-slate-500 text-xs col-span-3">No document types are active for your account yet.</p>';
                 }
-                // Dedupe overlapping trained + catalog labels (e.g. Payment Method twice)
+                return;
+            }
+
+            if (!GEN_BROWSE.category) {
+                // Level 2 — categories within industry
+                const indMeta = INDUSTRY_META[GEN_BROWSE.industry] || { label: _titleCaseKey(GEN_BROWSE.industry) };
+                if (backBtn) backBtn.classList.remove("hidden");
+                if (pathEl) pathEl.textContent = indMeta.label + " → choose a document group";
+                if (indGrid) indGrid.classList.add("hidden");
+                if (catGrid) catGrid.classList.remove("hidden");
+                if (cards) cards.classList.add("hidden");
+
+                const inIndustry = DOC_CATALOG_LIST.filter(function (item) {
+                    const inds = (item.industries && item.industries.length) ? item.industries.map(function (x) {
+                        return String(x).toLowerCase();
+                    }) : ["universal"];
+                    return inds.indexOf(GEN_BROWSE.industry) !== -1;
+                });
+                const byCat = {};
+                inIndustry.forEach(function (item) {
+                    const c = _categoryKey(item);
+                    byCat[c] = byCat[c] || [];
+                    byCat[c].push(item);
+                });
+                const catKeys = Object.keys(byCat).sort();
+                if (catGrid) {
+                    catGrid.innerHTML = catKeys.map(function (c) {
+                        const meta = CATEGORY_META[c] || { label: _titleCaseKey(c), icon: "fa-folder", hint: "" };
+                        const count = byCat[c].length;
+                        const avail = byCat[c].filter(function (i) { return i.available; }).length;
+                        return (
+                            '<button type="button" onclick="genSelectCategory(\'' + c.replace(/'/g, "\\'") + '\')" ' +
+                            'class="text-left bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-4 transition-colors">' +
+                            '<i class="fa-solid ' + meta.icon + ' text-emerald-400 mb-2"></i>' +
+                            '<p class="font-semibold text-white text-sm">' + escapeHtml(meta.label) + '</p>' +
+                            '<p class="text-[11px] text-slate-500 mt-1">' + escapeHtml(meta.hint || "") + '</p>' +
+                            '<p class="text-[10px] text-slate-400 mt-2">' + avail + " available · " + count + " types</p>" +
+                            "</button>"
+                        );
+                    }).join("") || '<p class="text-slate-500 text-xs col-span-3">No groups in this category.</p>';
+                }
+                return;
+            }
+
+            // Level 3 — document cards
+            const indMeta = INDUSTRY_META[GEN_BROWSE.industry] || { label: _titleCaseKey(GEN_BROWSE.industry) };
+            const catMeta = CATEGORY_META[GEN_BROWSE.category] || { label: _titleCaseKey(GEN_BROWSE.category) };
+            if (backBtn) backBtn.classList.remove("hidden");
+            if (pathEl) pathEl.textContent = indMeta.label + " → " + catMeta.label;
+            if (indGrid) indGrid.classList.add("hidden");
+            if (catGrid) catGrid.classList.add("hidden");
+            if (cards) cards.classList.remove("hidden");
+
+            const filtered = DOC_CATALOG_LIST.filter(function (item) {
+                const inds = (item.industries && item.industries.length) ? item.industries.map(function (x) {
+                    return String(x).toLowerCase();
+                }) : ["universal"];
+                if (inds.indexOf(GEN_BROWSE.industry) === -1) return false;
+                return _categoryKey(item) === GEN_BROWSE.category;
+            });
+            renderGenerateDocumentCards(filtered);
+        }
+
+        function renderGenerateDocumentCards(list) {
+            const container = document.getElementById("generateCardsContainer");
+            const noMatch = document.getElementById("genCardNoMatch");
+            if (!container) return;
+            if (!list.length) {
+                container.innerHTML = '<p class="text-slate-500 text-xs col-span-3">No documents in this group.</p>';
+                if (noMatch) noMatch.classList.add("hidden");
+                return;
+            }
+            if (noMatch) noMatch.classList.add("hidden");
+
+            container.innerHTML = list.map(function (item) {
+                const icon = DOC_TYPE_ICONS[item.docType] || "fa-file";
+                if (!item.available) {
+                    return (
+                        '<div class="gen-card bg-slate-900/50 border border-slate-800 rounded-xl p-5 opacity-50 cursor-not-allowed select-none" data-label="' +
+                        escapeHtml(String(item.label || "").toLowerCase()) + '">' +
+                        '<i class="fa-solid ' + icon + ' text-slate-600 mb-2"></i>' +
+                        '<p class="font-semibold text-slate-400 text-sm">' + escapeHtml(item.label) + "</p>" +
+                        '<p class="text-[11px] text-amber-500/80 mt-1"><i class="fa-solid fa-lock"></i> ' +
+                        escapeHtml(item.reason || "Not available") + "</p></div>"
+                    );
+                }
+                // Dedupe overlapping trained + catalog labels
                 if (item.fields && item.fields.length) {
                     const seen = new Set();
-                    item.fields = item.fields.filter(f => {
-                        const k = String(f.key || '').toLowerCase();
-                        const l = String(f.label || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-                        const sig = k + '|' + l;
+                    item.fields = item.fields.filter(function (f) {
+                        const k = String(f.key || "").toLowerCase();
+                        const l = String(f.label || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                        const sig = k + "|" + l;
                         if (seen.has(sig) || seen.has(l)) return false;
                         seen.add(sig); seen.add(l); seen.add(k);
                         return true;
                     });
                 }
-                // [ACTIVE] Dynamic fields: catalog defaults OR trained template columns.
-                // Table fields get +/− row controls; client can also add an extra field.
                 const trainedNote = item.trainedFrom
-                    ? `<p class="text-[10px] text-emerald-500/90 mb-1"><i class="fa-solid fa-graduation-cap"></i> Using fields from your trained format (${escapeHtml(item.trainedFrom)})</p>`
-                    : '';
-                const fieldsHtml = (item.fields || []).map(f => {
-                    if (f.type === 'table') {
-                        return `<div class="mt-2" data-table-field="${escapeHtml(item.docType)}|${escapeHtml(f.key)}">
-                            <div class="flex items-center justify-between mb-1">
-                                <label class="text-[10px] text-slate-400">${escapeHtml(f.label)}${f.required ? ' <span class="text-red-400">*</span>' : ''}
-                                    <span class="text-slate-600"> — each + adds a full row (all linked fields)</span></label>
-                                <button type="button" onclick="clientGenAddTableRow('${escapeHtml(item.docType)}','${escapeHtml(f.key)}')"
-                                    class="text-[10px] px-2 py-0.5 bg-emerald-900/50 hover:bg-emerald-800 border border-emerald-700 rounded text-emerald-300">+ Add line</button>
-                            </div>
-                            <div id="genTable-${item.docType}-${f.key}" class="space-y-1"></div>
-                        </div>`;
+                    ? '<p class="text-[10px] text-emerald-500/90 mb-1"><i class="fa-solid fa-graduation-cap"></i> Using fields from your trained format (' +
+                    escapeHtml(item.trainedFrom) + ")</p>"
+                    : "";
+                const fieldsHtml = (item.fields || []).map(function (f) {
+                    if (f.type === "table") {
+                        return (
+                            '<div class="mt-2" data-table-field="' + escapeHtml(item.docType) + "|" + escapeHtml(f.key) + '">' +
+                            '<div class="flex items-center justify-between mb-1">' +
+                            '<label class="text-[10px] text-slate-400">' + escapeHtml(f.label) +
+                            (f.required ? ' <span class="text-red-400">*</span>' : "") +
+                            ' <span class="text-slate-600"> — each + adds a full row</span></label>' +
+                            '<button type="button" onclick="clientGenAddTableRow(\'' + escapeHtml(item.docType) + '\',\'' +
+                            escapeHtml(f.key) + '\')" class="text-[10px] px-2 py-0.5 bg-emerald-900/50 hover:bg-emerald-800 border border-emerald-700 rounded text-emerald-300">+ Add line</button>' +
+                            "</div>" +
+                            '<div id="genTable-' + item.docType + "-" + f.key + '" class="space-y-1"></div></div>'
+                        );
                     }
-                    if (f.type === 'textarea') {
-                        return `<label class="block text-[10px] text-slate-400 mt-2">${escapeHtml(f.label)}${f.required ? ' <span class="text-red-400">*</span>' : ''}</label>
-                            <textarea id="genInput-${item.docType}-${f.key}" data-gen-key="${escapeHtml(f.key)}" class="w-full h-16 bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></textarea>`;
+                    if (f.type === "textarea") {
+                        return (
+                            '<label class="block text-[10px] text-slate-400 mt-2">' + escapeHtml(f.label) +
+                            (f.required ? ' <span class="text-red-400">*</span>' : "") + "</label>" +
+                            '<textarea id="genInput-' + item.docType + "-" + f.key + '" data-gen-key="' + escapeHtml(f.key) +
+                            '" class="w-full h-16 bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></textarea>'
+                        );
                     }
-                    return `<label class="block text-[10px] text-slate-400 mt-2">${escapeHtml(f.label)}${f.required ? ' <span class="text-red-400">*</span>' : ''}</label>
-                        <input type="text" id="genInput-${item.docType}-${f.key}" data-gen-key="${escapeHtml(f.key)}" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />`;
-                }).join('');
+                    return (
+                        '<label class="block text-[10px] text-slate-400 mt-2">' + escapeHtml(f.label) +
+                        (f.required ? ' <span class="text-red-400">*</span>' : "") + "</label>" +
+                        '<input type="text" id="genInput-' + item.docType + "-" + f.key + '" data-gen-key="' +
+                        escapeHtml(f.key) + '" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />'
+                    );
+                }).join("");
 
-                return `
-            <div id="genCard-${item.docType}" class="gen-card bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-5 transition-colors" data-label="${escapeHtml(item.label.toLowerCase())}">
-                <button onclick="toggleGenerateCard('${item.docType}')" class="w-full text-left">
-                    <i class="fa-solid ${icon} text-emerald-400 mb-2"></i>
-                    <p class="font-semibold text-white text-sm">${escapeHtml(item.label)}</p>
-                    <p class="text-[11px] text-slate-500 mt-1">${item.remaining === 'Unlimited' ? 'Unlimited this period' : `${item.used}/${item.limit} used this period`}</p>
-                </button>
-                <div id="genPanel-${item.docType}" class="directive-panel mt-3 pt-3 border-t border-slate-800 space-y-1">
-                    ${trainedNote}
-                    ${fieldsHtml || '<p class="text-[11px] text-slate-500">No extra instructions needed — sent as-is.</p>'}
-                    <div id="genExtraFields-${item.docType}" class="space-y-1"></div>
-                    <button type="button" onclick="clientGenAddExtraField('${escapeHtml(item.docType)}')"
-                        class="text-[10px] mt-2 px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">+ Add field</button>
-                    <div class="flex gap-2 justify-end pt-2">
-                        <button onclick="toggleGenerateCard('${item.docType}')"
-                            class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Cancel</button>
-                        <button id="genSendBtn-${item.docType}" onclick="submitGenerateDocument('${item.docType}')"
-                            class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white"><i
-                                class="fa-solid fa-paper-plane"></i> Send</button>
-                    </div>
-                </div>
-            </div>`;
-            }).join('');
-            container.dataset.rendered = '1';
-            applyGenerateCardFilter();
-            // Seed one empty line-item row for each table field so +/− is obvious
-            (res.catalog || []).forEach(item => {
-                (item.fields || []).forEach(f => {
-                    if (f.type === 'table') clientGenAddTableRow(item.docType, f.key);
+                return (
+                    '<div id="genCard-' + item.docType + '" class="gen-card bg-slate-900 border border-slate-800 hover:border-emerald-600 rounded-xl p-5 transition-colors" data-label="' +
+                    escapeHtml(String(item.label || "").toLowerCase()) + '">' +
+                    '<button onclick="toggleGenerateCard(\'' + item.docType + '\')" class="w-full text-left">' +
+                    '<i class="fa-solid ' + icon + ' text-emerald-400 mb-2"></i>' +
+                    '<p class="font-semibold text-white text-sm">' + escapeHtml(item.label) + "</p>" +
+                    '<p class="text-[11px] text-slate-500 mt-1">' +
+                    (item.remaining === "Unlimited" ? "Unlimited this period" : ((item.used || 0) + "/" + (item.limit || "—") + " used this period")) +
+                    "</p></button>" +
+                    '<div id="genPanel-' + item.docType + '" class="directive-panel mt-3 pt-3 border-t border-slate-800 space-y-1">' +
+                    trainedNote + (fieldsHtml || '<p class="text-[11px] text-slate-500">No extra instructions needed — sent as-is.</p>') +
+                    '<div id="genExtraFields-' + item.docType + '" class="space-y-1"></div>' +
+                    '<button type="button" onclick="clientGenAddExtraField(\'' + escapeHtml(item.docType) +
+                    '\')" class="text-[10px] mt-2 px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">+ Add field</button>' +
+                    '<div class="flex gap-2 justify-end pt-2">' +
+                    '<button onclick="toggleGenerateCard(\'' + item.docType +
+                    '\')" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Cancel</button>' +
+                    '<button id="genSendBtn-' + item.docType + '" onclick="submitGenerateDocument(\'' + item.docType +
+                    '\')" class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white"><i class="fa-solid fa-paper-plane"></i> Send</button>' +
+                    "</div></div></div>"
+                );
+            }).join("");
+
+            // Seed one empty line-item row for each table field
+            list.forEach(function (item) {
+                (item.fields || []).forEach(function (f) {
+                    if (f.type === "table") {
+                        try { clientGenAddTableRow(item.docType, f.key); } catch (_) { }
+                    }
                 });
             });
         }
 
+        async function loadDocumentCatalog() {
+            const container = document.getElementById("generateCardsContainer");
+            const statusEl = document.getElementById("generateStatus");
+            if (statusEl) statusEl.innerHTML = "";
+            const indGrid = document.getElementById("genIndustryGrid");
+            if (indGrid && !DOC_CATALOG_LIST.length) {
+                indGrid.innerHTML = '<p class="text-slate-500 text-xs col-span-3">Loading your available documents…</p>';
+            }
+
+            const res = await callGateway("clientportal", "clientPortalDocumentCatalog");
+            if (!res.success) {
+                if (indGrid) indGrid.innerHTML = '<p class="text-red-400 text-xs col-span-3">' + escapeHtml(clientFriendlyError(res.message || "Could not load documents.")) + "</p>";
+                return;
+            }
+
+            DOC_CATALOG_CACHE = {};
+            DOC_CATALOG_LIST = res.catalog || [];
+            DOC_CATALOG_LIST.forEach(function (item) { DOC_CATALOG_CACHE[item.docType] = item; });
+
+            // Keep current browse position if still valid; else reset to industries
+            if (GEN_BROWSE.industry) {
+                const stillHas = DOC_CATALOG_LIST.some(function (item) {
+                    const inds = (item.industries || ["universal"]).map(function (x) { return String(x).toLowerCase(); });
+                    return inds.indexOf(GEN_BROWSE.industry) !== -1;
+                });
+                if (!stillHas) GEN_BROWSE = { industry: null, category: null };
+            }
+            renderGenBrowse();
+        }
+
         function applyGenerateCardFilter() {
-            const q = (document.getElementById('genCardSearch')?.value || '').toLowerCase().trim();
-            const cards = document.querySelectorAll('#generateCardsContainer .gen-card');
-            let visibleCount = 0;
-            cards.forEach(card => {
-                const match = !q || (card.dataset.label || '').includes(q);
-                card.classList.toggle('hidden', !match);
-                if (match) visibleCount++;
-            });
-            const noMatch = document.getElementById('genCardNoMatch');
-            if (noMatch) noMatch.classList.toggle('hidden', cards.length === 0 || visibleCount > 0);
+            renderGenBrowse();
         }
 
         function toggleGenerateCard(docType) {
