@@ -874,8 +874,7 @@
                             <div>
                                 <h3 class="text-lg font-bold text-white">Teams &amp; Members</h3>
                                 <p class="text-xs text-slate-400">Every team currently formed, its Lead/Backup Lead,
-                                    and full member roster. Partners who leave must request rejoin or be re-added by
-                                    admin.</p>
+                                    and full member roster. Partners who leave must request rejoin or be re-added by admin.</p>
                             </div>
                             <div class="flex gap-2">
                                 <button type="button" onclick="loadTeamJoinRequestsUI()"
@@ -888,8 +887,7 @@
                                 </button>
                             </div>
                         </div>
-                        <div id="teamJoinRequestsBox"
-                            class="hidden bg-slate-950 border border-amber-900/40 rounded-xl p-3 space-y-2"></div>
+                        <div id="teamJoinRequestsBox" class="hidden bg-slate-950 border border-amber-900/40 rounded-xl p-3 space-y-2"></div>
                         <div id="careerTeamsList" class="flex-1 overflow-auto custom-scrollbar space-y-3">
                             <p class="text-xs text-slate-500 text-center py-6">Loading teams...</p>
                         </div>
@@ -3312,12 +3310,8 @@
                                     class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white">
                                     <i class="fa-solid fa-check-double"></i> Approve All
                                 </button>
-                                <button type="button" onclick="toggleSelectAllSocialPosts(true)"
-                                    class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Select
-                                    all</button>
-                                <button type="button" onclick="deleteSelectedSocialPostsAdmin()"
-                                    class="text-xs px-3 py-1.5 bg-red-900/50 hover:bg-red-900/70 rounded text-red-200">Delete
-                                    selected</button>
+                            <button type="button" onclick="toggleSelectAllSocialPosts(true)" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Select all</button>
+                            <button type="button" onclick="deleteSelectedSocialPostsAdmin()" class="text-xs px-3 py-1.5 bg-red-900/50 hover:bg-red-900/70 rounded text-red-200">Delete selected</button>
                                 <button onclick="loadAdminSocialCalendar()"
                                     class="text-xs px-2 py-1.5 text-slate-500 hover:text-slate-300">
                                     <i class="fa-solid fa-rotate"></i>
@@ -4244,8 +4238,7 @@
                     <div><label class="block text-xs text-slate-400 mb-1">Amount Paid (₦)</label><input type="number"
                             id="onboardLedgerAmountPaid" required placeholder="0"
                             class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500" />
-                        <p class="text-[10px] text-slate-500 mt-1">Auto-filled from catalogue when service has a fixed
-                            price. Custom services: enter amount manually.</p>
+                        <p class="text-[10px] text-slate-500 mt-1">Auto-filled from catalogue when service has a fixed price. Custom services: enter amount manually.</p>
                     </div>
                     <div><label class="block text-xs text-slate-400 mb-1">Payment Type</label>
                         <select id="onboardLedgerPaymentType"
@@ -14673,14 +14666,14 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             const v = (sel && sel.value) ? String(sel.value).trim() : '';
             if (v) {
                 LAST_SOCIAL_CLIENT_ID = v;
-                try { sessionStorage.setItem('VIC_SOCIAL_CLIENT_ID', v); } catch (_) { }
+                try { sessionStorage.setItem('VIC_SOCIAL_CLIENT_ID', v); } catch (_) {}
                 return v;
             }
             if (LAST_SOCIAL_CLIENT_ID) return LAST_SOCIAL_CLIENT_ID;
             try {
                 const cached = sessionStorage.getItem('VIC_SOCIAL_CLIENT_ID');
                 if (cached) { LAST_SOCIAL_CLIENT_ID = cached; return cached; }
-            } catch (_) { }
+            } catch (_) {}
             return '';
         }
 
@@ -14747,7 +14740,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             clientId = clientId || getSocialClientId();
             if (clientId) {
                 LAST_SOCIAL_CLIENT_ID = clientId;
-                try { sessionStorage.setItem('VIC_SOCIAL_CLIENT_ID', clientId); } catch (_) { }
+                try { sessionStorage.setItem('VIC_SOCIAL_CLIENT_ID', clientId); } catch (_) {}
                 const sel = document.getElementById('socialClientSelector');
                 if (sel && !sel.value) sel.value = clientId;
             }
@@ -14787,32 +14780,48 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         }
 
         /** Preview card for attached social media (image or video). */
+        const SOCIAL_MEDIA_MAX_PER_POST = 5;
+
         function renderSocialMediaPreview_(p) {
-            const url = p.ImageURL || p.ImagePreviewURL || '';
-            const openUrl = p.ImageOpenURL || p.ImageURL || url;
-            const preview = p.ImagePreviewURL || p.ImageURL || '';
-            const name = p.ImageFileName || p.ImageID || 'Attached media';
-            if (!url && !p.ImageID) {
-                return `<p class="text-[10px] text-slate-600 mt-1">No media attached — upload one below for photo/video platforms.</p>`;
+            let items = Array.isArray(p.MediaItems) ? p.MediaItems.slice() : [];
+            if (!items.length && (p.ImageURL || p.ImageID)) {
+                items = [{
+                    imageId: p.ImageID, fileId: p.ImageFileID, url: p.ImageURL,
+                    fileName: p.ImageFileName, previewUrl: p.ImagePreviewURL || p.ImageURL,
+                    openUrl: p.ImageOpenURL || p.ImageURL, assetType: 'image'
+                }];
             }
-            const isVideo = String(p.PostType || '').toLowerCase() === 'video' ||
-                String(p.PostType || '').toLowerCase() === 'reel' ||
-                /\.(mp4|mov|webm)(\?|$)/i.test(String(url));
-            return `
-            <div class="mt-2 flex items-start gap-3 bg-slate-900/80 border border-emerald-900/40 rounded-lg p-2">
-                ${isVideo
-                    ? `<div class="h-20 w-20 shrink-0 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400"><i class="fa-solid fa-film text-lg"></i></div>`
-                    : (preview
-                        ? `<a href="${escapeHtml(openUrl)}" target="_blank" rel="noopener" class="shrink-0"><img src="${escapeHtml(preview)}" alt="attached" class="h-20 w-20 object-cover rounded border border-slate-700" onerror="this.parentElement.innerHTML='<div class=\\'h-20 w-20 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 text-[10px]\\'>Preview</div>'"/></a>`
-                        : `<div class="h-20 w-20 shrink-0 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 text-[10px]">File</div>`)}
-                <div class="min-w-0 flex-1">
-                    <p class="text-[11px] text-emerald-400 font-medium truncate"><i class="fa-solid fa-paperclip mr-1"></i>${escapeHtml(name)}</p>
-                    <p class="text-[10px] text-slate-500 mt-0.5">Attached${p.ImageID ? ' · ' + escapeHtml(String(p.ImageID)) : ''}</p>
-                    <div class="flex flex-wrap gap-2 mt-1.5">
-                        ${openUrl ? `<a href="${escapeHtml(openUrl)}" target="_blank" rel="noopener" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-emerald-300">Open / preview</a>` : ''}
-                        ${url ? `<button type="button" onclick="navigator.clipboard.writeText('${escapeHtml(url).replace(/'/g, "\\'")}');showToast('URL copied','success')" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Copy URL</button>` : ''}
+            const count = items.length;
+            const max = p.MediaMax || SOCIAL_MEDIA_MAX_PER_POST;
+            if (!count) {
+                return `<p class="text-[10px] text-slate-600 mt-1">No media attached — upload up to ${max} files (image/video) below.</p>`;
+            }
+            const cards = items.map(function (m, idx) {
+                const openUrl = m.openUrl || m.url || '';
+                const preview = m.previewUrl || m.url || '';
+                const name = m.fileName || m.imageId || ('File ' + (idx + 1));
+                const isVideo = String(m.assetType || '').toLowerCase() === 'video' ||
+                    /\.(mp4|mov|webm)(\?|$)/i.test(String(m.url || ''));
+                const pid = escapeHtml(p.PostID);
+                const iid = escapeHtml(String(m.imageId || ''));
+                return `<div class="flex items-start gap-2 bg-slate-900/80 border border-emerald-900/40 rounded-lg p-2 min-w-[140px] max-w-[200px]">
+                    ${isVideo
+                        ? `<div class="h-14 w-14 shrink-0 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400"><i class="fa-solid fa-film"></i></div>`
+                        : (preview
+                            ? `<a href="${escapeHtml(openUrl)}" target="_blank" rel="noopener" class="shrink-0"><img src="${escapeHtml(preview)}" alt="" class="h-14 w-14 object-cover rounded border border-slate-700" onerror="this.style.display='none'"/></a>`
+                            : `<div class="h-14 w-14 shrink-0 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 text-[10px]">File</div>`)}
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[10px] text-emerald-400 font-medium truncate" title="${escapeHtml(name)}">${escapeHtml(name)}</p>
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            ${openUrl ? `<a href="${escapeHtml(openUrl)}" target="_blank" rel="noopener" class="text-[9px] px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-emerald-300">Open</a>` : ''}
+                            ${iid ? `<button type="button" onclick="detachSocialPostImageAdmin('${pid}','${iid}')" class="text-[9px] px-1.5 py-0.5 bg-red-950/50 hover:bg-red-900/60 rounded text-red-300">Remove</button>` : ''}
+                        </div>
                     </div>
-                </div>
+                </div>`;
+            }).join('');
+            return `<div class="mt-2">
+                <p class="text-[10px] text-slate-400 mb-1"><i class="fa-solid fa-paperclip mr-1"></i>${count}/${max} media attached${count >= 2 ? ' · carousel' : ''}</p>
+                <div class="flex flex-wrap gap-2">${cards}</div>
             </div>`;
         }
 
@@ -14820,14 +14829,32 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             if (!postId || !media) return;
             ADMIN_SOCIAL_CACHE = (ADMIN_SOCIAL_CACHE || []).map(function (p) {
                 if (String(p.PostID) !== String(postId)) return p;
+                var items = Array.isArray(media.mediaItems) ? media.mediaItems : (p.MediaItems || []);
+                items = items.map(function (m) {
+                    var fid = m.fileId || m.FileID || '';
+                    return {
+                        imageId: m.imageId || m.ImageID || '',
+                        fileId: fid,
+                        url: m.url || m.ImageURL || '',
+                        fileName: m.fileName || m.FileName || '',
+                        assetType: m.assetType || 'image',
+                        previewUrl: fid ? ('https://drive.google.com/thumbnail?id=' + fid + '&sz=w400') : (m.url || ''),
+                        openUrl: fid ? ('https://drive.google.com/file/d/' + fid + '/view') : (m.url || '')
+                    };
+                });
+                var first = items[0] || {};
                 return Object.assign({}, p, {
-                    ImageID: media.imageId || media.ImageID || p.ImageID,
-                    ImageURL: media.imageURL || media.ImageURL || p.ImageURL,
-                    ImageFileID: media.imageFileID || media.ImageFileID || p.ImageFileID,
-                    ImageFileName: media.fileName || media.ImageFileName || p.ImageFileName,
-                    ImagePreviewURL: media.ImagePreviewURL || media.imagePreviewURL || p.ImagePreviewURL,
-                    ImageOpenURL: media.ImageOpenURL || media.imageOpenURL || p.ImageOpenURL,
-                    Status: media.status || p.Status
+                    MediaItems: items,
+                    MediaCount: items.length,
+                    MediaMax: SOCIAL_MEDIA_MAX_PER_POST,
+                    ImageID: first.imageId || '',
+                    ImageURL: first.url || '',
+                    ImageFileID: first.fileId || '',
+                    ImageFileName: first.fileName || '',
+                    ImagePreviewURL: first.previewUrl || '',
+                    ImageOpenURL: first.openUrl || '',
+                    Status: media.status || p.Status,
+                    PostType: items.length >= 2 && String(p.PostType || '').toLowerCase() !== 'video' ? 'carousel' : p.PostType
                 });
             });
         }
@@ -14861,9 +14888,9 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             </div>
             ${renderSocialMediaPreview_(p)}
             <div class="flex flex-wrap items-center gap-2 mt-2">
-                <input type="file" id="socFile-${escapeHtml(p.PostID)}" accept="image/*,video/*" class="text-[10px] text-slate-400 max-w-[180px]" />
+                <input type="file" id="socFile-${escapeHtml(p.PostID)}" accept="image/*,video/*" multiple class="text-[10px] text-slate-400 max-w-[200px]" />
                 <button type="button" onclick="uploadSocialPostImageAdmin('${escapeHtml(p.PostID)}','${escapeHtml(p.Platform || '')}')"
-                    class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-200">Upload &amp; attach</button>
+                    class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-200">Upload &amp; attach (max 5)</button>
                 <button type="button" onclick="pickSocialPostImageAdmin('${escapeHtml(p.PostID)}','${escapeHtml(p.Platform || '')}')"
                     class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-200">Choose existing</button>
             </div>
@@ -14902,52 +14929,53 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             const clientId = getSocialClientId();
             if (!clientId) { showToast('Select a client first.', 'error'); return; }
             const input = document.getElementById('socFile-' + postId);
-            if (!input || !input.files || !input.files[0]) {
-                showToast('Choose a file first.', 'error');
+            if (!input || !input.files || !input.files.length) {
+                showToast('Choose one or more files first (max 5 total per post).', 'error');
                 return;
             }
-            const file = input.files[0];
-            const base64Data = await fileToBase64(file);
-            const assetType = (file.type || '').indexOf('video/') === 0 ? 'video' : 'image';
-            showToast('Uploading…', 'info');
-            const up = await executeSecureBridgeCall('agent', 'agent-upload-social-asset', {
-                clientId,
-                platform: (platform || 'instagram').toLowerCase(),
-                fileName: file.name,
-                mimeType: file.type || 'image/jpeg',
-                base64Data,
-                assetType
-            }, { silent: true });
-            if (!up.success) {
-                showToast(up.message || 'Upload failed.', 'error');
+            const existing = (ADMIN_SOCIAL_CACHE || []).find(function (p) { return String(p.PostID) === String(postId); });
+            const already = (existing && existing.MediaItems) ? existing.MediaItems.length : (existing && existing.ImageID ? 1 : 0);
+            const slots = Math.max(0, SOCIAL_MEDIA_MAX_PER_POST - already);
+            if (slots <= 0) {
+                showToast('Maximum ' + SOCIAL_MEDIA_MAX_PER_POST + ' media already attached.', 'error');
                 return;
             }
-            const imageId = up.imageId || up.ImageID || (up.record && up.record.ImageID);
-            if (!imageId) {
-                showToast('Uploaded but no imageId returned — try Choose existing.', 'error');
-                await fetchAdminSocialCalendar(clientId);
-                return;
-            }
-            const att = await executeSecureBridgeCall('agent', 'agent-attach-social-image', {
-                clientId, postId, imageId,
-                imageURL: up.fileUrl || up.ImageURL || up.FileURL || '',
-                imageFileID: up.fileId || up.FileID || ''
-            }, { silent: true });
-            showToast(att.success ? (att.message || 'Image attached. Approval kept.') : (att.message || 'Attach failed.'), att.success ? 'success' : 'error');
-            if (att.success) {
-                const fid = up.fileId || up.FileID || '';
-                patchSocialPostMediaInCache_(postId, {
-                    imageId: att.imageId || imageId,
-                    imageURL: att.imageURL || att.ImageURL || up.fileUrl || '',
-                    imageFileID: fid,
+            const files = Array.from(input.files).slice(0, slots);
+            showToast('Uploading ' + files.length + ' file(s)…', 'info');
+            let lastAtt = null;
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const base64Data = await fileToBase64(file);
+                const assetType = (file.type || '').indexOf('video/') === 0 ? 'video' : 'image';
+                const up = await executeSecureBridgeCall('agent', 'agent-upload-social-asset', {
+                    clientId,
+                    platform: (platform || 'instagram').toLowerCase(),
                     fileName: file.name,
-                    ImagePreviewURL: fid ? ('https://drive.google.com/thumbnail?id=' + fid + '&sz=w400') : '',
-                    ImageOpenURL: fid ? ('https://drive.google.com/file/d/' + fid + '/view') : (att.imageURL || ''),
-                    status: att.status
-                });
-                renderAdminSocialCalendar();
-                await fetchAdminSocialCalendar(clientId);
+                    mimeType: file.type || 'image/jpeg',
+                    base64Data,
+                    assetType
+                }, { silent: true });
+                if (!up.success) {
+                    showToast((file.name + ': ') + (up.message || 'Upload failed.'), 'error');
+                    continue;
+                }
+                const imageId = up.imageId || up.ImageID;
+                if (!imageId) continue;
+                lastAtt = await executeSecureBridgeCall('agent', 'agent-attach-social-image', {
+                    clientId, postId, imageId,
+                    imageURL: up.fileUrl || up.ImageURL || up.FileURL || '',
+                    imageFileID: up.fileId || up.FileID || ''
+                }, { silent: true });
             }
+            if (input) input.value = '';
+            if (lastAtt && lastAtt.success) {
+                patchSocialPostMediaInCache_(postId, { mediaItems: lastAtt.mediaItems || [], status: lastAtt.status });
+                showToast(lastAtt.message || 'Media attached.', 'success');
+                renderAdminSocialCalendar();
+            } else if (lastAtt) {
+                showToast(lastAtt.message || 'Attach failed.', 'error');
+            }
+            await fetchAdminSocialCalendar(clientId);
         }
 
         async function pickSocialPostImageAdmin(postId, platform) {
@@ -14967,31 +14995,49 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 showToast('No available assets for this platform. Upload one first.', 'error');
                 return;
             }
+            const existing = (ADMIN_SOCIAL_CACHE || []).find(function (p) { return String(p.PostID) === String(postId); });
+            const already = (existing && existing.MediaItems) ? existing.MediaItems.length : (existing && existing.ImageID ? 1 : 0);
+            const slots = Math.max(0, SOCIAL_MEDIA_MAX_PER_POST - already);
+            if (slots <= 0) {
+                showToast('Maximum ' + SOCIAL_MEDIA_MAX_PER_POST + ' media already attached.', 'error');
+                return;
+            }
             const lines = images.map(function (img, idx) {
                 return (idx + 1) + '. ' + (img.FileName || img.ImageID) + ' (' + (img.Platform || '') + ') · ' + (img.Status || '');
             }).join('\n');
-            const pick = prompt('Enter number to attach:\n' + lines, '1');
-            const n = parseInt(pick, 10);
-            if (!n || n < 1 || n > images.length) return;
-            const chosen = images[n - 1];
-            const imageId = chosen.ImageID;
-            const fid = chosen.FileID || '';
+            const pick = prompt(
+                'Enter numbers to attach (comma-separated, max ' + slots + ' more).\nExample: 1,3,5\n\n' + lines,
+                '1'
+            );
+            if (!pick) return;
+            const nums = pick.split(/[,\s]+/).map(function (s) { return parseInt(s, 10); })
+                .filter(function (n) { return n >= 1 && n <= images.length; });
+            const unique = [];
+            nums.forEach(function (n) { if (unique.indexOf(n) === -1) unique.push(n); });
+            const chosenIds = unique.slice(0, slots).map(function (n) { return images[n - 1].ImageID; });
+            if (!chosenIds.length) return;
+
             const att = await executeSecureBridgeCall('agent', 'agent-attach-social-image', {
-                clientId, postId, imageId,
-                imageURL: chosen.FileURL || chosen.ImageURL || '',
-                imageFileID: fid
+                clientId, postId, imageIds: chosenIds
             }, { silent: true });
-            showToast(att.success ? (att.message || 'Image attached. Approval kept.') : (att.message || 'Attach failed.'), att.success ? 'success' : 'error');
+            showToast(att.success ? (att.message || 'Media attached.') : (att.message || 'Attach failed.'), att.success ? 'success' : 'error');
             if (att.success) {
-                patchSocialPostMediaInCache_(postId, {
-                    imageId: att.imageId || imageId,
-                    imageURL: att.imageURL || att.ImageURL || chosen.FileURL || '',
-                    imageFileID: fid,
-                    fileName: chosen.FileName || '',
-                    ImagePreviewURL: fid ? ('https://drive.google.com/thumbnail?id=' + fid + '&sz=w400') : '',
-                    ImageOpenURL: fid ? ('https://drive.google.com/file/d/' + fid + '/view') : (chosen.FileURL || ''),
-                    status: att.status
-                });
+                patchSocialPostMediaInCache_(postId, { mediaItems: att.mediaItems || [], status: att.status });
+                renderAdminSocialCalendar();
+                await fetchAdminSocialCalendar(clientId);
+            }
+        }
+
+        async function detachSocialPostImageAdmin(postId, imageId) {
+            const clientId = getSocialClientId();
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            if (!confirm('Remove this media from the post?')) return;
+            const res = await executeSecureBridgeCall('agent', 'agent-detach-social-image', {
+                clientId, postId, imageId
+            }, { silent: true });
+            showToast(res.success ? (res.message || 'Removed.') : (res.message || 'Remove failed.'), res.success ? 'success' : 'error');
+            if (res.success) {
+                patchSocialPostMediaInCache_(postId, { mediaItems: res.mediaItems || [], status: res.status });
                 renderAdminSocialCalendar();
                 await fetchAdminSocialCalendar(clientId);
             }
