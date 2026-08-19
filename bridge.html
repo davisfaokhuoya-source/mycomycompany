@@ -14786,6 +14786,52 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             renderAdminSocialCalendar();
         }
 
+        /** Preview card for attached social media (image or video). */
+        function renderSocialMediaPreview_(p) {
+            const url = p.ImageURL || p.ImagePreviewURL || '';
+            const openUrl = p.ImageOpenURL || p.ImageURL || url;
+            const preview = p.ImagePreviewURL || p.ImageURL || '';
+            const name = p.ImageFileName || p.ImageID || 'Attached media';
+            if (!url && !p.ImageID) {
+                return `<p class="text-[10px] text-slate-600 mt-1">No media attached — upload one below for photo/video platforms.</p>`;
+            }
+            const isVideo = String(p.PostType || '').toLowerCase() === 'video' ||
+                String(p.PostType || '').toLowerCase() === 'reel' ||
+                /\.(mp4|mov|webm)(\?|$)/i.test(String(url));
+            return `
+            <div class="mt-2 flex items-start gap-3 bg-slate-900/80 border border-emerald-900/40 rounded-lg p-2">
+                ${isVideo
+                    ? `<div class="h-20 w-20 shrink-0 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400"><i class="fa-solid fa-film text-lg"></i></div>`
+                    : (preview
+                        ? `<a href="${escapeHtml(openUrl)}" target="_blank" rel="noopener" class="shrink-0"><img src="${escapeHtml(preview)}" alt="attached" class="h-20 w-20 object-cover rounded border border-slate-700" onerror="this.parentElement.innerHTML='<div class=\\'h-20 w-20 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 text-[10px]\\'>Preview</div>'"/></a>`
+                        : `<div class="h-20 w-20 shrink-0 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 text-[10px]">File</div>`)}
+                <div class="min-w-0 flex-1">
+                    <p class="text-[11px] text-emerald-400 font-medium truncate"><i class="fa-solid fa-paperclip mr-1"></i>${escapeHtml(name)}</p>
+                    <p class="text-[10px] text-slate-500 mt-0.5">Attached${p.ImageID ? ' · ' + escapeHtml(String(p.ImageID)) : ''}</p>
+                    <div class="flex flex-wrap gap-2 mt-1.5">
+                        ${openUrl ? `<a href="${escapeHtml(openUrl)}" target="_blank" rel="noopener" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-emerald-300">Open / preview</a>` : ''}
+                        ${url ? `<button type="button" onclick="navigator.clipboard.writeText('${escapeHtml(url).replace(/'/g, "\\'")}');showToast('URL copied','success')" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Copy URL</button>` : ''}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function patchSocialPostMediaInCache_(postId, media) {
+            if (!postId || !media) return;
+            ADMIN_SOCIAL_CACHE = (ADMIN_SOCIAL_CACHE || []).map(function (p) {
+                if (String(p.PostID) !== String(postId)) return p;
+                return Object.assign({}, p, {
+                    ImageID: media.imageId || media.ImageID || p.ImageID,
+                    ImageURL: media.imageURL || media.ImageURL || p.ImageURL,
+                    ImageFileID: media.imageFileID || media.ImageFileID || p.ImageFileID,
+                    ImageFileName: media.fileName || media.ImageFileName || p.ImageFileName,
+                    ImagePreviewURL: media.ImagePreviewURL || media.imagePreviewURL || p.ImagePreviewURL,
+                    ImageOpenURL: media.ImageOpenURL || media.imageOpenURL || p.ImageOpenURL,
+                    Status: media.status || p.Status
+                });
+            });
+        }
+
         function renderAdminSocialCalendar() {
             const listEl = document.getElementById('adminSocialCalendarList');
             const batchId = document.getElementById('socialAdminBatchSelector').value;
@@ -14813,7 +14859,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 <input id="socHashtags-${escapeHtml(p.PostID)}" placeholder="Hashtags" value="${escapeHtml(p.Hashtags || '')}" class="bg-slate-900 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
                 <input id="socCta-${escapeHtml(p.PostID)}" placeholder="CTA" value="${escapeHtml(p.CTA || '')}" class="bg-slate-900 border border-slate-800 rounded p-1.5 text-[11px] text-white" />
             </div>
-            ${p.ImageURL ? `<div class="mt-2"><img src="${escapeHtml(p.ImageURL)}" alt="post media" class="max-h-24 rounded border border-slate-800 object-cover" onerror="this.style.display='none'"/></div>` : `<p class="text-[10px] text-slate-600 mt-1">No image attached — upload one below for photo/video platforms.</p>`}
+            ${renderSocialMediaPreview_(p)}
             <div class="flex flex-wrap items-center gap-2 mt-2">
                 <input type="file" id="socFile-${escapeHtml(p.PostID)}" accept="image/*,video/*" class="text-[10px] text-slate-400 max-w-[180px]" />
                 <button type="button" onclick="uploadSocialPostImageAdmin('${escapeHtml(p.PostID)}','${escapeHtml(p.Platform || '')}')"
@@ -14888,7 +14934,20 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 imageFileID: up.fileId || up.FileID || ''
             }, { silent: true });
             showToast(att.success ? (att.message || 'Image attached. Approval kept.') : (att.message || 'Attach failed.'), att.success ? 'success' : 'error');
-            if (att.success) await fetchAdminSocialCalendar(clientId);
+            if (att.success) {
+                const fid = up.fileId || up.FileID || '';
+                patchSocialPostMediaInCache_(postId, {
+                    imageId: att.imageId || imageId,
+                    imageURL: att.imageURL || att.ImageURL || up.fileUrl || '',
+                    imageFileID: fid,
+                    fileName: file.name,
+                    ImagePreviewURL: fid ? ('https://drive.google.com/thumbnail?id=' + fid + '&sz=w400') : '',
+                    ImageOpenURL: fid ? ('https://drive.google.com/file/d/' + fid + '/view') : (att.imageURL || ''),
+                    status: att.status
+                });
+                renderAdminSocialCalendar();
+                await fetchAdminSocialCalendar(clientId);
+            }
         }
 
         async function pickSocialPostImageAdmin(postId, platform) {
@@ -14909,20 +14968,33 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 return;
             }
             const lines = images.map(function (img, idx) {
-                return (idx + 1) + '. ' + (img.FileName || img.ImageID) + ' (' + (img.Platform || '') + ')';
+                return (idx + 1) + '. ' + (img.FileName || img.ImageID) + ' (' + (img.Platform || '') + ') · ' + (img.Status || '');
             }).join('\n');
             const pick = prompt('Enter number to attach:\n' + lines, '1');
             const n = parseInt(pick, 10);
             if (!n || n < 1 || n > images.length) return;
             const chosen = images[n - 1];
             const imageId = chosen.ImageID;
+            const fid = chosen.FileID || '';
             const att = await executeSecureBridgeCall('agent', 'agent-attach-social-image', {
                 clientId, postId, imageId,
                 imageURL: chosen.FileURL || chosen.ImageURL || '',
-                imageFileID: chosen.FileID || ''
+                imageFileID: fid
             }, { silent: true });
             showToast(att.success ? (att.message || 'Image attached. Approval kept.') : (att.message || 'Attach failed.'), att.success ? 'success' : 'error');
-            if (att.success) await fetchAdminSocialCalendar(clientId);
+            if (att.success) {
+                patchSocialPostMediaInCache_(postId, {
+                    imageId: att.imageId || imageId,
+                    imageURL: att.imageURL || att.ImageURL || chosen.FileURL || '',
+                    imageFileID: fid,
+                    fileName: chosen.FileName || '',
+                    ImagePreviewURL: fid ? ('https://drive.google.com/thumbnail?id=' + fid + '&sz=w400') : '',
+                    ImageOpenURL: fid ? ('https://drive.google.com/file/d/' + fid + '/view') : (chosen.FileURL || ''),
+                    status: att.status
+                });
+                renderAdminSocialCalendar();
+                await fetchAdminSocialCalendar(clientId);
+            }
         }
 
         async function saveSocialPostEdit(postId) {
