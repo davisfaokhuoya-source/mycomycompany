@@ -356,6 +356,10 @@
                     class="hub-nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:bg-slate-900 hover:text-white border-l-2 border-transparent">
                     <i class="fa-solid fa-share-nodes w-5 text-slate-400"></i> Social Publishing
                 </button>
+                <button onclick="switchMasterHub('monitor')" id="nav-monitor"
+                    class="hub-nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:bg-slate-900 hover:text-white border-l-2 border-transparent">
+                    <i class="fa-solid fa-heart-pulse w-5 text-slate-400"></i> Ops Monitor
+                </button>
             </nav>
             <div class="p-3 border-t border-slate-800">
                 <button onclick="terminateTerminalSession()"
@@ -3986,6 +3990,203 @@
 
                 </div>
             </section>
+
+            <!-- ================================================================
+           HUB: OPS MONITOR — health, errors, success rates, social performance
+      ================================================================= -->
+            <section id="hub-monitor" class="hidden flex-1 flex overflow-hidden">
+                <div
+                    class="w-56 bg-slate-950/40 border-r border-slate-800/60 flex flex-col shrink-0 px-2 py-4 space-y-1">
+                    <span class="text-[10px] font-mono tracking-wider text-slate-500 uppercase px-3 mb-2 block">Monitor
+                        Sub-Modules</span>
+                    <a href="#" data-target-view="monitor-overview" class="agent-subview-link active">System Health</a>
+                    <a href="#" data-target-view="monitor-jobs" class="agent-subview-link">Job Queue &amp; Errors</a>
+                    <a href="#" data-target-view="monitor-audit" class="agent-subview-link">Audit &amp; Live Feed</a>
+                    <a href="#" data-target-view="monitor-social" class="agent-subview-link">Social Performance</a>
+                    <a href="#" data-target-view="monitor-costs" class="agent-subview-link">AI Cost Report</a>
+                </div>
+                <div class="flex-1 flex flex-col overflow-hidden">
+                    <!-- SYSTEM HEALTH OVERVIEW -->
+                    <div id="view-monitor-overview"
+                        class="agent-view flex-1 flex flex-col overflow-hidden p-5 space-y-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3 shrink-0">
+                            <div>
+                                <h2 class="text-sm font-bold text-white flex items-center gap-2"><i
+                                        class="fa-solid fa-heart-pulse text-emerald-400"></i> System Health</h2>
+                                <p class="text-[11px] text-slate-500 mt-0.5">Success / failure rates across document
+                                    jobs and audit events. Use this to see what is breaking.</p>
+                            </div>
+                            <button type="button" onclick="loadMonitorOverview()"
+                                class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white">
+                                <i class="fa-solid fa-rotate"></i> Refresh
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                                <p class="text-[10px] uppercase text-slate-500 font-mono">Job success rate</p>
+                                <p id="monJobSuccessRate" class="text-2xl font-bold text-emerald-400 mt-1">—</p>
+                                <p id="monJobSuccessMeta" class="text-[10px] text-slate-500 mt-1">—</p>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                                <p class="text-[10px] uppercase text-slate-500 font-mono">Job failure rate</p>
+                                <p id="monJobFailRate" class="text-2xl font-bold text-red-400 mt-1">—</p>
+                                <p id="monJobFailMeta" class="text-[10px] text-slate-500 mt-1">—</p>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                                <p class="text-[10px] uppercase text-slate-500 font-mono">In flight</p>
+                                <p id="monJobInFlight" class="text-2xl font-bold text-amber-400 mt-1">—</p>
+                                <p class="text-[10px] text-slate-500 mt-1">queued + running</p>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                                <p class="text-[10px] uppercase text-slate-500 font-mono">Audit alerts / errors</p>
+                                <p id="monAuditBad" class="text-2xl font-bold text-amber-300 mt-1">—</p>
+                                <p id="monAuditMeta" class="text-[10px] text-slate-500 mt-1">—</p>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-hidden">
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl flex flex-col overflow-hidden">
+                                <div class="px-4 py-2 border-b border-slate-800 flex items-center justify-between">
+                                    <span class="text-xs font-semibold text-white">Recent failures &amp; alerts</span>
+                                    <span class="text-[10px] text-slate-500">trace these first</span>
+                                </div>
+                                <div id="monRecentErrors"
+                                    class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2 text-xs"></div>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl flex flex-col overflow-hidden">
+                                <div class="px-4 py-2 border-b border-slate-800">
+                                    <span class="text-xs font-semibold text-white">Latest audit events</span>
+                                </div>
+                                <div id="monRecentAudit"
+                                    class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2 text-xs"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- JOB QUEUE -->
+                    <div id="view-monitor-jobs"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden p-5 space-y-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3 shrink-0">
+                            <div>
+                                <h2 class="text-sm font-bold text-white"><i
+                                        class="fa-solid fa-list-check text-emerald-400 mr-1"></i> Job Queue &amp; Errors
+                                </h2>
+                                <p class="text-[11px] text-slate-500">Active queue, recent job statuses, and error
+                                    messages for debugging.</p>
+                            </div>
+                            <button type="button" onclick="loadMonitorJobs()"
+                                class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white">Refresh</button>
+                        </div>
+                        <div id="monQueueBanner"
+                            class="text-xs text-slate-400 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">—
+                        </div>
+                        <div class="flex-1 min-h-0 overflow-auto custom-scrollbar border border-slate-800 rounded-xl">
+                            <table class="w-full text-xs">
+                                <thead class="bg-slate-950 text-slate-500 sticky top-0">
+                                    <tr>
+                                        <th class="text-left px-3 py-2 font-mono">Job</th>
+                                        <th class="text-left px-3 py-2">Action</th>
+                                        <th class="text-left px-3 py-2">Status</th>
+                                        <th class="text-left px-3 py-2">Created</th>
+                                        <th class="text-left px-3 py-2">Error / note</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="monJobsTableBody" class="divide-y divide-slate-800/60"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- AUDIT / LIVE FEED -->
+                    <div id="view-monitor-audit"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden p-5 space-y-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3 shrink-0">
+                            <div>
+                                <h2 class="text-sm font-bold text-white"><i
+                                        class="fa-solid fa-stream text-emerald-400 mr-1"></i> Audit &amp; Live Feed</h2>
+                                <p class="text-[11px] text-slate-500">Chronological agent actions — filter noise by
+                                    scanning ALERT / ERROR rows.</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <select id="monAuditStatusFilter" onchange="renderMonitorAudit()"
+                                    class="bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-white">
+                                    <option value="">All statuses</option>
+                                    <option value="OK">OK</option>
+                                    <option value="ALERT">ALERT</option>
+                                    <option value="ERROR">ERROR</option>
+                                </select>
+                                <button type="button" onclick="loadMonitorAudit()"
+                                    class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white">Refresh</button>
+                            </div>
+                        </div>
+                        <div id="monAuditList" class="flex-1 overflow-y-auto custom-scrollbar space-y-1.5 text-xs">
+                        </div>
+                    </div>
+
+                    <!-- SOCIAL PERFORMANCE -->
+                    <div id="view-monitor-social"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden p-5 space-y-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3 shrink-0">
+                            <div>
+                                <h2 class="text-sm font-bold text-white"><i
+                                        class="fa-solid fa-chart-line text-emerald-400 mr-1"></i> Social Performance
+                                </h2>
+                                <p class="text-[11px] text-slate-500">Engagement across clients once results are
+                                    recorded on published posts.</p>
+                            </div>
+                            <button type="button" onclick="loadMonitorSocial()"
+                                class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white">Refresh</button>
+                        </div>
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                                <p class="text-[10px] uppercase text-slate-500 font-mono">Clients with data</p>
+                                <p id="monSocClients" class="text-xl font-bold text-white mt-1">—</p>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                                <p class="text-[10px] uppercase text-slate-500 font-mono">Posts tracked</p>
+                                <p id="monSocPosts" class="text-xl font-bold text-white mt-1">—</p>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                                <p class="text-[10px] uppercase text-slate-500 font-mono">Avg engagement</p>
+                                <p id="monSocEng" class="text-xl font-bold text-emerald-400 mt-1">—</p>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                                <p class="text-[10px] uppercase text-slate-500 font-mono">Scanned clients</p>
+                                <p id="monSocScanned" class="text-xl font-bold text-slate-300 mt-1">—</p>
+                            </div>
+                        </div>
+                        <div id="monSocPlatforms" class="text-[11px] text-slate-400 shrink-0"></div>
+                        <div class="flex-1 min-h-0 overflow-auto custom-scrollbar border border-slate-800 rounded-xl">
+                            <table class="w-full text-xs">
+                                <thead class="bg-slate-950 text-slate-500 sticky top-0">
+                                    <tr>
+                                        <th class="text-left px-3 py-2">Client</th>
+                                        <th class="text-left px-3 py-2">Posts</th>
+                                        <th class="text-left px-3 py-2">Avg engagement</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="monSocByClient" class="divide-y divide-slate-800/60"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- AI COSTS -->
+                    <div id="view-monitor-costs"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden p-5 space-y-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3 shrink-0">
+                            <div>
+                                <h2 class="text-sm font-bold text-white"><i
+                                        class="fa-solid fa-coins text-emerald-400 mr-1"></i> AI Cost Report</h2>
+                                <p class="text-[11px] text-slate-500">Usage / cost snapshot from agent-cost-report (when
+                                    available).</p>
+                            </div>
+                            <button type="button" onclick="loadMonitorCosts()"
+                                class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white">Refresh</button>
+                        </div>
+                        <pre id="monCostBody"
+                            class="flex-1 overflow-auto custom-scrollbar bg-slate-950 border border-slate-800 rounded-xl p-4 text-[11px] text-slate-300 whitespace-pre-wrap"></pre>
+                    </div>
+                </div>
+            </section>
+
         </main>
     </div>
 
@@ -6962,6 +7163,21 @@
                     if (firstBtn) firstBtn.classList.add('active');
                     loadSocialConnections();
                 }, 100);
+            }
+
+            if (hubId === 'monitor') {
+                setTimeout(() => {
+                    document.querySelectorAll('#hub-monitor .agent-view').forEach(v => {
+                        v.classList.add('hidden');
+                        v.style.display = 'none';
+                    });
+                    const ov = document.getElementById('view-monitor-overview');
+                    if (ov) { ov.classList.remove('hidden'); ov.style.display = 'flex'; }
+                    document.querySelectorAll('#hub-monitor .agent-subview-link').forEach(l => l.classList.remove('active'));
+                    const firstBtn = document.querySelector('#hub-monitor [data-target-view="monitor-overview"]');
+                    if (firstBtn) firstBtn.classList.add('active');
+                    loadMonitorOverview();
+                }, 80);
             }
 
             if (hubId === 'career') {
@@ -15171,6 +15387,232 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             'agent-va-clients': loadVAClientsUI,
             'agent-integrations': () => { populateAgentClientSelector('integrationsClientSelector'); }
         };
+
+
+
+        // =====================================================================
+        // OPS MONITOR — system health, jobs, audit, social performance, costs
+        // =====================================================================
+        let MONITOR_AUDIT_CACHE = [];
+
+        function _monEscape(s) {
+            return escapeHtml ? escapeHtml(String(s == null ? '' : s)) : String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function _monStatusColor(st) {
+            const s = String(st || '').toUpperCase();
+            if (s === 'OK' || s === 'DONE' || s === 'SUCCESS' || s === 'COMPLETED') return 'text-emerald-400';
+            if (s === 'ALERT' || s === 'WARN' || s === 'WARNING' || s === 'QUEUED' || s === 'RUNNING') return 'text-amber-400';
+            if (s === 'ERROR' || s === 'FAILED' || s === 'FAIL' || s === 'TERMINATED') return 'text-red-400';
+            return 'text-slate-400';
+        }
+
+        async function loadMonitorOverview() {
+            const errBox = document.getElementById('monRecentErrors');
+            const auditBox = document.getElementById('monRecentAudit');
+            if (errBox) errBox.innerHTML = '<p class="text-slate-500">Loading…</p>';
+            if (auditBox) auditBox.innerHTML = '<p class="text-slate-500">Loading…</p>';
+            let res;
+            try {
+                res = await executeSecureBridgeCall('agent', 'agent-system-health', { limit: 40 }, { silent: true });
+            } catch (e) {
+                res = { success: false, message: String(e) };
+            }
+            if (!res || !res.success) {
+                // Fallback: live feed + audit if system-health not deployed yet
+                const feed = await executeSecureBridgeCall('agent', 'agent-get-live-feed', { limit: 30 }, { silent: true });
+                const audit = await executeSecureBridgeCall('agent', 'agent-audit-log', { page: 1 }, { silent: true });
+                document.getElementById('monJobSuccessRate').textContent = '—';
+                document.getElementById('monJobFailRate').textContent = '—';
+                document.getElementById('monJobInFlight').textContent = '—';
+                document.getElementById('monJobSuccessMeta').textContent = (res && res.message) || 'Deploy AgentLib system-health for rates';
+                document.getElementById('monJobFailMeta').textContent = '';
+                document.getElementById('monAuditBad').textContent = '—';
+                if (errBox) {
+                    const items = (feed && feed.feed) ? feed.feed.filter(f => /error|alert|fail/i.test(String(f.status || '') + String(f.summary || ''))) : [];
+                    errBox.innerHTML = items.length ? items.map(f => `
+                        <div class="border border-slate-800 rounded-lg p-2 bg-slate-900/50">
+                            <div class="flex justify-between gap-2"><span class="text-white font-medium">${_monEscape(f.action)}</span>
+                            <span class="${_monStatusColor(f.status)} text-[10px]">${_monEscape(f.status)}</span></div>
+                            <p class="text-slate-400 mt-1">${_monEscape(f.summary)}</p>
+                            <p class="text-[10px] text-slate-600 mt-1">${_monEscape(f.timestamp)} · ${_monEscape(f.clientId)}</p>
+                        </div>`).join('') : `<p class="text-slate-500">${_monEscape((res && res.message) || 'No error rows yet (or system-health not deployed).')}</p>`;
+                }
+                if (auditBox && audit && audit.data) {
+                    auditBox.innerHTML = (audit.data || []).slice(0, 25).map(r => `
+                        <div class="flex gap-2 border-b border-slate-800/40 py-1.5">
+                            <span class="${_monStatusColor(r.Status)} text-[10px] w-14 shrink-0">${_monEscape(r.Status)}</span>
+                            <div class="min-w-0"><p class="text-slate-200 truncate">${_monEscape(r.Action)}</p>
+                            <p class="text-slate-500 truncate">${_monEscape(r.Summary)}</p></div>
+                        </div>`).join('') || '<p class="text-slate-500">No audit rows.</p>';
+                }
+                return;
+            }
+            const j = res.jobs || {};
+            document.getElementById('monJobSuccessRate').textContent = (j.successRate != null ? j.successRate + '%' : '—');
+            document.getElementById('monJobFailRate').textContent = (j.failureRate != null ? j.failureRate + '%' : '—');
+            document.getElementById('monJobInFlight').textContent = ((j.queued || 0) + (j.running || 0));
+            document.getElementById('monJobSuccessMeta').textContent = (j.done || 0) + ' done / ' + (j.total || 0) + ' total';
+            document.getElementById('monJobFailMeta').textContent = (j.error || 0) + ' failed · ' + (j.terminated || 0) + ' terminated';
+            const a = res.audit || {};
+            document.getElementById('monAuditBad').textContent = ((a.alert || 0) + (a.error || 0));
+            document.getElementById('monAuditMeta').textContent = (a.ok || 0) + ' OK · ' + (a.total || 0) + ' total';
+
+            if (errBox) {
+                const errs = res.recentErrors || [];
+                errBox.innerHTML = errs.length ? errs.map(e => `
+                    <div class="border border-red-900/40 rounded-lg p-2 bg-red-950/20">
+                        <div class="flex justify-between gap-2">
+                            <span class="text-white font-medium">${_monEscape(e.action || e.jobId || 'event')}</span>
+                            <span class="${_monStatusColor(e.status)} text-[10px]">${_monEscape(e.status)}</span>
+                        </div>
+                        <p class="text-red-200/90 mt-1 whitespace-pre-wrap break-words">${_monEscape(e.error || '—')}</p>
+                        <p class="text-[10px] text-slate-600 mt-1">${_monEscape(e.createdAt)} ${e.clientId ? '· ' + _monEscape(e.clientId) : ''} ${e.jobId ? '· ' + _monEscape(e.jobId) : ''}</p>
+                    </div>`).join('') : '<p class="text-slate-500">No recent failures — queue looks healthy.</p>';
+            }
+            if (auditBox) {
+                const rows = res.recentAudit || [];
+                auditBox.innerHTML = rows.length ? rows.map(r => `
+                    <div class="flex gap-2 border-b border-slate-800/40 py-1.5">
+                        <span class="${_monStatusColor(r.status)} text-[10px] w-14 shrink-0">${_monEscape(r.status)}</span>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-slate-200 truncate">${_monEscape(r.action)}</p>
+                            <p class="text-slate-500 truncate">${_monEscape(r.summary)}</p>
+                            <p class="text-[10px] text-slate-600">${_monEscape(r.timestamp)} · ${_monEscape(r.clientId)}</p>
+                        </div>
+                    </div>`).join('') : '<p class="text-slate-500">No audit events.</p>';
+            }
+        }
+
+        async function loadMonitorJobs() {
+            const body = document.getElementById('monJobsTableBody');
+            const banner = document.getElementById('monQueueBanner');
+            if (body) body.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-slate-500">Loading…</td></tr>';
+            const res = await executeSecureBridgeCall('agent', 'agent-job-queue-status', { limit: 80 }, { silent: true });
+            if (!res || !res.success) {
+                // fallback health recent jobs
+                const h = await executeSecureBridgeCall('agent', 'agent-system-health', { limit: 80 }, { silent: true });
+                if (banner) banner.textContent = (res && res.message) || (h && h.message) || 'Queue status unavailable';
+                const jobs = (h && h.recentJobs) || [];
+                if (body) body.innerHTML = jobs.length ? jobs.map(j => `
+                    <tr class="hover:bg-slate-900/50">
+                        <td class="px-3 py-2 font-mono text-[10px] text-slate-400">${_monEscape(j.jobId)}</td>
+                        <td class="px-3 py-2 text-slate-200">${_monEscape(j.action)}</td>
+                        <td class="px-3 py-2 ${_monStatusColor(j.status)}">${_monEscape(j.status)}</td>
+                        <td class="px-3 py-2 text-slate-500">${_monEscape(j.createdAt)}</td>
+                        <td class="px-3 py-2 text-red-300/90 max-w-xs truncate" title="${_monEscape(j.error)}">${_monEscape(j.error || '—')}</td>
+                    </tr>`).join('') : '<tr><td colspan="5" class="px-3 py-4 text-slate-500">No jobs found.</td></tr>';
+                return;
+            }
+            if (banner) {
+                const act = res.active ? JSON.stringify(res.active).slice(0, 120) : 'none';
+                banner.innerHTML = '<span class="text-emerald-400 font-medium">Queue length: ' + (res.queueLength || 0) +
+                    '</span> · Active: <span class="text-slate-300 font-mono">' + _monEscape(act) + '</span>';
+            }
+            const jobs = res.jobs || [];
+            if (body) body.innerHTML = jobs.length ? jobs.map(j => `
+                <tr class="hover:bg-slate-900/50">
+                    <td class="px-3 py-2 font-mono text-[10px] text-slate-400">${_monEscape(j.jobId)}</td>
+                    <td class="px-3 py-2 text-slate-200">${_monEscape(j.action)}</td>
+                    <td class="px-3 py-2 ${_monStatusColor(j.status)}">${_monEscape(j.status)}</td>
+                    <td class="px-3 py-2 text-slate-500">${_monEscape(j.createdAt)}</td>
+                    <td class="px-3 py-2 text-red-300/90 max-w-md whitespace-pre-wrap break-words">${_monEscape(j.error || '—')}</td>
+                </tr>`).join('') : '<tr><td colspan="5" class="px-3 py-4 text-slate-500">No jobs in sheet.</td></tr>';
+        }
+
+        async function loadMonitorAudit() {
+            const list = document.getElementById('monAuditList');
+            if (list) list.innerHTML = '<p class="text-slate-500">Loading…</p>';
+            const res = await executeSecureBridgeCall('agent', 'agent-audit-log', { page: 1 }, { silent: true });
+            const feed = await executeSecureBridgeCall('agent', 'agent-get-live-feed', { limit: 50 }, { silent: true });
+            let rows = [];
+            if (res && (res.data || res.records)) rows = res.data || res.records || [];
+            else if (feed && feed.feed) {
+                rows = feed.feed.map(f => ({ Timestamp: f.timestamp, ClientID: f.clientId, Action: f.action, Summary: f.summary, Status: f.status }));
+            }
+            MONITOR_AUDIT_CACHE = rows;
+            renderMonitorAudit();
+        }
+
+        function renderMonitorAudit() {
+            const list = document.getElementById('monAuditList');
+            if (!list) return;
+            const filter = (document.getElementById('monAuditStatusFilter') || {}).value || '';
+            let rows = MONITOR_AUDIT_CACHE || [];
+            if (filter) rows = rows.filter(r => String(r.Status || r.status || '').toUpperCase().indexOf(filter) >= 0);
+            list.innerHTML = rows.length ? rows.map(r => `
+                <div class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 flex gap-3">
+                    <span class="${_monStatusColor(r.Status || r.status)} text-[10px] font-mono w-14 shrink-0 pt-0.5">${_monEscape(r.Status || r.status)}</span>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-slate-100 font-medium">${_monEscape(r.Action || r.action)}</p>
+                        <p class="text-slate-400 mt-0.5 whitespace-pre-wrap break-words">${_monEscape(r.Summary || r.summary)}</p>
+                        <p class="text-[10px] text-slate-600 mt-1">${_monEscape(r.Timestamp || r.timestamp)} · ${_monEscape(r.ClientID || r.clientId || '')}</p>
+                    </div>
+                </div>`).join('') : '<p class="text-slate-500">No audit events for this filter.</p>';
+        }
+
+        async function loadMonitorSocial() {
+            const tbody = document.getElementById('monSocByClient');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="px-3 py-4 text-slate-500">Loading…</td></tr>';
+            const res = await executeSecureBridgeCall('agent', 'agent-get-social-performance-overview', {}, { silent: true });
+            if (!res || !res.success) {
+                document.getElementById('monSocClients').textContent = '—';
+                document.getElementById('monSocPosts').textContent = '—';
+                document.getElementById('monSocEng').textContent = '—';
+                document.getElementById('monSocScanned').textContent = '—';
+                document.getElementById('monSocPlatforms').textContent = (res && res.message) || 'Overview unavailable — ensure gateway allows agent-get-social-performance-overview.';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="px-3 py-4 text-slate-500">No data.</td></tr>';
+                return;
+            }
+            const s = res.summary || {};
+            document.getElementById('monSocClients').textContent = res.clientsWithData != null ? res.clientsWithData : '—';
+            document.getElementById('monSocPosts').textContent = s.totalPosts != null ? s.totalPosts : '—';
+            document.getElementById('monSocEng').textContent = s.avgEngagementRate != null ? (s.avgEngagementRate + '%') : '—';
+            document.getElementById('monSocScanned').textContent = res.totalClientsScanned != null ? res.totalClientsScanned : '—';
+            const byP = s.byPlatform || {};
+            const plat = Object.keys(byP).map(p => p + ': ' + byP[p].avgEngagementRate + '% (' + byP[p].sampleSize + ')').join(' · ');
+            document.getElementById('monSocPlatforms').textContent = plat || 'No platform breakdown yet — record performance after publish.';
+            const clients = res.byClient || [];
+            if (tbody) tbody.innerHTML = clients.length ? clients.map(c => `
+                <tr class="hover:bg-slate-900/50">
+                    <td class="px-3 py-2 text-slate-200">${_monEscape(c.companyName || c.clientId)}</td>
+                    <td class="px-3 py-2 text-slate-400">${_monEscape(c.totalPosts)}</td>
+                    <td class="px-3 py-2 text-emerald-400 font-medium">${_monEscape(c.avgEngagementRate)}%</td>
+                </tr>`).join('') : '<tr><td colspan="3" class="px-3 py-4 text-slate-500">No client performance rows yet.</td></tr>';
+        }
+
+        async function loadMonitorCosts() {
+            const pre = document.getElementById('monCostBody');
+            if (pre) pre.textContent = 'Loading…';
+            const res = await executeSecureBridgeCall('agent', 'agent-cost-report', {}, { silent: true });
+            if (pre) {
+                if (!res || !res.success) pre.textContent = (res && res.message) || 'Cost report unavailable.';
+                else pre.textContent = JSON.stringify(res, null, 2);
+            }
+        }
+
+        // Wire monitor sub-nav (same pattern as agent-subview-link)
+        document.addEventListener('click', function (ev) {
+            const link = ev.target.closest && ev.target.closest('#hub-monitor .agent-subview-link');
+            if (!link) return;
+            ev.preventDefault();
+            const view = link.getAttribute('data-target-view');
+            if (!view) return;
+            document.querySelectorAll('#hub-monitor .agent-subview-link').forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+            document.querySelectorAll('#hub-monitor .agent-view').forEach(v => {
+                v.classList.add('hidden');
+                v.style.display = 'none';
+            });
+            const el = document.getElementById('view-' + view);
+            if (el) { el.classList.remove('hidden'); el.style.display = 'flex'; }
+            if (view === 'monitor-overview') loadMonitorOverview();
+            else if (view === 'monitor-jobs') loadMonitorJobs();
+            else if (view === 'monitor-audit') loadMonitorAudit();
+            else if (view === 'monitor-social') loadMonitorSocial();
+            else if (view === 'monitor-costs') loadMonitorCosts();
+        });
 
         document.addEventListener("DOMContentLoaded", initializeModule);
     </script>
