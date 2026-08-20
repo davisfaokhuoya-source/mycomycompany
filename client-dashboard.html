@@ -1031,14 +1031,67 @@
                     </div>
                 </section>
 
-                <!-- BILLING & RENEWAL -->
+                <!-- BILLING & RENEWAL / PAYG -->
                 <section id="view-billing" class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
-                    <div class="max-w-lg mx-auto w-full space-y-4 pt-2">
-                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+                    <div class="max-w-2xl mx-auto w-full space-y-4 pt-2">
+                        <div id="billingModelBadge" class="text-xs text-slate-400"></div>
+                        <div id="billingPaygPanel"
+                            class="hidden bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                        <i class="fa-solid fa-wallet text-emerald-400"></i> Pay-as-you-go wallet
+                                    </h3>
+                                    <p class="text-xs text-slate-400 mt-1">Ops + digital usage is debited from this
+                                        balance. Top up anytime.</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-[10px] uppercase text-slate-500 font-mono">Balance</p>
+                                    <p id="paygBalanceLabel" class="text-2xl font-bold text-emerald-400">—</p>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Top-up amount (₦)</label>
+                                <div class="flex flex-wrap gap-2 mb-2">
+                                    <button type="button"
+                                        onclick="document.getElementById('paygTopupAmount').value=50000"
+                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦50,000</button>
+                                    <button type="button"
+                                        onclick="document.getElementById('paygTopupAmount').value=100000"
+                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦100,000</button>
+                                    <button type="button"
+                                        onclick="document.getElementById('paygTopupAmount').value=250000"
+                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦250,000</button>
+                                    <button type="button"
+                                        onclick="document.getElementById('paygTopupAmount').value=500000"
+                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦500,000</button>
+                                </div>
+                                <input type="number" id="paygTopupAmount" min="10000" step="1000"
+                                    placeholder="e.g. 100000"
+                                    class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500" />
+                            </div>
+                            <button id="paygTopupBtn" onclick="submitPaygTopup()"
+                                class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium py-2.5 rounded-lg shadow">Top
+                                up wallet</button>
+                            <p id="paygTopupError" class="hidden text-xs text-red-400 text-center"></p>
+                            <div>
+                                <p class="text-[10px] font-mono uppercase text-slate-500 mb-2">Unit rates (Ops +
+                                    Digital)</p>
+                                <div id="paygRatesTable"
+                                    class="text-xs text-slate-300 space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-mono uppercase text-slate-500 mb-1">Recent top-ups</p>
+                                <div id="paygTopupsList" class="text-xs text-slate-400">—</div>
+                            </div>
+                        </div>
+                        <div id="billingSubPanel" class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
                             <div>
                                 <h3 class="text-base font-bold text-white">Renew subscription</h3>
                                 <p class="text-xs text-slate-400 mt-1">Choose a term, optionally apply a discount code
                                     from your account team, then continue to secure payment.</p>
+                                <p id="billingSubMeta" class="text-[11px] text-slate-500 mt-2"></p>
                             </div>
                             <div>
                                 <label class="block text-xs text-slate-400 mb-1">Renewal term</label>
@@ -1061,16 +1114,15 @@
                                 <p id="renewDiscountPreview" class="text-[11px] text-slate-500 mt-1.5"></p>
                             </div>
                             <button id="renewSubmitBtn" onclick="submitRenewal()"
-                                class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium py-2.5 rounded-lg shadow">
-                                Continue to payment
-                            </button>
+                                class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium py-2.5 rounded-lg shadow">Continue
+                                to payment</button>
                             <p id="renewError" class="hidden text-xs text-red-400 text-center"></p>
                             <p id="renewSuccess" class="hidden text-xs text-emerald-400 text-center"></p>
-                            <p class="text-[11px] text-slate-500 leading-relaxed">Pay-as-you-go accounts should top up
-                                via their account manager instead of renewing a subscription term. Privacy Policy: <a
-                                    href="https://thevictorias.com.ng/policy" target="_blank"
-                                    class="text-emerald-400 hover:underline">thevictorias.com.ng/policy</a></p>
                         </div>
+                        <p class="text-[11px] text-slate-500 leading-relaxed text-center">Privacy Policy:
+                            <a href="https://thevictorias.com.ng/policy" target="_blank"
+                                class="text-emerald-400 hover:underline">thevictorias.com.ng/policy</a>
+                        </p>
                     </div>
                 </section>
 
@@ -1334,6 +1386,7 @@
                 const ok = document.getElementById('renewSuccess');
                 if (err) err.classList.add('hidden');
                 if (ok) ok.classList.add('hidden');
+                try { loadBillingPanel(); } catch (_) { }
             }
             if (name === 'chat') {
                 loadChat();
@@ -1376,10 +1429,22 @@
             const pricing = res.pricing;
             if (pricing) {
                 document.getElementById('planLabel').textContent = pricing.label || (res.tier || '').replace(/_/g, ' ');
-                document.getElementById('planPrice').textContent = pricing.priceNgn
-                    ? '₦' + Number(pricing.priceNgn).toLocaleString() + ' /mo'
-                    : 'Contact Sales';
-                document.getElementById('planCustomBadge').classList.toggle('hidden', !pricing.isCustom);
+                const isPayg = String(res.billingModel || pricing.billingModel || '').toLowerCase() === 'payg';
+                if (isPayg) {
+                    const bal = pricing.paygBalanceNgn != null ? pricing.paygBalanceNgn : (res.paygBalanceNgn != null ? res.paygBalanceNgn : null);
+                    document.getElementById('planPrice').textContent = bal != null
+                        ? ('PAYG · ₦' + Number(bal).toLocaleString() + ' balance')
+                        : 'Pay-as-you-go';
+                } else {
+                    document.getElementById('planPrice').textContent = pricing.priceNgn
+                        ? '₦' + Number(pricing.priceNgn).toLocaleString() + ' /mo'
+                        : 'Contact Sales';
+                }
+                document.getElementById('planCustomBadge').classList.toggle('hidden', !pricing.isCustom && !isPayg);
+                if (isPayg) {
+                    const badge = document.getElementById('planCustomBadge');
+                    if (badge) { badge.textContent = 'PAYG'; badge.classList.remove('hidden'); }
+                }
             }
             const u = res.usage || {};
             const lim = res.limits || {};
@@ -1935,6 +2000,98 @@
                 const emailEl = document.getElementById('donateEmail');
                 if (nameEl && !nameEl.value) nameEl.value = document.getElementById('companyNameLabel')?.textContent || '';
             } catch (_) { }
+        }
+
+        const PAYG_RATE_LABELS = {
+            hours: 'AI agent hour', emails: 'Email sent', proposals: 'Proposal', documents: 'Document',
+            tasks: 'Task', socialAssets: 'Social post (generic)', linkedinPosts: 'LinkedIn post',
+            contentReviewHours: 'Content review hour', facebookPosts: 'Facebook post',
+            instagramPosts: 'Instagram post', tiktokPosts: 'TikTok post', threadsPosts: 'Threads post',
+            xPosts: 'X post', whatsappReplies: 'WhatsApp reply', calendarBatches: 'Calendar batch (week)'
+        };
+
+        async function loadBillingPanel() {
+            const badge = document.getElementById('billingModelBadge');
+            const paygPanel = document.getElementById('billingPaygPanel');
+            const subPanel = document.getElementById('billingSubPanel');
+            const res = await callGateway('clientportal', 'clientPortalGetBillingInfo', {});
+            if (!res || !res.success) {
+                if (badge) badge.textContent = (res && res.message) || 'Could not load billing.';
+                return;
+            }
+            const model = String(res.billingModel || 'subscription').toLowerCase();
+            if (badge) {
+                badge.innerHTML = model === 'payg'
+                    ? '<span class="px-2 py-1 rounded bg-emerald-900/40 text-emerald-300 border border-emerald-800 text-[10px] uppercase">Pay-as-you-go</span>'
+                    : '<span class="px-2 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[10px] uppercase">Subscription</span>';
+            }
+            if (model === 'payg') {
+                if (paygPanel) paygPanel.classList.remove('hidden');
+                if (subPanel) subPanel.classList.add('hidden');
+                const bal = (res.wallet && res.wallet.balanceNgn != null) ? Number(res.wallet.balanceNgn) : 0;
+                const balEl = document.getElementById('paygBalanceLabel');
+                if (balEl) balEl.textContent = '₦' + bal.toLocaleString();
+                const rates = (res.wallet && res.wallet.rates) || {};
+                const ratesEl = document.getElementById('paygRatesTable');
+                if (ratesEl) {
+                    const keys = Object.keys(PAYG_RATE_LABELS);
+                    ratesEl.innerHTML = keys.map(function (k) {
+                        if (rates[k] == null) return '';
+                        return '<div class="flex justify-between gap-2 border-b border-slate-800/80 py-1"><span class="text-slate-400">' +
+                            escapeHtml(PAYG_RATE_LABELS[k]) + '</span><span class="text-slate-200 font-mono">₦' +
+                            Number(rates[k]).toLocaleString() + '</span></div>';
+                    }).join('') || '<p class="text-slate-500">Rates unavailable.</p>';
+                }
+                const list = document.getElementById('paygTopupsList');
+                if (list) {
+                    const tops = res.recentTopups || [];
+                    list.innerHTML = tops.length ? tops.map(function (t) {
+                        return '<div class="flex justify-between py-1 border-b border-slate-800/50"><span>' +
+                            escapeHtml(t.Status || '') + ' · ₦' + Number(t.AmountNGN || 0).toLocaleString() +
+                            '</span><span class="text-slate-500">' + fmtDate(t.CreatedAt || t.PaidDate) + '</span></div>';
+                    }).join('') : '<p class="text-slate-600">No top-ups yet.</p>';
+                }
+            } else {
+                if (paygPanel) paygPanel.classList.add('hidden');
+                if (subPanel) subPanel.classList.remove('hidden');
+                const meta = document.getElementById('billingSubMeta');
+                if (meta && res.subscription) {
+                    const s = res.subscription;
+                    meta.textContent = (s.label || '') +
+                        (s.priceNgn != null ? (' · ₦' + Number(s.priceNgn).toLocaleString() + '/mo') : '') +
+                        (s.expiresOn ? (' · expires ' + fmtDate(s.expiresOn)) : '') +
+                        (s.daysLeft != null ? (' · ' + s.daysLeft + ' days left') : '');
+                }
+            }
+        }
+
+        async function submitPaygTopup() {
+            const errEl = document.getElementById('paygTopupError');
+            const btn = document.getElementById('paygTopupBtn');
+            if (errEl) errEl.classList.add('hidden');
+            const amountNgn = parseFloat((document.getElementById('paygTopupAmount') || {}).value || '0');
+            if (!amountNgn || amountNgn < 10000) {
+                if (errEl) { errEl.textContent = 'Minimum top-up is ₦10,000.'; errEl.classList.remove('hidden'); }
+                return;
+            }
+            if (btn) { btn.disabled = true; btn.textContent = 'Creating payment…'; }
+            try {
+                const res = await callGateway('clientportal', 'clientPortalInitiatePaygTopup', { amountNgn: amountNgn });
+                if (!res || !res.success) {
+                    if (errEl) { errEl.textContent = (res && res.message) || 'Could not start top-up.'; errEl.classList.remove('hidden'); }
+                    return;
+                }
+                if (res.paymentLink) {
+                    window.location.href = res.paymentLink;
+                } else {
+                    notifyUser(res.message || 'Top-up created. Complete payment via your account team if no link opened.', 'info');
+                    loadBillingPanel();
+                }
+            } catch (e) {
+                if (errEl) { errEl.textContent = clientFriendlyError(e && e.message ? e.message : e); errEl.classList.remove('hidden'); }
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'Top up wallet'; }
+            }
         }
 
         async function previewRenewalDiscount() {
