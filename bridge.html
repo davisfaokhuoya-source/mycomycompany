@@ -1475,10 +1475,70 @@
                                 <p class="text-xs text-slate-400">Monitor newly captured corporate acquisition profiles,
                                     assign sales agents, and track funnel conversions.</p>
                             </div>
-                            <button onclick="openLeadCreationModalFormPanel()"
-                                class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded transition-colors shadow flex items-center gap-1">
-                                <i class="fa-solid fa-user-plus"></i> Inject Manual Lead Profile
-                            </button>
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <button onclick="openLeadCreationModalFormPanel()"
+                                    class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded transition-colors shadow flex items-center gap-1">
+                                    <i class="fa-solid fa-user-plus"></i> Inject Manual Lead Profile
+                                </button>
+                                <button type="button" onclick="openLeadAiOutreachPanel()"
+                                    class="bg-blue-600 hover:bg-blue-500 text-xs text-white font-medium py-1.5 px-3 rounded shadow flex items-center gap-1">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> AI email selected
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="leadAiOutreachPanel"
+                            class="hidden bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3 shrink-0">
+                            <div class="flex flex-wrap items-start justify-between gap-2">
+                                <div>
+                                    <h4 class="text-xs font-bold text-white flex items-center gap-2"><i
+                                            class="fa-solid fa-robot text-emerald-400"></i> AI personalized outreach
+                                    </h4>
+                                    <p class="text-[11px] text-slate-500 mt-0.5">Select leads in the table. The agent
+                                        studies each lead’s row (company, role, industry, insights) and writes a unique
+                                        email from <span class="text-slate-300">our interest</span> below. Uses AgentLib
+                                        AI when linked.</p>
+                                </div>
+                                <button type="button"
+                                    onclick="document.getElementById('leadAiOutreachPanel').classList.add('hidden')"
+                                    class="text-slate-500 hover:text-white text-xs">Close</button>
+                            </div>
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                                <div class="lg:col-span-2">
+                                    <label class="block text-[10px] text-slate-500 mb-1">Our interest / campaign goal
+                                        (required for strong personalization)</label>
+                                    <textarea id="leadAiInterest" rows="3"
+                                        placeholder="e.g. Offer NDPA compliance + Growth Ops package to fintech ops leads; ask for a 20-min discovery call next week."
+                                        class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-emerald-500"></textarea>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] text-slate-500 mb-1">Tone</label>
+                                    <select id="leadAiTone"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-white">
+                                        <option value="professional, warm, concise">Professional warm</option>
+                                        <option value="direct and commercial">Direct commercial</option>
+                                        <option value="consultative and helpful">Consultative</option>
+                                    </select>
+                                    <label class="block text-[10px] text-slate-500 mb-1">CTA</label>
+                                    <input id="leadAiCta" value="Suggest a short 15–20 minute call this week."
+                                        class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-white" />
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <span id="leadSelectCount" class="text-[11px] text-slate-400">0 selected</span>
+                                <button type="button" onclick="selectAllVisibleLeads(true)"
+                                    class="text-[11px] px-2 py-1 bg-slate-800 rounded text-slate-300">Select
+                                    page</button>
+                                <button type="button" onclick="selectAllVisibleLeads(false)"
+                                    class="text-[11px] px-2 py-1 bg-slate-800 rounded text-slate-300">Clear</button>
+                                <button type="button" id="btnLeadAiDraft" onclick="runLeadAiPersonalize(false)"
+                                    class="text-xs px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-white">Draft
+                                    only (save to sheet)</button>
+                                <button type="button" id="btnLeadAiSend" onclick="runLeadAiPersonalize(true)"
+                                    class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Personalize
+                                    &amp; send now</button>
+                                <span id="leadAiStatus" class="text-[11px] text-slate-500"></span>
+                            </div>
                         </div>
 
                         <div
@@ -1487,6 +1547,9 @@
                                 <thead
                                     class="bg-slate-900 sticky top-0 text-slate-400 font-mono border-b border-slate-800 uppercase">
                                     <tr>
+                                        <th class="p-3 w-10"><input type="checkbox" id="leadSelectAllHeader"
+                                                onchange="selectAllVisibleLeads(this.checked)"
+                                                title="Select all on page" /></th>
                                         <th class="p-3 w-28">Lead Track Unique ID</th>
                                         <th class="p-3">Prospect FullName + Company</th>
                                         <th class="p-3">Corporate Contact Email</th>
@@ -8908,14 +8971,14 @@
 
         async function loadLeadsMatrix() {
             const tbodyId = "crmLeadsGridTableBody";
-            showTableSkeleton(tbodyId, 8);
+            showTableSkeleton(tbodyId, 9);
 
             const res = await executeSecureBridgeCall("leads", "leads-matrix", {});
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
 
             if (!res.success || !res.data || res.data.length === 0) {
-                tbody.innerHTML = emptyRow("No leads found.", 8);
+                tbody.innerHTML = emptyRow("No leads found.", 9);
                 return;
             }
 
@@ -8931,6 +8994,14 @@
 
                 return `
         <tr class="hover:bg-slate-800/60 transition-colors">
+            <td class="p-3 text-center">
+                <input type="checkbox" class="lead-row-select rounded border-slate-700"
+                    data-email="${escapeHtml(email)}"
+                    data-name="${escapeHtml(fullName)}"
+                    data-company="${escapeHtml(company)}"
+                    onchange="updateLeadSelectCount()"
+                    ${email && email !== '—' ? '' : 'disabled'} />
+            </td>
             <td class="p-3 font-mono text-slate-400 text-xs">${escapeHtml(leadId)}</td>
 
             <td class="p-3">
@@ -8986,7 +9057,123 @@
                 subjectEl.value = `Follow-up: ${clientName || 'Prospect'}`;
             }
 
+            // Optional interest box for single-lead AI fill
+            let interest = document.getElementById('emailClientAiInterest');
+            if (!interest) {
+                const form = document.getElementById('sendClientEmailForm');
+                if (form) {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'space-y-1';
+                    wrap.innerHTML = '<label class="block text-[10px] text-slate-500">AI interest (optional)</label>' +
+                        '<textarea id="emailClientAiInterest" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" placeholder="What we want from this lead…"></textarea>' +
+                        '<button type="button" onclick="aiFillLeadEmailModal()" class="text-[11px] px-2 py-1 bg-blue-700 hover:bg-blue-600 rounded text-white"><i class="fa-solid fa-wand-magic-sparkles"></i> AI personalize from lead dossier</button>';
+                    const subj = document.getElementById('emailClientSubject');
+                    if (subj && subj.parentElement) subj.parentElement.after(wrap);
+                    else form.insertBefore(wrap, form.firstChild);
+                }
+            }
+
             modal.classList.remove('hidden');
+        }
+
+        async function aiFillLeadEmailModal() {
+            const email = (document.getElementById('emailClientToAddress') || {}).value || '';
+            const interest = (document.getElementById('emailClientAiInterest') || {}).value || '';
+            if (!email) { showToast('No lead email on this form.', 'error'); return; }
+            showToast('Studying lead & drafting…', 'info');
+            const res = await executeSecureBridgeCall('leads', 'v5-preview-lead-email', {
+                email: email,
+                interest: interest || 'Personalized outreach from The Victorias Ltd Growth team'
+            }, { silent: true });
+            if (!res || !res.success) {
+                showToast((res && res.message) || 'AI preview failed — is the lead on the V5 Leads sheet?', 'error');
+                return;
+            }
+            const subj = document.getElementById('emailClientSubject');
+            const body = document.getElementById('emailClientBody') || document.getElementById('emailClientMessage');
+            if (subj) subj.value = res.subject || subj.value;
+            if (body) body.value = (res.body || '').replace(/<p>/gi, '').replace(/<\/p>/gi, '\n\n').replace(/<br\s*\/?>/gi, '\n');
+            showToast(res.personalizationNotes || 'Draft ready — review before send.', 'success');
+        }
+
+        function openLeadAiOutreachPanel() {
+            const panel = document.getElementById('leadAiOutreachPanel');
+            if (panel) panel.classList.remove('hidden');
+            updateLeadSelectCount();
+        }
+
+        function getSelectedLeadEmails() {
+            return Array.from(document.querySelectorAll('.lead-row-select:checked'))
+                .map(el => (el.getAttribute('data-email') || '').trim())
+                .filter(e => e && e !== '—');
+        }
+
+        function updateLeadSelectCount() {
+            const n = getSelectedLeadEmails().length;
+            const el = document.getElementById('leadSelectCount');
+            if (el) el.textContent = n + ' selected';
+        }
+
+        function selectAllVisibleLeads(on) {
+            document.querySelectorAll('.lead-row-select:not(:disabled)').forEach(el => { el.checked = !!on; });
+            const hdr = document.getElementById('leadSelectAllHeader');
+            if (hdr) hdr.checked = !!on;
+            updateLeadSelectCount();
+        }
+
+        async function runLeadAiPersonalize(sendNow) {
+            const emails = getSelectedLeadEmails();
+            const interest = (document.getElementById('leadAiInterest') || {}).value || '';
+            const tone = (document.getElementById('leadAiTone') || {}).value || '';
+            const cta = (document.getElementById('leadAiCta') || {}).value || '';
+            const status = document.getElementById('leadAiStatus');
+            if (!emails.length) {
+                showToast('Select at least one lead with an email.', 'error');
+                return;
+            }
+            if (!interest.trim()) {
+                showToast('Describe our interest / campaign goal so the AI can personalize properly.', 'error');
+                return;
+            }
+            if (sendNow && !confirm('Personalize and SEND email now to ' + emails.length + ' lead(s)?')) return;
+            if (status) status.textContent = sendNow ? 'Personalizing & sending…' : 'Drafting…';
+            const btnD = document.getElementById('btnLeadAiDraft');
+            const btnS = document.getElementById('btnLeadAiSend');
+            if (btnD) btnD.disabled = true;
+            if (btnS) btnS.disabled = true;
+            try {
+                const action = sendNow ? 'v5-send-selected' : 'v5-personalize-selected';
+                const profiles = Array.from(document.querySelectorAll('.lead-row-select:checked')).map(el => ({
+                    email: el.getAttribute('data-email') || '',
+                    name: el.getAttribute('data-name') || '',
+                    company: el.getAttribute('data-company') || ''
+                }));
+                const res = await executeSecureBridgeCall('leads', action, {
+                    emails: emails,
+                    leadProfiles: profiles,
+                    interest: interest,
+                    tone: tone,
+                    cta: cta,
+                    regenerate: !!sendNow,
+                    sendNow: !!sendNow,
+                    writeDrafts: true,
+                    limit: 25
+                }, { silent: true });
+                if (!res || !res.success) {
+                    showToast((res && res.message) || 'Request failed.', 'error');
+                    if (status) status.textContent = (res && res.message) || 'Failed';
+                    return;
+                }
+                showToast(res.message || 'Done.', 'success');
+                if (status) status.textContent = res.message || 'Done';
+                // Optional: show first notes
+                if (res.results && res.results[0] && res.results[0].personalizationNotes) {
+                    console.log('Sample personalization:', res.results[0].personalizationNotes);
+                }
+            } finally {
+                if (btnD) btnD.disabled = false;
+                if (btnS) btnS.disabled = false;
+            }
         }
 
         function quickAssignAgent(leadId) {
