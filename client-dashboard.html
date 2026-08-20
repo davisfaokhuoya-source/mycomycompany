@@ -1035,6 +1035,19 @@
                 <section id="view-billing" class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
                     <div class="max-w-2xl mx-auto w-full space-y-4 pt-2">
                         <div id="billingModelBadge" class="text-xs text-slate-400"></div>
+                        <div id="billingDualTierRow"
+                            class="hidden text-xs text-slate-300 bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2">
+                        </div>
+                        <div id="billingRatesAlways"
+                            class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
+                            <p class="text-[10px] font-mono uppercase text-slate-500">Pay-as-you-go unit rates <span
+                                    class="text-slate-600 normal-case">(reference · wallet clients are charged
+                                    these)</span></p>
+                            <div id="paygRatesTableAlways"
+                                class="text-xs text-slate-300 space-y-1 max-h-56 overflow-y-auto custom-scrollbar">
+                            </div>
+                        </div>
+
                         <div id="billingPaygPanel"
                             class="hidden bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
                             <div class="flex flex-wrap items-start justify-between gap-3">
@@ -1425,7 +1438,22 @@
         function applyOverviewPayload(res) {
             if (!res || !res.success) return;
             document.getElementById('companyNameLabel').textContent = res.companyName || CLIENT_ID;
-            document.getElementById('tierLabel').textContent = (res.tier || '').replace(/_/g, ' ');
+            // Dual suite: show Ops and Digital as separate lines — never shade one out
+            const opsKey = res.opsTier || (res.pricing && res.pricing.ops && res.pricing.ops.key) || '';
+            const digKey = res.digitalTier || (res.pricing && res.pricing.digital && res.pricing.digital.key) || '';
+            const tierEl = document.getElementById('tierLabel');
+            const digEl = document.getElementById('digitalTierLabel');
+            if (opsKey && digKey) {
+                if (tierEl) tierEl.textContent = String(opsKey).replace(/_/g, ' ');
+                if (digEl) {
+                    digEl.textContent = String(digKey).replace(/_/g, ' ');
+                    digEl.classList.remove('hidden');
+                }
+            } else {
+                const single = opsKey || digKey || res.tier || '';
+                if (tierEl) tierEl.textContent = String(single).replace(/_/g, ' ');
+                if (digEl) { digEl.textContent = ''; digEl.classList.add('hidden'); }
+            }
             const pricing = res.pricing;
             if (pricing) {
                 document.getElementById('planLabel').textContent = pricing.label || (res.tier || '').replace(/_/g, ' ');
@@ -2014,6 +2042,8 @@
             const badge = document.getElementById('billingModelBadge');
             const paygPanel = document.getElementById('billingPaygPanel');
             const subPanel = document.getElementById('billingSubPanel');
+            const dualRow = document.getElementById('billingDualTierRow');
+            const ratesAlways = document.getElementById('paygRatesTableAlways');
             const res = await callGateway('clientportal', 'clientPortalGetBillingInfo', {});
             if (!res || !res.success) {
                 if (badge) badge.textContent = (res && res.message) || 'Could not load billing.';
@@ -2025,23 +2055,40 @@
                     ? '<span class="px-2 py-1 rounded bg-emerald-900/40 text-emerald-300 border border-emerald-800 text-[10px] uppercase">Pay-as-you-go</span>'
                     : '<span class="px-2 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[10px] uppercase">Subscription</span>';
             }
+            // Dual suite line — both tiers always named when present
+            if (dualRow) {
+                const parts = [];
+                if (res.opsTier) parts.push('<span class="text-emerald-400">Ops: ' + escapeHtml(String(res.opsTier).replace(/_/g, ' ')) + '</span>');
+                if (res.digitalTier) parts.push('<span class="text-sky-400">Digital: ' + escapeHtml(String(res.digitalTier).replace(/_/g, ' ')) + '</span>');
+                if (parts.length) {
+                    dualRow.innerHTML = parts.join(' <span class="text-slate-600">·</span> ');
+                    dualRow.classList.remove('hidden');
+                } else {
+                    dualRow.classList.add('hidden');
+                }
+            }
+            // Always fill unit rates (subscription clients see reference prices too)
+            const rates = (res.rates) || (res.wallet && res.wallet.rates) || {};
+            if (ratesAlways) {
+                const keys = Object.keys(PAYG_RATE_LABELS);
+                ratesAlways.innerHTML = keys.map(function (k) {
+                    const v = rates[k];
+                    if (v == null) return '';
+                    return '<div class="flex justify-between gap-2 py-0.5 border-b border-slate-800/40"><span class="text-slate-400">' +
+                        escapeHtml(PAYG_RATE_LABELS[k]) + '</span><span class="text-slate-200 font-mono">₦' +
+                        Number(v).toLocaleString() + '</span></div>';
+                }).filter(Boolean).join('') || '<p class="text-slate-500">Rates unavailable — run migratePaygAndAddonPrices_2026_08() on AgentLib.</p>';
+            }
+            // Also fill nested rates table inside PAYG panel if present
+            const ratesEl = document.getElementById('paygRatesTable');
+            if (ratesEl && ratesAlways) ratesEl.innerHTML = ratesAlways.innerHTML;
+
             if (model === 'payg') {
                 if (paygPanel) paygPanel.classList.remove('hidden');
                 if (subPanel) subPanel.classList.add('hidden');
-                const bal = (res.wallet && res.wallet.balanceNgn != null) ? Number(res.wallet.balanceNgn) : 0;
                 const balEl = document.getElementById('paygBalanceLabel');
-                if (balEl) balEl.textContent = '₦' + bal.toLocaleString();
-                const rates = (res.wallet && res.wallet.rates) || {};
-                const ratesEl = document.getElementById('paygRatesTable');
-                if (ratesEl) {
-                    const keys = Object.keys(PAYG_RATE_LABELS);
-                    ratesEl.innerHTML = keys.map(function (k) {
-                        if (rates[k] == null) return '';
-                        return '<div class="flex justify-between gap-2 border-b border-slate-800/80 py-1"><span class="text-slate-400">' +
-                            escapeHtml(PAYG_RATE_LABELS[k]) + '</span><span class="text-slate-200 font-mono">₦' +
-                            Number(rates[k]).toLocaleString() + '</span></div>';
-                    }).join('') || '<p class="text-slate-500">Rates unavailable.</p>';
-                }
+                const bal = (res.wallet && res.wallet.balanceNgn != null) ? res.wallet.balanceNgn : res.paygBalanceNgn;
+                if (balEl) balEl.textContent = '₦' + Number(bal || 0).toLocaleString();
                 const list = document.getElementById('paygTopupsList');
                 if (list) {
                     const tops = res.recentTopups || [];
@@ -2057,7 +2104,11 @@
                 const meta = document.getElementById('billingSubMeta');
                 if (meta && res.subscription) {
                     const s = res.subscription;
-                    meta.textContent = (s.label || '') +
+                    let metaTxt = (s.label || '');
+                    if (s.ops && s.digital) {
+                        metaTxt = (s.ops.label || s.ops.key) + ' + ' + (s.digital.label || s.digital.key);
+                    }
+                    meta.textContent = metaTxt +
                         (s.priceNgn != null ? (' · ₦' + Number(s.priceNgn).toLocaleString() + '/mo') : '') +
                         (s.expiresOn ? (' · expires ' + fmtDate(s.expiresOn)) : '') +
                         (s.daysLeft != null ? (' · ' + s.daysLeft + ' days left') : '');
