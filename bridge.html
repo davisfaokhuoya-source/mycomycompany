@@ -3327,7 +3327,7 @@
                             <div class="grid grid-cols-4 gap-3">
                                 <div>
                                     <label class="block text-[10px] text-slate-400 mb-1">Client</label>
-                                    <select id="socialClientSelector" onchange="fetchAdminSocialCalendar(this.value)"
+                                    <select id="socialClientSelector" onchange="onSocialClientChanged(this.value)"
                                         class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white">
                                         <option value="">Select…</option>
                                     </select>
@@ -3349,7 +3349,38 @@
                                         class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white" />
                                 </div>
                             </div>
-                            <div class="flex items-center justify-between">
+                            <div>
+                                <label class="block text-[10px] text-slate-400 mb-1.5">Generate posts for these
+                                    platforms
+                                    <span class="text-slate-500">(must be linked for the client)</span></label>
+                                <div id="socialPlatformChecks" class="flex flex-wrap gap-3 text-xs text-slate-300">
+                                    <label class="inline-flex items-center gap-1.5 cursor-pointer"><input
+                                            type="checkbox"
+                                            class="soc-plat-cb rounded border-slate-600 bg-slate-900 text-emerald-500"
+                                            value="facebook" checked /> Facebook</label>
+                                    <label class="inline-flex items-center gap-1.5 cursor-pointer"><input
+                                            type="checkbox"
+                                            class="soc-plat-cb rounded border-slate-600 bg-slate-900 text-emerald-500"
+                                            value="instagram" checked /> Instagram</label>
+                                    <label class="inline-flex items-center gap-1.5 cursor-pointer"><input
+                                            type="checkbox"
+                                            class="soc-plat-cb rounded border-slate-600 bg-slate-900 text-emerald-500"
+                                            value="linkedin" checked /> LinkedIn</label>
+                                    <label class="inline-flex items-center gap-1.5 cursor-pointer"><input
+                                            type="checkbox"
+                                            class="soc-plat-cb rounded border-slate-600 bg-slate-900 text-emerald-500"
+                                            value="tiktok" /> TikTok</label>
+                                    <label class="inline-flex items-center gap-1.5 cursor-pointer"><input
+                                            type="checkbox"
+                                            class="soc-plat-cb rounded border-slate-600 bg-slate-900 text-emerald-500"
+                                            value="x" /> X / Twitter</label>
+                                    <label class="inline-flex items-center gap-1.5 cursor-pointer"><input
+                                            type="checkbox"
+                                            class="soc-plat-cb rounded border-slate-600 bg-slate-900 text-emerald-500"
+                                            value="threads" /> Threads</label>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between flex-wrap gap-2">
                                 <div class="flex items-center gap-2">
                                     <label class="text-[10px] text-slate-400">Custom posts/week (Enterprise
                                         override):</label>
@@ -3358,15 +3389,69 @@
                                     <button onclick="setSocialFrequencyOverride()"
                                         class="text-[10px] px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white">Save</button>
                                 </div>
-                                <button id="socialGenerateBtn" onclick="generateSocialCalendarUI()"
-                                    class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-1.5 px-4 rounded shadow">
-                                    <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Calendar
+                                <div class="flex items-center gap-2">
+                                    <button id="socialGenerateBtn" onclick="generateSocialCalendarUI()"
+                                        class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-1.5 px-4 rounded shadow">
+                                        <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Calendar
+                                    </button>
+                                    <button id="socialInitSheetBtn" onclick="initClientSheetUI()"
+                                        class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium py-1.5 px-3 rounded shadow"
+                                        title="Run this if you see 'Client sheet not found' — creates/repairs this client's data sheet.">
+                                        <i class="fa-solid fa-wrench"></i> Init/Repair Client Sheet
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Asset library: upload photos/files the agent will study & use -->
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shrink-0 space-y-3">
+                            <div class="flex flex-wrap items-start justify-between gap-2">
+                                <div>
+                                    <h4 class="text-sm font-semibold text-white flex items-center gap-2">
+                                        <i class="fa-solid fa-images text-emerald-400"></i> Media library for calendar
+                                    </h4>
+                                    <p class="text-[11px] text-slate-500 mt-0.5 max-w-2xl">Upload up to 12 photos,
+                                        videos, or documents <strong class="text-slate-400">per platform</strong>. Each
+                                        file is studied by the agent and paired into posts when you generate the
+                                        calendar. Media is deleted automatically after a post is published.</p>
+                                </div>
+                                <button type="button" onclick="loadAdminSocialAssets()"
+                                    class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">
+                                    <i class="fa-solid fa-rotate"></i> Refresh
                                 </button>
-                                <button id="socialInitSheetBtn" onclick="initClientSheetUI()"
-                                    class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium py-1.5 px-3 rounded shadow"
-                                    title="Run this if you see 'Client sheet not found' — creates/repairs this client's data sheet.">
-                                    <i class="fa-solid fa-wrench"></i> Init/Repair Client Sheet
-                                </button>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                                <div>
+                                    <label class="block text-[10px] text-slate-400 mb-1">Platform for this
+                                        upload</label>
+                                    <select id="socialAssetPlatform"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white">
+                                        <option value="facebook">Facebook</option>
+                                        <option value="instagram">Instagram</option>
+                                        <option value="linkedin">LinkedIn</option>
+                                        <option value="tiktok">TikTok</option>
+                                        <option value="x">X / Twitter</option>
+                                        <option value="threads">Threads</option>
+                                    </select>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-[10px] text-slate-400 mb-1">Photos / videos / documents
+                                        (multi-select)</label>
+                                    <input type="file" id="socialAssetFileInput" multiple
+                                        accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+                                        class="w-full text-xs text-slate-300 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-slate-800 file:text-slate-200" />
+                                </div>
+                                <div>
+                                    <button type="button" id="socialAssetUploadBtn" onclick="uploadAdminSocialAssets()"
+                                        class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium py-1.5 px-3 rounded shadow">
+                                        <i class="fa-solid fa-cloud-arrow-up"></i> Upload &amp; study
+                                    </button>
+                                </div>
+                            </div>
+                            <p id="socialAssetUploadStatus" class="text-[11px] text-slate-500 hidden"></p>
+                            <div id="adminSocialAssetsList"
+                                class="max-h-40 overflow-y-auto custom-scrollbar space-y-1.5 text-xs text-slate-400">
+                                <p class="text-slate-600">Select a client to see uploaded assets.</p>
                             </div>
                         </div>
 
@@ -15093,6 +15178,144 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             if (sel && LAST_SOCIAL_CLIENT_ID) {
                 sel.value = LAST_SOCIAL_CLIENT_ID;
             }
+            if (typeof loadAdminSocialAssets === 'function') loadAdminSocialAssets();
+            if (sel && sel.value && typeof fetchAdminSocialCalendar === 'function') {
+                fetchAdminSocialCalendar(sel.value);
+            }
+        }
+
+        function getSelectedSocialPlatforms() {
+            return Array.from(document.querySelectorAll('.soc-plat-cb:checked'))
+                .map(el => String(el.value || '').trim().toLowerCase())
+                .filter(Boolean);
+        }
+
+        function onSocialClientChanged(clientId) {
+            fetchAdminSocialCalendar(clientId);
+            loadAdminSocialAssets();
+        }
+
+        async function loadAdminSocialAssets() {
+            const listEl = document.getElementById('adminSocialAssetsList');
+            if (!listEl) return;
+            const clientId = getSocialClientId();
+            if (!clientId) {
+                listEl.innerHTML = '<p class="text-slate-600">Select a client to see uploaded assets.</p>';
+                return;
+            }
+            listEl.innerHTML = '<p class="text-slate-500"><span class="ai-spinner"></span>Loading assets…</p>';
+            const res = await executeSecureBridgeCall('agent', 'agent-list-social-assets', { clientId }, { silent: true });
+            if (!res || !res.success) {
+                listEl.innerHTML = '<p class="text-red-400">' + escapeHtml((res && res.message) || 'Could not load assets.') + '</p>';
+                return;
+            }
+            const images = (res.images || []).slice().sort(function (a, b) {
+                return String(b.UploadedAt || '').localeCompare(String(a.UploadedAt || ''));
+            });
+            if (!images.length) {
+                listEl.innerHTML = '<p class="text-slate-600">No assets yet — upload photos/files above (tag each with a platform).</p>';
+                return;
+            }
+            listEl.innerHTML = images.map(function (img) {
+                const st = String(img.Status || '');
+                const stClass = st === 'Available' ? 'text-emerald-400' : (st === 'Attached' ? 'text-amber-400' : 'text-slate-500');
+                let study = '';
+                try {
+                    if (img.Analysis) {
+                        const p = (typeof img.Analysis === 'string' && img.Analysis.charAt(0) === '{')
+                            ? JSON.parse(img.Analysis) : null;
+                        study = p && p.summary ? p.summary : String(img.Analysis).slice(0, 120);
+                    }
+                } catch (_) {
+                    study = String(img.Analysis || '').slice(0, 120);
+                }
+                const canDelete = st === 'Available';
+                return '<div class="flex items-start justify-between gap-2 bg-slate-900/60 border border-slate-800 rounded-lg px-2.5 py-1.5">' +
+                    '<div class="min-w-0 flex-1">' +
+                    '<p class="text-slate-200"><span class="font-medium uppercase text-[10px] text-emerald-400">' +
+                    escapeHtml(img.Platform || '') + '</span> · ' + escapeHtml(img.AssetType || 'image') +
+                    ' · <span class="' + stClass + '">' + escapeHtml(st) + '</span></p>' +
+                    '<p class="text-slate-400 truncate">' + escapeHtml(img.FileName || img.ImageID || '') + '</p>' +
+                    (study ? '<p class="text-[10px] text-slate-500 mt-0.5 line-clamp-2">Study: ' + escapeHtml(study) + '</p>' : '') +
+                    '</div>' +
+                    (canDelete
+                        ? '<button type="button" class="text-[10px] px-2 py-1 bg-red-950/50 hover:bg-red-900/60 rounded text-red-300 shrink-0" ' +
+                        'onclick="deleteAdminSocialAsset(\'' + escapeHtml(img.ImageID) + '\')">Delete</button>'
+                        : '<span class="text-[10px] text-slate-600 shrink-0">In use</span>') +
+                    '</div>';
+            }).join('');
+        }
+
+        async function uploadAdminSocialAssets() {
+            const clientId = getSocialClientId();
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            const platform = (document.getElementById('socialAssetPlatform') || {}).value || 'instagram';
+            const input = document.getElementById('socialAssetFileInput');
+            const statusEl = document.getElementById('socialAssetUploadStatus');
+            const btn = document.getElementById('socialAssetUploadBtn');
+            if (!input || !input.files || !input.files.length) {
+                showToast('Choose one or more files to upload.', 'error');
+                return;
+            }
+            const files = Array.from(input.files).slice(0, 12);
+            if (statusEl) {
+                statusEl.classList.remove('hidden');
+                statusEl.textContent = 'Uploading & studying ' + files.length + ' file(s) for ' + platform + '…';
+            }
+            setBtnBusy(btn, true, { busyLabel: 'Uploading…' });
+            let ok = 0, fail = 0;
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                let base64Data;
+                try {
+                    base64Data = await fileToBase64(file);
+                } catch (e) {
+                    fail++;
+                    continue;
+                }
+                let assetType = 'image';
+                const mt = file.type || '';
+                if (mt.indexOf('video/') === 0) assetType = 'video';
+                else if (mt.indexOf('image/') === 0) assetType = 'image';
+                else assetType = 'document';
+                const up = await executeSecureBridgeCall('agent', 'agent-upload-social-asset', {
+                    clientId,
+                    platform: String(platform).toLowerCase(),
+                    fileName: file.name,
+                    mimeType: mt || (assetType === 'video' ? 'video/mp4' : assetType === 'document' ? 'application/pdf' : 'image/jpeg'),
+                    base64Data,
+                    assetType
+                }, { silent: true });
+                if (up && up.success) {
+                    ok++;
+                    if (statusEl) {
+                        statusEl.textContent = 'Uploaded ' + ok + '/' + files.length +
+                            (up.analyzed ? ' (studied)' : '') + '…';
+                    }
+                } else {
+                    fail++;
+                    showToast((file.name + ': ') + ((up && up.message) || 'Upload failed'), 'error');
+                }
+            }
+            setBtnBusy(btn, false);
+            if (input) input.value = '';
+            if (statusEl) {
+                statusEl.textContent = 'Done: ' + ok + ' uploaded' + (fail ? (', ' + fail + ' failed') : '') +
+                    '. Agent will use Available assets when you generate the calendar.';
+            }
+            if (ok) showToast(ok + ' asset(s) uploaded for ' + platform + '.', 'success');
+            await loadAdminSocialAssets();
+        }
+
+        async function deleteAdminSocialAsset(imageId) {
+            const clientId = getSocialClientId();
+            if (!clientId || !imageId) return;
+            if (!confirm('Delete this asset from the library?')) return;
+            const res = await executeSecureBridgeCall('agent', 'agent-delete-social-image', {
+                clientId, imageId
+            }, { silent: true });
+            showToast(res.success ? 'Asset deleted.' : (res.message || 'Delete failed.'), res.success ? 'success' : 'error');
+            if (res.success) loadAdminSocialAssets();
         }
 
         async function generateSocialCalendarUI() {
@@ -15101,11 +15324,16 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             const monthOffset = parseInt(document.getElementById('socialMonthOffset').value, 10) || 0;
             const topicsRaw = document.getElementById('socialTopics').value.trim();
             const topics = topicsRaw ? topicsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+            const platforms = getSelectedSocialPlatforms();
+            if (!platforms.length) {
+                showToast('Select at least one platform for the calendar.', 'error');
+                return;
+            }
 
             const btn = document.getElementById('socialGenerateBtn');
             setBtnBusy(btn, true, { busyLabel: 'Generating…' });
             let res = await executeSecureBridgeCall('agent', 'agent-generate-social-calendar',
-                { clientId, monthOffset, topics }, { silent: true });
+                { clientId, monthOffset, topics, platforms }, { silent: true });
 
             // If backend ever queues this as a job, wait for completion
             if (res && res.queued && res.jobId && typeof resolveAdminJobResult === 'function') {
