@@ -874,7 +874,8 @@
                             <div>
                                 <h3 class="text-lg font-bold text-white">Teams &amp; Members</h3>
                                 <p class="text-xs text-slate-400">Every team currently formed, its Lead/Backup Lead,
-                                    and full member roster. Partners who leave must request rejoin or be re-added by admin.</p>
+                                    and full member roster. Partners who leave must request rejoin or be re-added by
+                                    admin.</p>
                             </div>
                             <div class="flex gap-2">
                                 <button type="button" onclick="loadTeamJoinRequestsUI()"
@@ -887,7 +888,8 @@
                                 </button>
                             </div>
                         </div>
-                        <div id="teamJoinRequestsBox" class="hidden bg-slate-950 border border-amber-900/40 rounded-xl p-3 space-y-2"></div>
+                        <div id="teamJoinRequestsBox"
+                            class="hidden bg-slate-950 border border-amber-900/40 rounded-xl p-3 space-y-2"></div>
                         <div id="careerTeamsList" class="flex-1 overflow-auto custom-scrollbar space-y-3">
                             <p class="text-xs text-slate-500 text-center py-6">Loading teams...</p>
                         </div>
@@ -3310,8 +3312,12 @@
                                     class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white">
                                     <i class="fa-solid fa-check-double"></i> Approve All
                                 </button>
-                            <button type="button" onclick="toggleSelectAllSocialPosts(true)" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Select all</button>
-                            <button type="button" onclick="deleteSelectedSocialPostsAdmin()" class="text-xs px-3 py-1.5 bg-red-900/50 hover:bg-red-900/70 rounded text-red-200">Delete selected</button>
+                                <button type="button" onclick="toggleSelectAllSocialPosts(true)"
+                                    class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Select
+                                    all</button>
+                                <button type="button" onclick="deleteSelectedSocialPostsAdmin()"
+                                    class="text-xs px-3 py-1.5 bg-red-900/50 hover:bg-red-900/70 rounded text-red-200">Delete
+                                    selected</button>
                                 <button onclick="loadAdminSocialCalendar()"
                                     class="text-xs px-2 py-1.5 text-slate-500 hover:text-slate-300">
                                     <i class="fa-solid fa-rotate"></i>
@@ -4238,7 +4244,8 @@
                     <div><label class="block text-xs text-slate-400 mb-1">Amount Paid (₦)</label><input type="number"
                             id="onboardLedgerAmountPaid" required placeholder="0"
                             class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500" />
-                        <p class="text-[10px] text-slate-500 mt-1">Auto-filled from catalogue when service has a fixed price. Custom services: enter amount manually.</p>
+                        <p class="text-[10px] text-slate-500 mt-1">Auto-filled from catalogue when service has a fixed
+                            price. Custom services: enter amount manually.</p>
                     </div>
                     <div><label class="block text-xs text-slate-400 mb-1">Payment Type</label>
                         <select id="onboardLedgerPaymentType"
@@ -14666,14 +14673,14 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             const v = (sel && sel.value) ? String(sel.value).trim() : '';
             if (v) {
                 LAST_SOCIAL_CLIENT_ID = v;
-                try { sessionStorage.setItem('VIC_SOCIAL_CLIENT_ID', v); } catch (_) {}
+                try { sessionStorage.setItem('VIC_SOCIAL_CLIENT_ID', v); } catch (_) { }
                 return v;
             }
             if (LAST_SOCIAL_CLIENT_ID) return LAST_SOCIAL_CLIENT_ID;
             try {
                 const cached = sessionStorage.getItem('VIC_SOCIAL_CLIENT_ID');
                 if (cached) { LAST_SOCIAL_CLIENT_ID = cached; return cached; }
-            } catch (_) {}
+            } catch (_) { }
             return '';
         }
 
@@ -14740,7 +14747,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             clientId = clientId || getSocialClientId();
             if (clientId) {
                 LAST_SOCIAL_CLIENT_ID = clientId;
-                try { sessionStorage.setItem('VIC_SOCIAL_CLIENT_ID', clientId); } catch (_) {}
+                try { sessionStorage.setItem('VIC_SOCIAL_CLIENT_ID', clientId); } catch (_) { }
                 const sel = document.getElementById('socialClientSelector');
                 if (sel && !sel.value) sel.value = clientId;
             }
@@ -15166,6 +15173,69 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         };
 
         document.addEventListener("DOMContentLoaded", initializeModule);
+    </script>
+    <script>
+
+        // ===== CareerHub job completion file upload (bridge admin) =====
+        // Call after setting status to Completed on client-onboarded jobs.
+
+        async function uploadCareerJobCompletionFile(trackingCode, fileInputEl, meta) {
+            meta = meta || {};
+            if (!trackingCode) { showToast('Tracking code required', 'error'); return; }
+            const file = fileInputEl && fileInputEl.files && fileInputEl.files[0];
+            if (!file && !meta.docUrl) { showToast('Choose a file or provide Drive URL', 'error'); return; }
+
+            let payload = {
+                action: 'adminUploadJobCompletionFile',
+                trackingCode: trackingCode,
+                title: meta.title || (file && file.name) || 'Completed file',
+                fileName: (file && file.name) || meta.fileName || 'file',
+                mimeType: (file && file.type) || meta.mimeType || 'application/octet-stream',
+                markCompleted: meta.markCompleted !== false,
+                notes: meta.notes || ''
+            };
+            if (meta.docUrl) {
+                payload.docUrl = meta.docUrl;
+            } else {
+                const base64 = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const s = String(reader.result || '');
+                        const i = s.indexOf('base64,');
+                        resolve(i >= 0 ? s.slice(i + 7) : s);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+                payload.base64 = base64;
+            }
+
+            const res = await executeSecureBridgeCall('career', 'adminUploadJobCompletionFile', payload);
+            // If your bridge routes career actions differently, use:
+            // await executeSecureBridgeCall('careerHub', 'adminUploadJobCompletionFile', payload);
+            if (res && res.success) {
+                showToast('File uploaded. Client notified (free 30 days, then ₦10,000 unlock).', 'success');
+                if (typeof loadProductionFulfillment === 'function') loadProductionFulfillment();
+                return res;
+            }
+            showToast((res && res.message) || 'Upload failed', 'error');
+            return res;
+        }
+
+        /** Optional: add a file input next to Completed status in openEditModal for client-onboarded */
+        function renderCareerJobFileUploadField(trackingCode) {
+            return `
+      <div class="mt-3 p-3 rounded border border-slate-700 bg-slate-900/50">
+        <label class="block text-xs text-slate-400 mb-1">Completion file (optional)</label>
+        <input type="file" id="careerJobFile_${trackingCode}" class="block w-full text-xs text-slate-300 mb-2" />
+        <button type="button" class="text-xs px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white"
+          onclick="uploadCareerJobCompletionFile('${trackingCode}', document.getElementById('careerJobFile_${trackingCode}'), { markCompleted: true })">
+          Upload &amp; notify client
+        </button>
+        <p class="text-[10px] text-slate-500 mt-1">Client gets a link free for 30 days, then ₦10,000 to unlock.</p>
+      </div>`;
+        }
+
     </script>
 </body>
 
