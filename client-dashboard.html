@@ -476,8 +476,7 @@
                         <p class="text-[11px] text-slate-400 leading-relaxed">The agent answers routine chats on your
                             <span class="text-slate-200">API WhatsApp number</span>. On referral it <span
                                 class="text-slate-200">sends a WhatsApp message from that API number to a linked staff
-                                number</span> (by department) with the customer’s details:
-                        </p>
+                                number</span> (by department) with the customer’s details:</p>
                         <ul class="text-[11px] text-slate-400 space-y-1.5 list-disc pl-5">
                             <li><span class="text-slate-200">Serious buyer / high intent</span> — ready to purchase,
                                 quote with budget, or paid engagement.</li>
@@ -1036,6 +1035,26 @@
                 <section id="view-billing" class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
                     <div class="max-w-2xl mx-auto w-full space-y-4 pt-2">
                         <div id="billingModelBadge" class="text-xs text-slate-400"></div>
+                        <div id="billingModelSwitchRow"
+                            class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+                            <p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide">Billing model</p>
+                            <p class="text-xs text-slate-400 leading-relaxed">
+                                Subscription uses your monthly plan quotas. Pay-as-you-go charges your wallet per action
+                                at the unit rates below — no monthly commitment.
+                            </p>
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <button type="button" id="btnSwitchToPayg" onclick="switchBillingModel('payg')"
+                                    class="text-xs px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium">
+                                    <i class="fa-solid fa-wallet mr-1"></i> Switch to Pay-as-you-go
+                                </button>
+                                <button type="button" id="btnSwitchToSubscription"
+                                    onclick="switchBillingModel('subscription')"
+                                    class="text-xs px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-medium border border-slate-700">
+                                    <i class="fa-solid fa-calendar-check mr-1"></i> Switch to Subscription
+                                </button>
+                                <span id="billingSwitchStatus" class="text-[11px] text-slate-500"></span>
+                            </div>
+                        </div>
                         <div id="billingDualTierRow"
                             class="hidden text-xs text-slate-300 bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2">
                         </div>
@@ -2056,6 +2075,24 @@
                     ? '<span class="px-2 py-1 rounded bg-emerald-900/40 text-emerald-300 border border-emerald-800 text-[10px] uppercase">Pay-as-you-go</span>'
                     : '<span class="px-2 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[10px] uppercase">Subscription</span>';
             }
+            // Highlight the switch that moves AWAY from the current model
+            const btnPayg = document.getElementById('btnSwitchToPayg');
+            const btnSub = document.getElementById('btnSwitchToSubscription');
+            if (btnPayg && btnSub) {
+                if (model === 'payg') {
+                    btnPayg.disabled = true;
+                    btnPayg.className = 'text-xs px-3 py-2 rounded-lg bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-800';
+                    btnSub.disabled = false;
+                    btnSub.className = 'text-xs px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium';
+                } else {
+                    btnSub.disabled = true;
+                    btnSub.className = 'text-xs px-3 py-2 rounded-lg bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-800';
+                    btnPayg.disabled = false;
+                    btnPayg.className = 'text-xs px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium';
+                }
+            }
+            const swStatus = document.getElementById('billingSwitchStatus');
+            if (swStatus) swStatus.textContent = '';
             // Dual suite line — both tiers always named when present
             if (dualRow) {
                 const parts = [];
@@ -2114,6 +2151,38 @@
                         (s.expiresOn ? (' · expires ' + fmtDate(s.expiresOn)) : '') +
                         (s.daysLeft != null ? (' · ' + s.daysLeft + ' days left') : '');
                 }
+            }
+        }
+
+        async function switchBillingModel(targetModel) {
+            const status = document.getElementById('billingSwitchStatus');
+            if (status) status.textContent = 'Switching…';
+            const btnPayg = document.getElementById('btnSwitchToPayg');
+            const btnSub = document.getElementById('btnSwitchToSubscription');
+            if (btnPayg) btnPayg.disabled = true;
+            if (btnSub) btnSub.disabled = true;
+            try {
+                const res = await callGateway('clientportal', 'clientPortalSwitchBillingModel', { targetModel: targetModel });
+                if (!res || !res.success) {
+                    if (status) status.textContent = (res && res.message) || 'Could not switch billing model.';
+                    if (status) status.className = 'text-[11px] text-red-400';
+                    notifyUser((res && res.message) || 'Could not switch billing model.', 'error');
+                    loadBillingPanel();
+                    return;
+                }
+                if (status) {
+                    status.textContent = res.message || ('Switched to ' + targetModel + '.');
+                    status.className = 'text-[11px] text-emerald-400';
+                }
+                notifyUser(res.message || ('Switched to ' + targetModel + '.'), 'success');
+                await loadBillingPanel();
+            } catch (e) {
+                if (status) {
+                    status.textContent = 'Network error while switching.';
+                    status.className = 'text-[11px] text-red-400';
+                }
+                notifyUser('Network error while switching billing model.', 'error');
+                loadBillingPanel();
             }
         }
 
@@ -3769,14 +3838,20 @@
             summaryEl.textContent = 'Loading…';
             listEl.innerHTML = '';
             const res = await callGateway('clientportal', 'clientPortalGetSocialPerformance', { limit: 10 });
-            if (!res.success) {
-                summaryEl.textContent = res.message || 'Performance data isn\'t available yet.';
+            if (!res || !res.success) {
+                summaryEl.textContent = (res && res.message) || 'Performance data isn\'t available yet. If this persists after posts are live, ask your account team to record results or re-check the gateway allowlist.';
                 return;
             }
             const s = res.summary || {};
-            if (!s.totalPosts) {
+            const total = Number(s.totalPosts || res.totalRecords || (res.records || []).length || 0);
+            if (!total) {
                 summaryEl.textContent = 'No results yet — this fills in once your published posts start getting impressions and engagement.';
                 return;
+            }
+            s.totalPosts = total;
+            if (s.avgEngagementRate == null && Array.isArray(res.records) && res.records.length) {
+                const rates = res.records.map(r => Number(r.EngagementRate) || 0);
+                s.avgEngagementRate = Math.round((rates.reduce((a, b) => a + b, 0) / rates.length) * 10) / 10;
             }
             const platformBits = Object.keys(s.byPlatform || {})
                 .map(p => `${escapeHtml(p)}: ${s.byPlatform[p].avgEngagementRate}% avg (${s.byPlatform[p].sampleSize} posts)`)
