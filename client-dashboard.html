@@ -476,7 +476,8 @@
                         <p class="text-[11px] text-slate-400 leading-relaxed">The agent answers routine chats on your
                             <span class="text-slate-200">API WhatsApp number</span>. On referral it <span
                                 class="text-slate-200">sends a WhatsApp message from that API number to a linked staff
-                                number</span> (by department) with the customer’s details:</p>
+                                number</span> (by department) with the customer’s details:
+                        </p>
                         <ul class="text-[11px] text-slate-400 space-y-1.5 list-disc pl-5">
                             <li><span class="text-slate-200">Serious buyer / high intent</span> — ready to purchase,
                                 quote with budget, or paid engagement.</li>
@@ -1484,9 +1485,17 @@
                         ? ('PAYG · ₦' + Number(bal).toLocaleString() + ' balance')
                         : 'Pay-as-you-go';
                 } else {
-                    document.getElementById('planPrice').textContent = pricing.priceNgn
-                        ? '₦' + Number(pricing.priceNgn).toLocaleString() + ' /mo'
-                        : 'Contact Sales';
+                    const usd = pricing.priceUsd != null ? Number(pricing.priceUsd) : null;
+                    const ngn = pricing.priceNgn != null ? Number(pricing.priceNgn) : null;
+                    if (usd && usd > 0) {
+                        document.getElementById('planPrice').textContent =
+                            '$' + usd.toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' /mo' +
+                            (ngn ? (' · ₦' + ngn.toLocaleString()) : '');
+                    } else if (ngn) {
+                        document.getElementById('planPrice').textContent = '₦' + ngn.toLocaleString() + ' /mo';
+                    } else {
+                        document.getElementById('planPrice').textContent = 'Contact Sales';
+                    }
                 }
                 document.getElementById('planCustomBadge').classList.toggle('hidden', !pricing.isCustom && !isPayg);
                 if (isPayg) {
@@ -1644,12 +1653,13 @@
                 if (list) list.innerHTML = '<p class="text-slate-500">Dashboard data is temporarily unavailable. Try Refresh.</p>';
             }
 
-            // Channel cards only from the same response — never extra API calls on Overview
+            // Channel cards: prefer bundled payload; otherwise fetch email/WA summaries
+            // so Overview is complete without requiring a separate backend deploy.
             if (res.bundled) {
                 try { applyOverviewChannelFromBundle(res); } catch (e) { console.error(e); }
+            } else {
+                try { loadOverviewChannelStats(); } catch (e) { console.error('loadOverviewChannelStats', e); }
             }
-            // If not bundled, leave email/WA overview counters as-is (placeholders).
-            // User opens Email Activity / WhatsApp Activity / Integrations for full data.
         }
 
         async function loadOverviewChannelStats() {
