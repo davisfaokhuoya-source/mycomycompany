@@ -1271,13 +1271,39 @@
                                 </div>
                                 <div class="col-md-6">
                                     <select id="cService" class="form-select"></select>
-                                    <div class="form-text">Prices aren't shown as a separate field — select a
-                                        service below to see its price, timeline, and details in its
-                                        description.</div>
+                                    <div class="form-text">Select a service to see price, commission %, and details
+                                        below.</div>
                                 </div>
                                 <div class="col-12 mt-2">
                                     <div id="taskDescriptionDisplay" class="alert alert-info small d-none"
                                         style="border-left:4px solid #E07410;"></div>
+                                </div>
+                                <div class="col-12 mt-2">
+                                    <div class="card border-0"
+                                        style="background:#F8FAFC;border:1px solid #E7E9EE!important;border-radius:10px;">
+                                        <div class="card-body py-3 px-3">
+                                            <div
+                                                class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                                                <strong class="small text-uppercase"
+                                                    style="letter-spacing:.04em;color:#5B6472;">Service price list
+                                                    (₦)</strong>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2"
+                                                    onclick="populateAvailableTasks()" title="Refresh prices">
+                                                    <i class="fas fa-sync-alt"></i> Refresh
+                                                </button>
+                                            </div>
+                                            <div id="servicePriceList" class="small">
+                                                <p class="text-muted mb-0">Loading prices…</p>
+                                            </div>
+                                            <p class="text-muted mb-0 mt-2" style="font-size:11px;">
+                                                <strong>Company registration:</strong> ₦70,000 for ₦1,000,000 share
+                                                capital;
+                                                +₦30,000 for each additional ₦1,000,000 share capital.
+                                                Commission rates shown are for your current tier (solo partners get
+                                                +3%).
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
                                     <select id="cUrgency" class="form-select">
@@ -1801,7 +1827,7 @@
 
                             <p class="text-muted small">
                                 Looking for your team's performance, roster, and chat?
-                                <a href="#" onclick="showTab(15);return false;">Go to My Team &rarr;</a>
+                                <span class="text-muted small">My Team is currently suspended.</span>
                             </p>
                         </div>
 
@@ -2450,10 +2476,10 @@
                 ]
             },
             {
-                label: "Team & Performance", icon: "fas fa-users",
+                label: "Performance", icon: "fas fa-chart-line",
                 tabs: [
-                    { idx: 14, icon: "fas fa-chart-line", label: "Performance" },
-                    { idx: 15, icon: "fas fa-user-friends", label: "My Team" }
+                    { idx: 14, icon: "fas fa-chart-line", label: "Performance" }
+                    // My Team deactivated — team features suspended
                 ]
             },
             {
@@ -3422,6 +3448,7 @@
                 teamChatPollingInterval = null;
             }
 
+            if (idx === 0) populateAvailableTasks();
             if (idx === 1) loadMyRecords();
             if (idx === 14) loadPerformanceTab();
             if (idx === 15) loadMyTeamTab();
@@ -3552,33 +3579,139 @@
             }
         }
 
+        // Map of catalog prices by normalised name / id for merging into task list
+        let serviceCatalogCache = [];
+
+        function _normServiceKey(s) {
+            return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+        }
+
+        function _findCatalogEntry(taskName) {
+            const n = _normServiceKey(taskName);
+            if (!n) return null;
+            for (const s of serviceCatalogCache) {
+                const sn = _normServiceKey(s.name);
+                const sid = _normServiceKey(String(s.id || "").replace(/_/g, " "));
+                if (n === sn || n === sid || n.includes(sn) || sn.includes(n) || n.includes(sid)) return s;
+            }
+            // keyword helpers
+            if (n.includes("business name")) return serviceCatalogCache.find(s => s.id === "business_name") || null;
+            if (n.includes("company") && n.includes("reg")) return serviceCatalogCache.find(s => s.id === "company_registration") || null;
+            if (n.includes("scuml")) return serviceCatalogCache.find(s => s.id === "scuml") || null;
+            if (n.includes("bpp")) return serviceCatalogCache.find(s => s.id === "bpp") || null;
+            if (n.includes("pencom")) return serviceCatalogCache.find(s => s.id === "pencom") || null;
+            if (n.includes("annual") && n.includes("fil")) return serviceCatalogCache.find(s => s.id === "annual_filing") || null;
+            if (n.includes("trademark")) return serviceCatalogCache.find(s => s.id === "trademark") || null;
+            if (n.includes("certified")) return serviceCatalogCache.find(s => s.id === "certified_true_copy") || null;
+            if (n.includes("director")) return serviceCatalogCache.find(s => s.id === "change_of_director") || null;
+            if (n.includes("ngo") || n.includes("trustee")) return serviceCatalogCache.find(s => s.id === "ngo") || null;
+            return null;
+        }
+
+        function renderServicePriceList() {
+            const el = document.getElementById("servicePriceList");
+            if (!el) return;
+            const fixed = (serviceCatalogCache || []).filter(s => !s.custom && s.price != null);
+            const custom = (serviceCatalogCache || []).filter(s => s.custom || s.price == null);
+            if (!fixed.length && !custom.length) {
+                el.innerHTML = `<p class="text-muted mb-0">Prices unavailable. Tap Refresh after login.</p>`;
+                return;
+            }
+            let html = `<div class="table-responsive"><table class="table table-sm table-borderless mb-0" style="font-size:12.5px;">
+                <thead><tr class="text-muted"><th>Service</th><th class="text-end">List price</th><th class="text-end">Your %</th></tr></thead><tbody>`;
+            fixed.forEach(s => {
+                const pct = s.commissionPct != null ? (s.commissionPct + "%") : "—";
+                html += `<tr>
+                    <td>${escapeHtml(s.name)}</td>
+                    <td class="text-end fw-semibold">₦${Number(s.price).toLocaleString()}</td>
+                    <td class="text-end">${pct}</td>
+                </tr>`;
+            });
+            html += `</tbody></table></div>`;
+            if (custom.length) {
+                html += `<p class="mb-0 mt-2 text-muted" style="font-size:11.5px;"><strong>Custom (contact admin):</strong> `
+                    + custom.map(s => escapeHtml(s.name)).join(", ") + `</p>`;
+            }
+            el.innerHTML = html;
+        }
+
         async function populateAvailableTasks() {
             const select = document.getElementById("cService");
             if (!select) return;
             select.innerHTML = '<option value="">Select a service...</option>';
+
+            // Load official catalogue prices (₦45,000 Business Name, etc.)
+            try {
+                const cat = await apiCall("getServiceCatalog", { token: currentToken }, false);
+                if (cat && cat.success && Array.isArray(cat.services)) {
+                    serviceCatalogCache = cat.services;
+                    renderServicePriceList();
+                }
+            } catch (e) {
+                console.warn("getServiceCatalog failed", e);
+            }
+
             const res = await apiCall("getMyAvailableTasks", { token: currentToken }, false);
             if (res.success && res.tasks && res.tasks.length) {
                 res.tasks.forEach(t => {
+                    const cat = _findCatalogEntry(t.taskName);
+                    const pct = (t.commissionNaira != null && t.commissionNaira !== "")
+                        ? t.commissionNaira
+                        : (cat && cat.commissionPct != null ? cat.commissionPct : null);
+                    const priceStr = cat && cat.price != null
+                        ? ("₦" + Number(cat.price).toLocaleString())
+                        : (cat && cat.custom ? "Custom" : "");
                     const opt = document.createElement("option");
                     opt.value = t.taskName;
-                    opt.textContent = `${t.taskName} (${t.commissionNaira}%)`;
-                    opt.dataset.description = t.description || "";
+                    // Show name (commission%) — price
+                    let label = t.taskName;
+                    if (pct != null && pct !== "") label += ` (${pct}%)`;
+                    if (priceStr) label += ` — ${priceStr}`;
+                    opt.textContent = label;
+                    const notes = (cat && cat.notes) ? cat.notes : (t.description || "");
+                    let desc = notes;
+                    if (priceStr && !String(notes).includes(priceStr)) {
+                        desc = (priceStr ? `<strong>List price: ${priceStr}</strong><br>` : "") + notes;
+                    }
+                    // Company registration share-capital note
+                    const n = _normServiceKey(t.taskName);
+                    if (n.includes("company") && (n.includes("reg") || n.includes("cac")) && !n.includes("business name")) {
+                        desc += `<br><em>Share capital: ₦70,000 for ₦1,000,000; +₦30,000 per additional ₦1,000,000 share capital.</em>`;
+                    }
+                    opt.dataset.description = desc;
+                    opt.dataset.price = cat && cat.price != null ? String(cat.price) : "";
                     select.appendChild(opt);
                 });
             } else {
-                const opt = document.createElement("option");
-                opt.textContent = res.message || "No tasks for your level yet";
-                opt.disabled = true;
-                select.appendChild(opt);
+                // Fallback: show full catalogue if tasks empty (still useful for visibility)
+                if (serviceCatalogCache.length) {
+                    serviceCatalogCache.filter(s => !s.custom).forEach(s => {
+                        const opt = document.createElement("option");
+                        opt.value = s.name;
+                        const pct = s.commissionPct != null ? ` (${s.commissionPct}%)` : "";
+                        const priceStr = s.price != null ? ` — ₦${Number(s.price).toLocaleString()}` : "";
+                        opt.textContent = s.name + pct + priceStr;
+                        opt.dataset.description = (s.price != null ? `<strong>List price: ₦${Number(s.price).toLocaleString()}</strong><br>` : "") + (s.notes || "");
+                        opt.dataset.price = s.price != null ? String(s.price) : "";
+                        select.appendChild(opt);
+                    });
+                } else {
+                    const opt = document.createElement("option");
+                    opt.textContent = (res && res.message) || "No tasks for your level yet";
+                    opt.disabled = true;
+                    select.appendChild(opt);
+                }
             }
             if (!select.dataset.listenerAdded) {
                 select.addEventListener("change", () => {
                     const sel = select.options[select.selectedIndex];
                     const display = document.getElementById("taskDescriptionDisplay");
                     if (sel && sel.value && sel.dataset.description) {
-                        display.innerHTML = `<strong>${sel.textContent}</strong><br>${sel.dataset.description}`;
+                        display.innerHTML = `<strong>${escapeHtml(sel.textContent)}</strong><br>${sel.dataset.description}`;
                         display.classList.remove("d-none");
-                    } else { display.classList.add("d-none"); }
+                    } else if (display) {
+                        display.classList.add("d-none");
+                    }
                 });
                 select.dataset.listenerAdded = "true";
             }
@@ -4446,6 +4579,11 @@
         }
 
         async function loadMyTeamTab() {
+            // Team features permanently deactivated on the partner portal for now.
+            teamFeaturesEnabledCache = false;
+            showTeamSuspendedUI("Team features are temporarily suspended. Please check back after an administrator re-authorizes team features.");
+            return;
+
             hideTeamSuspendedUI();
 
             try {
@@ -4781,7 +4919,7 @@
                 }
                 container.innerHTML = html;
             }
-            window.renderComplaintsPage = renderComplaintsPage; // exposed for the Prev/Next button handlers above
+            window.renderComplaintsPage = renderComplaintsPage;
             renderComplaintsPage(1);
         }
 
@@ -4831,29 +4969,13 @@
 
             const savedToken = localStorage.getItem("victoriasToken");
             const savedUser = localStorage.getItem("victoriasUser");
-
-            // Session validity is decided ENTIRELY by the backend now — the
-            // frontend no longer computes, stores, or extends any expiry
-            // timestamp of its own. We just check whether we have a cached
-            // token/user to try with; loadDashboard() below calls
-            // getDashboard(), and if the server says the session is expired
-            // it triggers ensureFreshToken() (or logs out if that also
-            // fails). This removes the client-side "victoriasExpiry" clock
-            // entirely, which was previously drifting out of sync with the
-            // real server-side session and causing both false early logouts
-            // and false "still valid" states.
             if (savedToken && savedUser) {
                 try {
                     currentToken = savedToken;
                     currentUser = JSON.parse(savedUser);
-
-                    // Show dashboard immediately from cache — no need to
-                    // block the UI on a round-trip first.
                     document.getElementById("authSection").classList.add("d-none");
                     document.getElementById("dashboardSection").classList.remove("d-none");
 
-                    // Ask the backend for the ground truth. loadDashboard()
-                    // handles the "session expired" case itself.
                     loadDashboard();
                     announceTargetIfSet();
                 } catch (e) {
