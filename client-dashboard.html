@@ -1109,23 +1109,29 @@
                                 <div class="text-right">
                                     <p class="text-[10px] uppercase text-slate-500 font-mono">Balance</p>
                                     <p id="paygBalanceLabel" class="text-2xl font-bold text-emerald-400">—</p>
+                                    <p class="text-[10px] text-slate-500 mt-1">USD first · Naira at $1 = ₦1,300</p>
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-xs text-slate-400 mb-1">Top-up amount (₦)</label>
+                                <label class="block text-xs text-slate-400 mb-1">Top-up amount (₦ · USD at $1 =
+                                    ₦1,300)</label>
                                 <div class="flex flex-wrap gap-2 mb-2">
                                     <button type="button"
                                         onclick="document.getElementById('paygTopupAmount').value=50000"
-                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦50,000</button>
+                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">$38
+                                        · ₦50k</button>
                                     <button type="button"
                                         onclick="document.getElementById('paygTopupAmount').value=100000"
-                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦100,000</button>
+                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">$77
+                                        · ₦100k</button>
                                     <button type="button"
                                         onclick="document.getElementById('paygTopupAmount').value=250000"
-                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦250,000</button>
+                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">$192
+                                        · ₦250k</button>
                                     <button type="button"
                                         onclick="document.getElementById('paygTopupAmount').value=500000"
-                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦500,000</button>
+                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">$385
+                                        · ₦500k</button>
                                 </div>
                                 <input type="number" id="paygTopupAmount" min="10000" step="1000"
                                     placeholder="e.g. 100000"
@@ -1354,6 +1360,36 @@
             return isNaN(d) ? String(val) : d.toLocaleString();
         }
 
+        // Display FX: $1 = ₦1,300 — USD primary, Naira secondary (matches public site).
+        const DISPLAY_FX_NGN_PER_USD = 1300;
+        function fmtUsd(n) {
+            const v = Number(n);
+            if (!isFinite(v)) return '—';
+            const digits = Math.abs(v - Math.round(v)) < 0.005 ? 0 : 2;
+            return '$' + v.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+        }
+        function fmtNgn(n) {
+            const v = Number(n);
+            if (!isFinite(v)) return '—';
+            return '₦' + Math.round(v).toLocaleString();
+        }
+        function usdFromNgn(ngn) { const v = Number(ngn); return isFinite(v) ? v / DISPLAY_FX_NGN_PER_USD : null; }
+        function ngnFromUsd(usd) { const v = Number(usd); return isFinite(v) ? v * DISPLAY_FX_NGN_PER_USD : null; }
+        function formatMoneyPair(usd, ngn, opts) {
+            opts = opts || {};
+            let u = (usd != null && usd !== '') ? Number(usd) : NaN;
+            let n = (ngn != null && ngn !== '') ? Number(ngn) : NaN;
+            if (!isFinite(u) && isFinite(n)) u = usdFromNgn(n);
+            if (!isFinite(n) && isFinite(u)) n = ngnFromUsd(u);
+            if (!isFinite(u)) return opts.fallback || '—';
+            const usdStr = fmtUsd(u);
+            const ngnStr = isFinite(n) ? ('≈ ' + fmtNgn(n)) : '';
+            if (opts.perMonth) {
+                return ngnStr ? (usdStr + ' /mo · ' + ngnStr + '/mo') : (usdStr + ' /mo');
+            }
+            return ngnStr ? (usdStr + ' · ' + ngnStr) : usdStr;
+        }
+
         // =====================================================================
         // LOGIN / LOGOUT
         // =====================================================================
@@ -1545,17 +1581,13 @@
                 if (isPayg) {
                     const bal = pricing.paygBalanceNgn != null ? pricing.paygBalanceNgn : (res.paygBalanceNgn != null ? res.paygBalanceNgn : null);
                     document.getElementById('planPrice').textContent = bal != null
-                        ? ('PAYG · ₦' + Number(bal).toLocaleString() + ' balance')
+                        ? ('PAYG · ' + formatMoneyPair(null, bal) + ' balance')
                         : 'Pay-as-you-go';
                 } else {
                     const usd = pricing.priceUsd != null ? Number(pricing.priceUsd) : null;
                     const ngn = pricing.priceNgn != null ? Number(pricing.priceNgn) : null;
-                    if (usd && usd > 0) {
-                        document.getElementById('planPrice').textContent =
-                            '$' + usd.toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' /mo' +
-                            (ngn ? (' · ₦' + ngn.toLocaleString()) : '');
-                    } else if (ngn) {
-                        document.getElementById('planPrice').textContent = '₦' + ngn.toLocaleString() + ' /mo';
+                    if ((usd && usd > 0) || (ngn && ngn > 0)) {
+                        document.getElementById('planPrice').textContent = formatMoneyPair(usd, ngn, { perMonth: true, fallback: 'Contact Sales' });
                     } else {
                         document.getElementById('planPrice').textContent = 'Contact Sales';
                     }
@@ -2227,8 +2259,8 @@
                     const v = rates[k];
                     if (v == null) return '';
                     return '<div class="flex justify-between gap-2 py-0.5 border-b border-slate-800/40"><span class="text-slate-400">' +
-                        escapeHtml(PAYG_RATE_LABELS[k]) + '</span><span class="text-slate-200 font-mono">₦' +
-                        Number(v).toLocaleString() + '</span></div>';
+                        escapeHtml(PAYG_RATE_LABELS[k]) + '</span><span class="text-slate-200 font-mono text-right">' +
+                        formatMoneyPair(null, v) + '</span></div>';
                 }).filter(Boolean).join('') || '<p class="text-slate-500">Rates unavailable — run migratePaygAndAddonPrices_2026_08() on AgentLib.</p>';
             }
             // Also fill nested rates table inside PAYG panel if present
@@ -2240,13 +2272,13 @@
                 if (subPanel) subPanel.classList.add('hidden');
                 const balEl = document.getElementById('paygBalanceLabel');
                 const bal = (res.wallet && res.wallet.balanceNgn != null) ? res.wallet.balanceNgn : res.paygBalanceNgn;
-                if (balEl) balEl.textContent = '₦' + Number(bal || 0).toLocaleString();
+                if (balEl) balEl.textContent = formatMoneyPair(null, bal || 0);
                 const list = document.getElementById('paygTopupsList');
                 if (list) {
                     const tops = res.recentTopups || [];
                     list.innerHTML = tops.length ? tops.map(function (t) {
                         return '<div class="flex justify-between py-1 border-b border-slate-800/50"><span>' +
-                            escapeHtml(t.Status || '') + ' · ₦' + Number(t.AmountNGN || 0).toLocaleString() +
+                            escapeHtml(t.Status || '') + ' · ' + formatMoneyPair(null, t.AmountNGN || 0) +
                             '</span><span class="text-slate-500">' + fmtDate(t.CreatedAt || t.PaidDate) + '</span></div>';
                     }).join('') : '<p class="text-slate-600">No top-ups yet.</p>';
                 }
@@ -2261,7 +2293,9 @@
                         metaTxt = (s.ops.label || s.ops.key) + ' + ' + (s.digital.label || s.digital.key);
                     }
                     meta.textContent = metaTxt +
-                        (s.priceNgn != null ? (' · ₦' + Number(s.priceNgn).toLocaleString() + '/mo') : '') +
+                        ((s.priceUsd != null || s.priceNgn != null)
+                            ? (' · ' + formatMoneyPair(s.priceUsd, s.priceNgn, { perMonth: true }))
+                            : '') +
                         (s.expiresOn ? (' · expires ' + fmtDate(s.expiresOn)) : '') +
                         (s.daysLeft != null ? (' · ' + s.daysLeft + ' days left') : '');
                 }
@@ -4213,6 +4247,7 @@
             </div>
         </div>
     </div>
+
 </body>
 
 </html>
