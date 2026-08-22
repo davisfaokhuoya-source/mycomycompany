@@ -251,6 +251,8 @@
                 <div class="truncate">
                     <h1 class="text-sm font-bold tracking-wide text-white truncate" id="companyNameLabel">Client</h1>
                     <p class="text-[10px] font-mono tracking-wider text-emerald-400 uppercase" id="tierLabel">—</p>
+                    <p class="hidden text-[10px] font-mono tracking-wider text-sky-400 uppercase" id="digitalTierLabel">
+                    </p>
                     <p class="text-[10px] text-slate-500 mt-0.5 truncate">
                         <span id="planLabel"></span>
                         <span id="planPrice" class="text-slate-400"></span>
@@ -1445,9 +1447,13 @@
         function renderQuotaStat(statElId, barElId, used, limitVal) {
             const statEl = document.getElementById(statElId);
             const barEl = document.getElementById(barElId);
-            const isUnlimited = limitVal === 'Unlimited' || limitVal === 999;
-            const isUnknown = limitVal === undefined || limitVal === null || limitVal === '—' || (typeof limitVal === 'number' && isNaN(limitVal));
-            if (statEl) statEl.textContent = isUnknown ? `${used} / —` : (isUnlimited ? `${used} / Unlimited` : `${used} / ${limitVal}`);
+            // 999 / 999999 = plan "unlimited" (enterprise ops emails etc.)
+            const n = (typeof limitVal === 'number') ? limitVal : parseFloat(limitVal);
+            const isUnlimited = limitVal === 'Unlimited' || limitVal === 999 || limitVal === 999999 ||
+                (!isNaN(n) && n >= 999);
+            const isUnknown = limitVal === undefined || limitVal === null || limitVal === '—' ||
+                (typeof limitVal === 'number' && isNaN(limitVal));
+            if (statEl) statEl.textContent = isUnknown ? (used + ' / —') : (isUnlimited ? (used + ' / Unlimited') : (used + ' / ' + limitVal));
             if (barEl) {
                 const pct = (isUnlimited || isUnknown) ? 6 : Math.min(100, (used / Math.max(1, limitVal)) * 100);
                 barEl.style.width = pct + '%';
@@ -1460,19 +1466,44 @@
             if (!res || !res.success) return;
             document.getElementById('companyNameLabel').textContent = res.companyName || CLIENT_ID;
             // Dual suite: show Ops and Digital as separate lines — never shade one out
+            // Active suite(s): show Ops and/or Digital — never invent a blank line.
+            // Backend may send opsTier / digitalTier keys, or pricing.ops / pricing.digital.
             const opsKey = res.opsTier || (res.pricing && res.pricing.ops && res.pricing.ops.key) || '';
             const digKey = res.digitalTier || (res.pricing && res.pricing.digital && res.pricing.digital.key) || '';
+            const opsLabel = (res.pricing && res.pricing.ops && res.pricing.ops.label)
+                || (opsKey ? String(opsKey).replace(/_/g, ' ') : '');
+            const digLabel = (res.pricing && res.pricing.digital && res.pricing.digital.label)
+                || (digKey ? String(digKey).replace(/_/g, ' ') : '');
             const tierEl = document.getElementById('tierLabel');
             const digEl = document.getElementById('digitalTierLabel');
             if (opsKey && digKey) {
-                if (tierEl) tierEl.textContent = String(opsKey).replace(/_/g, ' ');
+                // Both suites active
+                if (tierEl) {
+                    tierEl.textContent = 'Ops · ' + opsLabel;
+                    tierEl.classList.remove('hidden');
+                }
                 if (digEl) {
-                    digEl.textContent = String(digKey).replace(/_/g, ' ');
+                    digEl.textContent = 'Digital · ' + digLabel;
                     digEl.classList.remove('hidden');
                 }
+            } else if (opsKey) {
+                if (tierEl) {
+                    tierEl.textContent = 'Ops · ' + opsLabel;
+                    tierEl.classList.remove('hidden');
+                }
+                if (digEl) { digEl.textContent = ''; digEl.classList.add('hidden'); }
+            } else if (digKey) {
+                if (tierEl) {
+                    tierEl.textContent = 'Digital · ' + digLabel;
+                    tierEl.classList.remove('hidden');
+                }
+                if (digEl) { digEl.textContent = ''; digEl.classList.add('hidden'); }
             } else {
-                const single = opsKey || digKey || res.tier || '';
-                if (tierEl) tierEl.textContent = String(single).replace(/_/g, ' ');
+                const single = res.tier || '';
+                if (tierEl) {
+                    tierEl.textContent = single ? String(single).replace(/_/g, ' ') : '—';
+                    tierEl.classList.remove('hidden');
+                }
                 if (digEl) { digEl.textContent = ''; digEl.classList.add('hidden'); }
             }
             const pricing = res.pricing;
@@ -1510,7 +1541,7 @@
             renderQuotaStat('statDocuments', 'barDocuments', u.documentsUsed || 0, lim.documents ?? '—');
             const hoursUsed = parseFloat(u.hoursUsed) || 0;
             const hoursLimit = lim.hours;
-            const hoursUnlimited = hoursLimit === 999 || hoursLimit === undefined;
+            const hoursUnlimited = hoursLimit === 999 || hoursLimit === 999999 || hoursLimit === undefined || hoursLimit === null || Number(hoursLimit) >= 999;
             const hoursDisp = (Math.round(hoursUsed * 100) / 100);
             document.getElementById('statHours').textContent = hoursUnlimited
                 ? (hoursDisp + ' / Unlimited')
@@ -1542,7 +1573,7 @@
             if (eq) {
                 const eu = u.emailsUsed || 0;
                 const el = lim.emails;
-                eq.textContent = (el === 999 || el === undefined)
+                eq.textContent = (el === 999 || el === 999999 || el === undefined || el === null || Number(el) >= 999)
                     ? (eu + ' sent / Unlimited')
                     : (eu + ' / ' + el + ' sent this period');
             }
@@ -1696,8 +1727,9 @@
                 const listRes = await callGateway('clientportal', 'clientPortalListWhatsAppNumbers', {});
                 const apiBox = document.getElementById('ovWaApiBox');
                 const box = document.getElementById('ovWaNumbersList');
-                if (!listRes.success) {
-                    if (box) box.innerHTML = `<p class="text-slate-500">WhatsApp numbers unavailable right now.</p>`;
+                if (!listRes || listRes.success === false) {
+                    if (apiBox) apiBox.innerHTML = '<p class="text-slate-600">WhatsApp API status unavailable right now.</p>';
+                    if (box) box.innerHTML = '<p class="text-slate-500">WhatsApp numbers unavailable right now.</p>';
                     return;
                 }
                 const api = (listRes.apiConnections || listRes.connections || [])[0];
@@ -1732,7 +1764,9 @@
                     </div>`;
                 }).join('');
             } catch (_) {
+                const apiBox2 = document.getElementById('ovWaApiBox');
                 const box = document.getElementById('ovWaNumbersList');
+                if (apiBox2) apiBox2.innerHTML = '<p class="text-slate-600">WhatsApp API status unavailable right now.</p>';
                 if (box) box.innerHTML = '<p class="text-slate-600">WhatsApp data unavailable right now.</p>';
             }
         }
