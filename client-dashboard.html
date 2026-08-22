@@ -438,6 +438,31 @@
                         </div>
                     </div>
 
+                    <!-- Digital suite: social posts by platform -->
+                    <div id="ovSocialCard" class="hidden bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="text-sm font-semibold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-share-nodes text-sky-400"></i> Social publishing
+                            </p>
+                            <button type="button"
+                                onclick="showView('social', document.querySelector('.nav-link[data-view=social]'))"
+                                class="text-[10px] text-emerald-400 hover:text-emerald-300">Open calendar →</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-center mb-2">
+                            <div class="bg-slate-950 border border-slate-800 rounded-lg p-2">
+                                <p id="ovSocialTotal" class="text-lg font-bold text-white">—</p>
+                                <p class="text-[9px] uppercase text-slate-500">Posts tracked</p>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-lg p-2">
+                                <p id="ovSocialEng" class="text-lg font-bold text-emerald-400">—</p>
+                                <p class="text-[9px] uppercase text-slate-500">Avg engagement</p>
+                            </div>
+                        </div>
+                        <div id="ovSocialByPlatform" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+                        <p class="text-[11px] text-slate-500">Counts are posts with recorded results. Live queue is
+                            under Social Calendar.</p>
+                    </div>
+
                     <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <div>
@@ -1444,21 +1469,28 @@
         // Renders one "used / limit" stat + its progress bar. limitVal of 999 (or
         // "Unlimited") is treated as unlimited — shows a small fixed sliver so the
         // bar isn't empty, rather than a misleading 0%.
-        function renderQuotaStat(statElId, barElId, used, limitVal) {
+        function renderQuotaStat(statElId, barElId, used, limitVal, opts) {
+            opts = opts || {};
             const statEl = document.getElementById(statElId);
             const barEl = document.getElementById(barElId);
-            // 999 / 999999 = plan "unlimited" (enterprise ops emails etc.)
             const n = (typeof limitVal === 'number') ? limitVal : parseFloat(limitVal);
             const isUnlimited = limitVal === 'Unlimited' || limitVal === 999 || limitVal === 999999 ||
                 (!isNaN(n) && n >= 999);
             const isUnknown = limitVal === undefined || limitVal === null || limitVal === '—' ||
                 (typeof limitVal === 'number' && isNaN(limitVal));
-            if (statEl) statEl.textContent = isUnknown ? (used + ' / —') : (isUnlimited ? (used + ' / Unlimited') : (used + ' / ' + limitVal));
+            // PAYG (or usage-only mode): show the count alone — no artificial /50 style denominators
+            const usageOnly = !!opts.usageOnly || !!opts.isPayg;
+            if (statEl) {
+                if (usageOnly) statEl.textContent = String(used);
+                else if (isUnknown) statEl.textContent = used + ' / —';
+                else if (isUnlimited) statEl.textContent = used + ' / Unlimited';
+                else statEl.textContent = used + ' / ' + limitVal;
+            }
             if (barEl) {
-                const pct = (isUnlimited || isUnknown) ? 6 : Math.min(100, (used / Math.max(1, limitVal)) * 100);
+                const pct = (usageOnly || isUnlimited || isUnknown) ? 6 : Math.min(100, (used / Math.max(1, limitVal)) * 100);
                 barEl.style.width = pct + '%';
-                barEl.classList.toggle('bg-amber-500', !isUnlimited && !isUnknown && pct >= 90);
-                barEl.classList.toggle('bg-emerald-500', isUnlimited || isUnknown || pct < 90);
+                barEl.classList.toggle('bg-amber-500', !usageOnly && !isUnlimited && !isUnknown && pct >= 90);
+                barEl.classList.toggle('bg-emerald-500', usageOnly || isUnlimited || isUnknown || pct < 90);
             }
         }
 
@@ -1536,16 +1568,18 @@
             }
             const u = res.usage || {};
             const lim = res.limits || {};
-            renderQuotaStat('statEmails', 'barEmails', u.emailsUsed || 0, lim.emails ?? '—');
-            renderQuotaStat('statProposals', 'barProposals', u.proposalsUsed || 0, lim.proposals ?? '—');
-            renderQuotaStat('statDocuments', 'barDocuments', u.documentsUsed || 0, lim.documents ?? '—');
+            const isPayg = String(res.billingModel || (res.pricing && res.pricing.billingModel) || '').toLowerCase() === 'payg';
+            const qOpts = { isPayg: isPayg, usageOnly: isPayg };
+            renderQuotaStat('statEmails', 'barEmails', u.emailsUsed || 0, lim.emails ?? '—', qOpts);
+            renderQuotaStat('statProposals', 'barProposals', u.proposalsUsed || 0, lim.proposals ?? '—', qOpts);
+            renderQuotaStat('statDocuments', 'barDocuments', u.documentsUsed || 0, lim.documents ?? '—', qOpts);
             const hoursUsed = parseFloat(u.hoursUsed) || 0;
             const hoursLimit = lim.hours;
             const hoursUnlimited = hoursLimit === 999 || hoursLimit === 999999 || hoursLimit === undefined || hoursLimit === null || Number(hoursLimit) >= 999;
             const hoursDisp = (Math.round(hoursUsed * 100) / 100);
-            document.getElementById('statHours').textContent = hoursUnlimited
-                ? (hoursDisp + ' / Unlimited')
-                : (hoursDisp + ' / ' + hoursLimit);
+            document.getElementById('statHours').textContent = isPayg
+                ? String(hoursDisp)
+                : (hoursUnlimited ? (hoursDisp + ' / Unlimited') : (hoursDisp + ' / ' + hoursLimit));
             const ring = document.getElementById('ringHours');
             if (ring) {
                 const circumference = 175.9;
@@ -1573,9 +1607,13 @@
             if (eq) {
                 const eu = u.emailsUsed || 0;
                 const el = lim.emails;
-                eq.textContent = (el === 999 || el === 999999 || el === undefined || el === null || Number(el) >= 999)
-                    ? (eu + ' sent / Unlimited')
-                    : (eu + ' / ' + el + ' sent this period');
+                if (isPayg) {
+                    eq.textContent = eu + ' sent (pay-as-you-go)';
+                } else if (el === 999 || el === 999999 || el === undefined || el === null || Number(el) >= 999) {
+                    eq.textContent = eu + ' sent / Unlimited';
+                } else {
+                    eq.textContent = eu + ' / ' + el + ' sent this period';
+                }
             }
         }
 
@@ -1595,6 +1633,31 @@
                 set('ovWaReplied', String(res.whatsappStats.replied || 0));
                 set('ovWaHandoff', String(res.whatsappStats.handedOff || 0));
                 set('ovWaNumbers', (res.whatsappStats.numbersUsed || 0) + ' / ' + (res.whatsappStats.numbersLimit || 0) + ' linked');
+            }
+            // Digital suite social performance
+            const socialCard = document.getElementById('ovSocialCard');
+            if (socialCard) {
+                const hasDigital = !!(res.digitalTier || (res.pricing && res.pricing.digital) || res.socialStats);
+                socialCard.classList.toggle('hidden', !hasDigital);
+            }
+            if (res.socialStats) {
+                set('ovSocialTotal', String(res.socialStats.totalPosts || 0));
+                const eng = res.socialStats.avgEngagementRate;
+                set('ovSocialEng', eng != null ? (eng + '%') : '—');
+                const by = res.socialStats.byPlatform || {};
+                const listEl = document.getElementById('ovSocialByPlatform');
+                if (listEl) {
+                    const keys = Object.keys(by);
+                    listEl.innerHTML = keys.length
+                        ? keys.map(function (p) {
+                            const b = by[p] || {};
+                            const n = b.sampleSize != null ? b.sampleSize : (b.count != null ? b.count : 0);
+                            return '<div class="bg-slate-950 border border-slate-800 rounded-lg p-2 text-center">'
+                                + '<p class="text-lg font-bold text-white">' + n + '</p>'
+                                + '<p class="text-[9px] uppercase text-slate-500">' + escapeHtml(p) + '</p></div>';
+                        }).join('')
+                        : '<p class="text-[11px] text-slate-500 col-span-full">No published posts tracked yet.</p>';
+                }
             }
             const listRes = res.whatsappNumbers;
             if (!listRes) return;
@@ -1698,17 +1761,24 @@
             try {
                 const emailRes = await callGateway('clientportal', 'clientPortalGetEmailActivity', { page: 1 });
                 if (emailRes && emailRes.success) {
-                    const items = emailRes.activity || emailRes.records || emailRes.items || [];
-                    let replied = 0, pending = 0;
-                    items.forEach(function (m) {
-                        const s = String(m.Status || m.status || m.Action || '').toLowerCase();
-                        if (s.indexOf('sent') !== -1 || s.indexOf('repli') !== -1 || s.indexOf('auto') !== -1) replied++;
-                        if (s.indexOf('pending') !== -1 || s.indexOf('approval') !== -1 || s.indexOf('draft') !== -1) pending++;
-                    });
                     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-                    set('ovEmailInbound', items.length ? String(items.length) : (emailRes.total != null ? String(emailRes.total) : '0'));
-                    set('ovEmailReplied', String(replied));
-                    set('ovEmailPending', String(pending));
+                    const sum = emailRes.summary || {};
+                    if (sum.handled != null || sum.total != null) {
+                        set('ovEmailInbound', String(sum.handled != null ? sum.handled : sum.total));
+                        set('ovEmailReplied', String(sum.replied != null ? sum.replied : 0));
+                        set('ovEmailPending', String(sum.pending != null ? sum.pending : 0));
+                    } else {
+                        const items = emailRes.activity || emailRes.records || emailRes.items || emailRes.data || [];
+                        let replied = 0, pending = 0;
+                        items.forEach(function (m) {
+                            const s = String(m.Status || m.status || m.Action || '').toLowerCase();
+                            if (s.indexOf('sent') !== -1 || s.indexOf('repli') !== -1 || s.indexOf('auto') !== -1) replied++;
+                            if (s.indexOf('pending') !== -1 || s.indexOf('approval') !== -1 || s.indexOf('draft') !== -1) pending++;
+                        });
+                        set('ovEmailInbound', items.length ? String(items.length) : (emailRes.total != null ? String(emailRes.total) : '0'));
+                        set('ovEmailReplied', String(replied));
+                        set('ovEmailPending', String(pending));
+                    }
                 }
             } catch (_) { }
 
