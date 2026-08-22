@@ -3446,6 +3446,14 @@
                     "</p></button>" +
                     '<div id="genPanel-' + item.docType + '" class="directive-panel mt-3 pt-3 border-t border-slate-800 space-y-1">' +
                     trainedNote + (fieldsHtml || '<p class="text-[11px] text-slate-500">No extra instructions needed — sent as-is.</p>') +
+                    '<div class="mt-2 p-2 rounded-lg bg-slate-950 border border-slate-800">' +
+                    '<p class="text-[10px] text-slate-400 mb-1"><i class="fa-solid fa-layer-group text-emerald-500"></i> Multiple recipients (optional)</p>' +
+                    '<p class="text-[9px] text-slate-500 mb-1">One per line: <span class="text-slate-400">Name &lt;email@domain.com&gt;</span> or <span class="text-slate-400">Name, email</span>. Shared fields above apply to every person. Multiple documents are developed in batches of up to ' +
+                    (item.maxPerBatch || 9) + ' (weight ' + (item.weight || 1) + ') so the system stays reliable.</p>' +
+                    '<textarea id="genRecipients-' + item.docType + '" rows="3" placeholder="Ada Okonkwo &lt;ada@client.com&gt;&#10;Chidi Bello, chidi@firm.ng" ' +
+                    'class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-600"></textarea>' +
+                    '<p class="text-[9px] text-slate-500 mt-1">Each person counts as one document × weight ' + (item.weight || 1) + ' against your allocation. Confirmed templates also charge the same weight once when approved.</p>' +
+                    '</div>' +
                     '<div id="genExtraFields-' + item.docType + '" class="space-y-1"></div>' +
                     '<button type="button" onclick="clientGenAddExtraField(\'' + escapeHtml(item.docType) +
                     '\')" class="text-[10px] mt-2 px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">+ Add field</button>' +
@@ -3672,13 +3680,50 @@
                 }
                 const el = document.getElementById(`genInput-${docType}-${f.key}`);
                 const val = el ? el.value.trim() : '';
-                if (f.required && !val) {
+                // When multi-recipient list is provided, name/email on the card are optional shared defaults
+                const multiBox = document.getElementById('genRecipients-' + docType);
+                const multiText = multiBox ? multiBox.value.trim() : '';
+                const skipRequired = multiText && (f.key === 'recipientName' || f.key === 'recipientEmail');
+                if (f.required && !val && !skipRequired) {
                     statusEl.innerHTML = `<p class="text-xs text-amber-400 mt-2"><i class="fa-solid fa-triangle-exclamation"></i> Please fill in "${escapeHtml(f.label)}" before sending.</p>`;
                     if (el) el.focus();
                     return;
                 }
                 if (val) payload[f.key] = val;
             }
+
+            // Parse multi-recipient lines → recipients[]
+            (function parseRecipients() {
+                const box = document.getElementById('genRecipients-' + docType);
+                if (!box) return;
+                const lines = (box.value || '').split(/\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+                if (!lines.length) return;
+                const recipients = [];
+                lines.forEach(function (line) {
+                    let name = '', email = '';
+                    const angle = line.match(/^(.+?)\s*<\s*([^>]+)\s*>$/);
+                    if (angle) {
+                        name = angle[1].trim();
+                        email = angle[2].trim();
+                    } else if (line.indexOf(',') !== -1) {
+                        const parts = line.split(',');
+                        name = (parts[0] || '').trim();
+                        email = (parts.slice(1).join(',') || '').trim();
+                    } else if (line.indexOf('@') !== -1) {
+                        email = line;
+                        name = line.split('@')[0];
+                    } else {
+                        name = line;
+                    }
+                    recipients.push({ recipientName: name, recipientEmail: email });
+                });
+                if (recipients.length) {
+                    payload.recipients = recipients;
+                    // Ensure first recipient also fills singular fields for single-path fallback
+                    if (!payload.recipientName && recipients[0].recipientName) payload.recipientName = recipients[0].recipientName;
+                    if (!payload.recipientEmail && recipients[0].recipientEmail) payload.recipientEmail = recipients[0].recipientEmail;
+                }
+            })();
 
             // Extra fields added via + Add field
             document.querySelectorAll('#genExtraFields-' + docType + ' > div').forEach(row => {
@@ -3698,7 +3743,13 @@
             // rest of the dashboard (nav, other cards, other tabs) stays fully usable.
             if (cardEl) cardEl.classList.add('ai-working');
             setBtnBusy(sendBtn, true, { busyLabel: 'Generating…' });
-            statusEl.innerHTML = `<p class="text-xs text-slate-400 mt-2"><span class="ai-spinner"></span>Generating your ${escapeHtml(spec ? spec.label : docType)}…</p>`;
+            const _rcptBox = document.getElementById('genRecipients-' + docType);
+            const _rcptN = _rcptBox ? (_rcptBox.value || '').split(/\n/).map(function (l) { return l.trim(); }).filter(Boolean).length : 0;
+            const _w = (spec && spec.weight) || 1;
+            const _maxB = (spec && spec.maxPerBatch) || 9;
+            statusEl.innerHTML = _rcptN > 1
+                ? `<p class="text-xs text-slate-400 mt-2"><span class="ai-spinner"></span>Generating ${_rcptN} ${escapeHtml(spec ? spec.label : docType)}(s) in batches of up to ${_maxB} (weight ${_w}) — this may take a few minutes…</p>`
+                : `<p class="text-xs text-slate-400 mt-2"><span class="ai-spinner"></span>Generating your ${escapeHtml(spec ? spec.label : docType)}…</p>`;
 
             let res;
             try {
@@ -3723,7 +3774,12 @@
                 } else if (held) {
                     doneMsg = 'Done — held in My Documents for your approval. Open My Documents → Approve & Send when ready.';
                 }
-                statusEl.innerHTML = `<p class="text-xs text-emerald-400 mt-2"><i class="fa-solid fa-circle-check"></i> ${doneMsg}</p>`;
+                if (res.batchInfo && res.batchInfo.message) {
+                    doneMsg = res.batchInfo.message + (res.weightCharged ? (' Charged ' + res.weightCharged + ' document unit(s).') : '');
+                } else if (res.message && res.batchInfo) {
+                    doneMsg = res.message;
+                }
+                statusEl.innerHTML = `<p class="text-xs text-emerald-400 mt-2"><i class="fa-solid fa-circle-check"></i> ${escapeHtml(doneMsg)}</p>`;
                 toggleGenerateCard(docType); // collapse the panel back down
                 loadOverview();
                 loadDocumentCatalog(); // silently refresh so a now-exhausted card greys itself out
