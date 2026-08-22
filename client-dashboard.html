@@ -1478,12 +1478,12 @@
                 (!isNaN(n) && n >= 999);
             const isUnknown = limitVal === undefined || limitVal === null || limitVal === '—' ||
                 (typeof limitVal === 'number' && isNaN(limitVal));
-            // PAYG (or usage-only mode): show the count alone — no artificial /50 style denominators
+            // PAYG: count only. Subscription: used/limit (or Unlimited when plan is open-ended).
+            // Never show "used / —" on subscription — that reads as broken data.
             const usageOnly = !!opts.usageOnly || !!opts.isPayg;
             if (statEl) {
                 if (usageOnly) statEl.textContent = String(used);
-                else if (isUnknown) statEl.textContent = used + ' / —';
-                else if (isUnlimited) statEl.textContent = used + ' / Unlimited';
+                else if (isUnlimited || isUnknown) statEl.textContent = used + ' / Unlimited';
                 else statEl.textContent = used + ' / ' + limitVal;
             }
             if (barEl) {
