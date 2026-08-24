@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5" />
     <title>The Victorias — Client Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="shortcut icon" type="image/x-icon" href="/img/The Victorias Logo.ico">
@@ -191,6 +191,229 @@
                 transform: translateY(0);
             }
         }
+
+        /* ========== Mobile-friendly layout ========== */
+        html,
+        body {
+            max-width: 100vw;
+            overflow-x: hidden;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        /* Hamburger (hidden on desktop) */
+        #mobileMenuBtn {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            height: 2.25rem;
+            width: 2.25rem;
+            border-radius: 0.5rem;
+            border: 1px solid #1e293b;
+            background: #0f172a;
+            color: #e2e8f0;
+            flex-shrink: 0;
+        }
+
+        #mobileMenuBtn:active {
+            background: #1e293b;
+        }
+
+        /* Sidebar overlay backdrop */
+        #sidebarBackdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.65);
+            z-index: 40;
+        }
+
+        @media (max-width: 768px) {
+            #mobileMenuBtn {
+                display: inline-flex;
+            }
+
+            #mainView {
+                position: relative;
+            }
+
+            #mainView>aside {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: min(17rem, 86vw) !important;
+                z-index: 50;
+                transform: translateX(-105%);
+                transition: transform 0.22s ease;
+                box-shadow: none;
+            }
+
+            #mainView.sidebar-open>aside {
+                transform: translateX(0);
+                box-shadow: 8px 0 32px rgba(0, 0, 0, 0.45);
+            }
+
+            #mainView.sidebar-open #sidebarBackdrop {
+                display: block;
+            }
+
+            /* Header + content use full width */
+            #mainView>main {
+                width: 100%;
+                min-width: 0;
+            }
+
+            header.h-14 {
+                height: auto;
+                min-height: 3.5rem;
+                padding: 0.5rem 0.75rem !important;
+                gap: 0.5rem;
+                flex-wrap: wrap;
+            }
+
+            #pageTitle {
+                font-size: 0.8rem;
+                line-height: 1.2;
+                max-width: 55vw;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            /* Tighter main padding on phones */
+            main>.flex-1.overflow-hidden.p-6 {
+                padding: 0.75rem !important;
+            }
+
+            /* Overview stat cards: single column on very small, 2-col on mid */
+            #view-overview .grid.grid-cols-1.sm\\:grid-cols-2.lg\\:grid-cols-4 {
+                gap: 0.75rem;
+            }
+
+            /* Touch-friendly nav */
+            .nav-link {
+                padding: 0.75rem 0.9rem;
+                font-size: 0.85rem;
+                min-height: 2.75rem;
+            }
+
+            /* Forms / inputs: 16px avoids iOS zoom */
+            input,
+            select,
+            textarea,
+            button {
+                font-size: 16px !important;
+            }
+
+            .text-xs input,
+            .text-xs select,
+            .text-xs textarea,
+            input.text-xs,
+            select.text-xs,
+            textarea.text-xs,
+            button.text-xs {
+                font-size: 14px !important;
+            }
+
+            /* Cards and lists */
+            .rounded-xl {
+                border-radius: 0.75rem;
+            }
+
+            /* Social calendar post cards */
+            #socialCalendarList>div {
+                padding: 0.75rem !important;
+            }
+
+            /* Prevent horizontal scroll from long captions/hashtags */
+            #socialCalendarList,
+            #view-social,
+            #view-overview,
+            #view-documents,
+            #view-generate,
+            #view-chat,
+            #view-mywork,
+            #view-appointments,
+            #view-emailactivity,
+            #view-whatsappactivity,
+            #view-integrations,
+            #view-billing,
+            #view-donate {
+                max-width: 100%;
+                overflow-x: hidden;
+            }
+
+            /* Batch selector full width */
+            #socialBatchSelector {
+                max-width: 100% !important;
+                width: 100%;
+            }
+
+            /* Modal full-width on small screens */
+            #modalSendDocument>div {
+                max-width: 100%;
+                margin: 0.5rem;
+            }
+
+            /* Login card */
+            #loginView {
+                padding: 1rem !important;
+            }
+
+            #loginView>div {
+                padding: 1.25rem !important;
+            }
+
+            /* Toast */
+            #clientToastHost {
+                top: 0.5rem;
+                right: 0.5rem;
+                left: 0.5rem;
+                max-width: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            aside .p-4 h1 {
+                font-size: 0.75rem;
+            }
+
+            /* Stack action rows */
+            #view-social .flex.items-center.justify-between {
+                flex-direction: column;
+                align-items: stretch !important;
+                gap: 0.5rem;
+            }
+        }
+
+        /* Safe area for notched phones */
+        @supports (padding: env(safe-area-inset-bottom)) {
+            #mainView>aside {
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+
+            body {
+                padding-left: env(safe-area-inset-left);
+                padding-right: env(safe-area-inset-right);
+            }
+        }
+
+
+        @media (max-width: 768px) {
+            #mainView>main>div.flex-1 {
+                padding: 0.75rem !important;
+            }
+
+            #mainView>aside {
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Larger tap targets for primary actions */
+            button.bg-emerald-600,
+            button.bg-blue-600 {
+                min-height: 2.5rem;
+            }
+        }
     </style>
 </head>
 
@@ -241,7 +464,8 @@
          MAIN DASHBOARD VIEW
     ====================================================================== -->
     <div id="mainView" class="hidden flex-1 flex overflow-hidden h-screen">
-        <aside class="w-60 bg-slate-950 border-r border-slate-800 flex flex-col shrink-0">
+        <div id="sidebarBackdrop" onclick="closeMobileSidebar()" aria-hidden="true"></div>
+        <aside id="clientSidebar" class="w-60 bg-slate-950 border-r border-slate-800 flex flex-col shrink-0">
             <div class="p-4 border-b border-slate-800 flex items-center gap-3">
                 <div
                     class="h-8 w-8 rounded-lg overflow-hidden bg-emerald-500 flex items-center justify-center shadow-md shrink-0">
@@ -310,9 +534,14 @@
         </aside>
 
         <main class="flex-1 flex flex-col overflow-hidden">
-            <header class="h-14 border-b border-slate-800 flex items-center justify-between px-6 shrink-0">
-                <h2 id="pageTitle" class="text-sm font-semibold text-white">Overview</h2>
-                <div class="flex items-center gap-4">
+            <header class="h-14 border-b border-slate-800 flex items-center justify-between px-6 shrink-0 gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                    <button type="button" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Open menu">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <h2 id="pageTitle" class="text-sm font-semibold text-white">Overview</h2>
+                </div>
+                <div class="flex items-center gap-4 shrink-0">
                     <div class="relative">
                         <button onclick="toggleClientNotifPanel(event)"
                             class="relative h-8 w-8 flex items-center justify-center rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
@@ -1423,7 +1652,10 @@
             }
         }
 
+        function logoutClient_closeSb() { try { closeMobileSidebar(); } catch (_) { } }
         function logoutClient() {
+            try { closeMobileSidebar(); } catch (_) { }
+
             clearInterval(PRESENCE_TIMER);
             clearInterval(CHAT_TIMER);
             clearInterval(CLIENT_NOTIF_TIMER);
@@ -1455,7 +1687,26 @@
         // =====================================================================
         // NAVIGATION
         // =====================================================================
+
+        // ===== Mobile sidebar =====
+        function toggleMobileSidebar() {
+            const main = document.getElementById('mainView');
+            if (!main) return;
+            main.classList.toggle('sidebar-open');
+        }
+        function closeMobileSidebar() {
+            const main = document.getElementById('mainView');
+            if (main) main.classList.remove('sidebar-open');
+        }
+        function openMobileSidebar() {
+            const main = document.getElementById('mainView');
+            if (main) main.classList.add('sidebar-open');
+        }
+
+
         function showView(name, btn) {
+            try { closeMobileSidebar(); } catch (_) { }
+
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById('view-' + name).classList.add('active');
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
