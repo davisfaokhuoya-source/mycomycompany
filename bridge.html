@@ -15908,6 +15908,21 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             return 'text-slate-400';
         }
 
+        async function startHubSpotAuth(clientId) {
+            clientId = clientId || getIntegrationsClientId(); // same helper Zoho/Salesforce use
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            const btn = document.getElementById('hubspotAuthBtn'); // use your real button id
+            if (typeof setBtnBusy === 'function') setBtnBusy(btn, true, { busyLabel: 'Opening…' });
+            const res = await executeSecureBridgeCall('agent', 'agent-start-hubspot-auth', { clientId }, { silent: true });
+            if (typeof setBtnBusy === 'function') setBtnBusy(btn, false);
+            if (res && res.success && res.authUrl) {
+                window.open(res.authUrl, '_blank', 'noopener');
+                showToast('Complete HubSpot authorization in the new tab.', 'success');
+            } else {
+                showToast((res && res.message) || 'Could not start HubSpot auth.', 'error');
+            }
+        }
+
         async function loadMonitorOverview() {
             const errBox = document.getElementById('monRecentErrors');
             const auditBox = document.getElementById('monRecentAudit');
