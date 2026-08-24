@@ -6859,13 +6859,17 @@
         const OPS_TIER_KEYS = Object.keys(AGENT_TIER_INFO).filter(k => AGENT_TIER_INFO[k].suite === 'ops');
         const DIGITAL_TIER_KEYS = Object.keys(AGENT_TIER_INFO).filter(k => AGENT_TIER_INFO[k].suite === 'digital');
 
-        // Single source of truth for resolving a client's Ops / Digital tier.
-        // A client's suite tier normally lives in its own OpsTier/DigitalTier
-        // column, but older records only ever set the legacy single `Tier`
-        // column — every place in the UI that decides "is this client on
-        // Enterprise Ops / Digital Scale" MUST fall back to that legacy field,
-        // or older clients silently look tier-less (e.g. "Client is not on
-        // Digital Scale" even though they are, just via the legacy column).
+        function toggleSocialMediaLibrary(forceOpen) {
+            var panel = document.getElementById('socialMediaLibraryPanel');
+            var btn = document.getElementById('socialMediaLibraryToggle');
+            if (!panel || !btn) return;
+            var open = forceOpen === true ? true
+                : forceOpen === false ? false
+                    : !panel.classList.contains('open');
+            panel.classList.toggle('open', open);
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+
         function getClientOpsTier(c) {
             if (!c) return '';
             const raw = c.OpsTier || c.opsTier || '';
