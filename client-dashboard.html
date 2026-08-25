@@ -677,23 +677,47 @@
                                 onclick="showView('social', document.querySelector('.nav-link[data-view=social]'))"
                                 class="text-[10px] text-emerald-400 hover:text-emerald-300">Open calendar →</button>
                         </div>
-                        <div class="grid grid-cols-3 gap-2 text-center mb-2">
-                            <div class="bg-slate-950 border border-slate-800 rounded-lg p-2">
-                                <p id="ovSocialPublished" class="text-lg font-bold text-white">—</p>
-                                <p class="text-[9px] uppercase text-slate-500">Published</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
+                            <div class="bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-2">
+                                <p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide">This month <span
+                                        id="ovSocialMonthLabel" class="text-slate-600"></span></p>
+                                <div class="grid grid-cols-3 gap-2 text-center">
+                                    <div>
+                                        <p id="ovSocialPubMonth" class="text-lg font-bold text-white">—</p>
+                                        <p class="text-[9px] uppercase text-slate-500">Published</p>
+                                    </div>
+                                    <div>
+                                        <p id="ovSocialTrackMonth" class="text-lg font-bold text-white">—</p>
+                                        <p class="text-[9px] uppercase text-slate-500">Tracked</p>
+                                    </div>
+                                    <div>
+                                        <p id="ovSocialEngMonth" class="text-lg font-bold text-emerald-400">—</p>
+                                        <p class="text-[9px] uppercase text-slate-500">Avg eng.</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="bg-slate-950 border border-slate-800 rounded-lg p-2">
-                                <p id="ovSocialTotal" class="text-lg font-bold text-white">—</p>
-                                <p class="text-[9px] uppercase text-slate-500">Posts tracked</p>
-                            </div>
-                            <div class="bg-slate-950 border border-slate-800 rounded-lg p-2">
-                                <p id="ovSocialEng" class="text-lg font-bold text-emerald-400">—</p>
-                                <p class="text-[9px] uppercase text-slate-500">Avg engagement</p>
+                            <div class="bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-2">
+                                <p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide">Lifetime (all
+                                    time)</p>
+                                <div class="grid grid-cols-3 gap-2 text-center">
+                                    <div>
+                                        <p id="ovSocialPublished" class="text-lg font-bold text-white">—</p>
+                                        <p class="text-[9px] uppercase text-slate-500">Published</p>
+                                    </div>
+                                    <div>
+                                        <p id="ovSocialTotal" class="text-lg font-bold text-white">—</p>
+                                        <p class="text-[9px] uppercase text-slate-500">Tracked</p>
+                                    </div>
+                                    <div>
+                                        <p id="ovSocialEng" class="text-lg font-bold text-emerald-400">—</p>
+                                        <p class="text-[9px] uppercase text-slate-500">Avg eng.</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div id="ovSocialByPlatform" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
-                        <p class="text-[11px] text-slate-500">Published = live posts from Social Calendar.
-                            Tracked / engagement fill in once results are recorded.</p>
+                        <p class="text-[11px] text-slate-500">Published = posts gone live. Tracked / engagement = posts
+                            with recorded results. Lifetime is the running total of everything done so far.</p>
                     </div>
 
                     <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
@@ -1990,12 +2014,32 @@
                 socialCard.classList.toggle('hidden', !hasDigital);
             }
             if (res.socialStats) {
-                const published = res.socialStats.publishedPosts;
-                set('ovSocialPublished', published != null ? String(published) : '—');
-                set('ovSocialTotal', String(res.socialStats.totalPosts || 0));
-                const eng = res.socialStats.avgEngagementRate;
-                set('ovSocialEng', eng != null ? (eng + '%') : '—');
-                const by = res.socialStats.byPlatform || {};
+                const ss = res.socialStats;
+                const life = ss.lifetime || {};
+                const mon = ss.thisMonth || {};
+                const lifePub = life.published != null ? life.published : (ss.publishedPosts || 0);
+                const lifeTrack = life.tracked != null ? life.tracked : (ss.totalPosts || 0);
+                const lifeEng = life.avgEngagementRate != null ? life.avgEngagementRate : ss.avgEngagementRate;
+                const monPub = mon.published != null ? mon.published : 0;
+                const monTrack = mon.tracked != null ? mon.tracked : 0;
+                const monEng = mon.avgEngagementRate;
+
+                set('ovSocialPublished', String(lifePub));
+                set('ovSocialTotal', String(lifeTrack));
+                set('ovSocialEng', lifeEng != null ? (lifeEng + '%') : '—');
+                set('ovSocialPubMonth', String(monPub));
+                set('ovSocialTrackMonth', String(monTrack));
+                set('ovSocialEngMonth', monEng != null ? (monEng + '%') : '—');
+                const ml = document.getElementById('ovSocialMonthLabel');
+                if (ml) ml.textContent = ss.periodLabel ? ('· ' + ss.periodLabel) : '';
+
+                // Platform grid: lifetime published (or tracked sample sizes)
+                const by = (life.publishedByPlatform && Object.keys(life.publishedByPlatform).length)
+                    ? Object.keys(life.publishedByPlatform).reduce(function (acc, k) {
+                        acc[k] = { count: life.publishedByPlatform[k], sampleSize: life.publishedByPlatform[k] };
+                        return acc;
+                    }, {})
+                    : (ss.byPlatform || {});
                 const listEl = document.getElementById('ovSocialByPlatform');
                 if (listEl) {
                     const keys = Object.keys(by);
@@ -2003,12 +2047,14 @@
                         ? keys.map(function (p) {
                             const b = by[p] || {};
                             const n = b.sampleSize != null ? b.sampleSize : (b.count != null ? b.count : 0);
+                            const monN = (mon.publishedByPlatform && mon.publishedByPlatform[p]) || 0;
                             return '<div class="bg-slate-950 border border-slate-800 rounded-lg p-2 text-center">'
                                 + '<p class="text-lg font-bold text-white">' + n + '</p>'
-                                + '<p class="text-[9px] uppercase text-slate-500">' + escapeHtml(p) + '</p></div>';
+                                + '<p class="text-[9px] uppercase text-slate-500">' + escapeHtml(p) + '</p>'
+                                + '<p class="text-[9px] text-slate-600 mt-0.5">' + monN + ' this month</p></div>';
                         }).join('')
                         : ('<p class="text-[11px] text-slate-500 col-span-full">' +
-                            (published > 0
+                            (lifePub > 0
                                 ? 'Posts are live — engagement results will appear once recorded.'
                                 : 'No published posts yet. Open Social Calendar to review the queue.') +
                             '</p>');
