@@ -1496,12 +1496,12 @@
         let EMAIL_ACTIVITY_PAGE = 1;
         let WHATSAPP_ACTIVITY_PAGE = 1;
 
-        // Never surface raw script/stack traces on the client UI
+        // Never surface raw script/stack traces on the client UI (codes only via notifyUser)
         window.addEventListener('error', function (ev) {
             try { console.error('client-dashboard error', ev && ev.error ? ev.error : ev); } catch (_) { }
             try {
                 if (typeof notifyUser === 'function') {
-                    notifyUser('Something went wrong on this page. You can keep working or refresh.', 'error');
+                    notifyUser((ev && ev.error && (ev.error.message || String(ev.error))) || 'page error', 'error');
                 }
             } catch (_) { }
             return true;
@@ -1510,7 +1510,7 @@
             try { console.error('client-dashboard rejection', ev && ev.reason); } catch (_) { }
             try {
                 if (typeof notifyUser === 'function') {
-                    notifyUser(clientFriendlyError((ev && ev.reason && (ev.reason.message || ev.reason)) || 'Request failed.'), 'error');
+                    notifyUser((ev && ev.reason && (ev.reason.message || ev.reason)) || 'Request failed.', 'error');
                 }
             } catch (_) { }
         });
@@ -1519,16 +1519,51 @@
         // BRIDGE CALL — same wire format the admin dashboard uses, just against
         // the "clientportal" system with the client's own session token.
         // =====================================================================
-        /** Strip internal infra wording from errors shown to clients. */
+        /**
+         * Map any backend/UI failure to a stable numeric code for clients.
+         * Real details stay in the browser console for support — never on screen.
+         */
+        function clientErrorCode(msg) {
+            const m = String(msg || '').toLowerCase();
+            // Already a coded string — extract if present
+            const coded = m.match(/\berror code\s*(\d{4})\b/);
+            if (coded) return coded[1];
+
+            // Auth / session
+            if (/invalid client id|access code|unauthorized|token|session|sign.?in|login|auth/i.test(m)) return '4101';
+            if (/missing gateway|gateway url/i.test(m)) return '4102';
+
+            // Network / timeout / infra
+            if (/timed out|timeout|aborted|abort/i.test(m)) return '4201';
+            if (/network|failed to fetch|load failed|cors|dns/i.test(m)) return '4202';
+            if (/524|502|503|504|apps script gateway|worker|quota exceeded.*script/i.test(m)) return '4203';
+
+            // Document allocation / generation
+            if (/document limit|allocation|quota|self-service document/i.test(m)) return '4301';
+            if (/not enough document|units? needed|weight/i.test(m)) return '4302';
+            if (/document type isn't available|unknown doc|unknown document/i.test(m)) return '4303';
+            if (/missing required field|required field/i.test(m)) return '4304';
+            if (/preview|layout preview/i.test(m)) return '4305';
+            if (/generat|document build|docx|catalog/i.test(m)) return '4306';
+
+            // Billing / payments
+            if (/payment|paystack|flutterwave|billing|renewal|top-?up|wallet|discount/i.test(m)) return '4401';
+
+            // Integrations / messaging
+            if (/whatsapp|mailbox|email|integration|gmail|outlook/i.test(m)) return '4501';
+            if (/social|calendar|post/i.test(m)) return '4502';
+
+            // Script / unexpected
+            if (/referenceerror|typeerror|syntaxerror|at object\.|\.gs:|stack/i.test(m)) return '4901';
+
+            return '4900'; // generic
+        }
+
+        /** Client-facing error line: "Error occurred — error code 4203" (no internal text). */
         function clientFriendlyError(msg) {
-            const m = String(msg || '');
-            if (/timed out|timeout|524|apps script gateway|worker/i.test(m)) {
-                return 'This is taking longer than usual. Refresh the page in a moment — your documents may already be ready under My Documents.';
-            }
-            if (/ReferenceError|TypeError|forcedCatalogId|at Object\.|\.gs:/i.test(m)) {
-                return 'Something went wrong on our side. Please try again or contact support.';
-            }
-            return m || 'Something went wrong. Please try again.';
+            try { console.error('[client-error]', msg); } catch (_) { }
+            const code = clientErrorCode(msg);
+            return 'Error occurred — error code ' + code;
         }
 
         /** Non-blocking status toast. Always defined so send/approve paths never throw. */
@@ -1549,13 +1584,20 @@
             }, 4200);
         }
         function notifyUser(message, type) {
-            try { showToast(message, type || 'info'); } catch (_) {
-                try { alert(message); } catch (__) { }
+            const t = type || 'info';
+            // Errors always surface as codes only — never raw backend statements
+            const display = (t === 'error') ? clientFriendlyError(message) : message;
+            try { showToast(display, t); } catch (_) {
+                try { alert(display); } catch (__) { }
             }
         }
 
         async function callGateway(system, action, extra = {}) {
-            if (!GW_URL) { showLoginError('Missing Gateway URL.'); return { success: false }; }
+            if (!GW_URL) {
+                const coded = clientFriendlyError('Missing Gateway URL.');
+                if (typeof showLoginError === 'function') showLoginError(coded);
+                return { success: false, message: coded, errorCode: clientErrorCode('Missing Gateway URL.') };
+            }
             try {
                 const body = { system, action, token: SESSION_TOKEN, clientId: CLIENT_ID, ...extra };
                 const controller = new AbortController();
@@ -1570,13 +1612,29 @@
                 clearTimeout(t);
                 const text = await res.text();
                 const jsonStart = text.indexOf('{');
-                return JSON.parse(jsonStart !== -1 ? text.substring(jsonStart) : text || '{}');
+                let json = JSON.parse(jsonStart !== -1 ? text.substring(jsonStart) : text || '{}');
+                // Client-facing failures: replace real statements with error codes only
+                if (json && json.success === false) {
+                    const raw = json.message || json.error || 'request failed';
+                    try { console.error('[gateway]', action, raw); } catch (_) { }
+                    const code = clientErrorCode(raw);
+                    json = Object.assign({}, json, {
+                        message: 'Error occurred — error code ' + code,
+                        errorCode: code,
+                        _rawMessage: raw
+                    });
+                }
+                return json;
             } catch (e) {
                 console.error(e);
-                if (e && e.name === 'AbortError') {
-                    return { success: false, message: clientFriendlyError('timeout') };
-                }
-                return { success: false, message: clientFriendlyError(e.toString()) };
+                const raw = (e && e.name === 'AbortError') ? 'timeout' : (e && e.toString ? e.toString() : 'network');
+                const code = clientErrorCode(raw);
+                return {
+                    success: false,
+                    message: 'Error occurred — error code ' + code,
+                    errorCode: code,
+                    _rawMessage: raw
+                };
             }
         }
 
@@ -1624,7 +1682,10 @@
         // =====================================================================
         function showLoginError(msg) {
             const el = document.getElementById('loginError');
-            el.textContent = msg;
+            // Always code-only — never expose raw auth/infra text
+            el.textContent = /error code\s*\d{4}/i.test(String(msg || ''))
+                ? String(msg)
+                : clientFriendlyError(msg || 'login failed');
             el.classList.remove('hidden');
         }
 
@@ -3742,9 +3803,11 @@
                     '<div id="genExtraFields-' + item.docType + '" class="space-y-1"></div>' +
                     '<button type="button" onclick="clientGenAddExtraField(\'' + escapeHtml(item.docType) +
                     '\')" class="text-[10px] mt-2 px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">+ Add field</button>' +
-                    '<div class="flex gap-2 justify-end pt-2">' +
+                    '<div class="flex flex-wrap gap-2 justify-end pt-2">' +
                     '<button onclick="toggleGenerateCard(\'' + item.docType +
                     '\')" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Cancel</button>' +
+                    '<button id="genPreviewBtn-' + item.docType + '" onclick="previewDocumentLayout(\'' + item.docType +
+                    '\')" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-sky-300"><i class="fa-solid fa-eye"></i> Preview layout</button>' +
                     '<button id="genSendBtn-' + item.docType + '" onclick="submitGenerateDocument(\'' + item.docType +
                     '\')" class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white"><i class="fa-solid fa-paper-plane"></i> Send</button>' +
                     "</div></div></div>"
@@ -3842,6 +3905,87 @@
             // Only one panel open at a time keeps this simple on mobile.
             document.querySelectorAll('.directive-panel.open').forEach(p => p.classList.remove('open'));
             if (!isOpen) panel.classList.add('open');
+        }
+
+        /** Layout preview overlay — free sample; does not bill quota. */
+        async function previewDocumentLayout(docType) {
+            const btn = document.getElementById('genPreviewBtn-' + docType);
+            setBtnBusy(btn, true, { busyLabel: 'Building…' });
+            try {
+                const res = await callGateway('clientportal', 'clientPortalPreviewDocumentLayout', { docType: docType });
+                if (!res || !res.success) {
+                    notifyUser((res && res.message) || 'Could not build layout preview.', 'error');
+                    return;
+                }
+                openDocPreviewOverlay(res);
+            } catch (e) {
+                notifyUser(clientFriendlyError(e && e.message ? e.message : e), 'error');
+            } finally {
+                setBtnBusy(btn, false);
+            }
+        }
+
+        function openDocPreviewOverlay(res) {
+            const modal = document.getElementById('modalDocPreview');
+            const titleEl = document.getElementById('docPreviewTitle');
+            const metaEl = document.getElementById('docPreviewMeta');
+            const badgesEl = document.getElementById('docPreviewBadges');
+            const mockEl = document.getElementById('docPreviewMock');
+            const frame = document.getElementById('docPreviewFrame');
+            const openLink = document.getElementById('docPreviewOpenLink');
+            if (!modal) return;
+
+            titleEl.textContent = res.label || res.docId || 'Document preview';
+            const modeLabel = res.mode === 'blank_template' ? 'Your blank template'
+                : res.mode === 'structure' ? 'Trained sample structure'
+                    : 'Default layout';
+            metaEl.textContent = (res.message || modeLabel) +
+                (res.linkSharing === 'anyone_with_link_view' ? ' · Link is viewable by anyone with it.' : '');
+
+            const t = res.trained || {};
+            const chips = [];
+            if (t.hasBlankTemplate) chips.push('Exact template');
+            else if (t.hasSample) chips.push('Trained sample');
+            if (t.hasLetterhead) chips.push('Letterhead');
+            if (t.hasLogo) chips.push('Logo');
+            if (t.sampleFileName) chips.push(t.sampleFileName);
+            badgesEl.innerHTML = chips.length
+                ? chips.map(c => '<span class="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-[10px] text-slate-300">' + escapeHtml(c) + '</span>').join('')
+                : '<span class="text-[10px] text-slate-500">No custom training for this type yet</span>';
+
+            const blocks = (res.mock && res.mock.blocks) || [];
+            mockEl.innerHTML = blocks.length
+                ? ('<p class="text-[10px] text-slate-500 mb-1 uppercase tracking-wide">Field outline</p>' +
+                    '<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">' +
+                    blocks.map(b =>
+                        '<div class="bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-[11px]">' +
+                        '<span class="text-slate-400">' + escapeHtml(b.label || '') + '</span>' +
+                        '<span class="text-slate-200 block truncate">' + escapeHtml(String(b.sample || '—')) + '</span></div>'
+                    ).join('') + '</div>')
+                : '';
+
+            const url = res.previewUrl || '';
+            if (url) {
+                openLink.href = url;
+                openLink.classList.remove('hidden');
+                // Drive preview embed (works for anyone-with-link VIEW files)
+                const embed = url.replace(/\/view.*$/, '/preview');
+                frame.src = embed;
+                frame.classList.remove('hidden');
+            } else {
+                openLink.classList.add('hidden');
+                frame.removeAttribute('src');
+                frame.classList.add('hidden');
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeDocPreviewOverlay() {
+            const modal = document.getElementById('modalDocPreview');
+            const frame = document.getElementById('docPreviewFrame');
+            if (frame) { frame.removeAttribute('src'); }
+            if (modal) modal.classList.add('hidden');
         }
 
         function setBtnBusy(el, busy, opts = {}) {
@@ -4459,11 +4603,43 @@
             callGateway('clientportal', 'clientPortalMarkAllNotificationsRead', {}).then(() => pollClientNotifications());
         }
     </script>
+    <div id="modalDocPreview"
+        class="hidden fixed inset-0 bg-slate-950/85 z-50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4"
+        onclick="if (event.target === this) closeDocPreviewOverlay()">
+        <div
+            class="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
+            <div class="flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-800 shrink-0">
+                <div class="min-w-0">
+                    <h3 id="docPreviewTitle" class="text-sm font-bold text-white truncate">Document preview</h3>
+                    <p id="docPreviewMeta" class="text-[11px] text-slate-400 mt-0.5"></p>
+                    <div id="docPreviewBadges" class="flex flex-wrap gap-1.5 mt-2"></div>
+                </div>
+                <button type="button" onclick="closeDocPreviewOverlay()"
+                    class="text-slate-400 hover:text-white text-lg leading-none shrink-0 px-1"
+                    aria-label="Close">&times;</button>
+            </div>
+            <div class="px-4 py-3 overflow-y-auto custom-scrollbar flex-1 space-y-3">
+                <p
+                    class="text-[10px] text-amber-400/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1.5">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Preview only — sample values, does not count against your document allocation.
+                </p>
+                <div id="docPreviewMock"></div>
+                <iframe id="docPreviewFrame" title="Document preview"
+                    class="w-full h-[min(55vh,28rem)] rounded-lg border border-slate-800 bg-slate-950 hidden"
+                    allow="fullscreen"></iframe>
+            </div>
+            <div class="flex flex-wrap gap-2 justify-end px-4 py-3 border-t border-slate-800 shrink-0">
+                <a id="docPreviewOpenLink" href="#" target="_blank" rel="noopener"
+                    class="hidden text-xs px-3 py-1.5 bg-sky-700 hover:bg-sky-600 rounded text-white">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Open in new tab
+                </a>
+                <button type="button" onclick="closeDocPreviewOverlay()"
+                    class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">Close</button>
+            </div>
+        </div>
+    </div>
 
-    <!-- MODAL: client-initiated document send — lets the client route any of their own
-         documents to a recipient of their choosing, with their own subject/body,
-         separate from Approve & Send (which only fires reference docs to their own
-         saved contact). -->
     <div id="modalSendDocument"
         class="hidden fixed inset-0 bg-slate-950/80 z-50 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-md w-full space-y-4">
