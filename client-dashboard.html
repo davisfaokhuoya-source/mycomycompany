@@ -677,47 +677,19 @@
                                 onclick="showView('social', document.querySelector('.nav-link[data-view=social]'))"
                                 class="text-[10px] text-emerald-400 hover:text-emerald-300">Open calendar →</button>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
-                            <div class="bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-2">
-                                <p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide">This month <span
-                                        id="ovSocialMonthLabel" class="text-slate-600"></span></p>
-                                <div class="grid grid-cols-3 gap-2 text-center">
-                                    <div>
-                                        <p id="ovSocialPubMonth" class="text-lg font-bold text-white">—</p>
-                                        <p class="text-[9px] uppercase text-slate-500">Published</p>
-                                    </div>
-                                    <div>
-                                        <p id="ovSocialTrackMonth" class="text-lg font-bold text-white">—</p>
-                                        <p class="text-[9px] uppercase text-slate-500">Tracked</p>
-                                    </div>
-                                    <div>
-                                        <p id="ovSocialEngMonth" class="text-lg font-bold text-emerald-400">—</p>
-                                        <p class="text-[9px] uppercase text-slate-500">Avg eng.</p>
-                                    </div>
-                                </div>
+                        <div class="grid grid-cols-2 gap-2 text-center mb-2">
+                            <div class="bg-slate-950 border border-slate-800 rounded-lg p-2">
+                                <p id="ovSocialTotal" class="text-lg font-bold text-white">—</p>
+                                <p class="text-[9px] uppercase text-slate-500">Posts tracked</p>
                             </div>
-                            <div class="bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-2">
-                                <p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide">Lifetime (all
-                                    time)</p>
-                                <div class="grid grid-cols-3 gap-2 text-center">
-                                    <div>
-                                        <p id="ovSocialPublished" class="text-lg font-bold text-white">—</p>
-                                        <p class="text-[9px] uppercase text-slate-500">Published</p>
-                                    </div>
-                                    <div>
-                                        <p id="ovSocialTotal" class="text-lg font-bold text-white">—</p>
-                                        <p class="text-[9px] uppercase text-slate-500">Tracked</p>
-                                    </div>
-                                    <div>
-                                        <p id="ovSocialEng" class="text-lg font-bold text-emerald-400">—</p>
-                                        <p class="text-[9px] uppercase text-slate-500">Avg eng.</p>
-                                    </div>
-                                </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-lg p-2">
+                                <p id="ovSocialEng" class="text-lg font-bold text-emerald-400">—</p>
+                                <p class="text-[9px] uppercase text-slate-500">Avg engagement</p>
                             </div>
                         </div>
                         <div id="ovSocialByPlatform" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
-                        <p class="text-[11px] text-slate-500">Published = posts gone live. Tracked / engagement = posts
-                            with recorded results. Lifetime is the running total of everything done so far.</p>
+                        <p class="text-[11px] text-slate-500">Counts are posts with recorded results. Live queue is
+                            under Social Calendar.</p>
                     </div>
 
                     <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
@@ -1620,7 +1592,7 @@
             }
         }
 
-        async function callGateway(system, action, extra = {}, opts = {}) {
+        async function callGateway(system, action, extra = {}) {
             if (!GW_URL) {
                 const coded = clientFriendlyError('Missing Gateway URL.');
                 if (typeof showLoginError === 'function') showLoginError(coded);
@@ -1629,8 +1601,7 @@
             try {
                 const body = { system, action, token: SESSION_TOKEN, clientId: CLIENT_ID, ...extra };
                 const controller = new AbortController();
-                const timeoutMs = (opts && opts.timeoutMs) || 55000;
-                const t = setTimeout(() => controller.abort(), timeoutMs); // fail soft before wall
+                const t = setTimeout(() => controller.abort(), 55000); // fail soft before 90s wall
                 const res = await fetch(GW_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -2014,32 +1985,10 @@
                 socialCard.classList.toggle('hidden', !hasDigital);
             }
             if (res.socialStats) {
-                const ss = res.socialStats;
-                const life = ss.lifetime || {};
-                const mon = ss.thisMonth || {};
-                const lifePub = life.published != null ? life.published : (ss.publishedPosts || 0);
-                const lifeTrack = life.tracked != null ? life.tracked : (ss.totalPosts || 0);
-                const lifeEng = life.avgEngagementRate != null ? life.avgEngagementRate : ss.avgEngagementRate;
-                const monPub = mon.published != null ? mon.published : 0;
-                const monTrack = mon.tracked != null ? mon.tracked : 0;
-                const monEng = mon.avgEngagementRate;
-
-                set('ovSocialPublished', String(lifePub));
-                set('ovSocialTotal', String(lifeTrack));
-                set('ovSocialEng', lifeEng != null ? (lifeEng + '%') : '—');
-                set('ovSocialPubMonth', String(monPub));
-                set('ovSocialTrackMonth', String(monTrack));
-                set('ovSocialEngMonth', monEng != null ? (monEng + '%') : '—');
-                const ml = document.getElementById('ovSocialMonthLabel');
-                if (ml) ml.textContent = ss.periodLabel ? ('· ' + ss.periodLabel) : '';
-
-                // Platform grid: lifetime published (or tracked sample sizes)
-                const by = (life.publishedByPlatform && Object.keys(life.publishedByPlatform).length)
-                    ? Object.keys(life.publishedByPlatform).reduce(function (acc, k) {
-                        acc[k] = { count: life.publishedByPlatform[k], sampleSize: life.publishedByPlatform[k] };
-                        return acc;
-                    }, {})
-                    : (ss.byPlatform || {});
+                set('ovSocialTotal', String(res.socialStats.totalPosts || 0));
+                const eng = res.socialStats.avgEngagementRate;
+                set('ovSocialEng', eng != null ? (eng + '%') : '—');
+                const by = res.socialStats.byPlatform || {};
                 const listEl = document.getElementById('ovSocialByPlatform');
                 if (listEl) {
                     const keys = Object.keys(by);
@@ -2047,17 +1996,11 @@
                         ? keys.map(function (p) {
                             const b = by[p] || {};
                             const n = b.sampleSize != null ? b.sampleSize : (b.count != null ? b.count : 0);
-                            const monN = (mon.publishedByPlatform && mon.publishedByPlatform[p]) || 0;
                             return '<div class="bg-slate-950 border border-slate-800 rounded-lg p-2 text-center">'
                                 + '<p class="text-lg font-bold text-white">' + n + '</p>'
-                                + '<p class="text-[9px] uppercase text-slate-500">' + escapeHtml(p) + '</p>'
-                                + '<p class="text-[9px] text-slate-600 mt-0.5">' + monN + ' this month</p></div>';
+                                + '<p class="text-[9px] uppercase text-slate-500">' + escapeHtml(p) + '</p></div>';
                         }).join('')
-                        : ('<p class="text-[11px] text-slate-500 col-span-full">' +
-                            (lifePub > 0
-                                ? 'Posts are live — engagement results will appear once recorded.'
-                                : 'No published posts yet. Open Social Calendar to review the queue.') +
-                            '</p>');
+                        : '<p class="text-[11px] text-slate-500 col-span-full">No published posts tracked yet.</p>';
                 }
             }
             const listRes = res.whatsappNumbers;
@@ -3964,71 +3907,19 @@
             if (!isOpen) panel.classList.add('open');
         }
 
-        /** Local field outline from already-loaded catalog (instant; no network). */
-        function buildLocalDocPreview(docType) {
-            const item = (typeof DOC_CATALOG_LIST !== 'undefined' ? DOC_CATALOG_LIST : [])
-                .find(function (d) { return d.docType === docType || d.id === docType; });
-            const fields = (item && item.fields) || [];
-            const blocks = fields.length
-                ? fields.map(function (f) {
-                    return {
-                        label: f.label || f.key || '',
-                        sample: f.placeholder || f.sample || f.example || ('Sample ' + (f.label || f.key || ''))
-                    };
-                })
-                : [
-                    { label: 'Recipient Name', sample: 'Ada Okonkwo' },
-                    { label: 'Recipient Email', sample: 'ada@client.com' },
-                    { label: 'Date', sample: new Date().toISOString().slice(0, 10) }
-                ];
-            return {
-                success: true,
-                docId: docType,
-                label: (item && (item.label || item.name)) || docType,
-                mode: 'structure',
-                message: 'Field outline preview (sample values — does not count against allocation).',
-                mock: { blocks: blocks },
-                trained: (item && item.trained) || {},
-                previewUrl: '',
-                linkSharing: ''
-            };
-        }
-
         /** Layout preview overlay — free sample; does not bill quota. */
         async function previewDocumentLayout(docType) {
             const btn = document.getElementById('genPreviewBtn-' + docType);
             setBtnBusy(btn, true, { busyLabel: 'Building…' });
             try {
-                // Prefer server (may include Drive sample). Longer timeout; on timeout
-                // or failure, show local field outline so Preview never hard-fails as 4201.
-                let res = null;
-                try {
-                    res = await callGateway(
-                        'clientportal',
-                        'clientPortalPreviewDocumentLayout',
-                        { docType: docType },
-                        { timeoutMs: 90000 }
-                    );
-                } catch (netErr) {
-                    res = null;
-                }
+                const res = await callGateway('clientportal', 'clientPortalPreviewDocumentLayout', { docType: docType });
                 if (!res || !res.success) {
-                    const local = buildLocalDocPreview(docType);
-                    openDocPreviewOverlay(local);
-                    if (res && res.errorCode === '4201') {
-                        try { console.warn('[preview] server timed out — showing local field outline'); } catch (_) { }
-                    } else if (res && res.success === false) {
-                        try { console.warn('[preview] server:', res._rawMessage || res.message); } catch (_) { }
-                    }
+                    notifyUser((res && res.message) || 'Could not build layout preview.', 'error');
                     return;
                 }
                 openDocPreviewOverlay(res);
             } catch (e) {
-                try {
-                    openDocPreviewOverlay(buildLocalDocPreview(docType));
-                } catch (_) {
-                    notifyUser(clientFriendlyError(e && e.message ? e.message : e), 'error');
-                }
+                notifyUser(clientFriendlyError(e && e.message ? e.message : e), 'error');
             } finally {
                 setBtnBusy(btn, false);
             }
@@ -4049,7 +3940,8 @@
                 : res.mode === 'structure' ? 'Trained sample structure'
                     : 'Default layout';
             metaEl.textContent = (res.message || modeLabel) +
-                (res.linkSharing === 'anyone_with_link_view' ? ' · Link is viewable by anyone with it.' : '');
+                (res.cached ? ' · Shared sample on file.' : '') +
+                (res.linkSharing === 'anyone_with_link_view' ? ' · Anyone with the link can view.' : '');
 
             const t = res.trained || {};
             const chips = [];
