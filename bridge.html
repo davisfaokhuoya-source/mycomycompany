@@ -5906,7 +5906,44 @@
                 </button>
             </form>
             <div id="dsUploadResult"
-                class="hidden text-xs bg-slate-950 border border-slate-800 rounded p-3 space-y-3 text-slate-300"></div>
+                class="hidden text-xs bg-slate-950 border border-slate-800 rounded p-3 space-y-3 text-slate-300 max-h-[55vh] overflow-y-auto custom-scrollbar">
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit designCode JSON after save (Samples on File → Edit design) -->
+    <div id="modalDesignCodeEdit"
+        class="hidden fixed inset-0 bg-slate-950/85 z-50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
+            <div class="flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-800 shrink-0">
+                <div class="min-w-0">
+                    <h3 class="text-sm font-bold text-white">Edit clone template (designCode)</h3>
+                    <p id="designCodeEditMeta" class="text-[11px] text-slate-400 mt-0.5">Worker builds only from this
+                        JSON when set.</p>
+                </div>
+                <button type="button" onclick="closeDesignCodeEditModal()"
+                    class="text-slate-400 hover:text-white text-lg leading-none shrink-0 px-1"
+                    aria-label="Close">&times;</button>
+            </div>
+            <div class="px-4 py-3 overflow-y-auto custom-scrollbar flex-1 space-y-3">
+                <p class="text-[10px] text-slate-500">Edit the JSON the agent produced from the sample. Invalid JSON
+                    will not save. Generation and client sample preview use this after save.</p>
+                <label class="block text-[10px] text-slate-500 uppercase tracking-wide">designNarration</label>
+                <textarea id="designCodeEditNarration" rows="2"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-[11px] text-slate-200 font-mono"></textarea>
+                <label class="block text-[10px] text-slate-500 uppercase tracking-wide">designCode JSON</label>
+                <textarea id="designCodeEditJson" rows="18"
+                    class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-[11px] text-emerald-300/90 font-mono leading-relaxed"></textarea>
+                <p id="designCodeEditError" class="hidden text-xs text-red-400"></p>
+            </div>
+            <div class="flex flex-wrap gap-2 justify-end px-4 py-3 border-t border-slate-800 shrink-0">
+                <button type="button" onclick="closeDesignCodeEditModal()"
+                    class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">Cancel</button>
+                <button type="button" id="designCodeEditSaveBtn" onclick="saveDesignCodeEdit()"
+                    class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Save
+                    design</button>
+            </div>
         </div>
     </div>
 
@@ -13745,16 +13782,30 @@ ${a.Status === 'Pending Review' ? `
 
         /** Shows the AI's proposed columns, field roles, and blank-template guess for the admin to edit and confirm before it's used for real generation. */
         function renderDocStudioReview(clientId, res) {
-            DOC_STUDIO_PENDING_REVIEW = { clientId, recordId: res.recordId, columns: (res.columns || []).slice() };
-            const roles = (res.templateSpec && res.templateSpec.proposedFieldRoles) || {};
-            const isBlank = !!(res.templateSpec && res.templateSpec.isBlankTemplate);
+            const spec = res.templateSpec || {};
+            DOC_STUDIO_PENDING_REVIEW = {
+                clientId,
+                recordId: res.recordId,
+                columns: (res.columns || []).slice(),
+                templateSpec: spec,
+                designCode: spec.designCode || null,
+                designNarration: spec.designNarration || res.designNarration || ""
+            };
+            const roles = spec.proposedFieldRoles || {};
+            const isBlank = !!spec.isBlankTemplate;
             const roleOptions = ['data_field', 'boilerplate', 'signature_block'];
             const catalogOptions = DOC_STUDIO_CATALOG || [];
+            const designJson = spec.designCode
+                ? JSON.stringify(spec.designCode, null, 2)
+                : '{\n  "version": 2,\n  "kind": "document",\n  "elements": []\n}';
+            const narration = spec.designNarration || res.designNarration || "";
+            const elCount = (spec.designCode && spec.designCode.elements) ? spec.designCode.elements.length : 0;
 
             const resultEl = document.getElementById('dsUploadResult');
             resultEl.classList.remove('hidden');
             resultEl.innerHTML = `
                 <div class="text-white font-medium">${escapeHtml(res.detectedLabel || 'Unknown document')}</div>
+                <p class="text-[10px] text-slate-500">Clone program: <span class="text-emerald-400/90">${elCount}</span> layout elements from the sample. Edit below before Confirm — generation uses only this JSON when present.</p>
                 <div>
                     <label class="block text-slate-500 mb-1">Catalog match</label>
                     <select id="dsReviewCatalogId" class="w-full bg-slate-900 border border-slate-800 rounded p-1.5">
@@ -13772,27 +13823,53 @@ ${a.Status === 'Pending Review' ? `
                         <button type="button" onclick="dsReviewAddField()" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-emerald-400">+ Add field</button>
                     </div>
                     <p class="text-[10px] text-slate-600 mb-1">Use − to remove a field the AI should not keep. Only remaining fields are saved on Confirm.</p>
-                    <div id="dsReviewFields" class="space-y-1 max-h-48 overflow-auto custom-scrollbar">
+                    <div id="dsReviewFields" class="space-y-1 max-h-36 overflow-auto custom-scrollbar">
                         ${(res.columns || []).map((c, i) => `
                             <div class="flex items-center gap-2 ds-review-field-row">
                                 <input value="${escapeHtml(c)}" data-field-name
                                     class="flex-1 bg-slate-900 border border-slate-800 rounded p-1 text-[11px]">
                                 <select data-field-role class="bg-slate-900 border border-slate-800 rounded p-1 text-[11px]">
-                                    ${roleOptions.map(r => `<option value="${r}" ${roles[c] === r ? 'selected' : (r === 'data_field' && !roles[c] ? 'selected' : '')}>${r}</option>`).join('')}
+                                    ${roleOptions.map(r => `<option value="${r}" ${(roles[c] || 'data_field') === r ? 'selected' : ''}>${r}</option>`).join('')}
                                 </select>
                                 <button type="button" onclick="this.closest('.ds-review-field-row').remove()" title="Remove field"
                                     class="text-red-400 text-xs px-1.5 hover:bg-slate-800 rounded">−</button>
-                            </div>`).join('')}
+                            </div>`).join('') || '<p class="text-slate-600 text-[10px]">No fields detected — add manually if needed.</p>'}
                     </div>
                 </div>
-                ${res.fieldNotes ? `<div><span class="text-slate-500">AI notes:</span> ${escapeHtml(res.fieldNotes)}</div>` : ''}
-                <button onclick="confirmDocStudioReview()" class="w-full text-xs px-2 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white">
-                    Confirm &amp; Save
-                </button>
-            `;
+                <div class="border-t border-slate-800 pt-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-slate-300 text-[11px] font-medium">Clone template (designCode JSON)</label>
+                        <button type="button" onclick="dsReviewFormatJson()" class="text-[10px] text-slate-400 hover:text-emerald-400">Format JSON</button>
+                    </div>
+                    <p class="text-[10px] text-slate-600">This is what the Worker uses to build the document. Edit structure, colours, tokens — do not leave sample names/amounts as literals.</p>
+                    <label class="block text-[10px] text-slate-500">Narration</label>
+                    <textarea id="dsReviewNarration" rows="2"
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-[11px] text-slate-300 font-mono">${escapeHtml(narration)}</textarea>
+                    <textarea id="dsReviewDesignCode" rows="12"
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-[11px] text-emerald-300/90 font-mono leading-relaxed">${escapeHtml(designJson)}</textarea>
+                    <p id="dsReviewDesignError" class="hidden text-red-400 text-[10px]"></p>
+                </div>
+                <div class="flex gap-2 pt-1">
+                    <button type="button" onclick="closeDocStudioUploadModal()"
+                        class="flex-1 text-xs px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded text-white">Cancel</button>
+                    <button type="button" onclick="confirmDocStudioReview()"
+                        class="flex-1 text-xs px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded text-white font-medium">Confirm &amp; save template</button>
+                </div>`;
         }
 
-        /** Persists the admin's (possibly edited) review of the AI's proposal — the last step of the human-in-the-loop setup. */
+        function dsReviewFormatJson() {
+            const ta = document.getElementById('dsReviewDesignCode');
+            const err = document.getElementById('dsReviewDesignError');
+            if (!ta) return;
+            try {
+                const obj = JSON.parse(ta.value);
+                ta.value = JSON.stringify(obj, null, 2);
+                if (err) { err.classList.add('hidden'); err.textContent = ''; }
+            } catch (e) {
+                if (err) { err.classList.remove('hidden'); err.textContent = 'Invalid JSON: ' + e.message; }
+            }
+        }
+
         function dsReviewAddField() {
             const wrap = document.getElementById('dsReviewFields');
             if (!wrap) return;
@@ -13813,7 +13890,6 @@ ${a.Status === 'Pending Review' ? `
 
         async function confirmDocStudioReview() {
             if (!DOC_STUDIO_PENDING_REVIEW) return;
-            // Pair name + role from each remaining row (removed rows are gone from DOM)
             const columns = [];
             const fieldRoles = {};
             document.querySelectorAll('#dsReviewFields .ds-review-field-row').forEach(row => {
@@ -13826,12 +13902,35 @@ ${a.Status === 'Pending Review' ? `
             });
             const isBlankTemplate = document.getElementById('dsReviewIsBlank').checked;
             const catalogId = document.getElementById('dsReviewCatalogId').value;
+            const narration = (document.getElementById('dsReviewNarration') || {}).value || '';
+            const errEl = document.getElementById('dsReviewDesignError');
+            let designCode = null;
+            const rawJson = (document.getElementById('dsReviewDesignCode') || {}).value || '';
+            if (rawJson.trim()) {
+                try {
+                    designCode = JSON.parse(rawJson);
+                } catch (e) {
+                    if (errEl) { errEl.classList.remove('hidden'); errEl.textContent = 'Fix designCode JSON before save: ' + e.message; }
+                    showToast('designCode JSON is invalid — fix it before Confirm.', 'error');
+                    return;
+                }
+            }
+            if (errEl) { errEl.classList.add('hidden'); errEl.textContent = ''; }
 
+            const btn = document.querySelector('#dsUploadResult button[onclick="confirmDocStudioReview()"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
             const res = await executeSecureBridgeCall('agent', 'agent-confirm-document-template', {
-                clientId: DOC_STUDIO_PENDING_REVIEW.clientId, recordId: DOC_STUDIO_PENDING_REVIEW.recordId,
-                columns, fieldRoles, isBlankTemplate, catalogId
+                clientId: DOC_STUDIO_PENDING_REVIEW.clientId,
+                recordId: DOC_STUDIO_PENDING_REVIEW.recordId,
+                columns,
+                fieldRoles,
+                isBlankTemplate,
+                catalogId,
+                designCode: designCode || undefined,
+                designNarration: narration
             });
-            showToast(res.success ? 'Saved — this format will now be used for generation.' : (res.message || 'Save failed.'), res.success ? 'success' : 'error');
+            if (btn) { btn.disabled = false; btn.textContent = 'Confirm & save template'; }
+            showToast(res.success ? 'Template saved — Worker will use this designCode for generation.' : (res.message || 'Save failed.'), res.success ? 'success' : 'error');
             if (res.success) closeDocStudioUploadModal();
         }
 
@@ -13970,13 +14069,16 @@ ${a.Status === 'Pending Review' ? `
             listEl.innerHTML = res.samples.map(s => {
                 const canTest = (s.assetType === 'letterhead' || s.assetType === 'logo') ||
                     (s.status === 'confirmed' && s.suggestedCatalogId);
+                const canEditDesign = (s.assetType === 'sample' || s.assetType === 'blank_template') &&
+                    (s.status === 'confirmed' || s.status === 'pending_review' || s.status === 'analyzed');
                 return `
-                <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded p-2">
-                    <div>
-                        <div class="text-slate-200">${escapeHtml(s.detectedLabel || s.fileName)}</div>
+                <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded p-2 gap-2">
+                    <div class="min-w-0">
+                        <div class="text-slate-200 truncate">${escapeHtml(s.detectedLabel || s.fileName)}</div>
                         <div class="text-slate-500 text-[10px]">${escapeHtml(s.assetType)} · ${escapeHtml(s.status)} ${s.suggestedCatalogId ? '· ' + escapeHtml(s.suggestedCatalogId) : ''}</div>
                     </div>
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 shrink-0">
+                        ${canEditDesign ? `<button onclick="openDesignCodeEditModal('${escapeHtml(clientId)}','${escapeHtml(s.recordId)}','${escapeHtml(s.suggestedCatalogId || '')}')" class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-amber-300" title="Edit designCode JSON">Edit design</button>` : ''}
                         ${canTest ? `<button onclick="testTrainedAsset('${escapeHtml(clientId)}','${escapeHtml(s.assetType)}','${escapeHtml(s.suggestedCatalogId || '')}',this)" class="text-[10px] px-2 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white">Test</button>` : ''}
                         ${s.viewUrl ? `<a href="${escapeHtml(s.viewUrl)}" target="_blank" class="text-emerald-400 hover:text-emerald-300"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>` : ''}
                         <button onclick="deleteDocStudioSample('${escapeHtml(clientId)}','${escapeHtml(s.recordId)}')" class="text-slate-500 hover:text-red-400"><i class="fa-solid fa-trash"></i></button>
@@ -14015,6 +14117,103 @@ ${a.Status === 'Pending Review' ? `
             showToast(res.success ? 'Sample deleted.' : (res.message || 'Delete failed.'), res.success ? 'success' : 'error');
             if (res.success) loadDocStudioSamples(clientId);
         }
+
+        let DESIGN_CODE_EDIT_CTX = null;
+
+        function closeDesignCodeEditModal() {
+            document.getElementById('modalDesignCodeEdit')?.classList.add('hidden');
+            DESIGN_CODE_EDIT_CTX = null;
+        }
+
+        /** Load confirmed/pending template designCode for post-save editing. */
+        async function openDesignCodeEditModal(clientId, recordId, catalogId) {
+            DESIGN_CODE_EDIT_CTX = { clientId, recordId, catalogId: catalogId || '' };
+            const modal = document.getElementById('modalDesignCodeEdit');
+            const jsonEl = document.getElementById('designCodeEditJson');
+            const narrEl = document.getElementById('designCodeEditNarration');
+            const meta = document.getElementById('designCodeEditMeta');
+            const err = document.getElementById('designCodeEditError');
+            if (!modal || !jsonEl) return;
+            modal.classList.remove('hidden');
+            jsonEl.value = 'Loading…';
+            if (narrEl) narrEl.value = '';
+            if (err) { err.classList.add('hidden'); err.textContent = ''; }
+            if (meta) meta.textContent = (catalogId || 'document') + ' · ' + recordId;
+
+            // Prefer get-document-template when catalog known; else list samples and parse TemplateSpec
+            let designCode = null;
+            let narration = '';
+            if (catalogId) {
+                const res = await executeSecureBridgeCall('agent', 'agent-get-document-template', { clientId, docId: catalogId }, { silent: true });
+                if (res && res.success && res.template && res.template.designCode) {
+                    designCode = res.template.designCode;
+                    narration = res.template.designNarration || '';
+                }
+            }
+            if (!designCode) {
+                const list = await executeSecureBridgeCall('agent', 'agent-list-document-samples', { clientId }, { silent: true });
+                const row = (list && list.samples || []).find(s => s.recordId === recordId);
+                if (row && row.templateSpec && row.templateSpec.designCode) {
+                    designCode = row.templateSpec.designCode;
+                    narration = row.templateSpec.designNarration || '';
+                } else if (row && row.designCode) {
+                    designCode = row.designCode;
+                    narration = row.designNarration || '';
+                }
+            }
+            jsonEl.value = designCode ? JSON.stringify(designCode, null, 2) : '{\n  "version": 2,\n  "elements": []\n}';
+            if (narrEl) narrEl.value = narration || '';
+            if (!designCode) {
+                showToast('No designCode on file yet — paste JSON or re-analyse the sample.', 'info');
+            }
+        }
+
+        async function saveDesignCodeEdit() {
+            if (!DESIGN_CODE_EDIT_CTX) return;
+            const jsonEl = document.getElementById('designCodeEditJson');
+            const narrEl = document.getElementById('designCodeEditNarration');
+            const err = document.getElementById('designCodeEditError');
+            const btn = document.getElementById('designCodeEditSaveBtn');
+            let designCode;
+            try {
+                designCode = JSON.parse((jsonEl && jsonEl.value) || '');
+            } catch (e) {
+                if (err) { err.classList.remove('hidden'); err.textContent = 'Invalid JSON: ' + e.message; }
+                showToast('Fix JSON before saving.', 'error');
+                return;
+            }
+            if (err) { err.classList.add('hidden'); err.textContent = ''; }
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+            const payload = {
+                clientId: DESIGN_CODE_EDIT_CTX.clientId,
+                recordId: DESIGN_CODE_EDIT_CTX.recordId,
+                catalogId: DESIGN_CODE_EDIT_CTX.catalogId || undefined,
+                designCode,
+                designNarration: (narrEl && narrEl.value) || ''
+            };
+            let res = await executeSecureBridgeCall('agent', 'agent-update-document-template-design', payload);
+            // Fallback: confirm path also accepts designCode for pending rows
+            if ((!res || !res.success) && DESIGN_CODE_EDIT_CTX.recordId) {
+                res = await executeSecureBridgeCall('agent', 'agent-confirm-document-template', {
+                    clientId: DESIGN_CODE_EDIT_CTX.clientId,
+                    recordId: DESIGN_CODE_EDIT_CTX.recordId,
+                    catalogId: DESIGN_CODE_EDIT_CTX.catalogId || undefined,
+                    designCode,
+                    designNarration: (narrEl && narrEl.value) || '',
+                    columns: [],
+                    fieldRoles: {},
+                    isBlankTemplate: false
+                });
+            }
+            if (btn) { btn.disabled = false; btn.textContent = 'Save design'; }
+            showToast(res && res.success ? 'Design updated — next generate/preview uses this JSON.' : ((res && res.message) || 'Save failed.'), res && res.success ? 'success' : 'error');
+            if (res && res.success) {
+                closeDesignCodeEditModal();
+                const cid = DESIGN_CODE_EDIT_CTX ? DESIGN_CODE_EDIT_CTX.clientId : document.getElementById('docStudioClientId')?.value;
+                if (cid) loadDocStudioSamples(cid);
+            }
+        }
+
 
         const AI_ACTION_CATALOG = {
 
@@ -16305,10 +16504,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         document.addEventListener("DOMContentLoaded", initializeModule);
     </script>
     <script>
-
-        // ===== CareerHub job completion file upload (bridge admin) =====
-        // Call after setting status to Completed on client-onboarded jobs.
-
         async function uploadCareerJobCompletionFile(trackingCode, fileInputEl, meta) {
             meta = meta || {};
             if (!trackingCode) { showToast('Tracking code required', 'error'); return; }
@@ -16341,8 +16536,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             }
 
             const res = await executeSecureBridgeCall('career', 'adminUploadJobCompletionFile', payload);
-            // If your bridge routes career actions differently, use:
-            // await executeSecureBridgeCall('careerHub', 'adminUploadJobCompletionFile', payload);
             if (res && res.success) {
                 showToast('File uploaded. Client notified (free 30 days, then ₦10,000 unlock).', 'success');
                 if (typeof loadProductionFulfillment === 'function') loadProductionFulfillment();
@@ -16360,7 +16553,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
           onclick="uploadCareerJobCompletionFile('${trackingCode}', document.getElementById('careerJobFile_${trackingCode}'), { markCompleted: true })">
           Upload &amp; notify client
         </button>
-        <p class="text-[10px] text-slate-500 mt-1">Client gets a link free for 30 days, then ₦10,000 to unlock.</p>
+        <p class="text-[10px] text-slate-500 mt-1">Client gets a link free for 30 days, then ₦10,000 to unlock. </p> 
       </div>`;
         }
     </script>
