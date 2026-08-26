@@ -287,6 +287,92 @@
         }
 
 
+
+        /* Service / feature info tip (faded i) */
+        .svc-info {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 15px;
+            height: 15px;
+            margin-left: 6px;
+            border-radius: 50%;
+            border: 1px solid #cbd5e1;
+            color: #94a3b8;
+            font-size: 9px;
+            font-weight: 700;
+            font-style: normal;
+            font-family: Inter, sans-serif;
+            cursor: help;
+            position: relative;
+            vertical-align: middle;
+            opacity: 0.55;
+            transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+            flex-shrink: 0;
+        }
+
+        .svc-info:hover,
+        .svc-info:focus {
+            opacity: 1;
+            color: var(--brand);
+            border-color: var(--brand);
+            outline: none;
+        }
+
+        .svc-info::after {
+            content: attr(data-tip);
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 8px);
+            transform: translateX(-50%) translateY(4px);
+            min-width: 200px;
+            max-width: 280px;
+            padding: 8px 10px;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-size: 11px;
+            font-weight: 500;
+            line-height: 1.45;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s, transform 0.15s;
+            z-index: 50;
+            text-align: left;
+            white-space: normal;
+        }
+
+        .svc-info::before {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 2px);
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: #0f172a;
+            opacity: 0;
+            transition: opacity 0.15s;
+            z-index: 51;
+        }
+
+        .svc-info:hover::after,
+        .svc-info:focus::after {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .svc-info:hover::before,
+        .svc-info:focus::before {
+            opacity: 1;
+        }
+
+        .price-card[style*="1e293b"] .svc-info,
+        .price-card.dark-card .svc-info {
+            border-color: #475569;
+            color: #94a3b8;
+        }
+
         .price-amount-usd {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 1.85rem;
@@ -1910,8 +1996,11 @@
                 <h2 class="sec-title display-5 mb-3">AI-Human Hybrid Ops Suite</h2>
                 <p class="sec-body mx-auto" style="max-width:640px;">Every tier pairs a dedicated <strong
                         style="color:var(--brand);">AI-Human Hybrid VA</strong> team with automated compliance
-                    tracking, mailbox management, and — from Growth Ops up — real CRM connections. No vendor
-                    juggling, one accountable relationship.</p>
+                    tracking, mailbox management, and — from Growth Ops up — real CRM connections. Social media
+                    calendars and publishing are <strong>not</strong> included here — they live in the Digital Growth
+                    Suite below. Hover the <span class="svc-info" style="opacity:0.8;"
+                        data-tip="Info icons explain each line item.">i</span> icons on package details for what each
+                    service covers.</p>
                 <div style="margin-top:1rem;"><span class="price-discount-badge"
                         style="font-size:0.85rem;padding:6px 16px;">
                         <i class="fas fa-tag" style="margin-right:6px;"></i>Limited-time pricing — up to 28.6% off
@@ -3153,34 +3242,50 @@
             }
         });
 
+
+        /** Build a faded "i" info icon with hover tooltip. */
+        function svcInfoIcon(tip) {
+            if (!tip) return '';
+            const safe = String(tip).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+            return ' <span class="svc-info" tabindex="0" data-tip="' + safe + '" aria-label="More info">i</span>';
+        }
+
         const TIER_DETAILS = {
             starterOps: {
                 tag: "AI-Human Hybrid VA Support", title: "Starter Ops", sub: "For small teams & early-stage businesses",
                 price: "$192 USD/mo · ≈ ₦250,000/mo (-28.6% vs ₦350,000)", cta: "Get Starter Ops", ctaService: "Starter Ops",
                 included: [
-                    "20 hrs/month dedicated AI-Human Hybrid VA support",
-                    "1 managed mailbox (up to 50 emails/month handled)",
-                    "1 business proposal drafted & formatted per month",
-                    "Lightweight compliance orientation & recommendations (NDPA, CAC annual returns awareness)",
-                    "Monthly progress summary report",
-                    "Dedicated account contact"
+                    { t: "20 hrs/month dedicated AI-Human Hybrid VA support", tip: "Shared hour bank for admin, email handling, and document assistance with AI + human review." },
+                    { t: "1 managed mailbox (up to 50 emails/month handled)", tip: "One connected inbox; we help process up to 50 emails per month." },
+                    { t: "1 business proposal drafted & formatted per month", tip: "One proposal package per month within Starter Ops limits." },
+                    { t: "Lightweight compliance orientation (NDPA, CAC awareness)", tip: "Guidance and recommendations only — not full compliance tracking (Growth+) or social media." },
+                    { t: "Monthly progress summary report", tip: "Written summary of work done in the period." },
+                    { t: "Dedicated account contact", tip: "A named point of contact for requests and escalations." }
                 ],
-                excluded: ["No CRM connection", "No lead generation", "No document intelligence scanning"]
+                excluded: [
+                    "No CRM connection",
+                    "No lead generation",
+                    "No social media publishing (Digital tiers only)",
+                    "No document intelligence scanning"
+                ]
             },
             growthOps: {
                 tag: "Most Popular", title: "Growth Ops", sub: "For growing companies with active pipelines",
                 price: "$500 USD/mo · ≈ ₦650,000/mo (-31.6% vs ₦950,000)", cta: "Select Growth Ops", ctaService: "Growth Ops",
                 included: [
-                    "40 hrs/month AI-Human Hybrid VA support",
-                    "Up to 3 managed mailboxes, 200 emails/month",
-                    "3 business proposals drafted per month",
-                    "Compliance recommendations + tracking of 3 compliance documents (expiry & renewal alerts)",
-                    "CRM connection & analysis — Zoho, Salesforce, or HubSpot (read-only pull, pipeline insights)",
-                    "Bi-weekly performance reporting",
-                    "Priority email support",
-                    "80 leads generation"
+                    { t: "40 hrs/month AI-Human Hybrid VA support", tip: "Human operators plus AI tools for email, admin, and document work within your monthly hour bank." },
+                    { t: "Up to 3 managed mailboxes, 200 emails/month", tip: "We connect and manage up to 3 inboxes; volume counted toward your 200 email handling quota." },
+                    { t: "3 business proposals drafted per month", tip: "Formatted client-ready proposals within your Ops quota — not a Digital marketing package." },
+                    { t: "Compliance recommendations + tracking of 3 compliance documents", tip: "Expiry and renewal alerts for up to 3 tracked compliance documents (e.g. CAC, tax filings)." },
+                    { t: "CRM connection & analysis — Zoho, Salesforce, or HubSpot", tip: "Read-oriented CRM link for pipeline insights. Does not include social media publishing." },
+                    { t: "Bi-weekly performance reporting", tip: "Ops activity and progress every two weeks." },
+                    { t: "Priority email support", tip: "Faster response from your account contact during business hours." },
+                    { t: "70 leads generation / month", tip: "Lead research volume included in Growth Ops. Social posting is sold under Digital tiers only." }
                 ],
-                excluded: ["No CRM connection (available as add-on)"]
+                excluded: [
+                    "No social media calendar or publishing (see Digital Launch / Accelerate / Scale)",
+                    "No paid ads amplification"
+                ]
             },
             enterpriseOps: {
                 tag: "Full Stack", title: "Enterprise Ops", sub: "For large organisations with complex operations",
@@ -3200,25 +3305,25 @@
             },
             digitalLaunch: {
                 tag: "Front-Office", title: "Digital Launch", sub: "For businesses establishing their first digital presence",
-                price: "From $295 USD/mo · ≈ ₦383,500/mo", cta: "Launch Your Presence", ctaService: "Digital Launch",
+                price: "From $192 USD/mo · ≈ ₦250,000/mo", cta: "Launch Your Presence", ctaService: "Digital Launch",
                 included: [
-                    "8 social posts/week total — auto-redistributed live across TikTok (3), Facebook (3), Instagram (1) & LinkedIn (1) based on which platforms you've connected",
-                    "Image & text posts (LinkedIn is text-only on this tier)",
-                    "Monthly content calendar",
-                    "Analytics dashboard access",
-                    "Monthly performance report"
+                    { t: "8 social posts/week (TikTok, Facebook, Instagram, LinkedIn)", tip: "Weekly pool redistributed across the platforms you connect. Backend list price ₦250,000/mo." },
+                    { t: "Image & text posts (LinkedIn text-only on this tier)", tip: "No video posts on Launch — available on Digital Scale." },
+                    { t: "Monthly content calendar", tip: "Planned posts you can review before publish." },
+                    { t: "Analytics dashboard access", tip: "Basic performance view for published posts." },
+                    { t: "Monthly performance report", tip: "Written summary of reach and engagement." }
                 ],
-                excluded: ["No document or video posts", "No ABM campaigns", "No paid amplification", "No X, Threads, or WhatsApp"]
+                excluded: ["No document or video posts", "No ABM campaigns", "No paid amplification", "No X, Threads, or WhatsApp publishing on this tier"]
             },
             digitalAccelerate: {
                 tag: "Most Popular", title: "Digital Accelerate", sub: "For full-funnel growth & consistent B2B pipeline",
-                price: "$588 USD/mo · ≈ ₦764,400/mo", cta: "Accelerate Now", ctaService: "Digital Accelerate",
+                price: "$308 USD/mo · ≈ ₦400,000/mo", cta: "Accelerate Now", ctaService: "Digital Accelerate",
                 included: [
-                    "Full-funnel content strategy for connected platforms",
-                    "28 social posts/week total — auto-redistributed live across Facebook, Instagram, TikTok & LinkedIn (7 each) based on which platforms you've connected",
-                    "LinkedIn document posts included",
-                    "WhatsApp: 50 client-reply quota/week — converts to +5 bonus posts/week (text-only) until WhatsApp is connected",
-                    "Bi-weekly performance reporting"
+                    { t: "Full-funnel content strategy for connected platforms", tip: "Planning across FB, IG, TikTok, LinkedIn — separate from Ops mailbox/CRM packages." },
+                    { t: "28 social posts/week across Facebook, Instagram, TikTok & LinkedIn", tip: "About 7 posts/week per platform when all four are connected." },
+                    { t: "LinkedIn document posts included", tip: "Carousel/document-style posts on LinkedIn in addition to text/image." },
+                    { t: "WhatsApp: 50 client-reply quota/week (or +5 bonus posts if not connected)", tip: "Reply capacity for client WhatsApp; unused quota can convert to extra text posts." },
+                    { t: "Bi-weekly performance reporting", tip: "Growth metrics every two weeks." }
                 ],
                 excluded: ["No video posts (Digital Scale only)", "No X or Threads (Digital Scale only)", "No dedicated strategist (Digital Scale only)"]
             },
@@ -3247,12 +3352,18 @@
             const existing = document.getElementById('tierDetailsModal');
             if (existing) existing.remove();
 
+            const tipHtml = (tip) => tip
+                ? ` <span class="svc-info" tabindex="0" data-tip="${String(tip).replace(/"/g, '&quot;')}" aria-label="More info">i</span>`
+                : '';
+            const lineText = (item) => (item && typeof item === 'object') ? (item.t || item.text || '') : String(item || '');
+            const lineTip = (item) => (item && typeof item === 'object') ? (item.tip || '') : '';
+
             const includedHtml = d.included.map(item =>
-                `<li><i class="fas fa-check-circle"></i><span>${item}</span></li>`
+                `<li><i class="fas fa-check-circle"></i><span>${lineText(item)}${tipHtml(lineTip(item))}</span></li>`
             ).join('');
 
             const excludedHtml = (d.excluded || []).map(item =>
-                `<li class="excluded"><i class="fas fa-xmark"></i><span>${item}</span></li>`
+                `<li class="excluded"><i class="fas fa-xmark"></i><span>${lineText(item)}${tipHtml(lineTip(item))}</span></li>`
             ).join('');
 
             const overlay = document.createElement('div');

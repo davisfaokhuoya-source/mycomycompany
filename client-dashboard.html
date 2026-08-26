@@ -1173,6 +1173,23 @@
                     </div>
 
                     <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
+                                        class="fa-solid fa-toggle-on text-emerald-500"></i> Service switches</h3>
+                                <p class="text-[10px] text-slate-500 mt-1">Turn individual capabilities on or off.
+                                    Greyed
+                                    items are controlled by your account team. Social options require a Digital tier.
+                                </p>
+                            </div>
+                            <button type="button" onclick="loadClientServiceFlags()"
+                                class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Refresh</button>
+                        </div>
+                        <div id="clientServiceFlagsList" class="space-y-1.5 text-xs"></div>
+                        <p id="clientServiceFlagsMeta" class="text-[10px] text-slate-600"></p>
+                    </div>
+
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
                         <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
                                 class="fa-solid fa-share-nodes text-slate-500"></i> Social Media</h3>
                         <div id="integrationsSocialList" class="space-y-2 text-xs"></div>
@@ -2838,6 +2855,7 @@
         // can see and revoke themselves.
         // =====================================================================
         async function loadIntegrationsPanel() {
+            try { loadClientServiceFlags(); } catch (_) { }
             const mbxEl = document.getElementById('integrationsMailboxList');
             const waEl = document.getElementById('integrationsWhatsAppList');
             const socEl = document.getElementById('integrationsSocialList');
@@ -4315,6 +4333,110 @@
             callGateway('clientportal', 'clientPortalPresencePing');
             PRESENCE_TIMER = setInterval(() => callGateway('clientportal', 'clientPortalPresencePing'), 60000);
         }
+
+
+        // =====================================================================
+        // SERVICE FLAGS — per-capability on/off (client-controllable subset)
+        // =====================================================================
+        const SERVICE_FLAG_LABELS = {
+            "mailbox.connect": "Connect mailbox",
+            "mailbox.read": "Read inbox",
+            "mailbox.autoReply": "Auto-reply / draft replies",
+            "mailbox.send": "Send email",
+            "whatsapp.connect": "Connect WhatsApp",
+            "whatsapp.read": "Read WhatsApp",
+            "whatsapp.reply": "Reply on WhatsApp",
+            "crm.connect": "Connect CRM",
+            "crm.sync": "Sync CRM data",
+            "social.connect": "Connect social accounts",
+            "social.calendar": "Social calendar",
+            "social.publish": "Publish social posts",
+            "docs.generate": "Generate documents",
+            "docs.send": "Send documents",
+            "docs.preview": "Preview document layouts",
+            "chat.live": "Live chat",
+            "appointments": "Appointments",
+            "billing.selfServe": "Self-serve billing"
+        };
+        const SERVICE_FLAG_TIPS = {
+            "mailbox.connect": "Allow linking a business mailbox to the agent.",
+            "mailbox.read": "Allow the agent to read messages in connected mailboxes.",
+            "mailbox.autoReply": "Allow automated draft/reply handling (you can leave connect/read on while this is off).",
+            "mailbox.send": "Allow outbound email from connected mailboxes.",
+            "whatsapp.connect": "Allow linking WhatsApp Business numbers.",
+            "whatsapp.read": "Allow reading inbound WhatsApp messages.",
+            "whatsapp.reply": "Allow agent replies on WhatsApp.",
+            "crm.connect": "Allow CRM OAuth / API connection.",
+            "crm.sync": "Allow pulling pipeline data from CRM.",
+            "social.connect": "Requires a Digital tier. Link FB/IG/TikTok/LinkedIn/etc.",
+            "social.calendar": "Requires Digital tier. View planned posts.",
+            "social.publish": "Requires Digital tier. Publish approved posts.",
+            "docs.generate": "Create documents from the catalog.",
+            "docs.send": "Email generated documents to recipients.",
+            "docs.preview": "Free layout preview (does not use quota).",
+            "chat.live": "Live chat with your account team in this dashboard.",
+            "appointments": "View and manage appointment requests.",
+            "billing.selfServe": "Renewals, top-ups, and plan changes from Billing."
+        };
+
+        async function loadClientServiceFlags() {
+            const list = document.getElementById('clientServiceFlagsList');
+            const meta = document.getElementById('clientServiceFlagsMeta');
+            if (!list) return;
+            list.innerHTML = '<p class="text-slate-500 text-[11px]">Loading…</p>';
+            // Prefer dedicated action; fall back if gateway not updated yet
+            let res = await callGateway('clientportal', 'clientPortalGetServiceFlags', {});
+            if (!res || res.success === false) {
+                res = await callGateway('agent', 'agent-get-service-flags', { clientId: CLIENT_ID });
+            }
+            if (!res || !res.success) {
+                list.innerHTML = `<p class="text-slate-500 text-[11px]">${escapeHtml((res && res.message) || 'Service switches unavailable. Ask your account team if this persists.')}</p>`;
+                return;
+            }
+            const flags = res.flags || {};
+            const controllable = res.clientControllable || {};
+            const keys = res.catalog || Object.keys(SERVICE_FLAG_LABELS);
+            list.innerHTML = keys.map(k => {
+                const on = flags[k] !== false;
+                const can = !!controllable[k];
+                const label = SERVICE_FLAG_LABELS[k] || k;
+                const tip = SERVICE_FLAG_TIPS[k] || '';
+                return `<label class="flex items-center justify-between gap-2 py-1.5 px-2 rounded border border-slate-800/80 ${can ? 'bg-slate-900/40' : 'bg-slate-950/40 opacity-80'}">
+                    <span class="text-slate-300 flex items-center gap-1.5 min-w-0">
+                        <span class="truncate">${escapeHtml(label)}</span>
+                        ${tip ? `<span class="text-[9px] text-slate-500 shrink-0" title="${escapeHtml(tip)}">ⓘ</span>` : ''}
+                        ${!can ? '<span class="text-[9px] text-slate-600 shrink-0">(admin)</span>' : ''}
+                    </span>
+                    <input type="checkbox" data-flag="${escapeHtml(k)}" ${on ? 'checked' : ''} ${can ? '' : 'disabled'}
+                        onchange="toggleClientServiceFlag('${escapeHtml(k)}', this.checked)"
+                        class="rounded border-slate-600 text-emerald-500 focus:ring-emerald-500/40" />
+                </label>`;
+            }).join('');
+            if (meta) {
+                meta.textContent = (res.digitalTier ? ('Digital: ' + res.digitalTier) : 'No Digital tier — social switches stay off')
+                    + (res.opsTier ? (' · Ops: ' + res.opsTier) : '');
+            }
+        }
+
+        async function toggleClientServiceFlag(key, enabled) {
+            const res = await callGateway('clientportal', 'clientPortalSetServiceFlags', {
+                flags: { [key]: !!enabled }, asClient: true
+            });
+            if (!res || !res.success) {
+                // fallback agent action
+                const res2 = await callGateway('agent', 'agent-set-service-flags', {
+                    clientId: CLIENT_ID, flags: { [key]: !!enabled }, asClient: true
+                });
+                if (!res2 || !res2.success) {
+                    notifyUser((res2 && res2.message) || (res && res.message) || 'Could not update switch.', 'error');
+                    loadClientServiceFlags();
+                    return;
+                }
+            }
+            notifyUser('Updated: ' + (SERVICE_FLAG_LABELS[key] || key), 'success');
+            loadClientServiceFlags();
+        }
+
 
         // =====================================================================
         // SOCIAL CALENDAR — optional review/approval of the month's planned

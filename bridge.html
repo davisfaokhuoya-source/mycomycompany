@@ -4197,6 +4197,9 @@
                     <a href="#" data-target-view="monitor-overview" class="agent-subview-link active">System Health</a>
                     <a href="#" data-target-view="monitor-jobs" class="agent-subview-link">Job Queue &amp; Errors</a>
                     <a href="#" data-target-view="monitor-audit" class="agent-subview-link">Audit &amp; Live Feed</a>
+                    <a href="#" data-target-view="monitor-error-codes" class="agent-subview-link">Client Error Codes</a>
+                    <a href="#" data-target-view="monitor-service-flags" class="agent-subview-link">Client Service
+                        Switches</a>
                     <a href="#" data-target-view="monitor-social" class="agent-subview-link">Social Performance</a>
                     <a href="#" data-target-view="monitor-costs" class="agent-subview-link">AI Cost Report</a>
                 </div>
@@ -4258,6 +4261,39 @@
                     </div>
 
                     <!-- JOB QUEUE -->
+
+                    <div id="view-monitor-error-codes" class="agent-view hidden flex-1 flex-col overflow-hidden p-4"
+                        style="display:none;">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <h2 class="text-sm font-bold text-white">Client error codes</h2>
+                                <p class="text-[11px] text-slate-500">Codes shown on the Client Dashboard. Map reports
+                                    like “error code 4301” here.</p>
+                            </div>
+                            <button type="button" onclick="loadMonitorErrorCodes()"
+                                class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">Refresh</button>
+                        </div>
+                        <div id="monErrorCodesBody" class="flex-1 overflow-y-auto custom-scrollbar text-xs space-y-2">
+                        </div>
+                    </div>
+
+                    <div id="view-monitor-service-flags" class="agent-view hidden flex-1 flex-col overflow-hidden p-4"
+                        style="display:none;">
+                        <div class="flex flex-wrap items-end gap-2 mb-3">
+                            <div class="flex-1 min-w-[12rem]">
+                                <h2 class="text-sm font-bold text-white">Client service switches</h2>
+                                <p class="text-[11px] text-slate-500">Per-capability on/off. Social requires a Digital
+                                    tier. Ops no longer includes social limits.</p>
+                            </div>
+                            <select id="monServiceFlagsClient"
+                                class="bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-white min-w-[10rem]"></select>
+                            <button type="button" onclick="loadMonitorServiceFlags()"
+                                class="text-xs px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white">Load</button>
+                        </div>
+                        <div id="monServiceFlagsBody"
+                            class="flex-1 overflow-y-auto custom-scrollbar text-xs space-y-1.5"></div>
+                    </div>
+
                     <div id="view-monitor-jobs"
                         class="agent-view hidden flex-1 flex flex-col overflow-hidden p-5 space-y-4">
                         <div class="flex flex-wrap items-center justify-between gap-3 shrink-0">
@@ -15937,6 +15973,127 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             }
         }
 
+
+        const ADMIN_SERVICE_FLAG_LABELS = {
+            "mailbox.connect": "Connect mailbox",
+            "mailbox.read": "Read inbox",
+            "mailbox.autoReply": "Auto-reply / drafts",
+            "mailbox.send": "Send email",
+            "whatsapp.connect": "Connect WhatsApp",
+            "whatsapp.read": "Read WhatsApp",
+            "whatsapp.reply": "Reply WhatsApp",
+            "crm.connect": "Connect CRM",
+            "crm.sync": "Sync CRM",
+            "social.connect": "Connect social",
+            "social.calendar": "Social calendar",
+            "social.publish": "Publish social",
+            "docs.generate": "Generate documents",
+            "docs.send": "Send documents",
+            "docs.preview": "Preview layouts",
+            "chat.live": "Live chat",
+            "appointments": "Appointments",
+            "billing.selfServe": "Self-serve billing"
+        };
+
+        async function loadMonitorErrorCodes() {
+            const box = document.getElementById('monErrorCodesBody');
+            if (!box) return;
+            box.innerHTML = '<p class="text-slate-500">Loading…</p>';
+            const res = await executeSecureBridgeCall('agent', 'agent-get-error-code-catalog', {}, { silent: true });
+            const fallback = {
+                "4101": "Auth — invalid Client ID / access code / session",
+                "4102": "Missing Gateway URL",
+                "4201": "Timeout / aborted",
+                "4202": "Network / fetch / CORS",
+                "4203": "Upstream 502/503/504/524 / Apps Script / Worker",
+                "4301": "Document quota exhausted",
+                "4302": "Not enough document units for job weight",
+                "4303": "Unknown document type",
+                "4304": "Missing required generate field",
+                "4305": "Layout preview failure",
+                "4306": "Document generation failure",
+                "4401": "Billing / payment / renewal",
+                "4501": "Mailbox / WhatsApp / email integration",
+                "4502": "Social calendar / publish",
+                "4601": "Service switch turned off",
+                "4900": "Generic unclassified"
+            };
+            let codes = (res && res.success && res.codes) ? res.codes : null;
+            if (!codes) {
+                codes = {};
+                Object.keys(fallback).forEach(k => { codes[k] = { category: "—", meaning: fallback[k] }; });
+            }
+            const rows = Object.keys(codes).sort().map(code => {
+                const c = codes[code] || {};
+                const meaning = c.meaning || c || fallback[code] || "";
+                const cat = c.category || "—";
+                return `<div class="flex gap-3 border border-slate-800 rounded-lg px-3 py-2 bg-slate-950/50">
+                    <span class="font-mono text-emerald-400 w-12 shrink-0">${_monEscape(code)}</span>
+                    <span class="text-slate-500 w-20 shrink-0">${_monEscape(cat)}</span>
+                    <span class="text-slate-200">${_monEscape(meaning)}</span>
+                </div>`;
+            }).join('');
+            box.innerHTML = rows + (res && res.note ? `<p class="text-slate-500 mt-3">${_monEscape(res.note)}</p>` : '');
+        }
+
+        function populateMonServiceFlagsClients() {
+            const sel = document.getElementById('monServiceFlagsClient');
+            if (!sel || typeof ALL_CLIENTS_CACHE === 'undefined') return;
+            const list = ALL_CLIENTS_CACHE || [];
+            if (!list.length && typeof populateAllClientsSelector === 'function') {
+                try { populateAllClientsSelector('monServiceFlagsClient'); return; } catch (_) { }
+            }
+            const prev = sel.value;
+            sel.innerHTML = '<option value="">Select client…</option>' + list.map(c => {
+                const id = c.ClientID || c.clientId || '';
+                const name = c.CompanyName || c.companyName || id;
+                return `<option value="${_monEscape(id)}">${_monEscape(name)} (${_monEscape(id)})</option>`;
+            }).join('');
+            if (prev) sel.value = prev;
+        }
+
+        async function loadMonitorServiceFlags() {
+            const box = document.getElementById('monServiceFlagsBody');
+            const sel = document.getElementById('monServiceFlagsClient');
+            if (!box) return;
+            const clientId = sel && sel.value;
+            if (!clientId) {
+                box.innerHTML = '<p class="text-slate-500">Select a client, then Load.</p>';
+                populateMonServiceFlagsClients();
+                return;
+            }
+            box.innerHTML = '<p class="text-slate-500">Loading…</p>';
+            const res = await executeSecureBridgeCall('agent', 'agent-get-service-flags', { clientId }, { silent: true });
+            if (!res || !res.success) {
+                box.innerHTML = `<p class="text-red-400">${_monEscape((res && res.message) || 'Could not load flags. Deploy AgentLib service-flags fix.')}</p>`;
+                return;
+            }
+            const flags = res.flags || {};
+            const keys = res.catalog || Object.keys(ADMIN_SERVICE_FLAG_LABELS);
+            box.innerHTML = `<p class="text-[10px] text-slate-500 mb-2">Ops: ${_monEscape(res.opsTier || '—')} · Digital: ${_monEscape(res.digitalTier || 'none')}</p>` +
+                keys.map(k => {
+                    const on = flags[k] !== false;
+                    const label = ADMIN_SERVICE_FLAG_LABELS[k] || k;
+                    return `<label class="flex items-center justify-between gap-2 py-1.5 px-2 rounded border border-slate-800 bg-slate-950/40">
+                        <span class="text-slate-300">${_monEscape(label)} <span class="text-slate-600 font-mono text-[10px]">${_monEscape(k)}</span></span>
+                        <input type="checkbox" ${on ? 'checked' : ''} onchange="adminSetServiceFlag('${_monEscape(clientId)}','${_monEscape(k)}', this.checked)" class="rounded border-slate-600 text-emerald-500" />
+                    </label>`;
+                }).join('');
+        }
+
+        async function adminSetServiceFlag(clientId, key, enabled) {
+            const res = await executeSecureBridgeCall('agent', 'agent-set-service-flags', {
+                clientId, flags: { [key]: !!enabled }, asClient: false
+            }, { silent: true });
+            if (!res || !res.success) {
+                showToast((res && res.message) || 'Update failed', 'error');
+                loadMonitorServiceFlags();
+                return;
+            }
+            showToast('Updated ' + key, 'success');
+        }
+
+
         async function loadMonitorOverview() {
             const errBox = document.getElementById('monRecentErrors');
             const auditBox = document.getElementById('monRecentAudit');
@@ -16141,6 +16298,8 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             else if (view === 'monitor-audit') loadMonitorAudit();
             else if (view === 'monitor-social') loadMonitorSocial();
             else if (view === 'monitor-costs') loadMonitorCosts();
+            else if (view === 'monitor-error-codes') loadMonitorErrorCodes();
+            else if (view === 'monitor-service-flags') { populateMonServiceFlagsClients(); loadMonitorServiceFlags(); }
         });
 
         document.addEventListener("DOMContentLoaded", initializeModule);
