@@ -248,6 +248,33 @@
             background: #1e293b;
             color: #f1f5f9;
         }
+
+        details.ds-review-section>summary {
+            list-style: none;
+        }
+
+        details.ds-review-section>summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details.ds-review-section>summary::after {
+            content: "▾";
+            color: #64748b;
+            font-size: 10px;
+            margin-left: 0.5rem;
+        }
+
+        details.ds-review-section:not([open])>summary::after {
+            content: "▸";
+        }
+
+        .ds-verify-row.border-red-800\/60 {
+            border-color: rgba(153, 27, 27, 0.5);
+        }
+
+        .ds-verify-row.border-emerald-800\/40 {
+            border-color: rgba(6, 95, 70, 0.35);
+        }
     </style>
 </head>
 
@@ -13789,7 +13816,9 @@ ${a.Status === 'Pending Review' ? `
                 columns: (res.columns || []).slice(),
                 templateSpec: spec,
                 designCode: spec.designCode || null,
-                designNarration: spec.designNarration || res.designNarration || ""
+                designNarration: spec.designNarration || res.designNarration || "",
+                suggestedCatalogId: res.suggestedCatalogId || "",
+                detectedLabel: res.detectedLabel || ""
             };
             const roles = spec.proposedFieldRoles || {};
             const isBlank = !!spec.isBlankTemplate;
@@ -13800,12 +13829,33 @@ ${a.Status === 'Pending Review' ? `
                 : '{\n  "version": 2,\n  "kind": "document",\n  "elements": []\n}';
             const narration = spec.designNarration || res.designNarration || "";
             const elCount = (spec.designCode && spec.designCode.elements) ? spec.designCode.elements.length : 0;
+            const elements = (spec.designCode && spec.designCode.elements) ? spec.designCode.elements : [];
+
+            // Build verification rows from designCode elements + columns
+            const verifyRows = [];
+            elements.forEach(function (el, idx) {
+                const op = (el && (el.op || el.type)) || "element";
+                let summary = op;
+                if (el.text) summary = op + ": " + String(el.text).slice(0, 60);
+                else if (el.leftTitle || el.rightTitle) summary = op + ": " + (el.leftTitle || "") + " | " + (el.rightTitle || "");
+                else if (el.headers) summary = op + ": [" + (el.headers || []).join(", ") + "]";
+                else if (el.label) summary = op + ": " + el.label;
+                else if (op === "logo") summary = "logo mark: " + (el.mark || "?");
+                else if (op === "footer") summary = "footer: " + String(el.text || "").slice(0, 50);
+                else if (op === "signatureRow") summary = "signature: " + (el.left || "") + " / " + (el.right || "");
+                else if (op === "rule") summary = "rule (" + (el.color || "") + ")";
+                verifyRows.push({ id: "el-" + idx, kind: "element", op: op, summary: summary, path: "elements[" + idx + "]" });
+            });
+            (res.columns || []).forEach(function (c, idx) {
+                verifyRows.push({ id: "col-" + idx, kind: "field", op: "field", summary: c + " → " + (roles[c] || "data_field"), path: "columns[" + idx + "]" });
+            });
 
             const resultEl = document.getElementById('dsUploadResult');
             resultEl.classList.remove('hidden');
             resultEl.innerHTML = `
                 <div class="text-white font-medium">${escapeHtml(res.detectedLabel || 'Unknown document')}</div>
-                <p class="text-[10px] text-slate-500">Clone program: <span class="text-emerald-400/90">${elCount}</span> layout elements from the sample. Edit below before Confirm — generation uses only this JSON when present.</p>
+                <p class="text-[10px] text-slate-500">Clone program: <span class="text-emerald-400/90">${elCount}</span> layout elements. Verify below, note what is missing, then Confirm or Re-analyse with feedback.</p>
+
                 <div>
                     <label class="block text-slate-500 mb-1">Catalog match</label>
                     <select id="dsReviewCatalogId" class="w-full bg-slate-900 border border-slate-800 rounded p-1.5">
@@ -13817,57 +13867,137 @@ ${a.Status === 'Pending Review' ? `
                     <input type="checkbox" id="dsReviewIsBlank" ${isBlank ? 'checked' : ''} class="accent-emerald-600">
                     This is a blank template — fill it exactly rather than writing a new one
                 </label>
-                <div>
-                    <div class="flex items-center justify-between mb-1">
-                        <label class="block text-slate-500">Fields found (role = how AI treats each one)</label>
-                        <button type="button" onclick="dsReviewAddField()" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-emerald-400">+ Add field</button>
+
+                <!-- Collapsible: Fields -->
+                <details class="ds-review-section border border-slate-800 rounded-lg bg-slate-900/50" open>
+                    <summary class="cursor-pointer select-none px-3 py-2 text-[11px] font-medium text-slate-200 flex items-center justify-between">
+                        <span><i class="fa-solid fa-list text-slate-500 mr-1"></i> Fields found</span>
+                        <span class="text-[10px] text-slate-500 font-normal">${(res.columns || []).length} fields</span>
+                    </summary>
+                    <div class="px-3 pb-3 space-y-1 border-t border-slate-800/80">
+                        <div class="flex items-center justify-between mt-2 mb-1">
+                            <p class="text-[10px] text-slate-600">Use − to remove. Only remaining fields are saved on Confirm.</p>
+                            <button type="button" onclick="dsReviewAddField()" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-emerald-400">+ Add field</button>
+                        </div>
+                        <div id="dsReviewFields" class="space-y-1 max-h-40 overflow-auto custom-scrollbar">
+                            ${(res.columns || []).map((c) => `
+                                <div class="flex items-center gap-2 ds-review-field-row">
+                                    <input value="${escapeHtml(c)}" data-field-name
+                                        class="flex-1 bg-slate-950 border border-slate-800 rounded p-1 text-[11px]">
+                                    <select data-field-role class="bg-slate-950 border border-slate-800 rounded p-1 text-[11px]">
+                                        ${roleOptions.map(r => `<option value="${r}" ${(roles[c] || 'data_field') === r ? 'selected' : ''}>${r}</option>`).join('')}
+                                    </select>
+                                    <button type="button" onclick="this.closest('.ds-review-field-row').remove()" title="Remove field"
+                                        class="text-red-400 text-xs px-1.5 hover:bg-slate-800 rounded">−</button>
+                                </div>`).join('') || '<p class="text-slate-600 text-[10px]">No fields detected — add manually if needed.</p>'}
+                        </div>
                     </div>
-                    <p class="text-[10px] text-slate-600 mb-1">Use − to remove a field the AI should not keep. Only remaining fields are saved on Confirm.</p>
-                    <div id="dsReviewFields" class="space-y-1 max-h-36 overflow-auto custom-scrollbar">
-                        ${(res.columns || []).map((c, i) => `
-                            <div class="flex items-center gap-2 ds-review-field-row">
-                                <input value="${escapeHtml(c)}" data-field-name
-                                    class="flex-1 bg-slate-900 border border-slate-800 rounded p-1 text-[11px]">
-                                <select data-field-role class="bg-slate-900 border border-slate-800 rounded p-1 text-[11px]">
-                                    ${roleOptions.map(r => `<option value="${r}" ${(roles[c] || 'data_field') === r ? 'selected' : ''}>${r}</option>`).join('')}
-                                </select>
-                                <button type="button" onclick="this.closest('.ds-review-field-row').remove()" title="Remove field"
-                                    class="text-red-400 text-xs px-1.5 hover:bg-slate-800 rounded">−</button>
-                            </div>`).join('') || '<p class="text-slate-600 text-[10px]">No fields detected — add manually if needed.</p>'}
+                </details>
+
+                <!-- Collapsible: Verify what AI saw (green = OK, red = wrong + correction) -->
+                <details class="ds-review-section border border-slate-800 rounded-lg bg-slate-900/50" open>
+                    <summary class="cursor-pointer select-none px-3 py-2 text-[11px] font-medium text-slate-200 flex items-center justify-between">
+                        <span><i class="fa-solid fa-check-double text-slate-500 mr-1"></i> Verify what AI saw</span>
+                        <span class="text-[10px] text-slate-500 font-normal">Green = correct · Red = fix</span>
+                    </summary>
+                    <div class="px-3 pb-3 border-t border-slate-800/80 space-y-2">
+                        <p class="text-[10px] text-slate-600 mt-2">Mark each item. For red items, type the correct value — Re-analyse will keep greens and fix reds.</p>
+                        <div class="grid grid-cols-[1fr_auto_auto_1.2fr] gap-1 text-[9px] text-slate-500 uppercase tracking-wide px-1">
+                            <span>What AI detected</span><span>OK</span><span>Wrong</span><span>Correction (if wrong)</span>
+                        </div>
+                        <div id="dsVerifyList" class="space-y-1.5 max-h-52 overflow-auto custom-scrollbar">
+                            ${verifyRows.map((row) => `
+                                <div class="ds-verify-row grid grid-cols-[1fr_auto_auto_1.2fr] gap-1 items-center bg-slate-950 border border-slate-800 rounded px-2 py-1.5"
+                                    data-verify-id="${escapeHtml(row.id)}" data-verify-path="${escapeHtml(row.path)}" data-verify-summary="${escapeHtml(row.summary)}">
+                                    <span class="text-[11px] text-slate-300 truncate" title="${escapeHtml(row.summary)}">${escapeHtml(row.summary)}</span>
+                                    <label class="flex items-center justify-center px-1 cursor-pointer" title="Correct">
+                                        <input type="radio" name="verify-${escapeHtml(row.id)}" value="ok" checked
+                                            class="accent-emerald-500 ds-verify-ok" onchange="dsVerifyToggle(this)">
+                                    </label>
+                                    <label class="flex items-center justify-center px-1 cursor-pointer" title="Wrong">
+                                        <input type="radio" name="verify-${escapeHtml(row.id)}" value="wrong"
+                                            class="accent-red-500 ds-verify-wrong" onchange="dsVerifyToggle(this)">
+                                    </label>
+                                    <input type="text" data-verify-fix placeholder="What it should be…"
+                                        disabled class="ds-verify-fix w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-1 text-[11px] text-slate-400 placeholder:text-slate-600 disabled:opacity-40">
+                                </div>`).join('') || '<p class="text-slate-600 text-[10px]">No structured items to verify.</p>'}
+                        </div>
                     </div>
-                </div>
-                <div class="border-t border-slate-800 pt-3 space-y-2">
-                    <div class="flex items-center justify-between">
-                        <label class="block text-slate-300 text-[11px] font-medium">Clone template (designCode JSON)</label>
-                        <button type="button" onclick="dsReviewFormatJson()" class="text-[10px] text-slate-400 hover:text-emerald-400">Format JSON</button>
+                </details>
+
+                <!-- Collapsible: What's missing / re-analyse feedback -->
+                <details class="ds-review-section border border-slate-800 rounded-lg bg-slate-900/50" open>
+                    <summary class="cursor-pointer select-none px-3 py-2 text-[11px] font-medium text-slate-200">
+                        <i class="fa-solid fa-comment-dots text-slate-500 mr-1"></i> What is missing or wrong? (for Re-analyse)
+                    </summary>
+                    <div class="px-3 pb-3 border-t border-slate-800/80 space-y-2">
+                        <p class="text-[10px] text-slate-600 mt-2">Describe gaps (e.g. “missing logo V”, “totals duplicated”, “use recipientName not customerName”). Re-analyse keeps the current design and applies your notes.</p>
+                        <textarea id="dsReviewFeedback" rows="3"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-[11px] text-slate-200 placeholder:text-slate-600"
+                            placeholder="Example: Rules should be under the tagline. Totals must be one block: Subtotal, VAT, TOTAL PAID. Footer needs company address."></textarea>
                     </div>
-                    <p class="text-[10px] text-slate-600">This is what the Worker uses to build the document. Edit structure, colours, tokens — do not leave sample names/amounts as literals.</p>
-                    <label class="block text-[10px] text-slate-500">Narration</label>
-                    <textarea id="dsReviewNarration" rows="2"
-                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-[11px] text-slate-300 font-mono">${escapeHtml(narration)}</textarea>
-                    <textarea id="dsReviewDesignCode" rows="12"
-                        class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-[11px] text-emerald-300/90 font-mono leading-relaxed">${escapeHtml(designJson)}</textarea>
-                    <p id="dsReviewDesignError" class="hidden text-red-400 text-[10px]"></p>
-                </div>
-                <div class="flex gap-2 pt-1">
+                </details>
+
+                <!-- Collapsible: designCode JSON (collapsed by default so page stays usable) -->
+                <details class="ds-review-section border border-slate-800 rounded-lg bg-slate-900/50">
+                    <summary class="cursor-pointer select-none px-3 py-2 text-[11px] font-medium text-slate-200 flex items-center justify-between">
+                        <span><i class="fa-solid fa-code text-slate-500 mr-1"></i> Clone template (designCode JSON)</span>
+                        <button type="button" onclick="event.preventDefault(); event.stopPropagation(); dsReviewFormatJson();"
+                            class="text-[10px] text-slate-400 hover:text-emerald-400 font-normal">Format JSON</button>
+                    </summary>
+                    <div class="px-3 pb-3 border-t border-slate-800/80 space-y-2">
+                        <p class="text-[10px] text-slate-600 mt-2">Advanced: edit the full clone program. Worker builds from this JSON when confirmed.</p>
+                        <label class="block text-[10px] text-slate-500">Narration</label>
+                        <textarea id="dsReviewNarration" rows="2"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-[11px] text-slate-300 font-mono">${escapeHtml(narration)}</textarea>
+                        <textarea id="dsReviewDesignCode" rows="14"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-[11px] text-emerald-300/90 font-mono leading-relaxed">${escapeHtml(designJson)}</textarea>
+                        <p id="dsReviewDesignError" class="hidden text-red-400 text-[10px]"></p>
+                    </div>
+                </details>
+
+                <div class="flex flex-wrap gap-2 pt-2">
                     <button type="button" onclick="closeDocStudioUploadModal()"
-                        class="flex-1 text-xs px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded text-white">Cancel</button>
+                        class="text-xs px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded text-white">Cancel</button>
+                    <button type="button" onclick="reanalyzeDocStudioReview()"
+                        class="text-xs px-3 py-2 bg-amber-700 hover:bg-amber-600 rounded text-white" title="Re-run analysis using verification + feedback">
+                        <i class="fa-solid fa-rotate"></i> Re-analyse with feedback
+                    </button>
                     <button type="button" onclick="confirmDocStudioReview()"
                         class="flex-1 text-xs px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded text-white font-medium">Confirm &amp; save template</button>
                 </div>`;
         }
 
-        function dsReviewFormatJson() {
-            const ta = document.getElementById('dsReviewDesignCode');
-            const err = document.getElementById('dsReviewDesignError');
-            if (!ta) return;
-            try {
-                const obj = JSON.parse(ta.value);
-                ta.value = JSON.stringify(obj, null, 2);
-                if (err) { err.classList.add('hidden'); err.textContent = ''; }
-            } catch (e) {
-                if (err) { err.classList.remove('hidden'); err.textContent = 'Invalid JSON: ' + e.message; }
-            }
+        function dsVerifyToggle(el) {
+            const row = el && el.closest && el.closest('.ds-verify-row');
+            if (!row) return;
+            const fix = row.querySelector('.ds-verify-fix');
+            const wrong = row.querySelector('.ds-verify-wrong');
+            if (!fix || !wrong) return;
+            const isWrong = !!wrong.checked;
+            fix.disabled = !isWrong;
+            row.classList.toggle('border-red-800/60', isWrong);
+            row.classList.toggle('border-emerald-800/40', !isWrong);
+            if (!isWrong) fix.value = '';
+        }
+
+        function dsCollectVerificationFeedback() {
+            const corrections = [];
+            document.querySelectorAll('#dsVerifyList .ds-verify-row').forEach(function (row) {
+                const wrong = row.querySelector('.ds-verify-wrong');
+                if (!wrong || !wrong.checked) return;
+                const summary = row.getAttribute('data-verify-summary') || '';
+                const path = row.getAttribute('data-verify-path') || '';
+                const fixEl = row.querySelector('.ds-verify-fix');
+                const fix = (fixEl && fixEl.value || '').trim();
+                corrections.push({
+                    path: path,
+                    detected: summary,
+                    correction: fix || '(marked wrong — no correction text)'
+                });
+            });
+            const freeText = ((document.getElementById('dsReviewFeedback') || {}).value || '').trim();
+            return { corrections: corrections, feedback: freeText };
         }
 
         function dsReviewAddField() {
@@ -13917,8 +14047,6 @@ ${a.Status === 'Pending Review' ? `
             }
             if (errEl) { errEl.classList.add('hidden'); errEl.textContent = ''; }
 
-            const btn = document.querySelector('#dsUploadResult button[onclick="confirmDocStudioReview()"]');
-            if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
             const res = await executeSecureBridgeCall('agent', 'agent-confirm-document-template', {
                 clientId: DOC_STUDIO_PENDING_REVIEW.clientId,
                 recordId: DOC_STUDIO_PENDING_REVIEW.recordId,
@@ -13929,9 +14057,106 @@ ${a.Status === 'Pending Review' ? `
                 designCode: designCode || undefined,
                 designNarration: narration
             });
-            if (btn) { btn.disabled = false; btn.textContent = 'Confirm & save template'; }
             showToast(res.success ? 'Template saved — Worker will use this designCode for generation.' : (res.message || 'Save failed.'), res.success ? 'success' : 'error');
             if (res.success) closeDocStudioUploadModal();
+        }
+
+        /**
+         * Re-run analysis keeping current designCode + applying admin verification/feedback.
+         * Does not require choosing the file again if we still have the pending record context;
+         * sends previousDesignCode + corrections so the agent refines instead of starting over.
+         */
+        async function reanalyzeDocStudioReview() {
+            if (!DOC_STUDIO_PENDING_REVIEW) {
+                showToast('Nothing to re-analyse — run Analyze first.', 'error');
+                return;
+            }
+            const fileInput = document.getElementById('dsUploadFile');
+            const file = fileInput && fileInput.files && fileInput.files[0];
+            if (!file) {
+                showToast('Keep the same sample file selected, then click Re-analyse.', 'error');
+                return;
+            }
+            const clientId = DOC_STUDIO_PENDING_REVIEW.clientId
+                || document.getElementById('dsUploadClientId')?.value;
+            const catalogId = (document.getElementById('dsReviewCatalogId') || {}).value
+                || document.getElementById('dsUploadCatalogId')?.value || '';
+            const assetType = document.getElementById('dsUploadAssetType')?.value || 'sample';
+            const v = dsCollectVerificationFeedback();
+            let previousDesignCode = null;
+            const rawJson = (document.getElementById('dsReviewDesignCode') || {}).value || '';
+            if (rawJson.trim()) {
+                try { previousDesignCode = JSON.parse(rawJson); } catch (e) {
+                    showToast('designCode JSON is invalid — fix or clear it before Re-analyse.', 'error');
+                    return;
+                }
+            } else {
+                previousDesignCode = DOC_STUDIO_PENDING_REVIEW.designCode || null;
+            }
+            const narration = (document.getElementById('dsReviewNarration') || {}).value || '';
+            let feedbackParts = [];
+            if (v.feedback) feedbackParts.push(v.feedback);
+            if (v.corrections.length) {
+                feedbackParts.push('VERIFICATION CORRECTIONS:');
+                v.corrections.forEach(function (c) {
+                    feedbackParts.push('- Detected: ' + c.detected + ' → Should be: ' + c.correction + (c.path ? ' (path: ' + c.path + ')' : ''));
+                });
+            }
+            if (!feedbackParts.length && !v.corrections.length) {
+                showToast('Mark items as wrong or write what is missing, then Re-analyse.', 'error');
+                return;
+            }
+            const docHint = [
+                (document.getElementById('dsUploadHint') || {}).value || '',
+                feedbackParts.join('\n')
+            ].filter(Boolean).join('\n\n');
+
+            const btn = document.querySelector('#dsUploadResult button[onclick="reanalyzeDocStudioReview()"]');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Re-analysing…'; }
+            try {
+                const base64Data = await fileToBase64(file);
+                let res = await executeSecureBridgeCall('agent', 'agent-analyze-document-sample', {
+                    clientId,
+                    assetType,
+                    catalogId: catalogId || undefined,
+                    fileName: file.name,
+                    mimeType: file.type,
+                    base64Data,
+                    docHint: docHint,
+                    // Refinement context — backend keeps prior design and applies feedback
+                    previousRecordId: DOC_STUDIO_PENDING_REVIEW.recordId,
+                    previousDesignCode: previousDesignCode,
+                    previousDesignNarration: narration,
+                    verificationCorrections: v.corrections,
+                    refineMode: true
+                });
+                if (res && res.queued) {
+                    res = await resolveAdminJobResult(res, function (elapsedMs) {
+                        if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Re-analysing… (' + Math.round(elapsedMs / 1000) + 's)';
+                    });
+                }
+                if (!res || !res.success) {
+                    showToast((res && res.message) || 'Re-analyse failed.', 'error');
+                    return;
+                }
+                // Prefer merging: if new design is weaker, keep previous and only apply narration note
+                if (previousDesignCode && previousDesignCode.elements && previousDesignCode.elements.length) {
+                    const newDc = res.templateSpec && res.templateSpec.designCode;
+                    const newLen = (newDc && newDc.elements) ? newDc.elements.length : 0;
+                    const oldLen = previousDesignCode.elements.length;
+                    if (newLen < Math.max(3, oldLen * 0.5) && res.templateSpec) {
+                        res.templateSpec.designCode = previousDesignCode;
+                        res.templateSpec.designNarration = (narration || '') + ' | refined with admin feedback';
+                        showToast('AI returned a thinner layout — kept your previous designCode for editing.', 'info');
+                    }
+                }
+                renderDocStudioReview(clientId, res);
+                showToast('Re-analysis complete — review verification again, then Confirm.', 'success');
+            } catch (e) {
+                showToast('Re-analyse error: ' + e.toString(), 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Re-analyse with feedback'; }
+            }
         }
 
         function openDocStudioSamplesModal() {
