@@ -286,24 +286,31 @@
             max-height: 92vh;
         }
 
-        #docStudioUploadScroll {
+        #docStudioUploadBody {
             flex: 1 1 auto;
             min-height: 0;
-            overflow-y: scroll !important;
+        }
+
+        #docStudioUploadLeft,
+        #docStudioUploadRight {
+            min-height: 0;
             overscroll-behavior: contain;
             scrollbar-gutter: stable;
         }
 
-        #docStudioUploadScroll::-webkit-scrollbar {
-            width: 10px;
+        #docStudioUploadLeft::-webkit-scrollbar,
+        #docStudioUploadRight::-webkit-scrollbar {
+            width: 8px;
         }
 
-        #docStudioUploadScroll::-webkit-scrollbar-thumb {
+        #docStudioUploadLeft::-webkit-scrollbar-thumb,
+        #docStudioUploadRight::-webkit-scrollbar-thumb {
             background: #475569;
             border-radius: 6px;
         }
 
-        #docStudioUploadScroll::-webkit-scrollbar-track {
+        #docStudioUploadLeft::-webkit-scrollbar-track,
+        #docStudioUploadRight::-webkit-scrollbar-track {
             background: #0f172a;
         }
 
@@ -5919,80 +5926,77 @@
          (e.g. a specific school's 7-column report card) against that client + best-fit
          catalog doc type, so future generations reuse the client's real layout. -->
     <div id="modalDocStudioUpload"
-        class="hidden fixed inset-0 bg-slate-950/85 z-40 backdrop-blur-sm flex items-center justify-center p-2 sm:p-3">
+        class="hidden fixed inset-0 bg-slate-950/85 z-50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-3">
         <div id="docStudioUploadPanel"
-            class="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-lg flex flex-col transition-all duration-200"
-            style="max-height: 92vh; height: auto; display: flex; flex-direction: column;">
-            <!-- Fixed header -->
+            class="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full flex flex-col transition-all duration-200"
+            style="max-width: 28rem; max-height: 92vh;">
+            <!-- Header -->
             <div class="flex justify-between items-center border-b border-slate-800 px-4 sm:px-5 pt-3 pb-2 shrink-0">
-                <h3 class="text-sm font-bold text-white">Teach AI a Document Format</h3>
+                <div>
+                    <h3 class="text-sm font-bold text-white">Teach AI a Document Format</h3>
+                    <p class="text-[10px] text-slate-500 mt-0.5">Upload on the left · review AI result on the right
+                        after Analyze</p>
+                </div>
                 <button type="button" onclick="closeDocStudioUploadModal()"
-                    class="text-slate-400 hover:text-white text-lg leading-none font-bold px-1">&times;</button>
+                    class="text-slate-400 hover:text-white text-lg leading-none font-bold px-1 shrink-0">&times;</button>
             </div>
-            <p class="text-[10px] text-slate-500 px-4 sm:px-5 pt-2 shrink-0">Upload a real asset — sample, blank
-                template, letterhead, or logo. Review scrolls below after Analyze.</p>
 
-            <!-- SCROLLABLE BODY — this is the only region that scrolls -->
-            <div id="docStudioUploadScroll" class="custom-scrollbar"
-                style="flex: 1 1 auto; min-height: 0; overflow-y: scroll; -webkit-overflow-scrolling: touch; max-height: calc(92vh - 7rem);">
-                <div class="px-4 sm:px-5 py-3 space-y-3">
-                    <details id="dsUploadFormDetails"
-                        class="ds-review-section border border-slate-800 rounded-lg bg-slate-950/40" open>
-                        <summary class="cursor-pointer select-none px-3 py-2 text-[11px] font-medium text-slate-200">
-                            Upload settings
-                        </summary>
-                        <div class="px-3 pb-3 border-t border-slate-800/80 pt-2">
-                            <form id="docStudioUploadForm" onsubmit="submitDocStudioUpload(event)" class="space-y-3">
-                                <div>
-                                    <label class="block text-xs text-slate-400 mb-1">Client</label>
-                                    <select id="dsUploadClientId" required
-                                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-slate-400 mb-1">Asset type</label>
-                                    <select id="dsUploadAssetType" onchange="onDsUploadAssetTypeChange()"
-                                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
-                                        <option value="sample">Filled sample (has real data — teaches field layout)
-                                        </option>
-                                        <option value="blank_template">Blank template (empty form — filled on generate)
-                                        </option>
-                                        <option value="letterhead">Letterhead (letters only)</option>
-                                        <option value="logo">Logo (centred above title on non-letter docs)</option>
-                                    </select>
-                                </div>
-                                <div id="dsUploadCatalogWrap">
-                                    <label class="block text-xs text-slate-400 mb-1">Document type this trains <span
-                                            class="text-red-400">*</span></label>
-                                    <select id="dsUploadCatalogId" required
-                                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
-                                        <option value="">Loading catalog…</option>
-                                    </select>
-                                    <p class="text-[10px] text-slate-500 mt-1">Must match a generatable type (e.g.
-                                        Receipt). Generation
-                                        for that type will use this training.</p>
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-slate-400 mb-1">Extra hint (optional)</label>
-                                    <input type="text" id="dsUploadHint"
-                                        placeholder="e.g. Term 2 layout, bilingual headers"
-                                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-slate-400 mb-1">File</label>
-                                    <input type="file" id="dsUploadFile" required
-                                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
-                                </div>
-                                <button type="submit"
-                                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded">
-                                    Analyze
-                                </button>
-                            </form>
+            <!-- Two-column body: form | results -->
+            <div id="docStudioUploadBody" class="flex-1 min-h-0 grid grid-cols-1 gap-0" style="overflow: hidden;">
+                <!-- LEFT: upload form (scrolls independently) -->
+                <div id="docStudioUploadLeft"
+                    class="custom-scrollbar border-r border-slate-800/80 px-4 sm:px-5 py-3 space-y-3"
+                    style="overflow-y: auto; max-height: calc(92vh - 4.5rem);">
+                    <form id="docStudioUploadForm" onsubmit="submitDocStudioUpload(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Client</label>
+                            <select id="dsUploadClientId" required
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></select>
                         </div>
-                    </details>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Asset type</label>
+                            <select id="dsUploadAssetType" onchange="onDsUploadAssetTypeChange()"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
+                                <option value="sample">Filled sample (has real data — teaches field layout)</option>
+                                <option value="blank_template">Blank template (empty form — filled on generate)</option>
+                                <option value="letterhead">Letterhead (letters only)</option>
+                                <option value="logo">Logo (centred above title on non-letter docs)</option>
+                            </select>
+                        </div>
+                        <div id="dsUploadCatalogWrap">
+                            <label class="block text-xs text-slate-400 mb-1">Document type this trains <span
+                                    class="text-red-400">*</span></label>
+                            <select id="dsUploadCatalogId" required
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
+                                <option value="">Loading catalog…</option>
+                            </select>
+                            <p class="text-[10px] text-slate-500 mt-1">Must match a generatable type (e.g. Receipt).
+                                Generation
+                                for that type will use this training.</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Extra hint (optional)</label>
+                            <input type="text" id="dsUploadHint" placeholder="e.g. Term 2 layout, bilingual headers"
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">File</label>
+                            <input type="file" id="dsUploadFile" required
+                                class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                        </div>
+                        <button type="submit"
+                            class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded">
+                            Analyze
+                        </button>
+                    </form>
+                    <p id="dsUploadSideHint" class="text-[10px] text-slate-600 hidden sm:block">After Analyze, the AI
+                        review panel opens beside this form.</p>
+                </div>
 
-                    <div id="dsUploadResult"
-                        class="hidden text-xs bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-2 text-slate-300">
-                    </div>
+                <!-- RIGHT: AI review (hidden until results; scrolls independently) -->
+                <div id="docStudioUploadRight" class="hidden custom-scrollbar px-4 sm:px-5 py-3"
+                    style="overflow-y: auto; max-height: calc(92vh - 4.5rem);">
+                    <div id="dsUploadResult" class="text-xs space-y-2 text-slate-300"></div>
                 </div>
             </div>
         </div>
@@ -13820,17 +13824,16 @@ ${a.Status === 'Pending Review' ? `
             const form = document.getElementById('docStudioUploadForm');
             if (form) form.reset();
             const resultEl = document.getElementById('dsUploadResult');
-            if (resultEl) { resultEl.classList.add('hidden'); resultEl.innerHTML = ''; }
-            const panel = document.getElementById('docStudioUploadPanel');
-            if (panel) {
-                panel.classList.add('max-w-lg');
-                panel.classList.remove('max-w-2xl');
-                panel.style.maxWidth = '';
+            if (resultEl) { resultEl.innerHTML = ''; }
+            const rightCol = document.getElementById('docStudioUploadRight');
+            if (rightCol) rightCol.classList.add('hidden');
+            const body = document.getElementById('docStudioUploadBody');
+            if (body) {
+                body.classList.remove('md:grid-cols-2');
+                body.style.gridTemplateColumns = '';
             }
-            const formDetails = document.getElementById('dsUploadFormDetails');
-            if (formDetails) formDetails.setAttribute('open', '');
-            const scrollBox = document.getElementById('docStudioUploadScroll');
-            if (scrollBox) scrollBox.scrollTop = 0;
+            const panel = document.getElementById('docStudioUploadPanel');
+            if (panel) panel.style.maxWidth = '28rem';
             DOC_STUDIO_PENDING_REVIEW = null;
         }
 
@@ -13927,21 +13930,23 @@ ${a.Status === 'Pending Review' ? `
             });
 
             const resultEl = document.getElementById('dsUploadResult');
-            resultEl.classList.remove('hidden');
+            const rightCol = document.getElementById('docStudioUploadRight');
+            const body = document.getElementById('docStudioUploadBody');
             const panel = document.getElementById('docStudioUploadPanel');
-            if (panel) {
-                panel.classList.remove('max-w-lg');
-                panel.classList.add('max-w-2xl');
-                panel.style.maxWidth = '42rem';
+            if (resultEl) resultEl.classList.remove('hidden');
+            if (rightCol) rightCol.classList.remove('hidden');
+            if (body) {
+                body.classList.remove('grid-cols-1');
+                body.classList.add('grid-cols-1', 'md:grid-cols-2');
+                body.style.gridTemplateColumns = '';
             }
-            // Collapse upload form so review area has room; scroll body to results
-            const formDetails = document.getElementById('dsUploadFormDetails');
-            if (formDetails) formDetails.removeAttribute('open');
-            const scrollBox = document.getElementById('docStudioUploadScroll');
-            setTimeout(function () {
-                if (scrollBox) scrollBox.scrollTop = Math.max(0, (resultEl.offsetTop || 0) - 8);
-                if (resultEl.scrollIntoView) resultEl.scrollIntoView({ block: 'start', behavior: 'smooth' });
-            }, 50);
+            if (panel) {
+                panel.style.maxWidth = 'min(96vw, 56rem)';
+            }
+            // On small screens stack; on md+ side-by-side
+            if (window.matchMedia && window.matchMedia('(min-width: 768px)').matches) {
+                if (body) body.style.gridTemplateColumns = 'minmax(16rem, 22rem) minmax(0, 1fr)';
+            }
             resultEl.innerHTML = `
                 <div class="text-white font-medium">${escapeHtml(res.detectedLabel || 'Unknown document')}</div>
                 <p class="text-[10px] text-slate-500">Clone program: <span class="text-emerald-400/90">${elCount}</span> layout elements. Verify below, note what is missing, then Confirm or Re-analyse with feedback.</p>
@@ -17040,6 +17045,8 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             }
 
             const res = await executeSecureBridgeCall('career', 'adminUploadJobCompletionFile', payload);
+            // If your bridge routes career actions differently, use:
+            // await executeSecureBridgeCall('careerHub', 'adminUploadJobCompletionFile', payload);
             if (res && res.success) {
                 showToast('File uploaded. Client notified (free 30 days, then ₦10,000 unlock).', 'success');
                 if (typeof loadProductionFulfillment === 'function') loadProductionFulfillment();
