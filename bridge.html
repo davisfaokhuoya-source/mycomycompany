@@ -268,6 +268,22 @@
             content: "▸";
         }
 
+        details.ds-review-section:not([open]) {
+            opacity: 0.92;
+        }
+
+        #dsUploadResult {
+            max-height: none;
+        }
+
+        #dsVerifyList {
+            scrollbar-width: thin;
+        }
+
+        #docStudioUploadPanel {
+            display: flex;
+        }
+
         .ds-verify-row.border-red-800\/60 {
             border-color: rgba(153, 27, 27, 0.5);
         }
@@ -5880,60 +5896,64 @@
          (e.g. a specific school's 7-column report card) against that client + best-fit
          catalog doc type, so future generations reuse the client's real layout. -->
     <div id="modalDocStudioUpload"
-        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-4">
-        <div
-            class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl max-w-lg w-full flex flex-col space-y-4 max-h-[90vh] overflow-auto custom-scrollbar">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+        class="hidden fixed inset-0 bg-slate-950/80 z-40 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+        <div id="docStudioUploadPanel"
+            class="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-lg flex flex-col max-h-[92vh] overflow-hidden transition-all duration-200">
+            <div class="flex justify-between items-center border-b border-slate-800 px-5 pt-4 pb-2 shrink-0">
                 <h3 class="text-sm font-bold text-white">Teach AI a Document Format</h3>
-                <button onclick="closeDocStudioUploadModal()"
-                    class="text-slate-400 hover:text-white text-sm font-bold">&times;</button>
+                <button type="button" onclick="closeDocStudioUploadModal()"
+                    class="text-slate-400 hover:text-white text-lg leading-none font-bold">&times;</button>
             </div>
-            <p class="text-[10px] text-slate-500">Upload a real asset for this client — a sample with data in it, a
+            <p class="text-[10px] text-slate-500 px-5 pt-2 shrink-0">Upload a real asset for this client — a sample with
+                data in it, a
                 blank form to be filled exactly, or their letterhead/logo for branding. The AI proposes what it found;
                 you confirm before it's used for real generation.</p>
-            <form id="docStudioUploadForm" onsubmit="submitDocStudioUpload(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs text-slate-400 mb-1">Client</label>
-                    <select id="dsUploadClientId" required
-                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></select>
+            <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-5 py-3 space-y-3">
+                <form id="docStudioUploadForm" onsubmit="submitDocStudioUpload(event)" class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Client</label>
+                        <select id="dsUploadClientId" required
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Asset type</label>
+                        <select id="dsUploadAssetType" onchange="onDsUploadAssetTypeChange()"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
+                            <option value="sample">Filled sample (has real data — teaches field layout)</option>
+                            <option value="blank_template">Blank template (empty form — filled on generate)</option>
+                            <option value="letterhead">Letterhead (letters only)</option>
+                            <option value="logo">Logo (centred above title on non-letter docs)</option>
+                        </select>
+                    </div>
+                    <div id="dsUploadCatalogWrap">
+                        <label class="block text-xs text-slate-400 mb-1">Document type this trains <span
+                                class="text-red-400">*</span></label>
+                        <select id="dsUploadCatalogId" required
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
+                            <option value="">Loading catalog…</option>
+                        </select>
+                        <p class="text-[10px] text-slate-500 mt-1">Must match a generatable type (e.g. Receipt).
+                            Generation
+                            for that type will use this training.</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Extra hint (optional)</label>
+                        <input type="text" id="dsUploadHint" placeholder="e.g. Term 2 layout, bilingual headers"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">File</label>
+                        <input type="file" id="dsUploadFile" required
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
+                    </div>
+                    <button type="submit"
+                        class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded">
+                        Analyze
+                    </button>
+                </form>
+                <div id="dsUploadResult"
+                    class="hidden text-xs bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-2 text-slate-300">
                 </div>
-                <div>
-                    <label class="block text-xs text-slate-400 mb-1">Asset type</label>
-                    <select id="dsUploadAssetType" onchange="onDsUploadAssetTypeChange()"
-                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
-                        <option value="sample">Filled sample (has real data — teaches field layout)</option>
-                        <option value="blank_template">Blank template (empty form — filled on generate)</option>
-                        <option value="letterhead">Letterhead (letters only)</option>
-                        <option value="logo">Logo (centred above title on non-letter docs)</option>
-                    </select>
-                </div>
-                <div id="dsUploadCatalogWrap">
-                    <label class="block text-xs text-slate-400 mb-1">Document type this trains <span
-                            class="text-red-400">*</span></label>
-                    <select id="dsUploadCatalogId" required
-                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">
-                        <option value="">Loading catalog…</option>
-                    </select>
-                    <p class="text-[10px] text-slate-500 mt-1">Must match a generatable type (e.g. Receipt). Generation
-                        for that type will use this training.</p>
-                </div>
-                <div>
-                    <label class="block text-xs text-slate-400 mb-1">Extra hint (optional)</label>
-                    <input type="text" id="dsUploadHint" placeholder="e.g. Term 2 layout, bilingual headers"
-                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
-                </div>
-                <div>
-                    <label class="block text-xs text-slate-400 mb-1">File</label>
-                    <input type="file" id="dsUploadFile" required
-                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />
-                </div>
-                <button type="submit"
-                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-2.5 rounded">
-                    Analyze
-                </button>
-            </form>
-            <div id="dsUploadResult"
-                class="hidden text-xs bg-slate-950 border border-slate-800 rounded p-3 space-y-3 text-slate-300 max-h-[55vh] overflow-y-auto custom-scrollbar">
             </div>
         </div>
     </div>
@@ -5959,6 +5979,8 @@
                 <label class="block text-[10px] text-slate-500 uppercase tracking-wide">designNarration</label>
                 <textarea id="designCodeEditNarration" rows="2"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-[11px] text-slate-200 font-mono"></textarea>
+                <label class="block text-[10px] text-slate-500 uppercase tracking-wide">Colours</label>
+                <div id="designCodeEditColors" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
                 <label class="block text-[10px] text-slate-500 uppercase tracking-wide">designCode JSON</label>
                 <textarea id="designCodeEditJson" rows="18"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-[11px] text-emerald-300/90 font-mono leading-relaxed"></textarea>
@@ -13756,6 +13778,13 @@ ${a.Status === 'Pending Review' ? `
         function closeDocStudioUploadModal() {
             document.getElementById('modalDocStudioUpload').classList.add('hidden');
             document.getElementById('docStudioUploadForm')?.reset();
+            const resultEl = document.getElementById('dsUploadResult');
+            if (resultEl) { resultEl.classList.add('hidden'); resultEl.innerHTML = ''; }
+            const panel = document.getElementById('docStudioUploadPanel');
+            if (panel) {
+                panel.classList.add('max-w-lg');
+                panel.classList.remove('max-w-2xl');
+            }
             DOC_STUDIO_PENDING_REVIEW = null;
         }
 
@@ -13830,6 +13859,7 @@ ${a.Status === 'Pending Review' ? `
             const narration = spec.designNarration || res.designNarration || "";
             const elCount = (spec.designCode && spec.designCode.elements) ? spec.designCode.elements.length : 0;
             const elements = (spec.designCode && spec.designCode.elements) ? spec.designCode.elements : [];
+            const colorEntries = dsExtractDesignColors(spec.designCode);
 
             // Build verification rows from designCode elements + columns
             const verifyRows = [];
@@ -13852,6 +13882,11 @@ ${a.Status === 'Pending Review' ? `
 
             const resultEl = document.getElementById('dsUploadResult');
             resultEl.classList.remove('hidden');
+            const panel = document.getElementById('docStudioUploadPanel');
+            if (panel) {
+                panel.classList.remove('max-w-lg');
+                panel.classList.add('max-w-2xl');
+            }
             resultEl.innerHTML = `
                 <div class="text-white font-medium">${escapeHtml(res.detectedLabel || 'Unknown document')}</div>
                 <p class="text-[10px] text-slate-500">Clone program: <span class="text-emerald-400/90">${elCount}</span> layout elements. Verify below, note what is missing, then Confirm or Re-analyse with feedback.</p>
@@ -13868,8 +13903,16 @@ ${a.Status === 'Pending Review' ? `
                     This is a blank template — fill it exactly rather than writing a new one
                 </label>
 
+                <div class="flex items-center justify-between gap-2 pt-1">
+                    <span class="text-[10px] text-slate-500">Click section headers to minimize / expand. Scroll inside long lists.</span>
+                    <div class="flex gap-1 shrink-0">
+                        <button type="button" onclick="dsReviewToggleAll(true)" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Expand all</button>
+                        <button type="button" onclick="dsReviewToggleAll(false)" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Minimize all</button>
+                    </div>
+                </div>
+
                 <!-- Collapsible: Fields -->
-                <details class="ds-review-section border border-slate-800 rounded-lg bg-slate-900/50" open>
+                <details class="ds-review-section border border-slate-800 rounded-lg bg-slate-900/50">
                     <summary class="cursor-pointer select-none px-3 py-2 text-[11px] font-medium text-slate-200 flex items-center justify-between">
                         <span><i class="fa-solid fa-list text-slate-500 mr-1"></i> Fields found</span>
                         <span class="text-[10px] text-slate-500 font-normal">${(res.columns || []).length} fields</span>
@@ -13905,7 +13948,7 @@ ${a.Status === 'Pending Review' ? `
                         <div class="grid grid-cols-[1fr_auto_auto_1.2fr] gap-1 text-[9px] text-slate-500 uppercase tracking-wide px-1">
                             <span>What AI detected</span><span>OK</span><span>Wrong</span><span>Correction (if wrong)</span>
                         </div>
-                        <div id="dsVerifyList" class="space-y-1.5 max-h-52 overflow-auto custom-scrollbar">
+                        <div id="dsVerifyList" class="space-y-1.5 max-h-64 overflow-y-auto custom-scrollbar border border-slate-800/60 rounded-md p-1">
                             ${verifyRows.map((row) => `
                                 <div class="ds-verify-row grid grid-cols-[1fr_auto_auto_1.2fr] gap-1 items-center bg-slate-950 border border-slate-800 rounded px-2 py-1.5"
                                     data-verify-id="${escapeHtml(row.id)}" data-verify-path="${escapeHtml(row.path)}" data-verify-summary="${escapeHtml(row.summary)}">
@@ -13938,6 +13981,29 @@ ${a.Status === 'Pending Review' ? `
                     </div>
                 </details>
 
+                <!-- Colours: swatch + hex -->
+                <details class="ds-review-section border border-slate-800 rounded-lg bg-slate-900/50" open>
+                    <summary class="cursor-pointer select-none px-3 py-2 text-[11px] font-medium text-slate-200 flex items-center justify-between">
+                        <span><i class="fa-solid fa-palette text-slate-500 mr-1"></i> Colours</span>
+                        <span class="text-[10px] text-slate-500 font-normal">${colorEntries.length} detected</span>
+                    </summary>
+                    <div class="px-3 pb-3 border-t border-slate-800/80 space-y-2">
+                        <p class="text-[10px] text-slate-600 mt-2">Each colour shows a live swatch. Change the hex or pick a colour — designCode updates automatically.</p>
+                        <div id="dsReviewColors" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            ${colorEntries.length ? colorEntries.map(function (c) {
+                const hex = c.hex || "#000000";
+                return '<div class="ds-color-row flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5" data-color-path="' + escapeHtml(c.path) + '">' +
+                    '<input type="color" value="' + escapeHtml(hex) + '" class="ds-color-picker h-8 w-10 cursor-pointer bg-transparent border-0 p-0" title="Pick colour" oninput="dsReviewColorChanged(this)">' +
+                    '<span class="ds-color-swatch h-8 w-8 rounded border border-slate-600 shrink-0" style="background:' + escapeHtml(hex) + '"></span>' +
+                    '<div class="min-w-0 flex-1">' +
+                    '<p class="text-[10px] text-slate-500 truncate">' + escapeHtml(c.label) + '</p>' +
+                    '<input type="text" value="' + escapeHtml(hex) + '" class="ds-color-hex w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[11px] font-mono text-slate-200" oninput="dsReviewColorHexTyped(this)" onchange="dsReviewColorChanged(this)">' +
+                    '</div></div>';
+            }).join('') : '<p class="text-[10px] text-slate-600">No colours found in designCode yet.</p>'}
+                        </div>
+                    </div>
+                </details>
+
                 <!-- Collapsible: designCode JSON (collapsed by default so page stays usable) -->
                 <details class="ds-review-section border border-slate-800 rounded-lg bg-slate-900/50">
                     <summary class="cursor-pointer select-none px-3 py-2 text-[11px] font-medium text-slate-200 flex items-center justify-between">
@@ -13950,13 +14016,13 @@ ${a.Status === 'Pending Review' ? `
                         <label class="block text-[10px] text-slate-500">Narration</label>
                         <textarea id="dsReviewNarration" rows="2"
                             class="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-[11px] text-slate-300 font-mono">${escapeHtml(narration)}</textarea>
-                        <textarea id="dsReviewDesignCode" rows="14"
-                            class="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-[11px] text-emerald-300/90 font-mono leading-relaxed">${escapeHtml(designJson)}</textarea>
+                        <textarea id="dsReviewDesignCode" rows="18"
+                            class="w-full min-h-[220px] max-h-[45vh] overflow-y-auto bg-slate-950 border border-slate-800 rounded p-1.5 text-[11px] text-emerald-300/90 font-mono leading-relaxed">${escapeHtml(designJson)}</textarea>
                         <p id="dsReviewDesignError" class="hidden text-red-400 text-[10px]"></p>
                     </div>
                 </details>
 
-                <div class="flex flex-wrap gap-2 pt-2">
+                <div class="flex flex-wrap gap-2 pt-2 sticky bottom-0 bg-slate-950/95 border-t border-slate-800 -mx-3 px-3 py-2 mt-1 z-10">
                     <button type="button" onclick="closeDocStudioUploadModal()"
                         class="text-xs px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded text-white">Cancel</button>
                     <button type="button" onclick="reanalyzeDocStudioReview()"
@@ -13966,6 +14032,110 @@ ${a.Status === 'Pending Review' ? `
                     <button type="button" onclick="confirmDocStudioReview()"
                         class="flex-1 text-xs px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded text-white font-medium">Confirm &amp; save template</button>
                 </div>`;
+        }
+
+
+        function dsExtractDesignColors(designCode) {
+            const out = [];
+            const seen = new Set();
+            function add(label, path, hex) {
+                if (!hex || typeof hex !== "string") return;
+                const m = String(hex).trim().match(/^#?[0-9A-Fa-f]{6}$/);
+                if (!m) return;
+                let h = String(hex).trim();
+                if (h.charAt(0) !== "#") h = "#" + h;
+                h = h.toUpperCase();
+                const key = path + "|" + h;
+                if (seen.has(key)) return;
+                seen.add(key);
+                out.push({ label: label, path: path, hex: h });
+            }
+            if (!designCode || typeof designCode !== "object") return out;
+            add("Primary", "primaryColor", designCode.primaryColor);
+            add("Dark", "darkColor", designCode.darkColor);
+            add("Light", "lightColor", designCode.lightColor);
+            add("Gray / muted", "grayColor", designCode.grayColor);
+            const pal = designCode.palette || {};
+            add("Palette · primary", "palette.primary", pal.primary);
+            add("Palette · accent", "palette.accent", pal.accent);
+            add("Palette · dark", "palette.dark", pal.dark);
+            add("Palette · light", "palette.light", pal.light);
+            add("Palette · muted", "palette.muted", pal.muted);
+            const els = designCode.elements || [];
+            els.forEach(function (el, i) {
+                if (!el) return;
+                add("Element " + i + " · color", "elements[" + i + "].color", el.color);
+                if (el.runs && Array.isArray(el.runs)) {
+                    el.runs.forEach(function (r, ri) {
+                        if (r && r.color) add("Element " + i + " run " + ri + " · color", "elements[" + i + "].runs[" + ri + "].color", r.color);
+                    });
+                }
+                if (el.highlightColor) add("Element " + i + " · highlight", "elements[" + i + "].highlightColor", el.highlightColor);
+                if (el.headerColor) add("Element " + i + " · header", "elements[" + i + "].headerColor", el.headerColor);
+            });
+            return out;
+        }
+
+        function dsSetDesignColorByPath(obj, path, hex) {
+            if (!obj || !path) return;
+            const parts = path.replace(/\]/g, "").replace(/\[/g, ".").split(".");
+            let cur = obj;
+            for (let i = 0; i < parts.length - 1; i++) {
+                const p = parts[i];
+                if (cur[p] == null) {
+                    cur[p] = /^\d+$/.test(parts[i + 1]) ? [] : {};
+                }
+                cur = cur[p];
+            }
+            cur[parts[parts.length - 1]] = hex;
+        }
+
+        function dsReviewSyncColorsIntoJson() {
+            const ta = document.getElementById("dsReviewDesignCode");
+            if (!ta) return;
+            let obj;
+            try { obj = JSON.parse(ta.value || "{}"); } catch (e) { return; }
+            document.querySelectorAll("#dsReviewColors .ds-color-row").forEach(function (row) {
+                const path = row.getAttribute("data-color-path");
+                const hexEl = row.querySelector(".ds-color-hex");
+                let hex = (hexEl && hexEl.value || "").trim();
+                if (!/^#?[0-9A-Fa-f]{6}$/.test(hex)) return;
+                if (hex.charAt(0) !== "#") hex = "#" + hex;
+                hex = hex.toUpperCase();
+                dsSetDesignColorByPath(obj, path, hex);
+            });
+            ta.value = JSON.stringify(obj, null, 2);
+        }
+
+        function dsReviewColorChanged(el) {
+            const row = el && el.closest && el.closest(".ds-color-row");
+            if (!row) return;
+            let hex = (el.value || "").trim();
+            if (el.type === "color") hex = el.value;
+            if (!/^#?[0-9A-Fa-f]{6}$/i.test(hex)) return;
+            if (hex.charAt(0) !== "#") hex = "#" + hex;
+            hex = hex.toUpperCase();
+            const picker = row.querySelector(".ds-color-picker");
+            const swatch = row.querySelector(".ds-color-swatch");
+            const hexInput = row.querySelector(".ds-color-hex");
+            if (picker) picker.value = hex;
+            if (swatch) swatch.style.background = hex;
+            if (hexInput && hexInput !== el) hexInput.value = hex;
+            dsReviewSyncColorsIntoJson();
+        }
+
+        function dsReviewColorHexTyped(el) {
+            const v = (el.value || "").trim();
+            if (!/^#?[0-9A-Fa-f]{6}$/i.test(v)) return;
+            dsReviewColorChanged(el);
+        }
+
+
+        function dsReviewToggleAll(open) {
+            document.querySelectorAll('#dsUploadResult details.ds-review-section').forEach(function (d) {
+                if (open) d.setAttribute('open', '');
+                else d.removeAttribute('open');
+            });
         }
 
         function dsVerifyToggle(el) {
@@ -14388,9 +14558,59 @@ ${a.Status === 'Pending Review' ? `
             }
             jsonEl.value = designCode ? JSON.stringify(designCode, null, 2) : '{\n  "version": 2,\n  "elements": []\n}';
             if (narrEl) narrEl.value = narration || '';
+            renderDesignCodeEditColors(designCode);
             if (!designCode) {
                 showToast('No designCode on file yet — paste JSON or re-analyse the sample.', 'info');
             }
+        }
+
+        function renderDesignCodeEditColors(designCode) {
+            const wrap = document.getElementById('designCodeEditColors');
+            if (!wrap) return;
+            const entries = dsExtractDesignColors(designCode || {});
+            if (!entries.length) {
+                wrap.innerHTML = '<p class="text-[10px] text-slate-600">No colours in designCode.</p>';
+                return;
+            }
+            wrap.innerHTML = entries.map(function (c) {
+                const hex = c.hex || '#000000';
+                return '<div class="ds-color-row flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5" data-color-path="' + escapeHtml(c.path) + '">' +
+                    '<input type="color" value="' + escapeHtml(hex) + '" class="ds-color-picker h-8 w-10 cursor-pointer bg-transparent border-0 p-0" oninput="dsEditModalColorChanged(this)">' +
+                    '<span class="ds-color-swatch h-8 w-8 rounded border border-slate-600 shrink-0" style="background:' + escapeHtml(hex) + '"></span>' +
+                    '<div class="min-w-0 flex-1">' +
+                    '<p class="text-[10px] text-slate-500 truncate">' + escapeHtml(c.label) + '</p>' +
+                    '<input type="text" value="' + escapeHtml(hex) + '" class="ds-color-hex w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[11px] font-mono text-slate-200" onchange="dsEditModalColorChanged(this)">' +
+                    '</div></div>';
+            }).join('');
+        }
+
+        function dsEditModalColorChanged(el) {
+            const row = el && el.closest && el.closest('.ds-color-row');
+            if (!row) return;
+            let hex = (el.value || '').trim();
+            if (el.type === 'color') hex = el.value;
+            if (!/^#?[0-9A-Fa-f]{6}$/i.test(hex)) return;
+            if (hex.charAt(0) !== '#') hex = '#' + hex;
+            hex = hex.toUpperCase();
+            const picker = row.querySelector('.ds-color-picker');
+            const swatch = row.querySelector('.ds-color-swatch');
+            const hexInput = row.querySelector('.ds-color-hex');
+            if (picker) picker.value = hex;
+            if (swatch) swatch.style.background = hex;
+            if (hexInput && hexInput !== el) hexInput.value = hex;
+            const ta = document.getElementById('designCodeEditJson');
+            if (!ta) return;
+            let obj;
+            try { obj = JSON.parse(ta.value || '{}'); } catch (e) { return; }
+            document.querySelectorAll('#designCodeEditColors .ds-color-row').forEach(function (r) {
+                const path = r.getAttribute('data-color-path');
+                const hEl = r.querySelector('.ds-color-hex');
+                let h = (hEl && hEl.value || '').trim();
+                if (!/^#?[0-9A-Fa-f]{6}$/i.test(h)) return;
+                if (h.charAt(0) !== '#') h = '#' + h;
+                dsSetDesignColorByPath(obj, path, h.toUpperCase());
+            });
+            ta.value = JSON.stringify(obj, null, 2);
         }
 
         async function saveDesignCodeEdit() {
