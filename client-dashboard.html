@@ -3954,49 +3954,66 @@
             if (!modal) return;
 
             titleEl.textContent = res.label || res.docId || 'Document preview';
-            const modeLabel = res.mode === 'blank_template' ? 'Your blank template'
-                : res.mode === 'structure' ? 'Trained sample structure'
-                    : 'Default layout';
+            const mode = res.mode || '';
+            const modeLabel =
+                mode === 'trained_design' || mode === 'trained_design_cached' ? 'Trained sample document'
+                    : mode === 'default_sample' || mode === 'default_cached' ? 'Default sample document'
+                        : mode === 'blank_template' ? 'Your blank template'
+                            : mode === 'trained_structure_only' ? 'Training on file (sample DOCX pending)'
+                                : mode === 'structure' ? 'Field outline'
+                                    : 'Preview';
             metaEl.textContent = (res.message || modeLabel) +
-                (res.cached ? ' · Shared sample on file.' : '') +
                 (res.linkSharing === 'anyone_with_link_view' ? ' · Anyone with the link can view.' : '');
 
             const t = res.trained || {};
             const chips = [];
+            if (t.hasDesignCode) chips.push('Custom training');
             if (t.hasBlankTemplate) chips.push('Exact template');
-            else if (t.hasSample) chips.push('Trained sample');
+            else if (t.hasSample) chips.push('Sample file');
             if (t.hasLetterhead) chips.push('Letterhead');
             if (t.hasLogo) chips.push('Logo');
             if (t.sampleFileName) chips.push(t.sampleFileName);
             badgesEl.innerHTML = chips.length
                 ? chips.map(c => '<span class="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-[10px] text-slate-300">' + escapeHtml(c) + '</span>').join('')
-                : '<span class="text-[10px] text-slate-500">No custom training for this type yet</span>';
-
-            const blocks = (res.mock && res.mock.blocks) || [];
-            mockEl.innerHTML = blocks.length
-                ? ('<p class="text-[10px] text-slate-500 mb-1 uppercase tracking-wide">Field outline</p>' +
-                    '<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">' +
-                    blocks.map(b =>
-                        '<div class="bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-[11px]">' +
-                        '<span class="text-slate-400">' + escapeHtml(b.label || '') + '</span>' +
-                        '<span class="text-slate-200 block truncate">' + escapeHtml(String(b.sample || '—')) + '</span></div>'
-                    ).join('') + '</div>')
-                : '';
+                : '<span class="text-[10px] text-slate-500">Using default layout (no custom training yet)</span>';
 
             const url = res.previewUrl || '';
-            if (url) {
-                openLink.href = url;
-                openLink.classList.remove('hidden');
-                // Drive preview embed (works for anyone-with-link VIEW files)
-                const embed = url.replace(/\/view.*$/, '/preview');
-                frame.src = embed;
-                frame.classList.remove('hidden');
+            const fileId = res.previewFileId || '';
+            // Prefer real DOCX via Drive preview when we have a file
+            if (url || fileId) {
+                const embed = fileId
+                    ? ('https://drive.google.com/file/d/' + encodeURIComponent(fileId) + '/preview')
+                    : url.replace('/view', '/preview');
+                if (frame) {
+                    frame.src = embed;
+                    frame.classList.remove('hidden');
+                }
+                if (openLink) {
+                    openLink.href = url || ('https://drive.google.com/file/d/' + fileId + '/view');
+                    openLink.classList.remove('hidden');
+                }
+                if (mockEl) {
+                    mockEl.innerHTML = '<p class="text-[10px] text-slate-500">Showing the sample document. Open in new tab if the preview does not load.</p>';
+                }
             } else {
-                openLink.classList.add('hidden');
-                frame.removeAttribute('src');
-                frame.classList.add('hidden');
+                if (frame) {
+                    frame.src = 'about:blank';
+                    frame.classList.add('hidden');
+                }
+                if (openLink) openLink.classList.add('hidden');
+                const blocks = (res.mock && res.mock.blocks) || [];
+                if (mockEl) {
+                    mockEl.innerHTML = blocks.length
+                        ? ('<p class="text-[10px] text-slate-500 mb-1 uppercase tracking-wide">Field outline</p>' +
+                            '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' +
+                            blocks.map(b =>
+                                '<div class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">' +
+                                '<p class="text-[10px] text-slate-500">' + escapeHtml(b.label || '') + '</p>' +
+                                '<p class="text-xs text-slate-200 mt-0.5">' + escapeHtml(b.sample || '') + '</p></div>'
+                            ).join('') + '</div>')
+                        : '<p class="text-slate-500 text-xs">No preview available yet.</p>';
+                }
             }
-
             modal.classList.remove('hidden');
         }
 

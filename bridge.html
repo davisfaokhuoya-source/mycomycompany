@@ -16504,6 +16504,10 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         document.addEventListener("DOMContentLoaded", initializeModule);
     </script>
     <script>
+
+        // ===== CareerHub job completion file upload (bridge admin) =====
+        // Call after setting status to Completed on client-onboarded jobs.
+
         async function uploadCareerJobCompletionFile(trackingCode, fileInputEl, meta) {
             meta = meta || {};
             if (!trackingCode) { showToast('Tracking code required', 'error'); return; }
@@ -16536,6 +16540,8 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             }
 
             const res = await executeSecureBridgeCall('career', 'adminUploadJobCompletionFile', payload);
+            // If your bridge routes career actions differently, use:
+            // await executeSecureBridgeCall('careerHub', 'adminUploadJobCompletionFile', payload);
             if (res && res.success) {
                 showToast('File uploaded. Client notified (free 30 days, then ₦10,000 unlock).', 'success');
                 if (typeof loadProductionFulfillment === 'function') loadProductionFulfillment();
@@ -16553,7 +16559,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
           onclick="uploadCareerJobCompletionFile('${trackingCode}', document.getElementById('careerJobFile_${trackingCode}'), { markCompleted: true })">
           Upload &amp; notify client
         </button>
-        <p class="text-[10px] text-slate-500 mt-1">Client gets a link free for 30 days, then ₦10,000 to unlock. </p> 
+        <p class="text-[10px] text-slate-500 mt-1">Client gets a link free for 30 days, then ₦10,000 to unlock.</p>
       </div>`;
         }
     </script>
