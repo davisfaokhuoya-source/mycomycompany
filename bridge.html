@@ -14358,9 +14358,91 @@ ${a.Status === 'Pending Review' ? `
         }
 
         /**
+         * Client-side: force designCode to obey designNarration (order, gold rules, center).
+         * Mirrors DocumentsLib _applyNarrationToDesignCode so Re-analyse is not AI-only.
+         */
+        function dsApplyNarrationToDesignCode(designCode, narration) {
+            if (!designCode || !Array.isArray(designCode.elements)) return designCode;
+            narration = String(narration || '');
+            if (narration.length < 20) return designCode;
+            try { designCode = JSON.parse(JSON.stringify(designCode)); } catch (_) { return designCode; }
+            let els = designCode.elements.slice();
+            const n = narration.toLowerCase();
+            const isCompany = (e) => e && (/\{\{companyName\}\}/i.test(String(e.text || '')) || /THE VICTORIAS/i.test(String(e.text || '')));
+            const isTag = (e) => e && /AI Ops|From Setup to Scale|tagline/i.test(String(e.text || ''));
+            const isContact = (e) => {
+                if (!e) return false;
+                const t = String(e.text || '');
+                return /\{\{companyAddress\}\}/.test(t) || (/\{\{companyPhone\}\}/.test(t) && /\{\{companyWebsite\}\}/.test(t));
+            };
+            const isTitle = (e) => e && /PAYMENT RECEIPT|ORDER CONFIRMATION|^INVOICE$/i.test(String(e.text || ''));
+            const isRule = (e) => e && (e.op === 'rule' || e.type === 'rule');
+
+            if (/\bcenter(ed)?\b/.test(n) && /company name|title|tagline|contact/i.test(narration)) {
+                els.forEach((e) => {
+                    if (isCompany(e) || isTag(e) || isContact(e) || isTitle(e)) {
+                        e.align = 'center';
+                        if (isCompany(e)) {
+                            e.op = 'heading';
+                            e.bold = true;
+                            if (!e.size || e.size < 14) e.size = 16;
+                        }
+                    }
+                });
+            }
+            if (/gold|golden|amber|bronze/i.test(narration)) {
+                const gold = '#C5A059';
+                const ruleIdxs = [];
+                els.forEach((e, i) => { if (isRule(e)) ruleIdxs.push(i); });
+                if (ruleIdxs.length === 1) {
+                    els.splice(ruleIdxs[0], 0, { op: 'rule', color: designCode.darkColor || '#1B2A4A', size: 8, spacingAfterPt: 1 });
+                    els[ruleIdxs[0] + 1].color = gold;
+                    els[ruleIdxs[0] + 1].size = 14;
+                    els[ruleIdxs[0] + 1].spacingAfterPt = 12;
+                } else if (ruleIdxs.length >= 2) {
+                    els[ruleIdxs[0]].color = designCode.darkColor || '#1B2A4A';
+                    els[ruleIdxs[0]].size = 8;
+                    els[ruleIdxs[1]].color = gold;
+                    els[ruleIdxs[1]].size = Math.max(Number(els[ruleIdxs[1]].size) || 0, 12) || 14;
+                }
+                designCode.primaryColor = gold;
+                if (!designCode.palette) designCode.palette = {};
+                designCode.palette.primary = gold;
+            }
+            if (/tagline[\s\S]{0,80}contact|below that is a contact|address,\s*website,\s*email/i.test(narration)) {
+                let nameEl = null, tagEl = null, contactEl = null, titleEl = null;
+                const rules = [], other = [], body = [];
+                let inHeader = true;
+                els.forEach((e) => {
+                    if (inHeader && (e.op === 'table' || e.op === 'lineItems' || e.op === 'totals')) inHeader = false;
+                    if (!inHeader) { body.push(e); return; }
+                    if (!nameEl && isCompany(e)) { nameEl = e; return; }
+                    if (!tagEl && isTag(e)) { tagEl = e; return; }
+                    if (!contactEl && isContact(e)) {
+                        contactEl = Object.assign({}, e, { op: 'paragraph', size: e.size || 8 });
+                        return;
+                    }
+                    if (!titleEl && isTitle(e)) { titleEl = e; return; }
+                    if (isRule(e)) { rules.push(e); return; }
+                    other.push(e);
+                });
+                if (nameEl || contactEl) {
+                    els = [];
+                    if (nameEl) els.push(nameEl);
+                    if (tagEl) els.push(tagEl);
+                    if (contactEl) els.push(contactEl);
+                    els = els.concat(rules);
+                    if (titleEl) els.push(titleEl);
+                    els = els.concat(other).concat(body);
+                }
+            }
+            designCode.elements = els.filter(Boolean);
+            return designCode;
+        }
+
+        /**
          * Re-run analysis keeping current designCode + applying admin verification/feedback.
-         * Does not require choosing the file again if we still have the pending record context;
-         * sends previousDesignCode + corrections so the agent refines instead of starting over.
+         * Narration alone is enough to re-analyse: it is treated as the authoritative layout brief.
          */
         async function reanalyzeDocStudioReview() {
             if (!DOC_STUDIO_PENDING_REVIEW) {
@@ -14391,20 +14473,30 @@ ${a.Status === 'Pending Review' ? `
             }
             const narration = (document.getElementById('dsReviewNarration') || {}).value || '';
             let feedbackParts = [];
+            if (narration.trim()) {
+                feedbackParts.push('AUTHORITATIVE designNarration (designCode MUST match this top-to-bottom):\n' + narration.trim());
+            }
             if (v.feedback) feedbackParts.push(v.feedback);
-            if (v.corrections.length) {
+            if (v.corrections && v.corrections.length) {
                 feedbackParts.push('VERIFICATION CORRECTIONS:');
                 v.corrections.forEach(function (c) {
                     feedbackParts.push('- Detected: ' + c.detected + ' → Should be: ' + c.correction + (c.path ? ' (path: ' + c.path + ')' : ''));
                 });
             }
-            if (!feedbackParts.length && !v.corrections.length) {
-                showToast('Mark items as wrong or write what is missing, then Re-analyse.', 'error');
+            if (!feedbackParts.length) {
+                showToast('Edit the Narration to describe the correct layout, mark items Wrong, or write what is missing — then Re-analyse.', 'error');
                 return;
+            }
+            if (previousDesignCode && narration.trim()) {
+                previousDesignCode = dsApplyNarrationToDesignCode(previousDesignCode, narration);
+                const jsonBox = document.getElementById('dsReviewDesignCode');
+                if (jsonBox) {
+                    try { jsonBox.value = JSON.stringify(previousDesignCode, null, 2); } catch (_) { }
+                }
             }
             const docHint = [
                 (document.getElementById('dsUploadHint') || {}).value || '',
-                feedbackParts.join('\n')
+                feedbackParts.join('\n\n')
             ].filter(Boolean).join('\n\n');
 
             const btn = document.querySelector('#dsUploadResult button[onclick="reanalyzeDocStudioReview()"]');
@@ -14419,11 +14511,10 @@ ${a.Status === 'Pending Review' ? `
                     mimeType: file.type,
                     base64Data,
                     docHint: docHint,
-                    // Refinement context — backend keeps prior design and applies feedback
                     previousRecordId: DOC_STUDIO_PENDING_REVIEW.recordId,
                     previousDesignCode: previousDesignCode,
                     previousDesignNarration: narration,
-                    verificationCorrections: v.corrections,
+                    verificationCorrections: v.corrections || [],
                     refineMode: true
                 });
                 if (res && res.queued) {
@@ -14435,19 +14526,24 @@ ${a.Status === 'Pending Review' ? `
                     showToast((res && res.message) || 'Re-analyse failed.', 'error');
                     return;
                 }
-                // Prefer merging: if new design is weaker, keep previous and only apply narration note
                 if (previousDesignCode && previousDesignCode.elements && previousDesignCode.elements.length) {
                     const newDc = res.templateSpec && res.templateSpec.designCode;
                     const newLen = (newDc && newDc.elements) ? newDc.elements.length : 0;
                     const oldLen = previousDesignCode.elements.length;
                     if (newLen < Math.max(3, oldLen * 0.5) && res.templateSpec) {
-                        res.templateSpec.designCode = previousDesignCode;
-                        res.templateSpec.designNarration = (narration || '') + ' | refined with admin feedback';
-                        showToast('AI returned a thinner layout — kept your previous designCode for editing.', 'info');
+                        res.templateSpec.designCode = dsApplyNarrationToDesignCode(
+                            previousDesignCode,
+                            narration || res.templateSpec.designNarration || ''
+                        );
+                        res.templateSpec.designNarration = narration || res.templateSpec.designNarration || '';
+                        showToast('AI returned a thinner layout — kept narration-corrected designCode.', 'info');
+                    } else if (newDc && narration) {
+                        res.templateSpec.designCode = dsApplyNarrationToDesignCode(newDc, narration);
+                        if (narration.trim()) res.templateSpec.designNarration = narration;
                     }
                 }
                 renderDocStudioReview(clientId, res);
-                showToast('Re-analysis complete — review verification again, then Confirm.', 'success');
+                showToast('Re-analysis complete — JSON updated from narration. Review, then Confirm.', 'success');
             } catch (e) {
                 showToast('Re-analyse error: ' + e.toString(), 'error');
             } finally {
