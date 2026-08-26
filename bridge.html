@@ -13911,23 +13911,58 @@ ${a.Status === 'Pending Review' ? `
             const colorEntries = dsExtractDesignColors(spec.designCode);
 
             // Build verification rows from designCode elements + columns
-            const verifyRows = [];
-            elements.forEach(function (el, idx) {
+            function dsSummarizeElement(el, idx) {
                 const op = (el && (el.op || el.type)) || "element";
-                let summary = op;
-                if (el.text) summary = op + ": " + String(el.text).slice(0, 60);
-                else if (el.leftTitle || el.rightTitle) summary = op + ": " + (el.leftTitle || "") + " | " + (el.rightTitle || "");
-                else if (el.headers) summary = op + ": [" + (el.headers || []).join(", ") + "]";
-                else if (el.label) summary = op + ": " + el.label;
-                else if (op === "logo") summary = "logo mark: " + (el.mark || "?");
-                else if (op === "footer") summary = "footer: " + String(el.text || "").slice(0, 50);
-                else if (op === "signatureRow") summary = "signature: " + (el.left || "") + " / " + (el.right || "");
-                else if (op === "rule") summary = "rule (" + (el.color || "") + ")";
-                verifyRows.push({ id: "el-" + idx, kind: "element", op: op, summary: summary, path: "elements[" + idx + "]" });
+                const n = idx + 1;
+                if (op === "logo") return { step: n, band: "Logo", detail: "mark " + (el.mark || "?"), op: op };
+                if (op === "heading") return { step: n, band: "Heading", detail: String(el.text || "").slice(0, 80), op: op };
+                if (op === "paragraph" || op === "text") {
+                    const t = (el.runs && el.runs[0] && el.runs[0].text) ? el.runs.map(function (r) { return r.text || ""; }).join("") : (el.text || "");
+                    return { step: n, band: "Text", detail: String(t).slice(0, 90), op: op };
+                }
+                if (op === "rule") return { step: n, band: "Rule", detail: el.color || "line", op: op };
+                if (op === "table") return { step: n, band: "Table", detail: (el.headers || []).join(" · "), op: op };
+                if (op === "lineItems") return { step: n, band: "Line items", detail: (el.headers || []).join(" · "), op: op };
+                if (op === "totals") {
+                    const labs = (el.rows || []).map(function (r) {
+                        if (Array.isArray(r)) return String(r[1] || r[0] || "");
+                        return String(r || "");
+                    }).join(" · ");
+                    return { step: n, band: "Totals", detail: labs.slice(0, 100) || (el.headers || []).join(" · "), op: op };
+                }
+                if (op === "twoCol" || op === "twoColumnLabeled")
+                    return { step: n, band: "Two columns", detail: (el.leftTitle || "") + " | " + (el.rightTitle || ""), op: op };
+                if (op === "signatureRow") return { step: n, band: "Signatures", detail: (el.left || "") + " · " + (el.right || ""), op: op };
+                if (op === "footer") return { step: n, band: "Footer", detail: String(el.text || "").slice(0, 80), op: op };
+                if (op === "spacer") return { step: n, band: "Spacer", detail: (el.heightPt || "") + "pt", op: op };
+                return { step: n, band: op, detail: String(el.text || el.label || "").slice(0, 80), op: op };
+            }
+            const layoutFlow = elements.map(function (el, idx) {
+                const s = dsSummarizeElement(el, idx);
+                return {
+                    id: "el-" + idx,
+                    kind: "element",
+                    op: s.op,
+                    step: s.step,
+                    band: s.band,
+                    detail: s.detail,
+                    summary: s.step + ". " + s.band + " — " + s.detail,
+                    path: "elements[" + idx + "]"
+                };
             });
-            (res.columns || []).forEach(function (c, idx) {
-                verifyRows.push({ id: "col-" + idx, kind: "field", op: "field", summary: c + " → " + (roles[c] || "data_field"), path: "columns[" + idx + "]" });
+            const fieldFlow = (res.columns || []).map(function (c, idx) {
+                return {
+                    id: "col-" + idx,
+                    kind: "field",
+                    op: "field",
+                    step: idx + 1,
+                    band: "Field",
+                    detail: c + " → " + (roles[c] || "data_field"),
+                    summary: c + " → " + (roles[c] || "data_field"),
+                    path: "columns[" + idx + "]"
+                };
             });
+            const verifyRows = layoutFlow.concat(fieldFlow);
 
             const resultEl = document.getElementById('dsUploadResult');
             const rightCol = document.getElementById('docStudioUploadRight');
@@ -14003,14 +14038,43 @@ ${a.Status === 'Pending Review' ? `
                         <span><i class="fa-solid fa-check-double text-slate-500 mr-1"></i> Verify what AI saw</span>
                         <span class="text-[10px] text-slate-500 font-normal">Green = correct · Red = fix</span>
                     </summary>
-                    <div class="px-3 pb-3 border-t border-slate-800/80 space-y-2">
-                        <p class="text-[10px] text-slate-600 mt-2">Mark each item. For red items, type the correct value — Re-analyse will keep greens and fix reds.</p>
-                        <div class="grid grid-cols-[1fr_auto_auto_1.2fr] gap-1 text-[9px] text-slate-500 uppercase tracking-wide px-1">
-                            <span>What AI detected</span><span>OK</span><span>Wrong</span><span>Correction (if wrong)</span>
+                    <div class="px-3 pb-3 border-t border-slate-800/80 space-y-3">
+                        <p class="text-[10px] text-slate-600 mt-2">Layout is top → bottom as in the sample. Mark OK (green) or Wrong (red). Red items need a correction for Re-analyse.</p>
+
+                        <div>
+                            <p class="text-[10px] font-medium text-slate-400 uppercase tracking-wide mb-1">1 · Page flow (top to bottom)</p>
+                            <div class="grid grid-cols-[2rem_7rem_1fr_auto_auto_minmax(6rem,1.1fr)] gap-1 text-[9px] text-slate-500 uppercase tracking-wide px-1 mb-1">
+                                <span>#</span><span>Band</span><span>Content</span><span>OK</span><span>Wrong</span><span>Fix</span>
+                            </div>
+                            <div id="dsVerifyListLayout" class="space-y-1 max-h-56 overflow-y-auto custom-scrollbar border border-slate-800/60 rounded-md p-1">
+                                ${layoutFlow.map((row) => `
+                                <div class="ds-verify-row grid grid-cols-[2rem_7rem_1fr_auto_auto_minmax(6rem,1.1fr)] gap-1 items-center bg-slate-950 border border-slate-800 rounded px-2 py-1.5"
+                                    data-verify-id="${escapeHtml(row.id)}" data-verify-path="${escapeHtml(row.path)}" data-verify-summary="${escapeHtml(row.summary)}">
+                                    <span class="text-[10px] text-slate-500 font-mono">${row.step}</span>
+                                    <span class="text-[10px] text-emerald-400/90 truncate" title="${escapeHtml(row.band)}">${escapeHtml(row.band)}</span>
+                                    <span class="text-[11px] text-slate-300 truncate" title="${escapeHtml(row.detail)}">${escapeHtml(row.detail)}</span>
+                                    <label class="flex items-center justify-center px-1 cursor-pointer" title="Correct">
+                                        <input type="radio" name="verify-${escapeHtml(row.id)}" value="ok" checked
+                                            class="accent-emerald-500 ds-verify-ok" onchange="dsVerifyToggle(this)">
+                                    </label>
+                                    <label class="flex items-center justify-center px-1 cursor-pointer" title="Wrong">
+                                        <input type="radio" name="verify-${escapeHtml(row.id)}" value="wrong"
+                                            class="accent-red-500 ds-verify-wrong" onchange="dsVerifyToggle(this)">
+                                    </label>
+                                    <input type="text" data-verify-fix placeholder="Correction…"
+                                        disabled class="ds-verify-fix w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-1 text-[11px] text-slate-400 placeholder:text-slate-600 disabled:opacity-40">
+                                </div>`).join('') || '<p class="text-slate-600 text-[10px] p-2">No layout bands detected.</p>'}
+                            </div>
                         </div>
-                        <div id="dsVerifyList" class="space-y-1.5 max-h-64 overflow-y-auto custom-scrollbar border border-slate-800/60 rounded-md p-1">
-                            ${verifyRows.map((row) => `
-                                <div class="ds-verify-row grid grid-cols-[1fr_auto_auto_1.2fr] gap-1 items-center bg-slate-950 border border-slate-800 rounded px-2 py-1.5"
+
+                        <div>
+                            <p class="text-[10px] font-medium text-slate-400 uppercase tracking-wide mb-1">2 · Fields (data the form will collect)</p>
+                            <div class="grid grid-cols-[1fr_auto_auto_minmax(6rem,1.1fr)] gap-1 text-[9px] text-slate-500 uppercase tracking-wide px-1 mb-1">
+                                <span>Field → role</span><span>OK</span><span>Wrong</span><span>Fix</span>
+                            </div>
+                            <div id="dsVerifyListFields" class="space-y-1 max-h-40 overflow-y-auto custom-scrollbar border border-slate-800/60 rounded-md p-1">
+                                ${fieldFlow.map((row) => `
+                                <div class="ds-verify-row grid grid-cols-[1fr_auto_auto_minmax(6rem,1.1fr)] gap-1 items-center bg-slate-950 border border-slate-800 rounded px-2 py-1.5"
                                     data-verify-id="${escapeHtml(row.id)}" data-verify-path="${escapeHtml(row.path)}" data-verify-summary="${escapeHtml(row.summary)}">
                                     <span class="text-[11px] text-slate-300 truncate" title="${escapeHtml(row.summary)}">${escapeHtml(row.summary)}</span>
                                     <label class="flex items-center justify-center px-1 cursor-pointer" title="Correct">
@@ -14021,10 +14085,12 @@ ${a.Status === 'Pending Review' ? `
                                         <input type="radio" name="verify-${escapeHtml(row.id)}" value="wrong"
                                             class="accent-red-500 ds-verify-wrong" onchange="dsVerifyToggle(this)">
                                     </label>
-                                    <input type="text" data-verify-fix placeholder="What it should be…"
+                                    <input type="text" data-verify-fix placeholder="Correction…"
                                         disabled class="ds-verify-fix w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-1 text-[11px] text-slate-400 placeholder:text-slate-600 disabled:opacity-40">
-                                </div>`).join('') || '<p class="text-slate-600 text-[10px]">No structured items to verify.</p>'}
+                                </div>`).join('') || '<p class="text-slate-600 text-[10px] p-2">No fields detected.</p>'}
+                            </div>
                         </div>
+                        <div id="dsVerifyList" class="hidden"></div>
                     </div>
                 </details>
 
@@ -14213,7 +14279,7 @@ ${a.Status === 'Pending Review' ? `
 
         function dsCollectVerificationFeedback() {
             const corrections = [];
-            document.querySelectorAll('#dsVerifyList .ds-verify-row').forEach(function (row) {
+            document.querySelectorAll('#dsVerifyListLayout .ds-verify-row, #dsVerifyListFields .ds-verify-row, #dsVerifyList .ds-verify-row').forEach(function (row) {
                 const wrong = row.querySelector('.ds-verify-wrong');
                 if (!wrong || !wrong.checked) return;
                 const summary = row.getAttribute('data-verify-summary') || '';
