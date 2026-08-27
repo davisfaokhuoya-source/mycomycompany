@@ -6006,33 +6006,91 @@
     <div id="modalDesignCodeEdit"
         class="hidden fixed inset-0 bg-slate-950/85 z-50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
         <div
-            class="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
+            class="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[94vh] flex flex-col overflow-hidden">
             <div class="flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-800 shrink-0">
                 <div class="min-w-0">
                     <h3 class="text-sm font-bold text-white">Edit clone template (designCode)</h3>
                     <p id="designCodeEditMeta" class="text-[11px] text-slate-400 mt-0.5">Worker builds only from this
-                        JSON when set.</p>
+                        JSON when set. Applies to ANY trained document type.</p>
                 </div>
                 <button type="button" onclick="closeDesignCodeEditModal()"
                     class="text-slate-400 hover:text-white text-lg leading-none shrink-0 px-1"
                     aria-label="Close">&times;</button>
             </div>
             <div class="px-4 py-3 overflow-y-auto custom-scrollbar flex-1 space-y-3">
-                <p class="text-[10px] text-slate-500">Edit the JSON the agent produced from the sample. Invalid JSON
-                    will not save. Generation and client sample preview use this after save.</p>
-                <label class="block text-[10px] text-slate-500 uppercase tracking-wide">designNarration</label>
-                <textarea id="designCodeEditNarration" rows="2"
+                <p class="text-[10px] text-slate-500">The <strong class="text-slate-300">designNarration</strong> is the
+                    human description of the sample. The <strong class="text-slate-300">designCode JSON</strong> is what
+                    the worker executes. If narration and JSON disagree, fix narration first then click <em>Update JSON
+                        from description</em>.</p>
+
+                <details class="border border-slate-800 rounded-lg bg-slate-950/60 p-2" open>
+                    <summary class="text-[10px] text-emerald-400/90 cursor-pointer font-medium">JSON parameter guide
+                        (how to edit any clone)</summary>
+                    <ul class="mt-2 text-[10px] text-slate-400 space-y-1 list-disc pl-4 leading-relaxed">
+                        <li><code class="text-slate-300">elements[].op</code> — heading | paragraph | rule | twoCol |
+                            twoColumnLabeled | lineItems | totals | signatureRow | footer | table | image</li>
+                        <li><code class="text-slate-300">runs</code> — multi-style text in one line:
+                            <code>[{"text":"THE ","bold":true,"color":"#1A1A1A"},{"text":"VICTORIAS","color":"#CC5600"}]</code>
+                        </li>
+                        <li><code class="text-slate-300">colWidths</code> — fractions of page content width (e.g.
+                            <code>[0.08,0.52,0.12,0.28]</code>). If sum &lt; 0.95 the table stays that narrow (not
+                            stretched). Totals often use <code>[0.55,0.45]</code> full or <code>[0.2,0.2]</code>
+                            right-aligned narrow block.</li>
+                        <li><code class="text-slate-300">cellAlign</code> — per-column left | center | right</li>
+                        <li><code class="text-slate-300">headerStyle</code> — dark | accent | plain (table header fill)
+                        </li>
+                        <li><code class="text-slate-300">tableAlign</code> — left | center | right (placement of narrow
+                            tables)</li>
+                        <li><code class="text-slate-300">align / size / bold / color</code> — on headings &amp;
+                            paragraphs; size is pt</li>
+                        <li><code class="text-slate-300">{{tokens}}</code> — filled at generate time: companyName,
+                            recipientName, amountPaid, lineItems, etc.</li>
+                        <li><code class="text-slate-300">skipBrandedChrome / trainedLayout</code> — keep clone look; do
+                            not inject Victorias default header/footer</li>
+                    </ul>
+                </details>
+
+                <div class="flex flex-wrap items-center gap-3">
+                    <label class="flex items-center gap-2 text-[11px] text-slate-300 cursor-pointer">
+                        <input type="checkbox" id="designCodeDescWrong" onchange="onDesignDescWrongToggle()"
+                            class="rounded border-slate-600 text-emerald-500" />
+                        Description is wrong — I will correct it
+                    </label>
+                    <span id="designCodeSyncStatus" class="text-[10px] font-mono text-slate-500"></span>
+                </div>
+
+                <label class="block text-[10px] text-slate-500 uppercase tracking-wide">designNarration (authoritative
+                    description)</label>
+                <textarea id="designCodeEditNarration" rows="3"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-[11px] text-slate-200 font-mono"></textarea>
+
+                <div id="designCodeCorrectedDescWrap" class="hidden space-y-1">
+                    <label class="block text-[10px] text-amber-400/90 uppercase tracking-wide">Corrected description
+                        (injected)</label>
+                    <textarea id="designCodeCorrectedDesc" rows="4"
+                        placeholder="Paste the accurate top-to-bottom layout description…"
+                        class="w-full bg-slate-950 border border-amber-900/40 rounded p-2 text-[11px] text-amber-100/90 font-mono"></textarea>
+                    <button type="button" onclick="updateDesignFromDescription()"
+                        class="text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded text-white">
+                        Update JSON from description
+                    </button>
+                    <p class="text-[10px] text-slate-500">Uses the corrected text as the source of truth: narration is
+                        saved and designCode is re-synced so every described band appears in the JSON.</p>
+                </div>
+
                 <label class="block text-[10px] text-slate-500 uppercase tracking-wide">Colours</label>
                 <div id="designCodeEditColors" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
                 <label class="block text-[10px] text-slate-500 uppercase tracking-wide">designCode JSON</label>
-                <textarea id="designCodeEditJson" rows="18"
+                <textarea id="designCodeEditJson" rows="16"
                     class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-[11px] text-emerald-300/90 font-mono leading-relaxed"></textarea>
                 <p id="designCodeEditError" class="hidden text-xs text-red-400"></p>
             </div>
             <div class="flex flex-wrap gap-2 justify-end px-4 py-3 border-t border-slate-800 shrink-0">
                 <button type="button" onclick="closeDesignCodeEditModal()"
                     class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">Cancel</button>
+                <button type="button" onclick="checkDesignCodeAgainstNarration()"
+                    class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-sky-300">Check
+                    vs description</button>
                 <button type="button" id="designCodeEditSaveBtn" onclick="saveDesignCodeEdit()"
                     class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Save
                     design</button>
@@ -14784,6 +14842,196 @@ ${a.Status === 'Pending Review' ? `
             if (!designCode) {
                 showToast('No designCode on file yet — paste JSON or re-analyse the sample.', 'info');
             }
+            // Reset corrected-desc UI and run narration↔JSON consistency check
+            const wrongCb = document.getElementById('designCodeDescWrong');
+            if (wrongCb) wrongCb.checked = false;
+            onDesignDescWrongToggle();
+            setTimeout(function () { checkDesignCodeAgainstNarration(); }, 50);
+        }
+
+        function onDesignDescWrongToggle() {
+            const on = !!(document.getElementById('designCodeDescWrong') || {}).checked;
+            const wrap = document.getElementById('designCodeCorrectedDescWrap');
+            if (wrap) wrap.classList.toggle('hidden', !on);
+            if (on) {
+                const narr = document.getElementById('designCodeEditNarration');
+                const corr = document.getElementById('designCodeCorrectedDesc');
+                if (corr && narr && !corr.value.trim()) corr.value = narr.value || '';
+            }
+        }
+
+        /**
+         * Lightweight client-side check: does every meaningful phrase from the
+         * narration appear somewhere in the designCode JSON (ops, text, headers)?
+         * Generic for any document type — not receipt-specific.
+         */
+        function checkDesignCodeAgainstNarration() {
+            const status = document.getElementById('designCodeSyncStatus');
+            const err = document.getElementById('designCodeEditError');
+            const narrEl = document.getElementById('designCodeEditNarration');
+            const jsonEl = document.getElementById('designCodeEditJson');
+            if (!jsonEl) return { ok: true, missing: [] };
+            let obj;
+            try { obj = JSON.parse(jsonEl.value || '{}'); }
+            catch (e) {
+                if (status) { status.textContent = 'JSON invalid'; status.className = 'text-[10px] font-mono text-red-400'; }
+                if (err) { err.classList.remove('hidden'); err.textContent = 'Invalid JSON: ' + e.message; }
+                return { ok: false, missing: [], invalidJson: true };
+            }
+            if (err) err.classList.add('hidden');
+            const narration = ((narrEl && narrEl.value) || '').trim();
+            if (!narration) {
+                if (status) { status.textContent = 'No narration to check'; status.className = 'text-[10px] font-mono text-slate-500'; }
+                return { ok: true, missing: [] };
+            }
+            const jsonBlob = JSON.stringify(obj).toLowerCase();
+            // Extract candidate phrases: quoted strings, ALL-CAPS labels, lines with structure words
+            const phrases = [];
+            const lines = narration.split(/[\n.;]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+            lines.forEach(function (line) {
+                // Pull words that look like section labels (2+ word tokens or known ops)
+                const m = line.match(/\b([A-Z][A-Z0-9 /&-]{2,40})\b/g);
+                if (m) m.forEach(function (x) { if (x.length >= 3) phrases.push(x); });
+                // Common structural tokens
+                ['line items', 'totals', 'subtotal', 'signature', 'letterhead', 'two column', 'header', 'footer', 'logo'].forEach(function (k) {
+                    if (line.toLowerCase().indexOf(k) >= 0) phrases.push(k);
+                });
+            });
+            // Unique
+            const seen = {};
+            const uniq = [];
+            phrases.forEach(function (p) {
+                const k = p.toLowerCase().replace(/\s+/g, ' ').trim();
+                if (k.length < 3 || seen[k]) return;
+                seen[k] = true;
+                uniq.push(p);
+            });
+            const missing = [];
+            uniq.forEach(function (p) {
+                const k = p.toLowerCase().replace(/\s+/g, ' ');
+                // Map human phrases → JSON ops / keys
+                const aliases = {
+                    'line items': ['lineitems', 'line_items', '"op":"lineitems"', 'lineitem'],
+                    'two column': ['twocol', 'twocolumn', 'twocolumnlabeled'],
+                    'signature': ['signaturerow', 'signature'],
+                    'totals': ['"op":"totals"', 'subtotal', 'total paid'],
+                    'letterhead': ['logo', 'heading', 'companyname'],
+                    'header': ['heading', 'header'],
+                    'footer': ['"op":"footer"', 'footer']
+                };
+                let found = jsonBlob.indexOf(k.replace(/\s+/g, '')) >= 0 || jsonBlob.indexOf(k) >= 0;
+                if (!found && aliases[k]) {
+                    found = aliases[k].some(function (a) { return jsonBlob.indexOf(a) >= 0; });
+                }
+                // Also check original phrase in element texts
+                if (!found && obj.elements) {
+                    found = JSON.stringify(obj.elements).toLowerCase().indexOf(k) >= 0;
+                }
+                if (!found) missing.push(p);
+            });
+            if (status) {
+                if (!missing.length) {
+                    status.textContent = 'Narration ↔ JSON: OK';
+                    status.className = 'text-[10px] font-mono text-emerald-400';
+                } else {
+                    status.textContent = 'Missing in JSON: ' + missing.slice(0, 6).join(', ') + (missing.length > 6 ? '…' : '');
+                    status.className = 'text-[10px] font-mono text-amber-400';
+                }
+            }
+            return { ok: missing.length === 0, missing: missing };
+        }
+
+        /**
+         * When admin marks description wrong and injects a corrected version:
+         * 1) Replace designNarration with corrected text
+         * 2) Call backend to re-sync designCode from narration (or local structural patch)
+         * Generic for any catalog document type.
+         */
+        async function updateDesignFromDescription() {
+            const corrEl = document.getElementById('designCodeCorrectedDesc');
+            const narrEl = document.getElementById('designCodeEditNarration');
+            const jsonEl = document.getElementById('designCodeEditJson');
+            const corrected = ((corrEl && corrEl.value) || '').trim();
+            if (!corrected) {
+                showToast('Paste the corrected description first.', 'error');
+                return;
+            }
+            if (narrEl) narrEl.value = corrected;
+            if (!DESIGN_CODE_EDIT_CTX || !DESIGN_CODE_EDIT_CTX.clientId) {
+                showToast('Open a sample row first.', 'error');
+                return;
+            }
+            showToast('Syncing designCode from description…', 'info');
+            // Prefer server-side resync if available
+            let res = await executeSecureBridgeCall('agent', 'agent-resync-design-from-narration', {
+                clientId: DESIGN_CODE_EDIT_CTX.clientId,
+                recordId: DESIGN_CODE_EDIT_CTX.recordId,
+                catalogId: DESIGN_CODE_EDIT_CTX.catalogId || undefined,
+                designNarration: corrected
+            }, { silent: true });
+            if (res && res.success && res.designCode) {
+                if (jsonEl) jsonEl.value = JSON.stringify(res.designCode, null, 2);
+                renderDesignCodeEditColors(res.designCode);
+                checkDesignCodeAgainstNarration();
+                showToast('JSON updated from description. Review then Save design.', 'success');
+                return;
+            }
+            // Local structural ensure: merge missing ops inferred from narration into existing JSON
+            let obj;
+            try { obj = JSON.parse((jsonEl && jsonEl.value) || '{}'); } catch (e) {
+                showToast('Current JSON is invalid — fix syntax first.', 'error');
+                return;
+            }
+            obj.designNarration = corrected;
+            obj.elements = Array.isArray(obj.elements) ? obj.elements : [];
+            const blob = JSON.stringify(obj.elements).toLowerCase();
+            const lower = corrected.toLowerCase();
+            function hasOp(op) {
+                return obj.elements.some(function (e) { return e && String(e.op || '').toLowerCase() === op; });
+            }
+            // Generic structural backfill from description keywords
+            if (/line\s*item|table of items|itemised|itemized/.test(lower) && !hasOp('lineItems') && !hasOp('lineItemsTable')) {
+                obj.elements.push({
+                    op: 'lineItems',
+                    headers: ['#', 'DESCRIPTION', 'QTY', 'AMOUNT'],
+                    field: 'lineItems',
+                    headerStyle: obj.tableHeaderStyle || 'dark',
+                    colWidths: [0.08, 0.52, 0.12, 0.28],
+                    cellAlign: ['center', 'left', 'center', 'right']
+                });
+            }
+            if (/\btotal|subtotal|amount due|grand total/.test(lower) && !hasOp('totals')) {
+                obj.elements.push({
+                    op: 'totals',
+                    highlightLast: true,
+                    rows: [['', 'Subtotal: {{subtotal}}'], ['', 'TOTAL: {{amountPaid}}']],
+                    colWidths: [0.55, 0.45],
+                    tableAlign: 'right'
+                });
+            }
+            if (/signature|authorised|authorized|stamp/.test(lower) && !hasOp('signatureRow')) {
+                obj.elements.push({
+                    op: 'signatureRow',
+                    left: 'Authorized Signature',
+                    right: 'Company Stamp',
+                    showLine: true,
+                    colWidths: [0.5, 0.5]
+                });
+            }
+            if (/two[- ]column|side by side|received from.*payment/.test(lower) && !hasOp('twoColumnLabeled') && !hasOp('twoCol')) {
+                obj.elements.push({
+                    op: 'twoColumnLabeled',
+                    leftTitle: 'LEFT',
+                    rightTitle: 'RIGHT',
+                    left: ['{{fieldLeft}}'],
+                    right: ['{{fieldRight}}'],
+                    colWidths: [0.5, 0.5]
+                });
+            }
+            if (jsonEl) jsonEl.value = JSON.stringify(obj, null, 2);
+            renderDesignCodeEditColors(obj);
+            checkDesignCodeAgainstNarration();
+            showToast((res && res.message) || 'Narration applied locally — review JSON then Save design. (Server resync action may not be deployed yet.)', 'info');
         }
 
         function renderDesignCodeEditColors(designCode) {
