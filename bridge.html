@@ -1457,6 +1457,8 @@
                         Projects</button>
                     <button class="client-subview-link" data-target-view="client-onboarded">Active Job Status
                         Ledger</button>
+                    <button class="client-subview-link" data-target-view="client-interest">Interest
+                        applications</button>
                 </div>
                 <div class="flex-1 flex flex-col overflow-hidden p-6">
                     <!-- VIEW: Inbound Sourced Projects -->
@@ -1553,6 +1555,57 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- VIEW: Interest applications (companies requesting service access) -->
+                <div id="view-client-interest" class="client-view hidden flex-1 flex flex-col overflow-hidden space-y-4"
+                    style="display:none;">
+                    <div class="flex flex-wrap justify-between items-center gap-2 shrink-0">
+                        <div>
+                            <h3 class="text-lg font-bold text-white">Interest applications</h3>
+                            <p class="text-xs text-slate-400">Companies that asked to join the service queue. Review,
+                                note, and move status as you contact them.</p>
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <select id="interestStatusFilter" onchange="loadInterestApplications()"
+                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-200">
+                                <option value="">All statuses</option>
+                                <option value="New">New</option>
+                                <option value="Contacted">Contacted</option>
+                                <option value="Qualified">Qualified</option>
+                                <option value="Onboarding">Onboarding</option>
+                                <option value="Converted">Converted</option>
+                                <option value="Declined">Declined</option>
+                            </select>
+                            <button type="button" onclick="loadInterestApplications()"
+                                class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700">
+                                <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                            </button>
+                            <a href="/interest-form.html" target="_blank" rel="noopener"
+                                class="text-[10px] text-emerald-400 hover:text-emerald-300 underline self-center">Open
+                                public form</a>
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-auto custom-scrollbar border border-slate-800 rounded-lg">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-900/80 text-slate-500 sticky top-0">
+                                <tr>
+                                    <th class="p-2 font-medium">When</th>
+                                    <th class="p-2 font-medium">Company</th>
+                                    <th class="p-2 font-medium">Contact</th>
+                                    <th class="p-2 font-medium">Services</th>
+                                    <th class="p-2 font-medium">Status</th>
+                                    <th class="p-2 font-medium">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="interestApplicationsBody" class="divide-y divide-slate-800/80 text-slate-300">
+                                <tr>
+                                    <td colspan="6" class="p-4 text-slate-600">Open this tab to load applications.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </section>
 
             <!-- ================================================================
@@ -7598,6 +7651,7 @@
                 'assessment-applications': initializeModule_assessment_applications,
                 'client-submitted': loadClientSubmittedProjects,
                 'client-onboarded': loadProductionFulfillment,
+                'client-interest': loadInterestApplications,
                 'leads-matrix': loadLeadsMatrix,
                 'leads-broadcast': loadBroadcastQueue,
                 'leads-drive': loadMailDriveReports,
@@ -7765,6 +7819,7 @@
                 'leads-matrix': 'leads',
                 'client-submitted': 'client',
                 'client-onboarded': 'client',
+                'client-interest': 'client',
                 'career-complaints': 'career'
             };
 
@@ -9045,6 +9100,84 @@
             showToast(res.success ? `${questions.length} questions deployed.` : (res.error || "Deployment failed."), res.success ? "success" : "error");
             if (res.success) { closeMultiQuestionInsertionModalPopup(); initializeModule_assessment_questions(); }
         }
+
+
+        async function loadInterestApplications() {
+            const body = document.getElementById('interestApplicationsBody');
+            if (!body) return;
+            body.innerHTML = '<tr><td colspan="6" class="p-4 text-slate-500"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr>';
+            const status = (document.getElementById('interestStatusFilter') || {}).value || '';
+            try {
+                const res = await executeSecureBridgeCall('agent', 'agent-list-interest-applications', {
+                    status: status || undefined,
+                    limit: 200
+                });
+                if (!res || !res.success) {
+                    body.innerHTML = '<tr><td colspan="6" class="p-4 text-red-400">' +
+                        ((res && res.message) || 'Could not load applications.') + '</td></tr>';
+                    return;
+                }
+                const rows = res.applications || [];
+                if (!rows.length) {
+                    body.innerHTML = '<tr><td colspan="6" class="p-4 text-slate-600">No interest applications yet.</td></tr>';
+                    return;
+                }
+                const statuses = ['New', 'Contacted', 'Qualified', 'Onboarding', 'Converted', 'Declined'];
+                const esc = (typeof escapeHtml === 'function') ? escapeHtml : function (s) {
+                    return String(s == null ? '' : s)
+                        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;');
+                };
+                body.innerHTML = rows.map(function (r) {
+                    const when = r.SubmittedAt ? String(r.SubmittedAt).slice(0, 16).replace('T', ' ') : '—';
+                    const company = esc(r.CompanyName || '');
+                    const contact = esc((r.ContactName || '') + ' · ' + (r.ContactEmail || '') +
+                        (r.Phone ? ' · ' + r.Phone : ''));
+                    const services = esc(r.ServicesInterest || '—');
+                    const id = esc(r.ApplicationID || '');
+                    const st = r.Status || 'New';
+                    const opts = statuses.map(function (s) {
+                        return '<option value="' + s + '"' + (s === st ? ' selected' : '') + '>' + s + '</option>';
+                    }).join('');
+                    const meta = esc([r.City, r.Country, r.Industry].filter(Boolean).join(' · '));
+                    return '<tr class="hover:bg-slate-900/40" data-app-id="' + id + '">' +
+                        '<td class="p-2 text-slate-500 whitespace-nowrap">' + esc(when) +
+                        '<div class="text-[10px] text-slate-600">' + id + '</div></td>' +
+                        '<td class="p-2"><div class="font-medium text-white">' + company + '</div>' +
+                        '<div class="text-[10px] text-slate-500">' + meta + '</div></td>' +
+                        '<td class="p-2 text-[11px]">' + contact + '</td>' +
+                        '<td class="p-2 text-[11px] text-slate-400 max-w-[140px]">' + services + '</td>' +
+                        '<td class="p-2"><select class="interest-status bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-[11px]" data-id="' + id + '">' + opts + '</select></td>' +
+                        '<td class="p-2"><button type="button" class="text-[10px] text-emerald-400 hover:text-emerald-300" onclick="saveInterestRow(this)">Save</button></td>' +
+                        '</tr>';
+                }).join('');
+            } catch (e) {
+                body.innerHTML = '<tr><td colspan="6" class="p-4 text-red-400">Error loading applications.</td></tr>';
+            }
+        }
+
+        async function saveInterestRow(btn) {
+            const tr = btn && btn.closest('tr');
+            if (!tr) return;
+            const id = tr.getAttribute('data-app-id');
+            const sel = tr.querySelector('.interest-status');
+            const status = sel ? sel.value : 'New';
+            btn.disabled = true;
+            try {
+                const res = await executeSecureBridgeCall('agent', 'agent-update-interest-application', {
+                    applicationId: id,
+                    status: status,
+                    updatedBy: 'admin'
+                });
+                if (typeof showToast === 'function') {
+                    showToast(res && res.success ? ('Updated ' + id) : ((res && res.message) || 'Update failed'),
+                        res && res.success ? 'success' : 'error');
+                }
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
 
         async function loadClientSubmittedProjects() {
             const tbodyId = 'sourcedIntakeTableBody';
@@ -14100,18 +14233,10 @@ ${a.Status === 'Pending Review' ? `
                         <i class="fa-solid fa-comment-dots text-slate-500 mr-1"></i> What is missing or wrong? (for Re-analyse)
                     </summary>
                     <div class="px-3 pb-3 border-t border-slate-800/80 space-y-2">
-                        <p class="text-[10px] text-slate-600 mt-2">Mark items wrong above and/or describe gaps here. <strong class="text-slate-400">Save to training memory</strong> stores errors permanently so the next AI study for this document type must fix them. Re-analyse applies notes to the current design now.</p>
+                        <p class="text-[10px] text-slate-600 mt-2">Describe gaps (e.g. “missing logo V”, “totals duplicated”, “use recipientName not customerName”). Re-analyse keeps the current design and applies your notes.</p>
                         <textarea id="dsReviewFeedback" rows="3"
                             class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-[11px] text-slate-200 placeholder:text-slate-600"
                             placeholder="Example: Rules should be under the tagline. Totals must be one block: Subtotal, VAT, TOTAL PAID. Footer needs company address."></textarea>
-                        <div class="flex flex-wrap gap-2 mt-2">
-                            <button type="button" onclick="dsSaveTrainingMemory()"
-                                class="text-[10px] px-3 py-1.5 rounded bg-amber-900/50 hover:bg-amber-800 text-amber-200 border border-amber-800/60">
-                                <i class="fa-solid fa-brain mr-1"></i> Save errors to training memory
-                            </button>
-                            <span class="text-[10px] text-slate-600 self-center">Next study of this doc type will load these fixes automatically.</span>
-                        </div>
-                        <pre id="dsTrainingMemoryBox" class="hidden mt-2 p-2 text-[10px] text-amber-100/90 bg-slate-950 border border-amber-900/40 rounded max-h-28 overflow-auto whitespace-pre-wrap"></pre>
                     </div>
                 </details>
 
@@ -14166,16 +14291,6 @@ ${a.Status === 'Pending Review' ? `
                     <button type="button" onclick="confirmDocStudioReview()"
                         class="flex-1 text-xs px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded text-white font-medium">Confirm &amp; save template</button>
                 </div>`;
-            // Load prior training memory for this client + doc type
-            try {
-                const catId = (document.getElementById('dsReviewCatalogId') || {}).value
-                    || (res && res.suggestedCatalogId)
-                    || (spec && (spec.catalogId || spec.suggestedCatalogId))
-                    || '';
-                if (clientId && catId && typeof dsLoadTrainingMemoryIntoPanel === 'function') {
-                    dsLoadTrainingMemoryIntoPanel(clientId, catId);
-                }
-            } catch (_) { }
         }
 
 
@@ -14332,65 +14447,6 @@ ${a.Status === 'Pending Review' ? `
             wrap.appendChild(row);
         }
 
-
-        /** Save admin-noted errors into permanent training memory (next AI study will load them). */
-        async function dsSaveTrainingMemory() {
-            if (!DOC_STUDIO_PENDING_REVIEW) {
-                showToast('No pending review — analyze a sample first.', 'error');
-                return;
-            }
-            const v = (typeof dsCollectVerificationFeedback === 'function')
-                ? dsCollectVerificationFeedback()
-                : { corrections: [], feedback: '' };
-            if (!(v.corrections && v.corrections.length) && !(v.feedback && v.feedback.trim())) {
-                showToast('Mark at least one item as wrong (with a fix) or write a note in Feedback.', 'error');
-                return;
-            }
-            const catalogId = (document.getElementById('dsReviewCatalogId') || {}).value
-                || DOC_STUDIO_PENDING_REVIEW.catalogId
-                || DOC_STUDIO_PENDING_REVIEW.suggestedCatalogId
-                || '';
-            const res = await executeSecureBridgeCall('agent', 'agent-append-training-corrections', {
-                clientId: DOC_STUDIO_PENDING_REVIEW.clientId,
-                recordId: DOC_STUDIO_PENDING_REVIEW.recordId,
-                catalogId: catalogId,
-                corrections: v.corrections || [],
-                freeText: v.feedback || '',
-                source: 'admin_verify'
-            });
-            if (res && res.success) {
-                showToast(res.message || 'Training memory saved.', 'success');
-                if (res.trainingLesson) {
-                    const box = document.getElementById('dsTrainingMemoryBox');
-                    if (box) {
-                        box.classList.remove('hidden');
-                        box.textContent = res.trainingLesson;
-                    }
-                }
-            } else {
-                showToast((res && res.message) || 'Could not save training memory.', 'error');
-            }
-        }
-
-        async function dsLoadTrainingMemoryIntoPanel(clientId, catalogId) {
-            const box = document.getElementById('dsTrainingMemoryBox');
-            if (!box || !clientId || !catalogId) return;
-            try {
-                const res = await executeSecureBridgeCall('agent', 'agent-get-training-memory', {
-                    clientId: clientId,
-                    catalogId: catalogId
-                });
-                if (res && res.success && res.lesson) {
-                    box.classList.remove('hidden');
-                    box.textContent = res.lesson;
-                } else if (box) {
-                    box.classList.add('hidden');
-                    box.textContent = '';
-                }
-            } catch (_) { }
-        }
-
-
         async function confirmDocStudioReview() {
             if (!DOC_STUDIO_PENDING_REVIEW) return;
             const columns = [];
@@ -14420,9 +14476,6 @@ ${a.Status === 'Pending Review' ? `
             }
             if (errEl) { errEl.classList.add('hidden'); errEl.textContent = ''; }
 
-            const vConfirm = (typeof dsCollectVerificationFeedback === 'function')
-                ? dsCollectVerificationFeedback()
-                : { corrections: [], feedback: '' };
             const res = await executeSecureBridgeCall('agent', 'agent-confirm-document-template', {
                 clientId: DOC_STUDIO_PENDING_REVIEW.clientId,
                 recordId: DOC_STUDIO_PENDING_REVIEW.recordId,
@@ -14431,9 +14484,7 @@ ${a.Status === 'Pending Review' ? `
                 isBlankTemplate,
                 catalogId,
                 designCode: designCode || undefined,
-                designNarration: narration,
-                trainingCorrections: vConfirm.corrections || [],
-                trainingFeedback: vConfirm.feedback || ''
+                designNarration: narration
             });
             showToast(res.success ? 'Template saved — Worker will use this designCode for generation.' : (res.message || 'Save failed.'), res.success ? 'success' : 'error');
             if (res.success) closeDocStudioUploadModal();

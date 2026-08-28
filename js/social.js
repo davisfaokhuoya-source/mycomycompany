@@ -21,6 +21,7 @@ function navbar() {
                 <a href="index.html" class="nav-item nav-link">Home</a>
                 <a href="about.html" class="nav-item nav-link">About</a>
                 <a href="intro.html" class="nav-item nav-link">Intro</a>
+                <a href="interest.html" class="nav-item nav-link">Interest</a>
 
                 <div class="nav-item dropdown">
                     <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Portals</a>

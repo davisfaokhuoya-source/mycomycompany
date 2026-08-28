@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Express Interest — The Victorias</title>
+    <meta name="description"
+        content="Tell The Victorias about your company. Join the queue for document automation, ops, and growth services." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap"
+        rel="stylesheet" />
+    <style>
+        :root {
+            --primary: #CC5500;
+            --primary-dark: #A34400;
+            --dark: #1A1A1A;
+            --muted: #6E6E6E;
+            --light: #F7F5F2;
+            --border: #E8E4DF;
+            --ok: #0F7B4B;
+            --err: #B42318;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "DM Sans", system-ui, sans-serif;
+            background: var(--light);
+            color: var(--dark);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        .topbar {
+            background: var(--dark);
+            color: #fff;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .topbar .brand {
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            font-size: 15px;
+        }
+
+        .topbar .brand span {
+            color: var(--primary);
+        }
+
+        .topbar a {
+            color: #ccc;
+            font-size: 13px;
+            text-decoration: none;
+        }
+
+        .topbar a:hover {
+            color: #fff;
+        }
+
+        .wrap {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+
+        .hero {
+            margin-bottom: 28px;
+        }
+
+        .hero h1 {
+            font-family: "Instrument Serif", Georgia, serif;
+            font-size: clamp(1.85rem, 4vw, 2.4rem);
+            font-weight: 400;
+            line-height: 1.2;
+            margin-bottom: 10px;
+        }
+
+        .hero p {
+            color: var(--muted);
+            font-size: 15px;
+            max-width: 540px;
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 28px 24px;
+            box-shadow: 0 8px 30px rgba(26, 26, 26, 0.04);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 640px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+        }
+
+        label .req {
+            color: var(--primary);
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 14px;
+            font-family: inherit;
+            background: #fff;
+            color: var(--dark);
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(204, 85, 0, 0.15);
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .field {
+            margin-bottom: 4px;
+        }
+
+        .full {
+            grid-column: 1 / -1;
+        }
+
+        .services {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .services label.chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+            font-size: 13px;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            cursor: pointer;
+            background: #fafafa;
+            margin: 0;
+        }
+
+        .services label.chip:has(input:checked) {
+            border-color: var(--primary);
+            background: rgba(204, 85, 0, 0.08);
+            color: var(--primary-dark);
+        }
+
+        .services input {
+            width: auto;
+            margin: 0;
+        }
+
+        .actions {
+            margin-top: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button.submit {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 14px 20px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.15s;
+        }
+
+        button.submit:hover {
+            background: var(--primary-dark);
+        }
+
+        button.submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .note {
+            font-size: 12px;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        .msg {
+            display: none;
+            margin-top: 16px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .msg.ok {
+            display: block;
+            background: #E8F6EF;
+            color: var(--ok);
+            border: 1px solid #B6E2CD;
+        }
+
+        .msg.err {
+            display: block;
+            background: #FCEBEA;
+            color: var(--err);
+            border: 1px solid #F0B0AB;
+        }
+
+        .success-panel {
+            display: none;
+            text-align: center;
+            padding: 32px 16px;
+        }
+
+        .success-panel.show {
+            display: block;
+        }
+
+        .success-panel h2 {
+            font-family: "Instrument Serif", Georgia, serif;
+            font-size: 1.75rem;
+            margin-bottom: 8px;
+        }
+
+        .success-panel p {
+            color: var(--muted);
+        }
+
+        .foot {
+            margin-top: 28px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--muted);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="topbar">
+        <div class="brand">THE VICTORIAS <span>LTD</span></div>
+        <a href="https://thevictorias.com.ng" target="_blank" rel="noopener">thevictorias.com.ng</a>
+    </div>
+
+    <div class="wrap">
+        <div class="hero">
+            <h1>Express interest in working with us</h1>
+            <p>
+                Share a few details about your company. We review every application and
+                reach out when we can open capacity for your team — documents, compliance,
+                and growth operations under one roof.
+            </p>
+        </div>
+
+        <div class="card" id="formCard">
+            <form id="interestForm" novalidate>
+                <div class="grid">
+                    <div class="field full">
+                        <label>Company name <span class="req">*</span></label>
+                        <input name="companyName" required placeholder="e.g. Acme Logistics Ltd"
+                            autocomplete="organization" />
+                    </div>
+                    <div class="field">
+                        <label>Your name <span class="req">*</span></label>
+                        <input name="contactName" required placeholder="Full name" autocomplete="name" />
+                    </div>
+                    <div class="field">
+                        <label>Work email <span class="req">*</span></label>
+                        <input name="contactEmail" type="email" required placeholder="you@company.com"
+                            autocomplete="email" />
+                    </div>
+                    <div class="field">
+                        <label>Phone / WhatsApp <span class="req">*</span></label>
+                        <input name="phone" type="tel" required placeholder="+234…" autocomplete="tel" />
+                    </div>
+                    <div class="field">
+                        <label>Website</label>
+                        <input name="website" type="url" placeholder="https://" autocomplete="url" />
+                    </div>
+                    <div class="field">
+                        <label>Country <span class="req">*</span></label>
+                        <input name="country" required placeholder="Nigeria" value="Nigeria"
+                            autocomplete="country-name" />
+                    </div>
+                    <div class="field">
+                        <label>City</label>
+                        <input name="city" placeholder="Lagos" />
+                    </div>
+                    <div class="field">
+                        <label>Industry</label>
+                        <select name="industry">
+                            <option value="">Select…</option>
+                            <option>Professional services</option>
+                            <option>Fintech / Financial services</option>
+                            <option>Retail / Ecommerce</option>
+                            <option>Healthcare</option>
+                            <option>Education</option>
+                            <option>Manufacturing</option>
+                            <option>Real estate</option>
+                            <option>NGO / Development</option>
+                            <option>Technology</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Company size</label>
+                        <select name="companySize">
+                            <option value="">Select…</option>
+                            <option>1–5</option>
+                            <option>6–20</option>
+                            <option>21–50</option>
+                            <option>51–200</option>
+                            <option>200+</option>
+                        </select>
+                    </div>
+                    <div class="field full">
+                        <label>Services you’re interested in</label>
+                        <div class="services">
+                            <label class="chip"><input type="checkbox" name="services" value="Document automation" />
+                                Document automation</label>
+                            <label class="chip"><input type="checkbox" name="services"
+                                    value="Business registration &amp; compliance" /> Registration &amp;
+                                compliance</label>
+                            <label class="chip"><input type="checkbox" name="services"
+                                    value="Virtual operations / VA" /> Virtual operations</label>
+                            <label class="chip"><input type="checkbox" name="services"
+                                    value="CRM &amp; client pipeline" /> CRM &amp; pipeline</label>
+                            <label class="chip"><input type="checkbox" name="services"
+                                    value="Email &amp; communications" /> Email &amp; communications</label>
+                            <label class="chip"><input type="checkbox" name="services"
+                                    value="Growth / digital marketing" /> Growth &amp; digital</label>
+                            <label class="chip"><input type="checkbox" name="services" value="Not sure yet" /> Not sure
+                                yet</label>
+                        </div>
+                    </div>
+                    <div class="field full">
+                        <label>What do you need help with?</label>
+                        <textarea name="message"
+                            placeholder="Briefly describe your priorities, timelines, or pain points."></textarea>
+                    </div>
+                    <div class="field">
+                        <label>How did you hear about us?</label>
+                        <select name="source">
+                            <option value="">Select…</option>
+                            <option>Referral</option>
+                            <option>Google / search</option>
+                            <option>LinkedIn</option>
+                            <option>Instagram / Facebook</option>
+                            <option>WhatsApp</option>
+                            <option>Event / workshop</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Preferred contact method</label>
+                        <select name="preferredContact">
+                            <option>Email</option>
+                            <option>WhatsApp</option>
+                            <option>Phone call</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Honeypot — leave empty -->
+                <input type="text" name="company_url" value="" tabindex="-1" autocomplete="off"
+                    style="position:absolute;left:-9999px;opacity:0;height:0;width:0" aria-hidden="true" />
+
+                <div class="actions">
+                    <button type="submit" class="submit" id="submitBtn">Submit interest</button>
+                    <p class="note">We’ll only use this to respond about The Victorias services. No spam.</p>
+                </div>
+                <div class="msg" id="formMsg" role="status"></div>
+            </form>
+
+            <div class="success-panel" id="successPanel">
+                <h2>Thank you — you’re on our list</h2>
+                <p id="successDetail">We’ve received your interest. Our team reviews applications regularly and will
+                    contact you when we’re ready to onboard the next companies.</p>
+            </div>
+        </div>
+
+        <p class="foot">The Victorias Ltd · Business registration · Compliance · Growth</p>
+    </div>
+
+    <script>
+        // Point this at your Cloudflare Worker (same origin as the rest of the API).
+        const API_URL = "https://api.thevictorias.com.ng";
+
+        const form = document.getElementById("interestForm");
+        const msg = document.getElementById("formMsg");
+        const btn = document.getElementById("submitBtn");
+        const success = document.getElementById("successPanel");
+
+        form.addEventListener("submit", async function (e) {
+            e.preventDefault();
+            msg.className = "msg";
+            msg.textContent = "";
+
+            const fd = new FormData(form);
+            // Honeypot
+            if ((fd.get("company_url") || "").trim()) {
+                form.style.display = "none";
+                success.classList.add("show");
+                return;
+            }
+
+            const services = fd.getAll("services");
+            const payload = {
+                system: "agent",
+                action: "agent-submit-interest-application",
+                companyName: (fd.get("companyName") || "").trim(),
+                contactName: (fd.get("contactName") || "").trim(),
+                contactEmail: (fd.get("contactEmail") || "").trim(),
+                phone: (fd.get("phone") || "").trim(),
+                website: (fd.get("website") || "").trim(),
+                country: (fd.get("country") || "").trim(),
+                city: (fd.get("city") || "").trim(),
+                industry: (fd.get("industry") || "").trim(),
+                companySize: (fd.get("companySize") || "").trim(),
+                servicesInterest: services,
+                message: (fd.get("message") || "").trim(),
+                source: (fd.get("source") || "").trim(),
+                preferredContact: (fd.get("preferredContact") || "").trim()
+            };
+
+            if (!payload.companyName || !payload.contactName || !payload.contactEmail || !payload.phone || !payload.country) {
+                msg.className = "msg err";
+                msg.textContent = "Please fill in all required fields.";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "Submitting…";
+            try {
+                const res = await fetch(API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json().catch(function () { return {}; });
+                if (data && data.success) {
+                    form.style.display = "none";
+                    success.classList.add("show");
+                    if (data.reference) {
+                        document.getElementById("successDetail").textContent =
+                            "Reference " + data.reference + ". We’ve received your interest and will be in touch when capacity opens.";
+                    }
+                } else {
+                    msg.className = "msg err";
+                    msg.textContent = (data && data.message) || "Something went wrong. Please try again or email us directly.";
+                    btn.disabled = false;
+                    btn.textContent = "Submit interest";
+                }
+            } catch (err) {
+                msg.className = "msg err";
+                msg.textContent = "Network error. Check your connection and try again.";
+                btn.disabled = false;
+                btn.textContent = "Submit interest";
+            }
+        });
+    </script>
+</body>
+
+</html>
