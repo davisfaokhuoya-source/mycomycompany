@@ -3765,6 +3765,60 @@
                         return true;
                     });
                 }
+                // Itemized fields must always be tables (+ Add line), trained or default
+                (function normalizeItemizedFields(it) {
+                    if (!it || !it.fields || !it.fields.length) return;
+                    var TABLE_KEYS = /^(lineItems|lineitems|items|itemsOrdered|orderItems|products|services|transactions|installments|billableItems|shipmentCharges|components)$/i;
+                    var TABLE_LABELS = /line\s*item|items?\s*ordered|items?\s*shipped|billable|transactions|installment|product|service\s*line/i;
+                    var seenTable = false;
+                    it.fields = it.fields.map(function (f) {
+                        if (!f) return f;
+                        var k = String(f.key || "");
+                        var lab = String(f.label || "");
+                        if (f.type === "table" || TABLE_KEYS.test(k) || TABLE_LABELS.test(lab)) {
+                            seenTable = true;
+                            return Object.assign({}, f, {
+                                type: "table",
+                                label: f.label || (TABLE_KEYS.test(k) ? "Line items" : lab) || "Line items",
+                                columns: f.columns || [
+                                    { key: "description", label: "Description" },
+                                    { key: "qty", label: "Qty" },
+                                    { key: "amount", label: "Amount" }
+                                ]
+                            });
+                        }
+                        return f;
+                    });
+                    // Drop plain-text duplicates of the same table key
+                    var seen = {};
+                    it.fields = it.fields.filter(function (f) {
+                        var k = String(f.key || "").toLowerCase();
+                        if (f.type === "table") {
+                            if (seen["tbl:" + k]) return false;
+                            seen["tbl:" + k] = true;
+                            return true;
+                        }
+                        if (TABLE_KEYS.test(k) && seen["tbl:" + k]) return false;
+                        if (seen[k]) return false;
+                        seen[k] = true;
+                        return true;
+                    });
+                    // Financial docs without any table still get a line-items table
+                    if (!seenTable && /receipt|invoice|order_confirmation|payment|quotation|quote|proforma/i.test(String(it.docType || it.id || ""))) {
+                        it.fields.push({
+                            key: "lineItems",
+                            label: "Line items",
+                            type: "table",
+                            required: true,
+                            columns: [
+                                { key: "description", label: "Description" },
+                                { key: "qty", label: "Qty" },
+                                { key: "amount", label: "Amount" }
+                            ]
+                        });
+                    }
+                })(item);
+
                 const trainedNote = item.trainedFrom
                     ? '<p class="text-[10px] text-emerald-500/90 mb-1"><i class="fa-solid fa-graduation-cap"></i> Using fields from your trained format (' +
                     escapeHtml(item.trainedFrom) + ")</p>"
