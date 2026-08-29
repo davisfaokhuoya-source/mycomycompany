@@ -3812,16 +3812,15 @@
                     trainedNote + (fieldsHtml || '<p class="text-[11px] text-slate-500">No extra instructions needed — sent as-is.</p>') +
                     '<div class="mt-2 p-2 rounded-lg bg-slate-950 border border-slate-800">' +
                     '<div class="flex flex-wrap items-center justify-between gap-2 mb-1">' +
-                    '<p class="text-[10px] text-slate-400"><i class="fa-solid fa-layer-group text-emerald-500"></i> Clients / recipients <span id="genRcptCount-' + item.docType + '" class="text-slate-500">(optional)</span></p>' +
+                    '<p class="text-[10px] text-slate-400"><i class="fa-solid fa-layer-group text-emerald-500"></i> Multi-client run <span id="genRcptCount-' + item.docType + '" class="text-slate-500">(this form = client #1)</span></p>' +
                     '<div class="flex flex-wrap gap-1">' +
-                    '<button type="button" onclick="clientGenImportLastSetup(\'' + escapeHtml(item.docType) + '\')" class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300"><i class="fa-solid fa-clock-rotate-left"></i> Import last setup</button>' +
+                    '<button type="button" id="genImportBtn-' + item.docType + '" disabled onclick="clientGenImportFromPrimary(\'' + escapeHtml(item.docType) + '\')" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-500 opacity-50 cursor-not-allowed" title="Available when you have 2+ clients"><i class="fa-solid fa-copy"></i> Import from form #1</button>' +
                     '<button type="button" onclick="clientGenAddRecipient(\'' + escapeHtml(item.docType) + '\')" class="text-[10px] px-2 py-1 bg-emerald-700 hover:bg-emerald-600 rounded text-white font-medium"><i class="fa-solid fa-plus"></i> Add client</button>' +
                     '</div></div>' +
-                    '<p class="text-[9px] text-slate-500 mb-2">Shared fields above apply to every client. Use + Add client for each person, or leave empty to use single name/email fields. Batched generation (up to ' +
-                    (item.maxPerBatch || 9) + ' per batch, weight ' + (item.weight || 1) + ').</p>' +
+                    '<p class="text-[9px] text-slate-500 mb-2">This form is <strong class="text-slate-400">client #1</strong>. <strong class="text-slate-400">+ Add client</strong> opens a full form overlay for each extra person. Import copies form #1 into the overlay (only when 2+ clients). Up to ' +
+                    (item.maxPerBatch || 9) + ' per batch, weight ' + (item.weight || 1) + ' each.</p>' +
                     '<div id="genRecipientsList-' + item.docType + '" class="space-y-2"></div>' +
                     '<textarea id="genRecipients-' + item.docType + '" class="hidden" aria-hidden="true"></textarea>' +
-                    '<p class="text-[9px] text-slate-500 mt-1">Each client = one document × weight ' + (item.weight || 1) + ' against your allocation.</p>' +
                     '</div>' +
                     '<div id="genExtraFields-' + item.docType + '" class="space-y-1"></div>' +
                     '<button type="button" onclick="clientGenAddExtraField(\'' + escapeHtml(item.docType) +
@@ -4125,104 +4124,325 @@
         }
 
 
+
+        // =====================================================================
+        // MULTI-CLIENT: full-form overlays (not mini name/email cards)
+        // Primary card form = client #1. Each "Add client" opens a full overlay
+        // with the same fields. Import from form #1 only when 2+ clients exist.
+        // =====================================================================
         var CLIENT_GEN_RECIPIENTS = window.CLIENT_GEN_RECIPIENTS || (window.CLIENT_GEN_RECIPIENTS = {});
+        var CLIENT_GEN_EXTRA_FORMS = window.CLIENT_GEN_EXTRA_FORMS || (window.CLIENT_GEN_EXTRA_FORMS = {});
+        var CLIENT_GEN_OVERLAY_IDX = null;
+        var CLIENT_GEN_OVERLAY_DOC = null;
         const CLIENT_GEN_SETUP_PREFIX = "tvl_client_gen_setup_";
 
         function clientGenEnsureRecipients(docType) {
             if (!CLIENT_GEN_RECIPIENTS[docType]) CLIENT_GEN_RECIPIENTS[docType] = [];
             return CLIENT_GEN_RECIPIENTS[docType];
         }
+        function clientGenEnsureExtras(docType) {
+            if (!CLIENT_GEN_EXTRA_FORMS[docType]) CLIENT_GEN_EXTRA_FORMS[docType] = [];
+            return CLIENT_GEN_EXTRA_FORMS[docType];
+        }
         function clientGenSetupKey(docType) {
             return CLIENT_GEN_SETUP_PREFIX + String(typeof CLIENT_ID !== "undefined" ? CLIENT_ID : "x") + "_" + String(docType || "");
         }
-        function clientGenRenderRecipients(docType) {
-            const list = document.getElementById("genRecipientsList-" + docType);
-            const countEl = document.getElementById("genRcptCount-" + docType);
-            const hidden = document.getElementById("genRecipients-" + docType);
-            if (!list) return;
-            const rows = clientGenEnsureRecipients(docType);
-            if (countEl) countEl.textContent = rows.length ? "(" + rows.length + " client" + (rows.length === 1 ? "" : "s") + ")" : "(optional)";
-            const dt = String(docType || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-            list.innerHTML = rows.map(function (r, i) {
-                const name = escapeHtml(r.recipientName || "");
-                const email = escapeHtml(r.recipientEmail || "");
-                const phone = escapeHtml(r.phone || "");
-                return (
-                    '<div class="border border-slate-800 rounded-lg p-2 bg-slate-900/80">' +
-                    '<div class="flex justify-between items-center mb-1.5">' +
-                    '<span class="text-[10px] font-semibold text-slate-300">Client #' + (i + 1) + '</span>' +
-                    '<button type="button" onclick="clientGenRemoveRecipient(\'' + dt + '\',' + i + ')" class="text-[10px] px-1.5 py-0.5 bg-red-900/50 hover:bg-red-800 rounded text-red-200">Remove</button>' +
-                    '</div>' +
-                    '<div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5">' +
-                    '<div><label class="block text-[9px] text-slate-500">Name</label>' +
-                    '<input type="text" value="' + name + '" onchange="clientGenUpdateRecipient(\'' + dt + '\',' + i + ',\'recipientName\',this.value)" class="w-full bg-slate-950 border border-slate-700 rounded px-1.5 py-1 text-[11px] text-white" placeholder="Full name" /></div>' +
-                    '<div><label class="block text-[9px] text-slate-500">Email</label>' +
-                    '<input type="email" value="' + email + '" onchange="clientGenUpdateRecipient(\'' + dt + '\',' + i + ',\'recipientEmail\',this.value)" class="w-full bg-slate-950 border border-slate-700 rounded px-1.5 py-1 text-[11px] text-white" placeholder="email@domain.com" /></div>' +
-                    '<div><label class="block text-[9px] text-slate-500">Phone</label>' +
-                    '<input type="text" value="' + phone + '" onchange="clientGenUpdateRecipient(\'' + dt + '\',' + i + ',\'phone\',this.value)" class="w-full bg-slate-950 border border-slate-700 rounded px-1.5 py-1 text-[11px] text-white" placeholder="+234" /></div>' +
-                    '</div>' +
-                    '</div>'
-                );
-            }).join("");
-            if (hidden) {
-                hidden.value = rows.map(function (r) {
-                    var n = (r.recipientName || "").trim(), e = (r.recipientEmail || "").trim();
-                    if (!n && !e) return "";
-                    return n ? (n + " <" + e + ">") : e;
-                }).filter(Boolean).join("\n");
+
+        /** Read all field values from the primary (card) form for this docType. */
+        function clientGenCollectPrimaryFields(docType) {
+            const spec = (typeof DOC_CATALOG_LIST !== "undefined" ? DOC_CATALOG_LIST : []).find(function (x) {
+                return x && x.docType === docType;
+            }) || {};
+            const fields = {};
+            (spec.fields || []).forEach(function (f) {
+                if (!f || !f.key) return;
+                if (f.type === "table") {
+                    const rows = [];
+                    const box = document.getElementById("genTable-" + docType + "-" + f.key);
+                    if (box) {
+                        box.querySelectorAll("[data-table-row]").forEach(function (rowEl) {
+                            const row = {};
+                            rowEl.querySelectorAll("[data-col]").forEach(function (inp) {
+                                row[inp.getAttribute("data-col")] = (inp.value || "").trim();
+                            });
+                            if (Object.keys(row).some(function (k) { return row[k]; })) rows.push(row);
+                        });
+                    }
+                    // fallback: CLIENT_GEN_TABLES if used
+                    if (!rows.length && window.CLIENT_GEN_TABLES && CLIENT_GEN_TABLES[docType + "|" + f.key]) {
+                        (CLIENT_GEN_TABLES[docType + "|" + f.key] || []).forEach(function (r) {
+                            if (r && Object.keys(r).some(function (k) { return r[k]; })) rows.push(r);
+                        });
+                    }
+                    fields[f.key] = rows;
+                } else {
+                    const el = document.getElementById("genInput-" + docType + "-" + f.key);
+                    if (el) fields[f.key] = (el.value || "").trim();
+                }
+            });
+            // also any inputs with data-gen-key inside the card
+            const card = document.getElementById("genCard-" + docType);
+            if (card) {
+                card.querySelectorAll("[data-gen-key]").forEach(function (el) {
+                    const k = el.getAttribute("data-gen-key");
+                    if (k && fields[k] === undefined) fields[k] = (el.value || "").trim();
+                });
             }
+            return fields;
+        }
+
+        function clientGenUpdateImportButton(docType) {
+            const btn = document.getElementById("genImportBtn-" + docType);
+            const extras = clientGenEnsureExtras(docType);
+            const multi = extras.length >= 1;
+            if (!btn) return;
+            btn.disabled = !multi;
+            if (multi) {
+                btn.className = "text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300";
+                btn.classList.remove("opacity-50", "cursor-not-allowed");
+                btn.title = "Copy all fields from client #1 (main form) into the open overlay, or the last extra client";
+            } else {
+                btn.className = "text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-500 opacity-50 cursor-not-allowed";
+                btn.title = "Available when you have 2+ clients";
+            }
+            const countEl = document.getElementById("genRcptCount-" + docType);
+            if (countEl) {
+                const total = 1 + extras.length;
+                countEl.textContent = total <= 1
+                    ? "(this form = client #1)"
+                    : "(" + total + " clients — form #1 + " + extras.length + " overlay" + (extras.length > 1 ? "s" : "") + ")";
+            }
+            // list chips
+            const list = document.getElementById("genRecipientsList-" + docType);
+            if (list) {
+                if (!extras.length) {
+                    list.innerHTML = '<p class="text-[10px] text-slate-600">No extra clients yet. Main form above is client #1.</p>';
+                } else {
+                    list.innerHTML = extras.map(function (bag, i) {
+                        const label = (bag && (bag.recipientName || bag.customerName || bag.recipientEmail || bag.customerEmail)) || ("Client #" + (i + 2));
+                        return (
+                            '<div class="flex items-center justify-between gap-2 border border-slate-700 rounded-lg px-2 py-1.5 bg-slate-900/90">' +
+                            '<button type="button" onclick="clientGenOpenOverlay(\'' + String(docType).replace(/'/g, "\\'") + '\',' + i + ')" class="text-left flex-1 min-w-0">' +
+                            '<span class="text-[11px] font-semibold text-emerald-400">Client #' + (i + 2) + '</span> ' +
+                            '<span class="text-[10px] text-slate-400 truncate">' + escapeHtml(String(label)) + '</span>' +
+                            '</button>' +
+                            '<button type="button" onclick="clientGenOpenOverlay(\'' + String(docType).replace(/'/g, "\\'") + '\',' + i + ')" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-sky-300">Edit</button>' +
+                            '<button type="button" onclick="clientGenRemoveRecipient(\'' + String(docType).replace(/'/g, "\\'") + '\',' + i + ')" class="text-[10px] px-2 py-0.5 bg-red-900/40 hover:bg-red-800 rounded text-red-200">Remove</button>' +
+                            '</div>'
+                        );
+                    }).join("");
+                }
+            }
+            // keep legacy recipients array in sync for submit
+            const rows = clientGenEnsureRecipients(docType);
+            rows.length = 0;
+            extras.forEach(function (bag) {
+                rows.push({
+                    recipientName: bag.recipientName || bag.customerName || bag.name || "",
+                    recipientEmail: bag.recipientEmail || bag.customerEmail || bag.email || "",
+                    phone: bag.phone || bag.customerPhone || "",
+                    _fullFields: bag
+                });
+            });
+        }
+
+        function clientGenBuildOverlayFieldsHtml(docType, bag, idx) {
+            const spec = (DOC_CATALOG_LIST || []).find(function (x) { return x && x.docType === docType; }) || {};
+            const fields = spec.fields || [];
+            bag = bag || {};
+            let html = "";
+            fields.forEach(function (f) {
+                if (!f || !f.key) return;
+                const req = f.required ? ' <span class="text-red-400">*</span>' : "";
+                const val = bag[f.key];
+                if (f.type === "table") {
+                    const rows = Array.isArray(val) ? val : (val ? [val] : [{}]);
+                    const cols = (typeof clientGenTableColumns === "function")
+                        ? clientGenTableColumns(docType, f.key)
+                        : ["description", "qty", "amount"];
+                    html += '<div class="mt-2" data-ov-table="' + escapeHtml(f.key) + '">';
+                    html += '<div class="flex items-center justify-between mb-1"><label class="text-[10px] text-slate-400">' +
+                        escapeHtml(f.label || f.key) + req + '</label>';
+                    html += '<button type="button" onclick="clientGenOverlayAddTableRow(\'' + escapeHtml(f.key) + '\')" class="text-[10px] px-2 py-0.5 bg-emerald-900/50 border border-emerald-700 rounded text-emerald-300">+ Add line</button></div>';
+                    html += '<div id="ovTable-' + escapeHtml(f.key) + '" class="space-y-1">';
+                    rows.forEach(function (row, ri) {
+                        html += '<div class="flex flex-wrap gap-1 items-center" data-ov-table-row>';
+                        cols.forEach(function (c) {
+                            html += '<input type="text" data-col="' + escapeHtml(c) + '" value="' + escapeHtml(String((row && row[c]) || "")) +
+                                '" placeholder="' + escapeHtml(c) + '" class="flex-1 min-w-[4rem] bg-slate-950 border border-slate-700 rounded px-1.5 py-1 text-[11px] text-white" />';
+                        });
+                        html += '<button type="button" onclick="this.parentElement.remove()" class="text-red-400 text-xs px-1">-</button></div>';
+                    });
+                    html += '</div></div>';
+                } else if (f.type === "textarea") {
+                    html += '<label class="block text-[10px] text-slate-400 mt-2">' + escapeHtml(f.label || f.key) + req + '</label>';
+                    html += '<textarea data-ov-key="' + escapeHtml(f.key) + '" class="w-full h-16 bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">' +
+                        escapeHtml(String(val || "")) + '</textarea>';
+                } else {
+                    html += '<label class="block text-[10px] text-slate-400 mt-2">' + escapeHtml(f.label || f.key) + req + '</label>';
+                    html += '<input type="text" data-ov-key="' + escapeHtml(f.key) + '" value="' + escapeHtml(String(val == null ? "" : val)) +
+                        '" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />';
+                }
+            });
+            if (!fields.length) {
+                html += '<p class="text-[11px] text-slate-500">No catalog fields — enter name & email below.</p>';
+                html += '<label class="block text-[10px] text-slate-400 mt-2">Name</label>';
+                html += '<input type="text" data-ov-key="recipientName" value="' + escapeHtml(bag.recipientName || "") + '" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />';
+                html += '<label class="block text-[10px] text-slate-400 mt-2">Email</label>';
+                html += '<input type="email" data-ov-key="recipientEmail" value="' + escapeHtml(bag.recipientEmail || "") + '" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />';
+            }
+            return html;
+        }
+
+        function clientGenOverlayAddTableRow(fieldKey) {
+            const box = document.getElementById("ovTable-" + fieldKey);
+            if (!box) return;
+            const first = box.querySelector("[data-ov-table-row]");
+            const cols = first
+                ? Array.from(first.querySelectorAll("[data-col]")).map(function (el) { return el.getAttribute("data-col"); })
+                : ["description", "qty", "amount"];
+            const row = document.createElement("div");
+            row.className = "flex flex-wrap gap-1 items-center";
+            row.setAttribute("data-ov-table-row", "1");
+            row.innerHTML = cols.map(function (c) {
+                return '<input type="text" data-col="' + escapeHtml(c) + '" placeholder="' + escapeHtml(c) +
+                    '" class="flex-1 min-w-[4rem] bg-slate-950 border border-slate-700 rounded px-1.5 py-1 text-[11px] text-white" />';
+            }).join("") + '<button type="button" onclick="this.parentElement.remove()" class="text-red-400 text-xs px-1">-</button>';
+            box.appendChild(row);
+        }
+
+        function clientGenEnsureOverlayHost() {
+            let host = document.getElementById("clientGenOverlayHost");
+            if (host) return host;
+            host = document.createElement("div");
+            host.id = "clientGenOverlayHost";
+            document.body.appendChild(host);
+            return host;
+        }
+
+        function clientGenOpenOverlay(docType, idx) {
+            const extras = clientGenEnsureExtras(docType);
+            if (idx < 0 || idx >= extras.length) return;
+            CLIENT_GEN_OVERLAY_DOC = docType;
+            CLIENT_GEN_OVERLAY_IDX = idx;
+            const bag = extras[idx] || {};
+            const host = clientGenEnsureOverlayHost();
+            const fieldsHtml = clientGenBuildOverlayFieldsHtml(docType, bag, idx);
+            host.innerHTML =
+                '<div class="fixed inset-0 z-[80] flex items-start justify-center p-4 sm:p-8 overflow-y-auto" style="background:rgba(2,6,23,0.82);backdrop-filter:blur(4px)">' +
+                '<div class="w-full max-w-lg bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl my-4">' +
+                '<div class="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-800">' +
+                '<div><p class="text-sm font-semibold text-white">Client #' + (idx + 2) + ' — full form</p>' +
+                '<p class="text-[10px] text-slate-500">Same fields as the main form. Saved into this multi-client run.</p></div>' +
+                '<button type="button" onclick="clientGenCloseOverlay()" class="text-slate-400 hover:text-white text-lg px-2">&times;</button>' +
+                '</div>' +
+                '<div class="px-4 py-3 max-h-[70vh] overflow-y-auto space-y-1" id="clientGenOverlayBody">' + fieldsHtml + '</div>' +
+                '<div class="flex flex-wrap gap-2 justify-end px-4 py-3 border-t border-slate-800">' +
+                '<button type="button" onclick="clientGenImportFromPrimary(\'' + String(docType).replace(/'/g, "\\'") + '\')" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-200"><i class="fa-solid fa-copy"></i> Import from form #1</button>' +
+                '<button type="button" onclick="clientGenCloseOverlay()" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Cancel</button>' +
+                '<button type="button" onclick="clientGenSaveOverlay()" class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white font-medium">Save client #' + (idx + 2) + '</button>' +
+                '</div>' +
+                '</div>' +
+                '</div>';
+        }
+
+        function clientGenCloseOverlay() {
+            const host = document.getElementById("clientGenOverlayHost");
+            if (host) host.innerHTML = "";
+            CLIENT_GEN_OVERLAY_IDX = null;
+            CLIENT_GEN_OVERLAY_DOC = null;
+        }
+
+        function clientGenReadOverlayBag() {
+            const body = document.getElementById("clientGenOverlayBody");
+            if (!body) return {};
+            const bag = {};
+            body.querySelectorAll("[data-ov-key]").forEach(function (el) {
+                bag[el.getAttribute("data-ov-key")] = (el.value || "").trim();
+            });
+            body.querySelectorAll("[data-ov-table]").forEach(function (wrap) {
+                const key = wrap.getAttribute("data-ov-table");
+                const rows = [];
+                wrap.querySelectorAll("[data-ov-table-row]").forEach(function (rowEl) {
+                    const row = {};
+                    rowEl.querySelectorAll("[data-col]").forEach(function (inp) {
+                        row[inp.getAttribute("data-col")] = (inp.value || "").trim();
+                    });
+                    if (Object.keys(row).some(function (k) { return row[k]; })) rows.push(row);
+                });
+                bag[key] = rows;
+            });
+            return bag;
+        }
+
+        function clientGenSaveOverlay() {
+            const docType = CLIENT_GEN_OVERLAY_DOC;
+            const idx = CLIENT_GEN_OVERLAY_IDX;
+            if (docType == null || idx == null) return;
+            const extras = clientGenEnsureExtras(docType);
+            extras[idx] = clientGenReadOverlayBag();
+            clientGenCloseOverlay();
+            clientGenUpdateImportButton(docType);
+            if (typeof notifyUser === "function") notifyUser("Client #" + (idx + 2) + " saved for this run.", "success");
         }
 
         function clientGenAddRecipient(docType) {
-            var rows = clientGenEnsureRecipients(docType);
-            if (rows.length >= 50) { notifyUser("Maximum 50 clients per run.", "error"); return; }
-            rows.push({ recipientName: "", recipientEmail: "", phone: "" });
-            clientGenRenderRecipients(docType);
+            const extras = clientGenEnsureExtras(docType);
+            if (extras.length >= 49) {
+                if (typeof notifyUser === "function") notifyUser("Maximum 50 clients per run.", "error");
+                return;
+            }
+            // seed from primary form so the overlay is not empty
+            const seed = clientGenCollectPrimaryFields(docType);
+            extras.push(Object.assign({}, seed));
+            clientGenUpdateImportButton(docType);
+            clientGenOpenOverlay(docType, extras.length - 1);
         }
+
         function clientGenRemoveRecipient(docType, idx) {
-            clientGenEnsureRecipients(docType).splice(idx, 1);
-            clientGenRenderRecipients(docType);
+            const extras = clientGenEnsureExtras(docType);
+            extras.splice(idx, 1);
+            if (CLIENT_GEN_OVERLAY_DOC === docType && CLIENT_GEN_OVERLAY_IDX === idx) clientGenCloseOverlay();
+            clientGenUpdateImportButton(docType);
         }
-        function clientGenUpdateRecipient(docType, idx, key, value) {
-            var rows = clientGenEnsureRecipients(docType);
-            if (!rows[idx]) rows[idx] = {};
-            rows[idx][key] = value;
-            var hidden = document.getElementById("genRecipients-" + docType);
-            if (hidden) {
-                hidden.value = rows.map(function (r) {
-                    var n = (r.recipientName || "").trim(), e = (r.recipientEmail || "").trim();
-                    if (!n && !e) return "";
-                    return n ? (n + " <" + e + ">") : e;
-                }).filter(Boolean).join("\n");
+
+        /** Copy primary form (#1) into the open overlay, or last extra if none open. Only when 2+ clients. */
+        function clientGenImportFromPrimary(docType) {
+            const extras = clientGenEnsureExtras(docType);
+            if (!extras.length) {
+                if (typeof notifyUser === "function") notifyUser("Add at least one extra client first.", "error");
+                return;
+            }
+            const primary = clientGenCollectPrimaryFields(docType);
+            let idx = CLIENT_GEN_OVERLAY_IDX;
+            if (CLIENT_GEN_OVERLAY_DOC !== docType || idx == null || idx < 0) idx = extras.length - 1;
+            extras[idx] = Object.assign({}, primary);
+            if (CLIENT_GEN_OVERLAY_DOC === docType && CLIENT_GEN_OVERLAY_IDX === idx) {
+                clientGenOpenOverlay(docType, idx);
+            }
+            clientGenUpdateImportButton(docType);
+            if (typeof notifyUser === "function") {
+                notifyUser("Imported form #1 into client #" + (idx + 2) + ". Edit anything that differs, then Save.", "success");
             }
         }
+
+        // Back-compat alias (old button name)
         function clientGenImportLastSetup(docType) {
-            try {
-                var raw = localStorage.getItem(clientGenSetupKey(docType));
-                if (!raw) { notifyUser("No previous setup for this document type yet.", "info"); return; }
-                var data = JSON.parse(raw);
-                if (!data || !Array.isArray(data.recipients) || !data.recipients.length) {
-                    notifyUser("Saved setup was empty.", "info"); return;
-                }
-                CLIENT_GEN_RECIPIENTS[docType] = data.recipients.map(function (r) {
-                    return { recipientName: r.recipientName || "", recipientEmail: r.recipientEmail || "", phone: r.phone || "" };
-                });
-                if (data.sharedFields) {
-                    Object.keys(data.sharedFields).forEach(function (k) {
-                        var el = document.getElementById("genInput-" + docType + "-" + k);
-                        if (el && data.sharedFields[k] != null) el.value = data.sharedFields[k];
-                    });
-                }
-                clientGenRenderRecipients(docType);
-                notifyUser("Imported last setup (" + CLIENT_GEN_RECIPIENTS[docType].length + " client(s)).", "success");
-            } catch (e) { notifyUser("Could not import last setup.", "error"); }
+            clientGenImportFromPrimary(docType);
         }
+
+        function clientGenRenderRecipients(docType) {
+            clientGenUpdateImportButton(docType);
+        }
+
+        function clientGenUpdateRecipient() { /* no-op: full forms replace mini fields */ }
+
         function clientGenSaveLastSetup(docType, sharedFields, recipients) {
             try {
                 localStorage.setItem(clientGenSetupKey(docType), JSON.stringify({
-                    savedAt: new Date().toISOString(),
-                    sharedFields: sharedFields || {},
-                    recipients: recipients || []
+                    at: Date.now(),
+                    shared: sharedFields || {},
+                    extras: clientGenEnsureExtras(docType)
                 }));
             } catch (_) { }
         }
@@ -4269,54 +4489,46 @@
                 if (val) payload[f.key] = val;
             }
 
-            // Multi-recipient: structured cards first, then legacy hidden textarea lines
-            (function parseRecipients() {
-                var recipients = [];
-                var structured = (typeof CLIENT_GEN_RECIPIENTS !== "undefined" && CLIENT_GEN_RECIPIENTS[docType])
-                    ? CLIENT_GEN_RECIPIENTS[docType] : [];
-                structured.forEach(function (r) {
-                    var name = String((r && r.recipientName) || "").trim();
-                    var email = String((r && r.recipientEmail) || "").trim();
-                    var phone = String((r && (r.phone || r.recipientPhone)) || "").trim();
-                    if (!name && !email) return;
-                    recipients.push({
-                        recipientName: name,
-                        recipientEmail: email,
-                        phone: phone
-                    });
+            // Multi-client: primary form = client #1; overlays = full field bags for #2+
+            (function () {
+                var extras = (typeof CLIENT_GEN_EXTRA_FORMS !== "undefined" && CLIENT_GEN_EXTRA_FORMS[docType])
+                    ? CLIENT_GEN_EXTRA_FORMS[docType] : [];
+                if (!extras.length) return; // single-client: payload stays as primary form only
+
+                var primary = {};
+                try {
+                    primary = (typeof clientGenCollectPrimaryFields === "function")
+                        ? clientGenCollectPrimaryFields(docType) : Object.assign({}, payload);
+                } catch (_) {
+                    primary = Object.assign({}, payload);
+                }
+                // Build recipients[]: each entry is a full fields override for that person
+                var recipients = [Object.assign({}, primary, {
+                    recipientName: primary.recipientName || primary.customerName || payload.recipientName || "",
+                    recipientEmail: primary.recipientEmail || primary.customerEmail || payload.recipientEmail || "",
+                    phone: primary.phone || primary.customerPhone || payload.phone || ""
+                })];
+                extras.forEach(function (bag) {
+                    bag = bag || {};
+                    recipients.push(Object.assign({}, primary, bag, {
+                        recipientName: bag.recipientName || bag.customerName || bag.name || "",
+                        recipientEmail: bag.recipientEmail || bag.customerEmail || bag.email || "",
+                        phone: bag.phone || bag.customerPhone || ""
+                    }));
                 });
-                if (!recipients.length) {
-                    var box = document.getElementById("genRecipients-" + docType);
-                    if (!box) return;
-                    var lines = (box.value || "").split(/\n/).map(function (l) { return l.trim(); }).filter(Boolean);
-                    lines.forEach(function (line) {
-                        var name = "", email = "";
-                        var m = line.match(/^(.+?)\s*<\s*([^>]+)\s*>$/);
-                        if (m) { name = m[1].trim(); email = m[2].trim(); }
-                        else {
-                            var parts = line.split(/[,;]/);
-                            if (parts.length >= 2) {
-                                name = parts[0].trim();
-                                email = parts.slice(1).join(" ").trim();
-                            } else if (line.indexOf("@") >= 0) {
-                                email = line.trim();
-                            } else {
-                                name = line.trim();
-                            }
-                        }
-                        if (name || email) recipients.push({ recipientName: name, recipientEmail: email });
-                    });
+                payload.recipients = recipients;
+                payload.fields = payload.fields || {};
+                payload.fields.recipients = recipients;
+                if (recipients[0]) {
+                    if (!payload.recipientName) payload.recipientName = recipients[0].recipientName;
+                    if (!payload.recipientEmail) payload.recipientEmail = recipients[0].recipientEmail;
+                    if (!payload.phone) payload.phone = recipients[0].phone;
                 }
-                if (recipients.length) {
-                    payload.recipients = recipients;
-                    if (!payload.recipientName && recipients[0].recipientName) payload.recipientName = recipients[0].recipientName;
-                    if (!payload.recipientEmail && recipients[0].recipientEmail) payload.recipientEmail = recipients[0].recipientEmail;
-                    if (!payload.phone && recipients[0].phone) payload.phone = recipients[0].phone;
-                    try {
-                        clientGenSaveLastSetup(docType, payload, recipients);
-                    } catch (_) { }
-                }
+                try {
+                    clientGenSaveLastSetup(docType, payload, recipients);
+                } catch (_) { }
             })();
+
 
             // Extra fields added via + Add field
             document.querySelectorAll('#genExtraFields-' + docType + ' > div').forEach(row => {
@@ -4337,11 +4549,12 @@
             if (cardEl) cardEl.classList.add('ai-working');
             setBtnBusy(sendBtn, true, { busyLabel: 'Generating…' });
             const _rcptBox = document.getElementById('genRecipients-' + docType);
-            let _rcptN = (CLIENT_GEN_RECIPIENTS[docType] || []).filter(function (r) {
-                return (r.recipientName || r.recipientEmail);
-            }).length;
-            if (!_rcptN && _rcptBox) {
-                _rcptN = (_rcptBox.value || '').split(/\n/).map(function (l) { return l.trim(); }).filter(Boolean).length;
+            let _rcptN = 1 + ((typeof CLIENT_GEN_EXTRA_FORMS !== "undefined" && CLIENT_GEN_EXTRA_FORMS[docType])
+                ? CLIENT_GEN_EXTRA_FORMS[docType].length : 0);
+            if (_rcptN <= 1) {
+                _rcptN = (CLIENT_GEN_RECIPIENTS[docType] || []).filter(function (r) {
+                    return (r.recipientName || r.recipientEmail);
+                }).length || 1;
             }
             const _w = (spec && spec.weight) || 1;
             const _maxB = (spec && spec.maxPerBatch) || 9;
@@ -4802,6 +5015,7 @@
         </div>`).join('');
             listEl.dataset.rendered = '1';
         }
+
 
         let CLIENT_NOTIF_TIMER = null;
         let CLIENT_NOTIF_CACHE = [];
