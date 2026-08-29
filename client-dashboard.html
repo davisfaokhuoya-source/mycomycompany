@@ -3811,12 +3811,17 @@
                     '<div id="genPanel-' + item.docType + '" class="directive-panel mt-3 pt-3 border-t border-slate-800 space-y-1">' +
                     trainedNote + (fieldsHtml || '<p class="text-[11px] text-slate-500">No extra instructions needed — sent as-is.</p>') +
                     '<div class="mt-2 p-2 rounded-lg bg-slate-950 border border-slate-800">' +
-                    '<p class="text-[10px] text-slate-400 mb-1"><i class="fa-solid fa-layer-group text-emerald-500"></i> Multiple recipients (optional)</p>' +
-                    '<p class="text-[9px] text-slate-500 mb-1">One per line: <span class="text-slate-400">Name &lt;email@domain.com&gt;</span> or <span class="text-slate-400">Name, email</span>. Shared fields above apply to every person. Multiple documents are developed in batches of up to ' +
-                    (item.maxPerBatch || 9) + ' (weight ' + (item.weight || 1) + ') so the system stays reliable.</p>' +
-                    '<textarea id="genRecipients-' + item.docType + '" rows="3" placeholder="Ada Okonkwo &lt;ada@client.com&gt;&#10;Chidi Bello, chidi@firm.ng" ' +
-                    'class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-600"></textarea>' +
-                    '<p class="text-[9px] text-slate-500 mt-1">Each person counts as one document × weight ' + (item.weight || 1) + ' against your allocation. Confirmed templates also charge the same weight once when approved.</p>' +
+                    '<div class="flex flex-wrap items-center justify-between gap-2 mb-1">' +
+                    '<p class="text-[10px] text-slate-400"><i class="fa-solid fa-layer-group text-emerald-500"></i> Clients / recipients <span id="genRcptCount-' + item.docType + '" class="text-slate-500">(optional)</span></p>' +
+                    '<div class="flex flex-wrap gap-1">' +
+                    '<button type="button" onclick="clientGenImportLastSetup(\'' + escapeHtml(item.docType) + '\')" class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300"><i class="fa-solid fa-clock-rotate-left"></i> Import last setup</button>' +
+                    '<button type="button" onclick="clientGenAddRecipient(\'' + escapeHtml(item.docType) + '\')" class="text-[10px] px-2 py-1 bg-emerald-700 hover:bg-emerald-600 rounded text-white font-medium"><i class="fa-solid fa-plus"></i> Add client</button>' +
+                    '</div></div>' +
+                    '<p class="text-[9px] text-slate-500 mb-2">Shared fields above apply to every client. Use + Add client for each person, or leave empty to use single name/email fields. Batched generation (up to ' +
+                    (item.maxPerBatch || 9) + ' per batch, weight ' + (item.weight || 1) + ').</p>' +
+                    '<div id="genRecipientsList-' + item.docType + '" class="space-y-2"></div>' +
+                    '<textarea id="genRecipients-' + item.docType + '" class="hidden" aria-hidden="true"></textarea>' +
+                    '<p class="text-[9px] text-slate-500 mt-1">Each client = one document × weight ' + (item.weight || 1) + ' against your allocation.</p>' +
                     '</div>' +
                     '<div id="genExtraFields-' + item.docType + '" class="space-y-1"></div>' +
                     '<button type="button" onclick="clientGenAddExtraField(\'' + escapeHtml(item.docType) +
@@ -4119,6 +4124,98 @@
             wrap.appendChild(div);
         }
 
+
+        var CLIENT_GEN_RECIPIENTS = window.CLIENT_GEN_RECIPIENTS || (window.CLIENT_GEN_RECIPIENTS = {});
+        const CLIENT_GEN_SETUP_PREFIX = "tvl_client_gen_setup_";
+
+        function clientGenEnsureRecipients(docType) {
+            if (!CLIENT_GEN_RECIPIENTS[docType]) CLIENT_GEN_RECIPIENTS[docType] = [];
+            return CLIENT_GEN_RECIPIENTS[docType];
+        }
+        function clientGenSetupKey(docType) {
+            return CLIENT_GEN_SETUP_PREFIX + String(typeof CLIENT_ID !== "undefined" ? CLIENT_ID : "x") + "_" + String(docType || "");
+        }
+        function clientGenRenderRecipients(docType) {
+            const list = document.getElementById("genRecipientsList-" + docType);
+            const countEl = document.getElementById("genRcptCount-" + docType);
+            const hidden = document.getElementById("genRecipients-" + docType);
+            if (!list) return;
+            const rows = clientGenEnsureRecipients(docType);
+            if (countEl) countEl.textContent = rows.length ? "(" + rows.length + " client" + (rows.length === 1 ? "" : "s") + ")" : "(optional)";
+            list.innerHTML = rows.map(function (r, i) {
+                return '<div class="border border-slate-800 rounded-lg p-2 bg-slate-900/80">' +
+                    '<div class="flex justify-between items-center mb-1.5">' +
+                    '<span class="text-[10px] font-semibold text-slate-300">Client #' + (i + 1) + '</span>' +
+                    '<button type="button" onclick="clientGenRemoveRecipient(\'' + escapeHtml(docType) + "\'," + i + ')" class="text-[10px] px-1.5 py-0.5 bg-red-900/50 hover:bg-red-800 rounded text-red-200">− Remove</button></div>' +
+                    '<div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5">' +
+                    '<div><label class="block text-[9px] text-slate-500">Name</label><input type="text" value="' + escapeHtml(r.recipientName || "") + '" onchange="clientGenUpdateRecipient(\'' + escapeHtml(docType) + "\'," + i + ",'recipientName',this.value)" class="w-full bg-slate-950 border border-slate-700 rounded px-1.5 py-1 text-[11px] text-white" placeholder = "Full name" /></div > " +
+                '<div><label class="block text-[9px] text-slate-500">Email</label><input type="email" value="' + escapeHtml(r.recipientEmail || "") + '" onchange="clientGenUpdateRecipient(\'' + escapeHtml(docType) + "\'," + i + ",'recipientEmail',this.value)" class="w-full bg-slate-950 border border-slate-700 rounded px-1.5 py-1 text-[11px] text-white" placeholder = "email@domain.com" /></div > " +
+                '<div><label class="block text-[9px] text-slate-500">Phone</label><input type="text" value="' + escapeHtml(r.phone || "") + '" onchange="clientGenUpdateRecipient(\'' + escapeHtml(docType) + "\'," + i + ",'phone',this.value)" class="w-full bg-slate-950 border border-slate-700 rounded px-1.5 py-1 text-[11px] text-white" placeholder = "+234…" /></div > " +
+                "</div></div>";
+            }).join("");
+            if (hidden) {
+                hidden.value = rows.map(function (r) {
+                    var n = (r.recipientName || "").trim(), e = (r.recipientEmail || "").trim();
+                    if (!n && !e) return "";
+                    return n ? (n + " <" + e + ">") : e;
+                }).filter(Boolean).join("\n");
+            }
+        }
+        function clientGenAddRecipient(docType) {
+            var rows = clientGenEnsureRecipients(docType);
+            if (rows.length >= 50) { notifyUser("Maximum 50 clients per run.", "error"); return; }
+            rows.push({ recipientName: "", recipientEmail: "", phone: "" });
+            clientGenRenderRecipients(docType);
+        }
+        function clientGenRemoveRecipient(docType, idx) {
+            clientGenEnsureRecipients(docType).splice(idx, 1);
+            clientGenRenderRecipients(docType);
+        }
+        function clientGenUpdateRecipient(docType, idx, key, value) {
+            var rows = clientGenEnsureRecipients(docType);
+            if (!rows[idx]) rows[idx] = {};
+            rows[idx][key] = value;
+            var hidden = document.getElementById("genRecipients-" + docType);
+            if (hidden) {
+                hidden.value = rows.map(function (r) {
+                    var n = (r.recipientName || "").trim(), e = (r.recipientEmail || "").trim();
+                    if (!n && !e) return "";
+                    return n ? (n + " <" + e + ">") : e;
+                }).filter(Boolean).join("\n");
+            }
+        }
+        function clientGenImportLastSetup(docType) {
+            try {
+                var raw = localStorage.getItem(clientGenSetupKey(docType));
+                if (!raw) { notifyUser("No previous setup for this document type yet.", "info"); return; }
+                var data = JSON.parse(raw);
+                if (!data || !Array.isArray(data.recipients) || !data.recipients.length) {
+                    notifyUser("Saved setup was empty.", "info"); return;
+                }
+                CLIENT_GEN_RECIPIENTS[docType] = data.recipients.map(function (r) {
+                    return { recipientName: r.recipientName || "", recipientEmail: r.recipientEmail || "", phone: r.phone || "" };
+                });
+                if (data.sharedFields) {
+                    Object.keys(data.sharedFields).forEach(function (k) {
+                        var el = document.getElementById("genInput-" + docType + "-" + k);
+                        if (el && data.sharedFields[k] != null) el.value = data.sharedFields[k];
+                    });
+                }
+                clientGenRenderRecipients(docType);
+                notifyUser("Imported last setup (" + CLIENT_GEN_RECIPIENTS[docType].length + " client(s)).", "success");
+            } catch (e) { notifyUser("Could not import last setup.", "error"); }
+        }
+        function clientGenSaveLastSetup(docType, sharedFields, recipients) {
+            try {
+                localStorage.setItem(clientGenSetupKey(docType), JSON.stringify({
+                    savedAt: new Date().toISOString(),
+                    sharedFields: sharedFields || {},
+                    recipients: recipients || []
+                }));
+            } catch (_) { }
+        }
+
+
         async function submitGenerateDocument(docType) {
             const spec = DOC_CATALOG_CACHE[docType];
             const fields = (spec && spec.fields) || [];
@@ -4148,7 +4245,10 @@
                 // When multi-recipient list is provided, name/email on the card are optional shared defaults
                 const multiBox = document.getElementById('genRecipients-' + docType);
                 const multiText = multiBox ? multiBox.value.trim() : '';
-                const skipRequired = multiText && (f.key === 'recipientName' || f.key === 'recipientEmail');
+                const structuredN = (CLIENT_GEN_RECIPIENTS[docType] || []).filter(function (r) {
+                    return (r.recipientName || r.recipientEmail);
+                }).length;
+                const skipRequired = (multiText || structuredN > 0) && (f.key === 'recipientName' || f.key === 'recipientEmail' || f.key === 'phone');
                 if (f.required && !val && !skipRequired) {
                     statusEl.innerHTML = `<p class="text-xs text-amber-400 mt-2"><i class="fa-solid fa-triangle-exclamation"></i> Please fill in "${escapeHtml(f.label)}" before sending.</p>`;
                     if (el) el.focus();
@@ -4157,36 +4257,52 @@
                 if (val) payload[f.key] = val;
             }
 
-            // Parse multi-recipient lines → recipients[]
+            // Multi-recipient: structured cards first, then legacy hidden textarea lines
             (function parseRecipients() {
-                const box = document.getElementById('genRecipients-' + docType);
-                if (!box) return;
-                const lines = (box.value || '').split(/\n/).map(function (l) { return l.trim(); }).filter(Boolean);
-                if (!lines.length) return;
-                const recipients = [];
-                lines.forEach(function (line) {
-                    let name = '', email = '';
-                    const angle = line.match(/^(.+?)\s*<\s*([^>]+)\s*>$/);
-                    if (angle) {
-                        name = angle[1].trim();
-                        email = angle[2].trim();
-                    } else if (line.indexOf(',') !== -1) {
-                        const parts = line.split(',');
-                        name = (parts[0] || '').trim();
-                        email = (parts.slice(1).join(',') || '').trim();
-                    } else if (line.indexOf('@') !== -1) {
-                        email = line;
-                        name = line.split('@')[0];
-                    } else {
-                        name = line;
-                    }
-                    recipients.push({ recipientName: name, recipientEmail: email });
+                var recipients = [];
+                var structured = (typeof CLIENT_GEN_RECIPIENTS !== "undefined" && CLIENT_GEN_RECIPIENTS[docType])
+                    ? CLIENT_GEN_RECIPIENTS[docType] : [];
+                structured.forEach(function (r) {
+                    var name = String((r && r.recipientName) || "").trim();
+                    var email = String((r && r.recipientEmail) || "").trim();
+                    var phone = String((r && (r.phone || r.recipientPhone)) || "").trim();
+                    if (!name && !email) return;
+                    recipients.push({
+                        recipientName: name,
+                        recipientEmail: email,
+                        phone: phone
+                    });
                 });
+                if (!recipients.length) {
+                    var box = document.getElementById("genRecipients-" + docType);
+                    if (!box) return;
+                    var lines = (box.value || "").split(/\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+                    lines.forEach(function (line) {
+                        var name = "", email = "";
+                        var m = line.match(/^(.+?)\s*<\s*([^>]+)\s*>$/);
+                        if (m) { name = m[1].trim(); email = m[2].trim(); }
+                        else {
+                            var parts = line.split(/[,;]/);
+                            if (parts.length >= 2) {
+                                name = parts[0].trim();
+                                email = parts.slice(1).join(" ").trim();
+                            } else if (line.indexOf("@") >= 0) {
+                                email = line.trim();
+                            } else {
+                                name = line.trim();
+                            }
+                        }
+                        if (name || email) recipients.push({ recipientName: name, recipientEmail: email });
+                    });
+                }
                 if (recipients.length) {
                     payload.recipients = recipients;
-                    // Ensure first recipient also fills singular fields for single-path fallback
                     if (!payload.recipientName && recipients[0].recipientName) payload.recipientName = recipients[0].recipientName;
                     if (!payload.recipientEmail && recipients[0].recipientEmail) payload.recipientEmail = recipients[0].recipientEmail;
+                    if (!payload.phone && recipients[0].phone) payload.phone = recipients[0].phone;
+                    try {
+                        clientGenSaveLastSetup(docType, payload, recipients);
+                    } catch (_) { }
                 }
             })();
 
@@ -4209,7 +4325,12 @@
             if (cardEl) cardEl.classList.add('ai-working');
             setBtnBusy(sendBtn, true, { busyLabel: 'Generating…' });
             const _rcptBox = document.getElementById('genRecipients-' + docType);
-            const _rcptN = _rcptBox ? (_rcptBox.value || '').split(/\n/).map(function (l) { return l.trim(); }).filter(Boolean).length : 0;
+            let _rcptN = (CLIENT_GEN_RECIPIENTS[docType] || []).filter(function (r) {
+                return (r.recipientName || r.recipientEmail);
+            }).length;
+            if (!_rcptN && _rcptBox) {
+                _rcptN = (_rcptBox.value || '').split(/\n/).map(function (l) { return l.trim(); }).filter(Boolean).length;
+            }
             const _w = (spec && spec.weight) || 1;
             const _maxB = (spec && spec.maxPerBatch) || 9;
             statusEl.innerHTML = _rcptN > 1
