@@ -897,6 +897,69 @@
                         </label>
                     </div>
 
+                    <!-- Client guide: capacity, weight, batches -->
+                    <div class="max-w-5xl mb-4">
+                        <button type="button" onclick="toggleDocGenGuide()"
+                            class="w-full text-left text-xs px-3 py-2.5 rounded-lg border border-slate-700 bg-slate-900/80 hover:border-emerald-600 text-slate-300 flex flex-wrap items-center gap-2">
+                            <i class="fa-solid fa-circle-info text-emerald-400"></i>
+                            <span class="font-medium text-slate-200">How document generation works</span>
+                            <span class="text-slate-500 hidden sm:inline">— units, batches, multi-client, trained
+                                templates</span>
+                            <i id="docGenGuideChevron"
+                                class="fa-solid fa-chevron-down ml-auto text-[10px] text-slate-500"></i>
+                        </button>
+                        <div id="docGenGuide"
+                            class="hidden mt-2 p-4 rounded-xl border border-slate-700 bg-slate-950 text-[11px] text-slate-400 leading-relaxed space-y-3">
+                            <div>
+                                <p class="text-slate-200 font-semibold text-xs mb-1">Document units (capacity)</p>
+                                <p>Each document uses <strong class="text-slate-300">1–5 units</strong> of your plan
+                                    capacity, based on complexity.</p>
+                                <ul class="mt-2 space-y-1 list-disc list-inside">
+                                    <li><span class="text-emerald-400 font-medium">Weight 1</span> — Receipts, invoices,
+                                        order confirmations · <strong>1 unit</strong> · up to <strong>9</strong> per
+                                        batch</li>
+                                    <li><span class="text-sky-400 font-medium">Weight 2</span> — Simple letters &amp;
+                                        notices · <strong>2 units</strong> · up to <strong>6</strong> per batch</li>
+                                    <li><span class="text-slate-300 font-medium">Weight 3</span> — Standard reports
+                                        &amp; forms · <strong>3 units</strong> · up to <strong>4</strong> per batch</li>
+                                    <li><span class="text-amber-400 font-medium">Weight 4</span> — Proposals &amp; pitch
+                                        decks · <strong>4 units</strong> · up to <strong>2</strong> per batch · <em>1
+                                            proposal ≈ 4 receipts</em></li>
+                                    <li><span class="text-red-400 font-medium">Weight 5</span> — Legal / compliance ·
+                                        <strong>5 units</strong> · <strong>1</strong> per batch</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <p class="text-slate-200 font-semibold text-xs mb-1">Multi-client runs</p>
+                                <p>The open form is <strong class="text-slate-300">client #1</strong>. <strong
+                                        class="text-slate-300">+ Add client</strong> opens a full form for each extra
+                                    person. Units = weight × number of clients. Large runs split into batches
+                                    automatically; one <strong class="text-slate-300">Send</strong> still starts the
+                                    whole job.</p>
+                            </div>
+                            <div>
+                                <p class="text-slate-200 font-semibold text-xs mb-1">Trained templates &amp; line items
+                                </p>
+                                <p>If a sample was trained for your account, layout and fields follow your design.
+                                    Itemized docs always allow <strong class="text-slate-300">+ Add line</strong> for
+                                    multiple products or services.</p>
+                            </div>
+                            <div>
+                                <p class="text-slate-200 font-semibold text-xs mb-1">Tips</p>
+                                <ul class="space-y-1 list-disc list-inside">
+                                    <li><strong class="text-slate-300">Preview layout</strong> checks design before
+                                        spending units on a full send.</li>
+                                    <li><strong class="text-slate-300">Import from form #1</strong> copies the main form
+                                        into an extra client (only when you have 2+ clients).</li>
+                                    <li>Finished files appear under <strong class="text-slate-300">My
+                                            Documents</strong>; long jobs may also email you when ready.</li>
+                                    <li>If capacity is short, reduce clients in the run or top up — you’ll see an error
+                                        code on screen.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Browse: Industry (Universal / Schools / NGO…) → Category (Financial / Legal…) → document cards -->
                     <div class="max-w-5xl space-y-3">
                         <div class="flex flex-wrap items-center gap-2">
@@ -3858,10 +3921,15 @@
                     escapeHtml(String(item.label || "").toLowerCase()) + '">' +
                     '<button onclick="toggleGenerateCard(\'' + item.docType + '\')" class="w-full text-left">' +
                     '<i class="fa-solid ' + icon + ' text-emerald-400 mb-2"></i>' +
-                    '<p class="font-semibold text-white text-sm">' + escapeHtml(item.label) + "</p>" +
+                    '<div class="flex items-start justify-between gap-2"><div>' +
+                    '<p class="font-semibold text-white text-sm">' + escapeHtml(item.label) + "</p></div>" +
+                    clientGenWeightBadgeHtml(item) +
+                    '</div>' +
                     '<p class="text-[11px] text-slate-500 mt-1">' +
                     (item.remaining === "Unlimited" ? "Unlimited this period" : ((item.used || 0) + "/" + (item.limit || "—") + " used this period")) +
-                    "</p></button>" +
+                    '</p>' +
+                    '<p class="text-[10px] text-slate-600 mt-0.5">' + clientGenWeightHint(item) + '</p>' +
+                    "</button>" +
                     '<div id="genPanel-' + item.docType + '" class="directive-panel mt-3 pt-3 border-t border-slate-800 space-y-1">' +
                     trainedNote + (fieldsHtml || '<p class="text-[11px] text-slate-500">No extra instructions needed — sent as-is.</p>') +
                     '<div class="mt-2 p-2 rounded-lg bg-slate-950 border border-slate-800">' +
@@ -3879,6 +3947,9 @@
                     '<div id="genExtraFields-' + item.docType + '" class="space-y-1"></div>' +
                     '<button type="button" onclick="clientGenAddExtraField(\'' + escapeHtml(item.docType) +
                     '\')" class="text-[10px] mt-2 px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">+ Add field</button>' +
+                    '<div id="genUnitEstimate-' + item.docType + '" class="mt-2 text-[10px] text-slate-400 bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-2">' +
+                    clientGenUnitEstimateHtml(item.docType, item) +
+                    '</div>' +
                     '<div class="flex flex-wrap gap-2 justify-end pt-2">' +
                     '<button onclick="toggleGenerateCard(\'' + item.docType +
                     '\')" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Cancel</button>' +
@@ -4179,6 +4250,105 @@
 
 
 
+
+        function toggleDocGenGuide() {
+            const el = document.getElementById("docGenGuide");
+            const ch = document.getElementById("docGenGuideChevron");
+            if (!el) return;
+            const open = el.classList.toggle("hidden") === false;
+            if (ch) {
+                ch.classList.toggle("fa-chevron-down", !open);
+                ch.classList.toggle("fa-chevron-up", open);
+            }
+        }
+
+        function clientGenResolveWeight(itemOrType) {
+            var item = itemOrType;
+            if (typeof itemOrType === "string") {
+                item = (typeof DOC_CATALOG_LIST !== "undefined" ? DOC_CATALOG_LIST : []).find(function (x) {
+                    return x && x.docType === itemOrType;
+                }) || { docType: itemOrType };
+            }
+            item = item || {};
+            var w = Number(item.weight);
+            if (w >= 1 && w <= 5) return Math.round(w);
+            var id = String(item.docType || item.id || "");
+            if (/receipt|invoice|order_confirmation|payment_confirmation|payment_reminder/i.test(id)) return 1;
+            if (/proposal|pitch/i.test(id)) return 4;
+            if (/compliance|legal/i.test(id)) return 5;
+            if (/letter/i.test(id)) return 2;
+            if (/report/i.test(id)) return 3;
+            return 3;
+        }
+
+        function clientGenMaxBatch(weight) {
+            var w = Math.min(5, Math.max(1, Number(weight) || 3));
+            if (w <= 1) return 9;
+            if (w === 2) return 6;
+            if (w === 3) return 4;
+            if (w === 4) return 2;
+            return 1;
+        }
+
+        function clientGenWeightBadgeHtml(item) {
+            var w = clientGenResolveWeight(item);
+            var colors = {
+                1: "bg-emerald-900/50 text-emerald-300 border-emerald-700/50",
+                2: "bg-sky-900/50 text-sky-300 border-sky-700/50",
+                3: "bg-slate-800 text-slate-300 border-slate-600",
+                4: "bg-amber-900/40 text-amber-300 border-amber-700/50",
+                5: "bg-red-900/40 text-red-300 border-red-700/50"
+            };
+            var cls = colors[w] || colors[3];
+            return '<span class="shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded border ' + cls + '">W' + w + '</span>';
+        }
+
+        function clientGenWeightHint(item) {
+            var w = clientGenResolveWeight(item);
+            var maxB = Number(item.maxPerBatch) || clientGenMaxBatch(w);
+            var labels = {
+                1: "Light · 1 unit each · up to " + maxB + "/batch",
+                2: "Simple · 2 units each · up to " + maxB + "/batch",
+                3: "Standard · 3 units each · up to " + maxB + "/batch",
+                4: "Heavy · 4 units each · up to " + maxB + "/batch",
+                5: "Heaviest · 5 units each · 1/batch"
+            };
+            return labels[w] || labels[3];
+        }
+
+        function clientGenCountClientsForDoc(docType) {
+            var extras = (typeof CLIENT_GEN_EXTRA_FORMS !== "undefined" && CLIENT_GEN_EXTRA_FORMS[docType])
+                ? CLIENT_GEN_EXTRA_FORMS[docType].length : 0;
+            return 1 + extras;
+        }
+
+        function clientGenUnitEstimateHtml(docType, item) {
+            var w = clientGenResolveWeight(item || docType);
+            var maxB = (item && item.maxPerBatch) || clientGenMaxBatch(w);
+            var n = clientGenCountClientsForDoc(docType);
+            var units = w * n;
+            var batches = Math.ceil(n / maxB);
+            return (
+                '<span class="text-slate-300 font-medium">This run:</span> ' +
+                n + ' document' + (n === 1 ? "" : "s") +
+                ' × weight ' + w +
+                ' = <span class="text-emerald-400 font-semibold">' + units + ' unit' + (units === 1 ? "" : "s") + '</span>' +
+                (n > 1
+                    ? (' · ' + batches + ' batch' + (batches === 1 ? "" : "es") + ' of up to ' + maxB)
+                    : (' · max ' + maxB + ' per batch if you add clients'))
+            );
+        }
+
+        function clientGenRefreshUnitEstimate(docType) {
+            var el = document.getElementById("genUnitEstimate-" + docType);
+            if (!el) return;
+            var item = (typeof DOC_CATALOG_LIST !== "undefined" ? DOC_CATALOG_LIST : []).find(function (x) {
+                return x && x.docType === docType;
+            }) || { docType: docType };
+            el.innerHTML = clientGenUnitEstimateHtml(docType, item);
+        }
+
+
         // =====================================================================
         // MULTI-CLIENT: full-form overlays (not mini name/email cards)
         // Primary card form = client #1. Each "Add client" opens a full overlay
@@ -4450,6 +4620,7 @@
             const seed = clientGenCollectPrimaryFields(docType);
             extras.push(Object.assign({}, seed));
             clientGenUpdateImportButton(docType);
+            try { clientGenRefreshUnitEstimate(docType); } catch (_) { }
             clientGenOpenOverlay(docType, extras.length - 1);
         }
 
@@ -4458,6 +4629,7 @@
             extras.splice(idx, 1);
             if (CLIENT_GEN_OVERLAY_DOC === docType && CLIENT_GEN_OVERLAY_IDX === idx) clientGenCloseOverlay();
             clientGenUpdateImportButton(docType);
+            try { clientGenRefreshUnitEstimate(docType); } catch (_) { }
         }
 
         /** Copy primary form (#1) into the open overlay, or last extra if none open. Only when 2+ clients. */
@@ -4612,9 +4784,11 @@
             }
             const _w = (spec && spec.weight) || 1;
             const _maxB = (spec && spec.maxPerBatch) || 9;
+            const _units = _rcptN * _w;
+            const _batches = Math.ceil(_rcptN / _maxB);
             statusEl.innerHTML = _rcptN > 1
-                ? `<p class="text-xs text-slate-400 mt-2"><span class="ai-spinner"></span>Generating ${_rcptN} ${escapeHtml(spec ? spec.label : docType)}(s) in batches of up to ${_maxB} (weight ${_w}) — this may take a few minutes…</p>`
-                : `<p class="text-xs text-slate-400 mt-2"><span class="ai-spinner"></span>Generating your ${escapeHtml(spec ? spec.label : docType)}…</p>`;
+                ? `<p class="text-xs text-slate-400 mt-2"><span class="ai-spinner"></span>Generating <strong class="text-slate-300">${_rcptN}</strong> ${escapeHtml(spec ? spec.label : docType)}(s) · <strong class="text-emerald-400">${_units} units</strong> (weight ${_w} each) · ${_batches} batch${_batches === 1 ? '' : 'es'} of up to ${_maxB} — please wait…</p>`
+                : `<p class="text-xs text-slate-400 mt-2"><span class="ai-spinner"></span>Generating your ${escapeHtml(spec ? spec.label : docType)} · <strong class="text-emerald-400">${_w} unit${_w === 1 ? '' : 's'}</strong> (weight ${_w})…</p>`;
 
             let res;
             try {
