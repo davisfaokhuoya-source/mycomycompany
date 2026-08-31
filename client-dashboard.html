@@ -2991,6 +2991,13 @@
             try {
                 if (fileInput && fileInput.files && fileInput.files[0]) {
                     const file = fileInput.files[0];
+                    if (file.size > 1500000) {
+                        if (typeof notifyUser === 'function') {
+                            notifyUser('Signature image is larger than 1.5MB. Compress it or save name only, then add a smaller image.', 'error');
+                        }
+                        if (status) status.textContent = 'Image too large (max ~1.5MB).';
+                        return;
+                    }
                     payload.fileName = file.name;
                     payload.mimeType = file.type || 'image/png';
                     payload.base64Data = await new Promise(function (resolve, reject) {
@@ -3006,8 +3013,9 @@
                     if (fileInput) fileInput.value = '';
                     loadClientSignatory();
                 } else {
-                    if (typeof notifyUser === 'function') notifyUser((res && res.message) || 'Could not save signatory.', 'error');
-                    if (status) status.textContent = (res && res.message) || 'Save failed.';
+                    const msg = (res && (res.message || res.error)) || 'Could not save signatory.';
+                    if (typeof notifyUser === 'function') notifyUser(msg, 'error');
+                    if (status) status.textContent = msg;
                 }
             } catch (e) {
                 if (typeof notifyUser === 'function') notifyUser('Save error.', 'error');
