@@ -926,7 +926,8 @@
                                         decks · <strong>4 units</strong> · up to <strong>2</strong> per batch · <em>1
                                             proposal ≈ 4 receipts</em></li>
                                     <li><span class="text-red-400 font-medium">Weight 5</span> — Legal / compliance ·
-                                        <strong>5 units</strong> · <strong>1</strong> per batch</li>
+                                        <strong>5 units</strong> · <strong>1</strong> per batch
+                                    </li>
                                 </ul>
                             </div>
                             <div>
@@ -1732,8 +1733,10 @@
                     const raw = json.message || json.error || 'request failed';
                     try { console.error('[gateway]', action, raw); } catch (_) { }
                     const code = clientErrorCode(raw);
+                    // Signatory / settings: keep readable text on the form (still attach code)
+                    const keepRaw = /Signatory|signatory|Preference|MailboxPrivacy|ServiceFlags/i.test(action);
                     json = Object.assign({}, json, {
-                        message: 'Error occurred — error code ' + code,
+                        message: keepRaw ? raw : ('Error occurred — error code ' + code),
                         errorCode: code,
                         _rawMessage: raw
                     });
@@ -2986,43 +2989,75 @@
                 if (typeof notifyUser === 'function') notifyUser('Enter a name or choose a signature image.', 'error');
                 return;
             }
-            if (status) status.textContent = 'Saving…';
-            const payload = { name: name, position: position };
+            if (status) {
+                status.className = 'text-[10px] text-slate-400 mt-1';
+                status.textContent = 'Saving…';
+            }
             try {
+                // Step 1: always save name + position (no image) — must succeed without Drive
+                let res = await callGateway('clientportal', 'clientPortalSetSignatory', {
+                    name: name,
+                    position: position,
+                    skipImage: true
+                });
+                if (!res || !res.success) {
+                    const raw = (res && (res._rawMessage || res.message)) || 'Could not save signatory.';
+                    if (status) {
+                        status.className = 'text-[10px] text-red-400 mt-1';
+                        status.textContent = raw;
+                    }
+                    if (typeof notifyUser === 'function') notifyUser(raw, 'error');
+                    return;
+                }
+                // Step 2: optional image
                 if (fileInput && fileInput.files && fileInput.files[0]) {
                     const file = fileInput.files[0];
                     if (file.size > 1500000) {
-                        if (typeof notifyUser === 'function') {
-                            notifyUser('Signature image is larger than 1.5MB. Compress it or save name only, then add a smaller image.', 'error');
+                        if (status) {
+                            status.className = 'text-[10px] text-amber-400 mt-1';
+                            status.textContent = 'Name saved. Image skipped — file over 1.5MB. Use a smaller PNG.';
                         }
-                        if (status) status.textContent = 'Image too large (max ~1.5MB).';
+                        if (typeof notifyUser === 'function') notifyUser('Name saved. Compress signature image under 1.5MB and try again.', 'success');
+                        loadClientSignatory();
                         return;
                     }
-                    payload.fileName = file.name;
-                    payload.mimeType = file.type || 'image/png';
-                    payload.base64Data = await new Promise(function (resolve, reject) {
+                    if (status) status.textContent = 'Uploading signature image…';
+                    const base64Data = await new Promise(function (resolve, reject) {
                         const r = new FileReader();
                         r.onload = function () { resolve(String(r.result || '')); };
                         r.onerror = reject;
                         r.readAsDataURL(file);
                     });
-                }
-                const res = await callGateway('clientportal', 'clientPortalSetSignatory', payload);
-                if (res && res.success) {
-                    if (typeof notifyUser === 'function') notifyUser(res.message || 'Signatory saved.', 'success');
+                    res = await callGateway('clientportal', 'clientPortalSetSignatory', {
+                        name: name,
+                        position: position,
+                        fileName: file.name,
+                        mimeType: file.type || 'image/png',
+                        base64Data: base64Data
+                    });
+                    if (!res || !res.success) {
+                        const raw = (res && (res._rawMessage || res.message)) || 'Image upload failed.';
+                        if (status) {
+                            status.className = 'text-[10px] text-amber-400 mt-1';
+                            status.textContent = 'Name saved. Image failed: ' + raw;
+                        }
+                        if (typeof notifyUser === 'function') notifyUser('Name saved. Image failed — try a smaller PNG.', 'error');
+                        loadClientSignatory();
+                        return;
+                    }
                     if (fileInput) fileInput.value = '';
-                    loadClientSignatory();
-                } else {
-                    const msg = (res && (res.message || res.error)) || 'Could not save signatory.';
-                    if (typeof notifyUser === 'function') notifyUser(msg, 'error');
-                    if (status) status.textContent = msg;
                 }
+                if (typeof notifyUser === 'function') notifyUser((res && res._rawMessage) || res.message || 'Signatory saved.', 'success');
+                loadClientSignatory();
             } catch (e) {
-                if (typeof notifyUser === 'function') notifyUser('Save error.', 'error');
-                if (status) status.textContent = 'Save error.';
+                const msg = (e && e.message) ? e.message : String(e);
+                if (status) {
+                    status.className = 'text-[10px] text-red-400 mt-1';
+                    status.textContent = msg;
+                }
+                if (typeof notifyUser === 'function') notifyUser(msg, 'error');
             }
         }
-
 
         async function loadIntegrationsPanel() {
             try { loadClientSignatory(); } catch (_) { }
