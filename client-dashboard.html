@@ -1176,6 +1176,40 @@
 
                     <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
                         <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
+                                class="fa-solid fa-signature text-emerald-500"></i> Official signatory</h3>
+                        <p class="text-[11px] text-slate-500 leading-relaxed">Used on letters, proposals, and formal
+                            documents — one signature only (name, position, and optional image). Law-firm / bank
+                            standard.</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] text-slate-500 mb-0.5">Full name</label>
+                                <input id="clientSigName" type="text" placeholder="e.g. Ada Okoye"
+                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white" />
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-500 mb-0.5">Position / title</label>
+                                <input id="clientSigPosition" type="text" placeholder="e.g. Managing Director"
+                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white" />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-0.5">Signature image (PNG/JPG,
+                                optional)</label>
+                            <input id="clientSigFile" type="file" accept="image/png,image/jpeg,image/webp"
+                                class="w-full text-[11px] text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-slate-800 file:text-slate-200" />
+                            <p id="clientSigStatus" class="text-[10px] text-slate-600 mt-1">No signatory saved yet.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="saveClientSignatory()"
+                                class="text-[10px] px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white font-medium">Save
+                                signatory</button>
+                            <button type="button" onclick="loadClientSignatory()"
+                                class="text-[10px] px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Refresh</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
                                 class="fa-solid fa-envelope text-slate-500"></i> Mailboxes</h3>
                         <div id="integrationsMailboxList" class="space-y-2 text-xs"></div>
                     </div>
@@ -2917,7 +2951,73 @@
         // INTEGRATIONS — mailbox / social media / CRM connections the client
         // can see and revoke themselves.
         // =====================================================================
+
+        async function loadClientSignatory() {
+            const status = document.getElementById('clientSigStatus');
+            try {
+                const res = await callGateway('clientportal', 'clientPortalGetSignatory', {});
+                if (!res || !res.success) {
+                    if (status) status.textContent = (res && res.message) || 'Could not load signatory.';
+                    return;
+                }
+                const s = res.signatory || {};
+                const nameEl = document.getElementById('clientSigName');
+                const posEl = document.getElementById('clientSigPosition');
+                if (nameEl) nameEl.value = s.name || s.SignatoryName || '';
+                if (posEl) posEl.value = s.position || s.SignatoryPosition || '';
+                if (status) {
+                    const has = (s.name || s.SignatoryName || s.fileId || s.SignatureFileId);
+                    status.textContent = has
+                        ? ('Saved: ' + (s.name || s.SignatoryName || '—') + (s.position || s.SignatoryPosition ? ' · ' + (s.position || s.SignatoryPosition) : '') + (s.fileId || s.SignatureFileId ? ' · image on file' : ''))
+                        : 'No signatory saved yet.';
+                    status.className = has ? 'text-[10px] text-emerald-500/90 mt-1' : 'text-[10px] text-slate-600 mt-1';
+                }
+            } catch (e) {
+                if (status) status.textContent = 'Load error.';
+            }
+        }
+
+        async function saveClientSignatory() {
+            const status = document.getElementById('clientSigStatus');
+            const name = (document.getElementById('clientSigName')?.value || '').trim();
+            const position = (document.getElementById('clientSigPosition')?.value || '').trim();
+            const fileInput = document.getElementById('clientSigFile');
+            if (!name && !(fileInput && fileInput.files && fileInput.files[0])) {
+                if (typeof notifyUser === 'function') notifyUser('Enter a name or choose a signature image.', 'error');
+                return;
+            }
+            if (status) status.textContent = 'Saving…';
+            const payload = { name: name, position: position };
+            try {
+                if (fileInput && fileInput.files && fileInput.files[0]) {
+                    const file = fileInput.files[0];
+                    payload.fileName = file.name;
+                    payload.mimeType = file.type || 'image/png';
+                    payload.base64Data = await new Promise(function (resolve, reject) {
+                        const r = new FileReader();
+                        r.onload = function () { resolve(String(r.result || '')); };
+                        r.onerror = reject;
+                        r.readAsDataURL(file);
+                    });
+                }
+                const res = await callGateway('clientportal', 'clientPortalSetSignatory', payload);
+                if (res && res.success) {
+                    if (typeof notifyUser === 'function') notifyUser(res.message || 'Signatory saved.', 'success');
+                    if (fileInput) fileInput.value = '';
+                    loadClientSignatory();
+                } else {
+                    if (typeof notifyUser === 'function') notifyUser((res && res.message) || 'Could not save signatory.', 'error');
+                    if (status) status.textContent = (res && res.message) || 'Save failed.';
+                }
+            } catch (e) {
+                if (typeof notifyUser === 'function') notifyUser('Save error.', 'error');
+                if (status) status.textContent = 'Save error.';
+            }
+        }
+
+
         async function loadIntegrationsPanel() {
+            try { loadClientSignatory(); } catch (_) { }
             try { loadClientServiceFlags(); } catch (_) { }
             const mbxEl = document.getElementById('integrationsMailboxList');
             const waEl = document.getElementById('integrationsWhatsAppList');
@@ -4085,11 +4185,11 @@
             titleEl.textContent = res.label || res.docId || 'Document preview';
             const mode = res.mode || '';
             const modeLabel =
-                mode === 'trained_design' || mode === 'trained_design_cached' ? 'Trained sample document'
-                    : mode === 'default_sample' || mode === 'default_cached' ? 'Default sample document'
+                mode === 'trained_design' || mode === 'trained_design_cached' ? 'Your trained design sample'
+                    : mode === 'default_sample' || mode === 'default_cached' ? 'Default catalog sample (not your custom training)'
                         : mode === 'blank_template' ? 'Your blank template'
-                            : mode === 'trained_structure_only' ? 'Training on file (sample DOCX pending)'
-                                : mode === 'structure' ? 'Field outline'
+                            : mode === 'trained_structure_only' ? 'Training on file — sample DOCX not ready yet'
+                                : mode === 'structure' ? 'Field outline only'
                                     : 'Preview';
             metaEl.textContent = (res.message || modeLabel) +
                 (res.linkSharing === 'anyone_with_link_view' ? ' · Anyone with the link can view.' : '');
