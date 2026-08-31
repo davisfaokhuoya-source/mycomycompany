@@ -926,8 +926,7 @@
                                         decks · <strong>4 units</strong> · up to <strong>2</strong> per batch · <em>1
                                             proposal ≈ 4 receipts</em></li>
                                     <li><span class="text-red-400 font-medium">Weight 5</span> — Legal / compliance ·
-                                        <strong>5 units</strong> · <strong>1</strong> per batch
-                                    </li>
+                                        <strong>5 units</strong> · <strong>1</strong> per batch</li>
                                 </ul>
                             </div>
                             <div>
@@ -1181,6 +1180,23 @@
                         <p class="text-[11px] text-slate-500 leading-relaxed">Used on letters, proposals, and formal
                             documents — one signature only (name, position, and optional image). Law-firm / bank
                             standard.</p>
+                        <div
+                            class="rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2 text-[10px] text-slate-400 leading-relaxed space-y-1">
+                            <p class="font-semibold text-slate-300 uppercase tracking-wide text-[9px]">Signature image
+                                rules</p>
+                            <ul class="list-disc pl-4 space-y-0.5">
+                                <li>Optional — you can save <strong class="text-slate-300">name and title only</strong>.
+                                </li>
+                                <li>Formats: <strong class="text-slate-300">PNG or JPG</strong> (transparent PNG works
+                                    best).</li>
+                                <li>Prefer a <strong class="text-slate-300">cropped signature only</strong>, not a full
+                                    phone photo.</li>
+                                <li>Keep the file small (about <strong class="text-slate-300">under 1.5 MB</strong>).
+                                    Large WhatsApp photos are auto-compressed; very large files may still fail.</li>
+                                <li>One official signatory per account. Replacing the image updates future letters and
+                                    proposals.</li>
+                            </ul>
+                        </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <div>
                                 <label class="block text-[10px] text-slate-500 mb-0.5">Full name</label>
@@ -1707,7 +1723,7 @@
             }
         }
 
-        async function callGateway(system, action, extra = {}) {
+        async function callGateway(system, action, extra = {}, options = {}) {
             if (!GW_URL) {
                 const coded = clientFriendlyError('Missing Gateway URL.');
                 if (typeof showLoginError === 'function') showLoginError(coded);
@@ -1716,7 +1732,8 @@
             try {
                 const body = { system, action, token: SESSION_TOKEN, clientId: CLIENT_ID, ...extra };
                 const controller = new AbortController();
-                const t = setTimeout(() => controller.abort(), 55000); // fail soft before 90s wall
+                const waitMs = Math.min(Number(options.timeoutMs) || 55000, 120000);
+                const t = setTimeout(() => controller.abort(), waitMs);
                 const res = await fetch(GW_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -2980,6 +2997,58 @@
             }
         }
 
+
+        /** Shrink signature image so Apps Script does not time out (4201). Max edge 900px, JPEG ~0.72. */
+        function compressSignatureImage(file) {
+            return new Promise(function (resolve, reject) {
+                if (!file || !String(file.type || "").startsWith("image/")) {
+                    reject(new Error("Not an image file"));
+                    return;
+                }
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = function () {
+                    try {
+                        const maxEdge = 900;
+                        let w = img.naturalWidth || img.width;
+                        let h = img.naturalHeight || img.height;
+                        if (w > maxEdge || h > maxEdge) {
+                            if (w >= h) {
+                                h = Math.round(h * (maxEdge / w));
+                                w = maxEdge;
+                            } else {
+                                w = Math.round(w * (maxEdge / h));
+                                h = maxEdge;
+                            }
+                        }
+                        const canvas = document.createElement("canvas");
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext("2d");
+                        ctx.fillStyle = "#ffffff";
+                        ctx.fillRect(0, 0, w, h);
+                        ctx.drawImage(img, 0, 0, w, h);
+                        URL.revokeObjectURL(url);
+                        const dataUrl = canvas.toDataURL("image/jpeg", 0.72);
+                        resolve({
+                            base64Data: dataUrl,
+                            fileName: String(file.name || "signature").replace(/\.[^.]+$/, "") + ".jpg",
+                            mimeType: "image/jpeg"
+                        });
+                    } catch (e) {
+                        URL.revokeObjectURL(url);
+                        reject(e);
+                    }
+                };
+                img.onerror = function () {
+                    URL.revokeObjectURL(url);
+                    reject(new Error("Could not read image"));
+                };
+                img.src = url;
+            });
+        }
+
+
         async function saveClientSignatory() {
             const status = document.getElementById('clientSigStatus');
             const name = (document.getElementById('clientSigName')?.value || '').trim();
@@ -3012,29 +3081,27 @@
                 // Step 2: optional image
                 if (fileInput && fileInput.files && fileInput.files[0]) {
                     const file = fileInput.files[0];
-                    if (file.size > 1500000) {
+                    if (status) status.textContent = 'Compressing signature image…';
+                    let compressed;
+                    try {
+                        compressed = await compressSignatureImage(file);
+                    } catch (ce) {
                         if (status) {
                             status.className = 'text-[10px] text-amber-400 mt-1';
-                            status.textContent = 'Name saved. Image skipped — file over 1.5MB. Use a smaller PNG.';
+                            status.textContent = 'Name saved. Could not process image — try a smaller PNG/JPG.';
                         }
-                        if (typeof notifyUser === 'function') notifyUser('Name saved. Compress signature image under 1.5MB and try again.', 'success');
+                        if (typeof notifyUser === 'function') notifyUser('Name saved. Image not processed.', 'success');
                         loadClientSignatory();
                         return;
                     }
                     if (status) status.textContent = 'Uploading signature image…';
-                    const base64Data = await new Promise(function (resolve, reject) {
-                        const r = new FileReader();
-                        r.onload = function () { resolve(String(r.result || '')); };
-                        r.onerror = reject;
-                        r.readAsDataURL(file);
-                    });
                     res = await callGateway('clientportal', 'clientPortalSetSignatory', {
                         name: name,
                         position: position,
-                        fileName: file.name,
-                        mimeType: file.type || 'image/png',
-                        base64Data: base64Data
-                    });
+                        fileName: compressed.fileName,
+                        mimeType: compressed.mimeType,
+                        base64Data: compressed.base64Data
+                    }, { timeoutMs: 90000 });
                     if (!res || !res.success) {
                         const raw = (res && (res._rawMessage || res.message)) || 'Image upload failed.';
                         if (status) {
