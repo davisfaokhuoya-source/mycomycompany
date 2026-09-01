@@ -580,13 +580,16 @@
                                     class="ring-fill" transform="rotate(-90 32 32)"></circle>
                             </svg>
                             <div>
-                                <p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide">Hours Used</p>
+                                <p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide">Hours Used <span
+                                        class="text-slate-600">(this month)</span></p>
                                 <p id="statHours" class="text-lg font-bold text-white mt-1">0 / 0</p>
+                                <p id="statHoursLife" class="text-[10px] text-slate-500 mt-0.5">Lifetime: 0</p>
                             </div>
                         </div>
                         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
                             <p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide">Emails Sent</p>
                             <p id="statEmails" class="text-2xl font-bold text-white mt-2">0 / 0</p>
+                            <p id="statEmailsLife" class="text-[10px] text-slate-500 mt-0.5">Lifetime: 0</p>
                             <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-3">
                                 <div id="barEmails" class="h-1.5 bg-emerald-500 rounded-full" style="width:0%"></div>
                             </div>
@@ -595,6 +598,7 @@
                             <p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide">Proposals Drafted
                             </p>
                             <p id="statProposals" class="text-2xl font-bold text-white mt-2">0 / 0</p>
+                            <p id="statProposalsLife" class="text-[10px] text-slate-500 mt-0.5">Lifetime: 0</p>
                             <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-3">
                                 <div id="barProposals" class="h-1.5 bg-emerald-500 rounded-full" style="width:0%"></div>
                             </div>
@@ -603,6 +607,7 @@
                             <p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide">Documents
                                 (Team-Generated)</p>
                             <p id="statDocuments" class="text-2xl font-bold text-white mt-2">0 / 0</p>
+                            <p id="statDocumentsLife" class="text-[10px] text-slate-500 mt-0.5">Lifetime: 0</p>
                             <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-3">
                                 <div id="barDocuments" class="h-1.5 bg-emerald-500 rounded-full" style="width:0%"></div>
                             </div>
@@ -926,7 +931,8 @@
                                         decks · <strong>4 units</strong> · up to <strong>2</strong> per batch · <em>1
                                             proposal ≈ 4 receipts</em></li>
                                     <li><span class="text-red-400 font-medium">Weight 5</span> — Legal / compliance ·
-                                        <strong>5 units</strong> · <strong>1</strong> per batch</li>
+                                        <strong>5 units</strong> · <strong>1</strong> per batch
+                                    </li>
                                 </ul>
                             </div>
                             <div>
@@ -1723,6 +1729,18 @@
             }
         }
 
+
+        function isSessionExpiredMessage(msg, code) {
+            const m = String(msg || '');
+            const c = String(code || '');
+            return c === '4101' || /SESSION_EXPIRED|session expired|invalid client id|access code|unauthorized|token|sign.?in|login|auth/i.test(m);
+        }
+        function forceLogoutOnAuthError(msg, code) {
+            if (!isSessionExpiredMessage(msg, code)) return false;
+            try { showLoginError(clientFriendlyError(msg || 'Session expired. Please sign in again.')); } catch (_) { }
+            try { logoutClient(); } catch (_) { }
+            return true;
+        }
         async function callGateway(system, action, extra = {}, options = {}) {
             if (!GW_URL) {
                 const coded = clientFriendlyError('Missing Gateway URL.');
@@ -1750,6 +1768,16 @@
                     const raw = json.message || json.error || 'request failed';
                     try { console.error('[gateway]', action, raw); } catch (_) { }
                     const code = clientErrorCode(raw);
+                    // Session / auth: force logout — client must not stay on a coded error screen
+                    if (typeof forceLogoutOnAuthError === 'function' && forceLogoutOnAuthError(raw, code)) {
+                        return {
+                            success: false,
+                            message: 'Error occurred — error code 4101',
+                            errorCode: '4101',
+                            _rawMessage: raw,
+                            sessionExpired: true
+                        };
+                    }
                     // Signatory / settings: keep readable text on the form (still attach code)
                     const keepRaw = /Signatory|signatory|Preference|MailboxPrivacy|ServiceFlags/i.test(action);
                     json = Object.assign({}, json, {
@@ -2051,6 +2079,14 @@
             renderQuotaStat('statEmails', 'barEmails', u.emailsUsed || 0, lim.emails ?? '—', qOpts);
             renderQuotaStat('statProposals', 'barProposals', u.proposalsUsed || 0, lim.proposals ?? '—', qOpts);
             renderQuotaStat('statDocuments', 'barDocuments', u.documentsUsed || 0, lim.documents ?? '—', qOpts);
+
+            // Lifetime totals (from usage.lifetime when present)
+            const life = u.lifetime || {};
+            const setLife = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = 'Lifetime: ' + (Number(v) || 0); };
+            setLife('statHoursLife', life.hoursUsed != null ? life.hoursUsed : u.hoursUsed);
+            setLife('statEmailsLife', life.emailsUsed != null ? life.emailsUsed : u.emailsUsed);
+            setLife('statProposalsLife', life.proposalsUsed != null ? life.proposalsUsed : u.proposalsUsed);
+            setLife('statDocumentsLife', life.documentsUsed != null ? life.documentsUsed : u.documentsUsed);
             const hoursUsed = parseFloat(u.hoursUsed) || 0;
             const hoursLimit = lim.hours;
             const hoursUnlimited = hoursLimit === 999 || hoursLimit === 999999 || hoursLimit === undefined || hoursLimit === null || Number(hoursLimit) >= 999;
@@ -4165,6 +4201,16 @@
                     '\')" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Cancel</button>' +
                     '<button id="genPreviewBtn-' + item.docType + '" onclick="previewDocumentLayout(\'' + item.docType +
                     '\')" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-sky-300"><i class="fa-solid fa-eye"></i> Preview layout</button>' +
+                    '<div class="brand-opts mt-3 p-2 rounded border border-slate-700 bg-slate-900/50 space-y-1.5" id="brandOpts-' + item.docType + '">' +
+                    '<p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide mb-1">Branding for this document</p>' +
+                    '<label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">' +
+                    '<input type="checkbox" id="useLetterhead-' + item.docType + '" class="rounded border-slate-600" />' +
+                    '<span>Use company letterhead <span class="text-slate-500">(when available)</span></span></label>' +
+                    '<label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">' +
+                    '<input type="checkbox" id="useLogo-' + item.docType + '" class="rounded border-slate-600" checked />' +
+                    '<span>Use company logo <span class="text-slate-500">(when letterhead is not used)</span></span></label>' +
+                    '<p class="text-[9px] text-slate-500">Only applied if the asset is on file. Logo is used automatically when letterhead is off or unavailable.</p>' +
+                    '</div>' +
                     '<button id="genSendBtn-' + item.docType + '" onclick="submitGenerateDocument(\'' + item.docType +
                     '\')" class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white"><i class="fa-solid fa-paper-plane"></i> Send</button>' +
                     "</div></div></div>"
@@ -4924,6 +4970,14 @@
                 }
                 if (val) payload[f.key] = val;
             }
+
+            // Branding opt-in (only meaningful when assets exist server-side)
+            try {
+                const lhEl = document.getElementById('useLetterhead-' + docType);
+                const lgEl = document.getElementById('useLogo-' + docType);
+                if (lhEl) payload.useLetterhead = !!lhEl.checked;
+                if (lgEl) payload.useLogo = !!lgEl.checked;
+            } catch (_br) { }
 
             // Multi-client: primary form = client #1; overlays = full field bags for #2+
             (function () {
