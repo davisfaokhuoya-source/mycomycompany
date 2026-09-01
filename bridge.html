@@ -13141,6 +13141,156 @@
             ADMIN_NOTIF_TIMER = setInterval(pollAdminNotifications, 20000);
         }
 
+
+        /* —— Admin alert popups: client messages + AI schedule/approvals (not mixed into doc list) —— */
+        var ADMIN_POPUP_SEEN = {};
+        try {
+            ADMIN_POPUP_SEEN = JSON.parse(sessionStorage.getItem('vh_admin_popup_seen') || '{}') || {};
+        } catch (_) { ADMIN_POPUP_SEEN = {}; }
+
+        function _saveAdminPopupSeen() {
+            try { sessionStorage.setItem('vh_admin_popup_seen', JSON.stringify(ADMIN_POPUP_SEEN)); } catch (_) { }
+        }
+
+        function ensureAdminPopupHost() {
+            var host = document.getElementById('adminAlertPopupHost');
+            if (host) return host;
+            host = document.createElement('div');
+            host.id = 'adminAlertPopupHost';
+            Object.assign(host.style, {
+                position: 'fixed', top: '16px', right: '16px', zIndex: '99999',
+                display: 'flex', flexDirection: 'column', gap: '10px',
+                maxWidth: '380px', width: 'min(380px, calc(100vw - 24px))', pointerEvents: 'none'
+            });
+            document.body.appendChild(host);
+            return host;
+        }
+
+        function showAdminAlertPopup(opts) {
+            opts = opts || {};
+            var id = String(opts.id || ('pop-' + Date.now()));
+            if (ADMIN_POPUP_SEEN[id]) return;
+            ADMIN_POPUP_SEEN[id] = true;
+            _saveAdminPopupSeen();
+
+            var host = ensureAdminPopupHost();
+            var el = document.createElement('div');
+            el.setAttribute('data-popup-id', id);
+            el.style.pointerEvents = 'auto';
+            el.className = 'admin-alert-popup';
+            var kind = opts.kind || 'info';
+            var border = kind === 'chat' ? '#3b82f6' : (kind === 'schedule' ? '#f59e0b' : (kind === 'approval' ? '#10b981' : '#64748b'));
+            var bg = '#0f172a';
+            Object.assign(el.style, {
+                background: bg, border: '1px solid ' + border, borderLeft: '4px solid ' + border,
+                borderRadius: '12px', padding: '12px 14px', boxShadow: '0 12px 40px rgba(0,0,0,.45)',
+                color: '#e2e8f0', fontSize: '12px', lineHeight: '1.4',
+                animation: 'vhPopIn .2s ease-out'
+            });
+            var clientLine = opts.clientLabel
+                ? '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#94a3b8;margin-bottom:4px;">' +
+                escapeHtml(opts.clientLabel) + '</div>'
+                : '';
+            el.innerHTML =
+                clientLine +
+                '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">' +
+                '<div style="font-weight:600;color:#fff;font-size:13px;">' + escapeHtml(opts.title || 'Alert') + '</div>' +
+                '<button type="button" aria-label="Dismiss" style="background:transparent;border:0;color:#94a3b8;cursor:pointer;font-size:16px;line-height:1;">×</button>' +
+                '</div>' +
+                (opts.message ? ('<div style="margin-top:6px;color:#cbd5e1;">' + escapeHtml(opts.message) + '</div>') : '') +
+                '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">' +
+                (opts.actionLabel
+                    ? ('<button type="button" data-act="go" style="background:' + border + ';color:#0f172a;border:0;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:600;cursor:pointer;">' +
+                        escapeHtml(opts.actionLabel) + '</button>')
+                    : '') +
+                '<button type="button" data-act="dismiss" style="background:#1e293b;color:#e2e8f0;border:0;border-radius:8px;padding:6px 10px;font-size:11px;cursor:pointer;">Dismiss</button>' +
+                '</div>';
+
+            function close() { try { el.remove(); } catch (_) { } }
+            el.querySelector('button[aria-label="Dismiss"]').onclick = close;
+            el.querySelector('[data-act="dismiss"]').onclick = close;
+            var goBtn = el.querySelector('[data-act="go"]');
+            if (goBtn) {
+                goBtn.onclick = function () {
+                    close();
+                    try {
+                        if (typeof opts.onAction === 'function') opts.onAction();
+                        else if (opts.linkView && typeof switchAgentView === 'function') switchAgentView(opts.linkView);
+                        else if (opts.linkView) {
+                            var btn = document.querySelector('[data-target-view="' + opts.linkView + '"]');
+                            if (btn) btn.click();
+                        }
+                    } catch (e) { console.warn(e); }
+                };
+            }
+            host.appendChild(el);
+            // Auto-dismiss after 25s (user can still open panel)
+            setTimeout(close, 25000);
+            // Cap stack at 4
+            while (host.children.length > 4) host.removeChild(host.firstChild);
+        }
+
+        function classifyAdminNotifForPopup(n) {
+            var type = String(n.Type || n.type || '').toLowerCase();
+            var title = String(n.Title || n.title || '');
+            var msg = String(n.Message || n.message || '');
+            var clientId = n.ClientID || n.clientId || '';
+            var clientLabel = '';
+            if (type === 'chat_message' || /message from/i.test(title)) {
+                clientLabel = title.replace(/^New message from\s+/i, '') || clientId || 'Client';
+                return {
+                    kind: 'chat',
+                    id: n.NotificationID || n.id,
+                    clientLabel: 'Client message · ' + clientLabel,
+                    title: clientLabel,
+                    message: msg || title,
+                    actionLabel: 'Open Live Chat',
+                    linkView: 'agent-livechat',
+                    category: 'messages'
+                };
+            }
+            if (type === 'schedule_approval' || /schedule|appointment|meeting|event/i.test(type + ' ' + title)) {
+                return {
+                    kind: 'schedule',
+                    id: n.NotificationID || n.id,
+                    clientLabel: clientId ? ('Schedule · ' + clientId) : 'Schedule / AI agent',
+                    title: title || 'Schedule needs attention',
+                    message: msg,
+                    actionLabel: 'Review',
+                    linkView: 'agent-approvals',
+                    category: 'operations'
+                };
+            }
+            if (type === 'approval_required' || type === 'document_approval' || /approval needed/i.test(title)) {
+                // Document approvals stay manageable in the approvals view;
+                // still popup so admin sees them, but labeled separately from chat.
+                var isDoc = type === 'document_approval' || /document|proposal|report|letter|receipt|invoice/i.test(type + ' ' + title + ' ' + msg);
+                return {
+                    kind: isDoc ? 'approval' : 'schedule',
+                    id: n.NotificationID || n.id,
+                    clientLabel: (isDoc ? 'Document approval · ' : 'Approval · ') + (clientId || ''),
+                    title: title || 'Approval required',
+                    message: msg,
+                    actionLabel: 'Open Approvals',
+                    linkView: 'agent-approvals',
+                    category: isDoc ? 'documents' : 'operations'
+                };
+            }
+            return null;
+        }
+
+        function maybeShowAdminPopupsFromNotifs(list) {
+            if (!Array.isArray(list)) return;
+            list.forEach(function (n) {
+                var isRead = n.Read === true || n.Read === 'TRUE';
+                if (isRead) return;
+                var classified = classifyAdminNotifForPopup(n);
+                if (!classified) return;
+                showAdminAlertPopup(classified);
+            });
+        }
+
+
         async function pollAdminNotifications() {
             const [agentRes, careerRes] = await Promise.all([
                 executeSecureBridgeCall('agent', 'agent-get-notifications', { unreadOnly: false, limit: 30 }, { silent: true }),
@@ -13161,8 +13311,14 @@
                 }
             }
             renderAdminNotifPanel();
+            try { maybeShowAdminPopupsFromNotifs(ADMIN_NOTIF_CACHE); } catch (ePop) { console.warn('admin popup', ePop); }
         }
 
+        var ADMIN_NOTIF_FILTER = 'all'; // all | messages | documents | operations
+        function setAdminNotifFilter(f) {
+            ADMIN_NOTIF_FILTER = f || 'all';
+            renderAdminNotifPanel();
+        }
         function renderAdminNotifPanel() {
             const list = document.getElementById('adminNotifList');
             if (!list) return;
@@ -13170,15 +13326,34 @@
                 list.innerHTML = '<p class="text-xs text-slate-500 p-4 text-center">No notifications yet.</p>';
                 return;
             }
+            // Category chips: separate client messages from document approvals and ops/schedule
+            var filterBar = '<div class="flex flex-wrap gap-1 px-3 pt-2 pb-1">' +
+                [['all', 'All'], ['messages', 'Messages'], ['documents', 'Documents'], ['operations', 'Ops / Schedule']].map(function (pair) {
+                    var active = ADMIN_NOTIF_FILTER === pair[0];
+                    return '<button type="button" onclick="setAdminNotifFilter(\'' + pair[0] + '\')" class="text-[10px] px-2 py-0.5 rounded ' +
+                        (active ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white') + '">' + pair[1] + '</button>';
+                }).join('') + '</div>';
+
             const iconMap = {
                 chat_message: 'fa-comment text-blue-400',
+                schedule_approval: 'fa-calendar-check text-amber-400',
+                approval_required: 'fa-clipboard-check text-emerald-400',
+                document_approval: 'fa-file-lines text-emerald-400',
                 job_complete: 'fa-circle-check text-emerald-400',
                 job_failed: 'fa-circle-xmark text-red-400',
                 complaint: 'fa-triangle-exclamation text-amber-400',
                 client_submission: 'fa-user-plus text-sky-400',
                 payout_request: 'fa-money-bill-wave text-emerald-400'
             };
-            list.innerHTML = ADMIN_NOTIF_CACHE.map(n => {
+            const filtered = ADMIN_NOTIF_CACHE.filter(n => {
+                if (ADMIN_NOTIF_FILTER === 'all') return true;
+                const t = String(n.Type || '').toLowerCase();
+                if (ADMIN_NOTIF_FILTER === 'messages') return t === 'chat_message' || /message from/i.test(String(n.Title || ''));
+                if (ADMIN_NOTIF_FILTER === 'documents') return t === 'document_approval' || t === 'job_complete' || t === 'job_failed' || /document/i.test(t);
+                if (ADMIN_NOTIF_FILTER === 'operations') return t === 'schedule_approval' || t === 'approval_required' || /schedule|appointment|email/i.test(t);
+                return true;
+            });
+            list.innerHTML = filterBar + (filtered.length ? filtered.map(n => {
                 const isRead = n.Read === true || n.Read === 'TRUE';
                 const icon = iconMap[n.Type] || 'fa-bell text-slate-400';
                 return `
@@ -13192,7 +13367,7 @@
             </div>
             ${isRead ? '' : '<span class="h-1.5 w-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></span>'}
         </div>`;
-            }).join('');
+            }).join('') : ('<p class="text-xs text-slate-500 p-4 text-center">No items in this category.</p>'))
         }
 
         function toggleAdminNotifPanel(evt) {
