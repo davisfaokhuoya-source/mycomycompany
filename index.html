@@ -2805,27 +2805,9 @@
      CUSTOM SCRIPTS — Three.js Sphere, Exchange Rate, Animations
 ============================================================ -->
     <script>
-        // ========== API ENDPOINT ==========
-        // [FIX] Both calls on this page were fetching the bare string
-        // "api.thevictorias.com.ng" with no scheme, which the browser resolves
-        // as a *relative path* on this same page (e.g. thevictorias.com.ng/
-        // api.thevictorias.com.ng) instead of an absolute cross-origin request
-        // to the gateway — so it always 404'd and pricing/demo silently fell
-        // back to "unavailable". Every request from this page must go to the
-        // actual gateway host, with its scheme.
-        const API_URL = "https://api.thevictorias.com.ng";
 
-        // ========== SERVICE PRICING (ServicePricing tab, via AgentLib) ==========
-        // Single source of truth is the ServicePricing sheet in AgentLib — there
-        // is NO hardcoded fallback price anywhere in this page. Every price
-        // element starts as a "Loading price…" / "…" placeholder in the markup
-        // and is filled in exclusively by this call to agent-get-all-service-pricing,
-        // which returns every tier/add-on price already converted (fixed FX rates:
-        // ₦1,300=$1, ₦1,600=€1) and with 7.5% tax applied — no separate third-party
-        // FX call, and no risk of a stale number ever being shown to a visitor.
-        // This action is whitelisted as a PUBLIC agent action in gate.txt (see
-        // PUBLIC_AGENT_ACTIONS) — it's read-only and never returns client-
-        // specific pricing, so it works here with no admin token.
+        const API_URL = "https://app.thevictorias.com.ng";
+
         async function fetchServicePricing(retries = 1) {
             try {
                 const response = await fetch(API_URL, {
