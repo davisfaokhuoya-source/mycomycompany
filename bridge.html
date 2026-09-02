@@ -6848,7 +6848,7 @@
          view-publish-settings). -->
 
     <script>
-        let WEBAPP_URL = localStorage.getItem('app.thevictorias.com.ng');
+        let WEBAPP_URL = localStorage.getItem('api.thevictorias.com.ng');
         let SESSION_MASTER_TOKEN = localStorage.getItem('VIC_MASTER_TOKEN') || "";
         let CURRENT_ADMIN_IDENTITY = localStorage.getItem('VIC_ADMIN_EMAIL') || "Unauthenticated Session";
 
@@ -7274,9 +7274,7 @@
         }
 
         async function executeSecureBridgeCall(systemTarget, actionTarget, analyticalPayload = {}, opts = {}) {
-            const url = (typeof WEBAPP_URL === "string" && WEBAPP_URL) ||
-                localStorage.getItem("VIC_WEBAPP_URL") ||
-                "https://app.thevictorias.com.ng";
+            const url = (typeof WEBAPP_URL === "string" && WEBAPP_URL) || localStorage.getItem("VIC_WEBAPP_URL") || "https://app.thevictorias.com.ng";
             if (!url) {
                 alert("Please enter your Web App URL in the login screen.");
                 return { success: false, message: "No endpoint URL" };
@@ -14152,8 +14150,14 @@ ${a.Status === 'Pending Review' ? `
             if (!sel) return;
             if (!DOC_STUDIO_CATALOG || !DOC_STUDIO_CATALOG.length) {
                 try {
-                    const res = await executeSecureBridgeCall('agent', 'agent-list-catalog-documents', {});
-                    DOC_STUDIO_CATALOG = (res.success && res.documentTypes) ? res.documentTypes : [];
+                    let res = await executeSecureBridgeCall('agent', 'agent-list-catalog-documents', {});
+                    if (!res || !res.success) {
+                        res = await executeSecureBridgeCall('agent', 'agent-list-catalog-document-types', {});
+                    }
+                    DOC_STUDIO_CATALOG = (res && res.success && res.documentTypes) ? res.documentTypes : [];
+                    if (!DOC_STUDIO_CATALOG.length && res && res.message) {
+                        try { console.warn('[doc-studio catalog]', res.message); showToast(res.message, 'error'); } catch (_) { }
+                    }
                 } catch (e) { DOC_STUDIO_CATALOG = DOC_STUDIO_CATALOG || []; }
             }
             const opts = ['<option value="">— Select document type —</option>']
@@ -17636,6 +17640,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             showToast((res && res.message) || 'Upload failed', 'error');
             return res;
         }
+        
         function renderCareerJobFileUploadField(trackingCode) {
             return `
       <div class="mt-3 p-3 rounded border border-slate-700 bg-slate-900/50">
