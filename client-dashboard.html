@@ -2410,6 +2410,11 @@
                            class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-200">
                            <i class="fa-solid fa-share"></i> Send
                        </button>
+                        <button onclick="deleteClientDocument('${escapeHtml(d.docId || '')}','${escapeHtml(d.recordId || d.queueId || d.docId || '')}', this)"
+                           class="text-xs px-2 py-1 bg-red-950 hover:bg-red-900 border border-red-900/40 rounded text-red-300"
+                           title="Delete document">
+                           <i class="fa-solid fa-trash"></i>
+                       </button>
                        </div>`;
                 return `
             <tr>
@@ -5465,7 +5470,7 @@
         }
 
         let MYWORK_TIMER = null;
-        function startMyWorkPolling() { clearInterval(MYWORK_TIMER); MYWORK_TIMER = setInterval(loadMyWork, 30000); }
+        function startMyWorkPolling() { clearInterval(MYWORK_TIMER); loadMyWork(); MYWORK_TIMER = setInterval(loadMyWork, 8000); }
 
         async function terminateJob(jobId, btnEl) {
             if (!confirm("Stop this job? This can't be undone, and it still counts against your document quota.")) return;
@@ -5477,6 +5482,25 @@
                 loadMyWork();
             } else {
                 alert(res.message || 'Could not terminate this job.');
+            }
+        }
+
+
+        async function deleteClientDocument(docId, recordId, btnEl) {
+            if (!confirm('Delete this document from your account? The file will be moved to trash.')) return;
+            setBtnBusy(btnEl, true, { busyLabel: '…' });
+            const res = await callGateway('clientportal', 'clientPortalDeleteDocument', {
+                docId: docId || undefined,
+                recordId: recordId || undefined,
+                documentId: docId || undefined,
+                fileId: docId || undefined
+            });
+            setBtnBusy(btnEl, false);
+            if (res && res.success) {
+                notifyUser('Document deleted.', 'success');
+                loadDocuments();
+            } else {
+                notifyUser((res && res.message) || 'Could not delete document.', 'error');
             }
         }
 
@@ -5495,10 +5519,10 @@
             </div>
             <div class="flex items-center gap-2">
                 ${j.status === 'queued' || j.status === 'running'
-                    ? `<span class="inline-flex items-center gap-1.5 text-amber-400 text-xs"><span class="ai-spinner"></span>${j.status === 'running' ? 'Working…' : 'Queued…'}</span>`
-                    : j.status === 'done'
-                        ? `<span class="text-emerald-400 text-xs"><i class="fa-solid fa-circle-check"></i> Done${j.docUrl ? ` — <a href="${escapeHtml(j.docUrl)}" target="_blank" class="text-blue-400 underline">Open</a>` : ''}</span>`
-                        : `<span class="text-red-400 text-xs"><i class="fa-solid fa-circle-xmark"></i> ${escapeHtml(j.status === 'Terminated' ? 'Terminated' : 'Failed')}</span>`}
+                    ? `<span class="inline-flex items-center gap-1.5 text-amber-400 text-xs"><span class="ai-spinner"></span>${j.status === 'running' ? 'Working…' : 'Queued…'}${j.progress && j.progress.percent != null ? ` ${j.progress.percent}%` : ''}${j.progress && j.progress.message ? ` — ${escapeHtml(String(j.progress.message).slice(0, 40))}` : ''}</span>`
+                    : (j.status === 'done' || j.status === 'Done')
+                        ? `<span class="text-emerald-400 text-xs"><i class="fa-solid fa-circle-check"></i> Done${(j.docUrl || (j.result && j.result.docUrl)) ? ` — <a href="${escapeHtml(j.docUrl || j.result.docUrl)}" target="_blank" class="text-blue-400 underline">Open</a>` : ''}</span>`
+                        : `<span class="text-red-400 text-xs"><i class="fa-solid fa-circle-xmark"></i> ${escapeHtml(j.status === 'Terminated' || j.status === 'error' ? (j.status === 'error' ? 'Failed' : 'Terminated') : (j.status || 'Failed'))}</span>`}
                 ${j.canTerminate && (j.status === 'queued' || j.status === 'running')
                     ? `<button onclick="terminateJob('${escapeHtml(j.jobId)}', this)"
                         class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Terminate</button>`
