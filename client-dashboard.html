@@ -4322,7 +4322,17 @@
             try {
                 const res = await callGateway('clientportal', 'clientPortalPreviewDocumentLayout', { docType: docType });
                 if (!res || !res.success) {
-                    notifyUser((res && res.message) || 'Could not build layout preview.', 'error');
+                    notifyUser((res && res.message) || 'Could not open sample preview.', 'error');
+                    return;
+                }
+                if (res.hasSample === false || res.mode === 'no_sample' || (!res.previewUrl && !res.previewFileId && !res.mock)) {
+                    notifyUser('No sample yet for this document type. Your admin can generate or save a sample after training.', 'info');
+                    return;
+                }
+                // Prefer stored Drive sample — same open pattern as My Documents
+                if (res.previewUrl) {
+                    window.open(res.previewUrl, '_blank', 'noopener');
+                    notifyUser(res.message || 'Opening sample…', 'success');
                     return;
                 }
                 openDocPreviewOverlay(res);
