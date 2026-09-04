@@ -2850,6 +2850,32 @@
             }
         }
 
+
+        async function clientRefreshEmailTokenHealth() {
+            const el = document.getElementById('clientEmailTokenHealth');
+            if (el) el.textContent = 'Checking mailbox tokens…';
+            try {
+                const res = await callGateway('clientportal', 'clientPortalEmailTokenHealth', { live: true });
+                if (!el) return;
+                if (!res || !res.success) {
+                    el.innerHTML = '<span class="text-red-400">' + ((res && res.message) || 'Could not check email health') + '</span>';
+                    return;
+                }
+                const s = res.summary || {};
+                let html = '<p class="text-xs ' + (s.unhealthy ? 'text-amber-400' : 'text-emerald-400') + '">' + (s.message || '') + '</p>';
+                html += '<ul class="mt-1 space-y-1 text-[11px] text-slate-400">';
+                (res.mailboxes || []).forEach(function (m) {
+                    html += '<li>' + (m.healthy ? '✓' : '✗') + ' ' + (m.emailAddress || m.mailboxId) +
+                        ' — ' + (m.message || m.code || '') + '</li>';
+                });
+                html += '</ul>';
+                if (!(res.mailboxes || []).length) html = '<p class="text-xs text-slate-500">No mailbox connected.</p>';
+                el.innerHTML = html;
+            } catch (e) {
+                if (el) el.innerHTML = '<span class="text-red-400">' + e + '</span>';
+            }
+        }
+
         async function previewRenewalDiscount() {
             const previewEl = document.getElementById('renewDiscountPreview');
             const code = (document.getElementById('renewDiscountCode')?.value || '').trim();

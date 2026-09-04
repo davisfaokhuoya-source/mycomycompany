@@ -16516,6 +16516,72 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             showToast(saveRes.message || (saveRes.success ? 'Sample saved' : 'Save failed'), saveRes.success ? 'success' : 'error');
         }
 
+
+        /* —— CRM field map + email token health —— */
+        async function adminLoadEmailTokenHealth(clientId, live) {
+            clientId = clientId || (document.getElementById('crmHealthClientId') && document.getElementById('crmHealthClientId').value) || '';
+            if (!clientId) { showToast('Enter client ID', 'error'); return; }
+            const el = document.getElementById('adminEmailTokenHealth');
+            if (el) el.innerHTML = '<span class="text-slate-500 text-xs">Probing mailboxes…</span>';
+            try {
+                const res = await executeSecureBridgeCall('agent', 'agent-get-email-token-health', {
+                    clientId: clientId,
+                    live: live !== false
+                });
+                if (!el) return;
+                if (!res.success) {
+                    el.innerHTML = '<span class="text-red-400 text-xs">' + (res.message || 'Failed') + '</span>';
+                    return;
+                }
+                const s = res.summary || {};
+                let html = '<p class="text-xs mb-2 ' + (s.unhealthy ? 'text-amber-400' : 'text-emerald-400') + '">' +
+                    (s.message || '') + '</p><ul class="text-[11px] space-y-1">';
+                (res.mailboxes || []).forEach(function (m) {
+                    html += '<li class="flex gap-2 items-start border-b border-slate-800 py-1">' +
+                        '<span class="' + (m.healthy ? 'text-emerald-400' : 'text-red-400') + '">' + (m.healthy ? '●' : '○') + '</span>' +
+                        '<span class="text-slate-300">' + (m.emailAddress || m.mailboxId) + '</span>' +
+                        '<span class="text-slate-500">' + (m.provider || '') + '</span>' +
+                        '<span class="text-slate-400 flex-1">' + (m.message || m.code || '') + '</span></li>';
+                });
+                html += '</ul>';
+                el.innerHTML = html || '<span class="text-slate-500 text-xs">No mailboxes</span>';
+            } catch (e) {
+                if (el) el.innerHTML = '<span class="text-red-400 text-xs">' + e + '</span>';
+            }
+        }
+
+        async function adminLoadCrmFieldMap(clientId) {
+            clientId = clientId || (document.getElementById('crmHealthClientId') && document.getElementById('crmHealthClientId').value) || '';
+            if (!clientId) { showToast('Enter client ID', 'error'); return; }
+            const el = document.getElementById('adminCrmFieldMap');
+            try {
+                const res = await executeSecureBridgeCall('agent', 'agent-get-crm-field-map', { clientId: clientId });
+                if (!el) return;
+                if (!res.success) {
+                    el.textContent = res.message || 'Failed';
+                    return;
+                }
+                el.textContent = JSON.stringify(res.map, null, 2);
+                const badge = document.getElementById('adminCrmMapBadge');
+                if (badge) badge.textContent = res.isCustom ? 'custom map' : 'defaults';
+            } catch (e) {
+                if (el) el.textContent = String(e);
+            }
+        }
+
+        async function adminApplyCrmPreview(clientId) {
+            clientId = clientId || (document.getElementById('crmHealthClientId') && document.getElementById('crmHealthClientId').value) || '';
+            const docType = (document.getElementById('crmApplyDocType') && document.getElementById('crmApplyDocType').value) || 'letter';
+            const res = await executeSecureBridgeCall('agent', 'agent-apply-crm-to-fields', {
+                clientId: clientId,
+                docType: docType,
+                fields: {}
+            });
+            const el = document.getElementById('adminCrmApplyResult');
+            if (el) el.textContent = JSON.stringify(res, null, 2);
+            showToast(res.success ? ('Applied ' + ((res.applied && res.applied.length) || 0) + ' fields from CRM') : (res.message || 'Failed'), res.success ? 'success' : 'error');
+        }
+
         async function resolveAdminJobResult(initialRes, onTick) {
             if (!initialRes || !initialRes.queued || !initialRes.jobId) {
                 return initialRes;
