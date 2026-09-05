@@ -16556,10 +16556,14 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         }
 
         async function adminMaybeSaveTestAsPreviewSample(testRes, clientId, docType) {
-            if (!testRes || !testRes.askSave) return;
-            const fileId = testRes.fileId || testRes.docxFileId || (testRes.result && (testRes.result.fileId || testRes.result.docxFileId));
+            if (!testRes || !testRes.success) return;
+            const hasFile = !!(testRes.fileId || testRes.docxFileId || testRes.previewFileId ||
+                (testRes.result && (testRes.result.fileId || testRes.result.docxFileId || testRes.result.previewFileId)));
+            if (!testRes.askSave && !hasFile) return;
+            const fileId = testRes.fileId || testRes.docxFileId || testRes.previewFileId ||
+                (testRes.result && (testRes.result.fileId || testRes.result.docxFileId || testRes.result.previewFileId));
             if (!fileId) {
-                showToast('Test finished but no fileId to save as sample.', 'error');
+                showToast('Test finished but no fileId to save as sample. Re-run test after deploying DocumentsLib fix.', 'error');
                 return;
             }
             if (testRes.layoutLint && testRes.layoutLint.issues && testRes.layoutLint.issues.length) {
