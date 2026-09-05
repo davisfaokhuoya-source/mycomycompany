@@ -4151,30 +4151,46 @@
                             type: "table",
                             required: true,
                             columns: [
-                                { key: "description", label: "Description" },
-                                { key: "qty", label: "Qty" },
-                                { key: "amount", label: "Amount" }
+                                { key: "description", label: "DESCRIPTION" },
+                                { key: "qty", label: "QTY" },
+                                { key: "amount", label: "AMOUNT (₦)" }
                             ]
                         });
                     }
                 })(item);
 
                 const trainedNote = item.trainedFrom
-                    ? '<p class="text-[10px] text-emerald-500/90 mb-1"><i class="fa-solid fa-graduation-cap"></i> Using fields from your trained format (' +
-                    escapeHtml(item.trainedFrom) + ")</p>"
+                    ? '<div class="mb-2 px-2.5 py-1.5 rounded-lg bg-emerald-950/80 border border-emerald-700/60 text-[10px] text-emerald-300 leading-snug">' +
+                    '<i class="fa-solid fa-graduation-cap mr-1"></i> Using the format learned from <strong class="text-emerald-200">' +
+                    escapeHtml(item.trainedFrom) + '</strong>' +
+                    (item.trainedColumns && item.trainedColumns.length
+                        ? ' — columns: ' + escapeHtml(item.trainedColumns.join(', '))
+                        : '') +
+                    '</div>'
                     : "";
                 const fieldsHtml = (item.fields || []).map(function (f) {
                     if (f.type === "table") {
+                        if (item.trainedColumns && item.trainedColumns.length && (!f.columns || !f.columns.length)) {
+                            f.columns = item.trainedColumns.map(function (lab, ix) {
+                                var k = String(lab || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || ("col" + (ix + 1));
+                                if (lab === "#" || k === "n" || k === "") k = "n";
+                                return { key: k, label: String(lab).toUpperCase() };
+                            });
+                        }
                         return (
-                            '<div class="mt-2" data-table-field="' + escapeHtml(item.docType) + "|" + escapeHtml(f.key) + '">' +
-                            '<div class="flex items-center justify-between mb-1">' +
-                            '<label class="text-[10px] text-slate-400">' + escapeHtml(f.label) +
-                            (f.required ? ' <span class="text-red-400">*</span>' : "") +
-                            ' <span class="text-slate-600"> — each + adds a full row</span></label>' +
+                            '<div class="mt-3 rounded-lg border border-slate-700 bg-slate-950/80 p-3" data-table-field="' +
+                            escapeHtml(item.docType) + "|" + escapeHtml(f.key) + '">' +
+                            '<div class="flex items-center justify-between mb-2 gap-2 flex-wrap">' +
+                            '<label class="text-[11px] text-slate-300 font-medium">' + escapeHtml(f.label || "Line items") +
+                            (f.required ? ' <span class="text-red-400">*</span>' : "") + "</label>" +
+                            '<div class="flex gap-1">' +
                             '<button type="button" onclick="clientGenAddTableRow(\'' + escapeHtml(item.docType) + '\',\'' +
-                            escapeHtml(f.key) + '\')" class="text-[10px] px-2 py-0.5 bg-emerald-900/50 hover:bg-emerald-800 border border-emerald-700 rounded text-emerald-300">+ Add line</button>' +
-                            "</div>" +
-                            '<div id="genTable-' + item.docType + "-" + f.key + '" class="space-y-1"></div></div>'
+                            escapeHtml(f.key) + '\')" class="text-[10px] px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded text-slate-200">+ Row</button>' +
+                            '<button type="button" onclick="clientGenAddTableColumn(\'' + escapeHtml(item.docType) + '\',\'' +
+                            escapeHtml(f.key) + '\')" class="text-[10px] px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded text-slate-200">+ Column</button>' +
+                            "</div></div>" +
+                            '<div id="genTable-' + item.docType + "-" + f.key + '" class="space-y-1"></div>' +
+                            '<p class="text-[9px] text-slate-500 mt-1.5">Each row is one product or service. Subtotal / VAT / Total can auto-fill from amounts if left empty.</p></div>'
                         );
                     }
                     if (f.type === "textarea") {
@@ -4185,11 +4201,18 @@
                             '" class="w-full h-16 bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"></textarea>'
                         );
                     }
+                    var optHint = '';
+                    var fk = String(f.key || '').toLowerCase();
+                    if (/subtotal|vat|tax|amountpaid|total|amountinwords/.test(fk) && !f.required) {
+                        optHint = fk.indexOf('amountpaid') >= 0 || fk.indexOf('total') >= 0
+                            ? ' <span class="text-slate-600">(optional — auto from lines if empty)</span>'
+                            : ' <span class="text-slate-600">(optional)</span>';
+                    }
                     return (
                         '<label class="block text-[10px] text-slate-400 mt-2">' + escapeHtml(f.label) +
-                        (f.required ? ' <span class="text-red-400">*</span>' : "") + "</label>" +
+                        (f.required ? ' <span class="text-red-400">*</span>' : "") + optHint + "</label>" +
                         '<input type="text" id="genInput-' + item.docType + "-" + f.key + '" data-gen-key="' +
-                        escapeHtml(f.key) + '" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white" />'
+                        escapeHtml(f.key) + '" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white focus:border-emerald-600 outline-none" />'
                     );
                 }).join("");
 
@@ -4248,11 +4271,27 @@
                 );
             }).join("");
 
-            // Seed one empty line-item row for each table field
+            // Seed line-item tables (2 empty rows) — same ease-of-use as admin modal
             list.forEach(function (item) {
                 (item.fields || []).forEach(function (f) {
                     if (f.type === "table") {
-                        try { clientGenAddTableRow(item.docType, f.key); } catch (_) { }
+                        try {
+                            var id = item.docType + "|" + f.key;
+                            if (f.columns && f.columns.length) {
+                                CLIENT_GEN_TABLE_COLS[id] = f.columns.map(function (col) {
+                                    if (typeof col === "string") return { key: col.toLowerCase().replace(/\s+/g, "_"), label: col };
+                                    return col;
+                                });
+                            } else if (item.trainedColumns && item.trainedColumns.length) {
+                                CLIENT_GEN_TABLE_COLS[id] = item.trainedColumns.map(function (lab, i) {
+                                    var k = String(lab || "col" + (i + 1)).toLowerCase().replace(/[^a-z0-9]+/g, "_");
+                                    if (k === "" || k === "n" || lab === "#") k = "n";
+                                    return { key: k, label: String(lab).toUpperCase() };
+                                });
+                            }
+                            CLIENT_GEN_TABLE_STATE[id] = [];
+                            clientGenRenderTable(item.docType, f.key);
+                        } catch (err) { console.warn("table seed", err); }
                     }
                 });
             });
@@ -4474,9 +4513,9 @@
             const cols = (fd && fd.columns && fd.columns.length)
                 ? fd.columns
                 : [
-                    { key: 'description', label: 'Description' },
-                    { key: 'qty', label: 'Qty' },
-                    { key: 'amount', label: 'Amount' }
+                    { key: 'description', label: 'DESCRIPTION' },
+                    { key: 'qty', label: 'QTY' },
+                    { key: 'amount', label: 'AMOUNT (₦)' }
                 ];
             CLIENT_GEN_TABLE_COLS[id] = cols;
             return cols;
@@ -4506,25 +4545,58 @@
             const rows = CLIENT_GEN_TABLE_STATE[id] || [];
             const wrap = document.getElementById('genTable-' + docType + '-' + key);
             if (!wrap) return;
+
+            // Ensure at least 2 empty rows for ease of use (like admin modal)
             if (!rows.length) {
-                wrap.innerHTML = '<p class="text-[10px] text-slate-600">No rows yet — click + Row to add description, qty and amount together.</p>';
-                return;
+                CLIENT_GEN_TABLE_STATE[id] = [{}, {}];
+                cols.forEach(function (col) {
+                    CLIENT_GEN_TABLE_STATE[id][0][col.key] = col.key === 'qty' ? '1' : '';
+                    CLIENT_GEN_TABLE_STATE[id][1][col.key] = col.key === 'qty' ? '1' : '';
+                });
             }
-            const header = `<div class="flex gap-1 text-[9px] text-slate-500 mb-0.5">${cols.map(c =>
-                `<span class="${c.key === 'description' ? 'flex-1' : (c.key === 'qty' ? 'w-12' : 'w-20')}">${escapeHtml(c.label)}</span>`
-            ).join('')}<span class="w-6"></span></div>`;
-            wrap.innerHTML = header + rows.map((r, i) => `
-                <div class="flex gap-1 items-center mb-1 p-1.5 bg-slate-950/80 border border-slate-800 rounded">
-                    ${cols.map(c => {
-                const w = c.key === 'description' ? 'flex-1' : (c.key === 'qty' ? 'w-12' : 'w-20');
-                return `<input placeholder="${escapeHtml(c.label)}" value="${escapeHtml(r[c.key] || '')}"
-                            onchange="CLIENT_GEN_TABLE_STATE['${id}'][${i}]['${c.key}']=this.value"
-                            class="${w} bg-slate-900 border border-slate-700 rounded p-1.5 text-[11px] text-white" />`;
-            }).join('')}
-                    <button type="button" onclick="clientGenRemoveTableRow('${escapeHtml(docType)}','${escapeHtml(key)}',${i})"
-                        class="text-red-400 text-xs px-1.5 hover:bg-slate-800 rounded" title="Remove this row">−</button>
-                </div>`).join('');
+            const liveRows = CLIENT_GEN_TABLE_STATE[id];
+
+            const colCount = cols.length + 2; // # + cols + remove
+            let html = '<div class="overflow-x-auto"><table class="w-full text-[11px] border-collapse">';
+            html += '<thead><tr class="bg-slate-900 text-slate-400 text-[9px] uppercase tracking-wide">';
+            html += '<th class="px-2 py-1.5 text-left font-medium w-8">#</th>';
+            cols.forEach(function (col) {
+                html += '<th class="px-2 py-1.5 text-left font-medium">' + escapeHtml(col.label) + '</th>';
+            });
+            html += '<th class="w-8"></th></tr></thead><tbody>';
+            liveRows.forEach(function (r, i) {
+                html += '<tr class="border-t border-slate-800">';
+                html += '<td class="px-2 py-1 text-slate-500">' + (i + 1) + '</td>';
+                cols.forEach(function (col) {
+                    html += '<td class="px-1 py-1"><input type="text" value="' + escapeHtml(r[col.key] || '') + '" ' +
+                        'placeholder="' + escapeHtml(col.label) + '" ' +
+                        'onchange="CLIENT_GEN_TABLE_STATE['' + id + ''][' + i + ']['' + col.key + '']=this.value" ' +
+                            'class="w-full min-w-[4rem] bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white focus:border-emerald-600 outline-none" /></td>';
+                });
+                html += '<td class="px-1"><button type="button" onclick="clientGenRemoveTableRow('' +
+                escapeHtml(docType) + '', '' + escapeHtml(key) + '', ' + i + ')" ' +
+            'class="text-slate-500 hover:text-red-400 px-1" title="Remove row">&times;</button></td>';
+            html += '</tr>';
+        });
+        html += '</tbody></table></div>';
+        wrap.innerHTML = html;
         }
+
+        function clientGenAddTableColumn(docType, key) {
+            const id = docType + '|' + key;
+            const cols = clientGenTableColumns(docType, key);
+            const n = cols.length + 1;
+            const newKey = 'col' + n;
+            const label = prompt('Column name', 'Column ' + n);
+            if (!label) return;
+            cols.push({ key: newKey, label: String(label).trim() });
+            CLIENT_GEN_TABLE_COLS[id] = cols;
+            (CLIENT_GEN_TABLE_STATE[id] || []).forEach(function (r) {
+                if (r[newKey] === undefined) r[newKey] = '';
+            });
+            clientGenRenderTable(docType, key);
+        }
+
 
         function clientGenAddExtraField(docType) {
             const wrap = document.getElementById('genExtraFields-' + docType);
