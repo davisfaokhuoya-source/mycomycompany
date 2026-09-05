@@ -16490,8 +16490,20 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                     if (res.done) break;
                 }
                 const ok = all.filter(r => r.success).length;
-                showToast('Default samples: ' + ok + ' saved, ' + (all.length - ok) + ' failed', ok ? 'success' : 'error');
-                if (statusEl) statusEl.textContent = 'Done — ' + ok + ' defaults stored.';
+                const fail = all.filter(r => !r.success);
+                const failHint = fail.length
+                    ? (' First errors: ' + fail.slice(0, 3).map(function (f) {
+                        return (f.docType || '?') + ': ' + (f.message || 'failed');
+                    }).join(' | '))
+                    : '';
+                showToast('Default samples: ' + ok + ' saved, ' + fail.length + ' failed', ok ? 'success' : 'error');
+                if (statusEl) {
+                    statusEl.textContent = 'Done — ' + ok + ' defaults stored.' + failHint;
+                    statusEl.title = fail.map(function (f) {
+                        return (f.docType || '') + ': ' + (f.message || '');
+                    }).join('\n');
+                }
+                if (fail.length) console.warn('[default samples failures]', fail);
             } catch (e) {
                 showToast(String(e), 'error');
             }
