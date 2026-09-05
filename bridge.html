@@ -3353,6 +3353,11 @@
                             <button type="button" onclick="adminGenerateDefaultSamplesBatch()"
                                 class="text-xs px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white font-medium">Generate
                                 / refresh all default samples</button>
+                            <button type="button" id="adminDebugSwitchBtn" onclick="adminToggleDebugSwitch()"
+                                class="text-xs px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium border border-slate-500">
+                                Debug JSON in DOCX: OFF
+                            </button>
+                            <span id="adminDebugSwitchStatus" class="text-[11px] text-slate-400 ml-1"></span>
                             <span id="adminDefaultSamplesStatus" class="text-[11px] text-slate-400 ml-2"></span>
                         </div>
 
@@ -16468,6 +16473,47 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
  */
 
         /* —— Production: default samples batch + save test as client preview —— */
+
+        async function adminRefreshDebugSwitchUi() {
+            const btn = document.getElementById('adminDebugSwitchBtn');
+            const st = document.getElementById('adminDebugSwitchStatus');
+            try {
+                const res = await executeSecureBridgeCall('agent', 'agent-get-debug-switch', {});
+                const on = !!(res && res.enabled);
+                if (btn) {
+                    btn.textContent = on ? 'Debug JSON in DOCX: ON' : 'Debug JSON in DOCX: OFF';
+                    btn.className = on
+                        ? 'text-xs px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg text-white font-medium'
+                        : 'text-xs px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium border border-slate-500';
+                }
+                if (st) st.textContent = on ? 'Appendix JSON on in generated files' : '';
+            } catch (e) {
+                if (st) st.textContent = String(e.message || e);
+            }
+        }
+
+        async function adminToggleDebugSwitch() {
+            const btn = document.getElementById('adminDebugSwitchBtn');
+            const currentlyOn = btn && /ON/.test(btn.textContent || '');
+            const next = !currentlyOn;
+            try {
+                const res = await executeSecureBridgeCall('agent', 'agent-debug-switch', {
+                    enabled: next,
+                    embedJsonInDocx: next,
+                    verboseLog: next
+                });
+                showToast((res && res.message) || (next ? 'Debug ON' : 'Debug OFF'), res && res.success === false ? 'error' : 'success');
+                await adminRefreshDebugSwitchUi();
+            } catch (e) {
+                showToast(String(e.message || e), 'error');
+            }
+        }
+
+        // Load debug switch state when Document Studio is shown
+        document.addEventListener('DOMContentLoaded', function () {
+            try { setTimeout(adminRefreshDebugSwitchUi, 1500); } catch (_) { }
+        });
+
         async function adminGenerateDefaultSamplesBatch() {
             const statusEl = document.getElementById('adminDefaultSamplesStatus');
             if (statusEl) statusEl.textContent = 'Generating default samples (batch)…';
