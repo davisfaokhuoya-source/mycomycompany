@@ -1067,6 +1067,10 @@
                 </section>
                 <!-- LIVE CHAT -->
                 <section id="view-chat" class="view flex-1 h-full flex-col overflow-hidden">
+                    <div id="chatHumanLock"
+                        class="hidden mx-4 mt-3 px-3 py-2 rounded-lg bg-slate-900 border border-amber-800/60 text-amber-200 text-xs">
+                        Admin chat locked until you have human time (Billing → Human time pack).</div>
+
                     <div class="flex-1 flex flex-col bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
                         <div class="px-4 py-3 border-b border-slate-800 shrink-0">
                             <p class="text-sm font-semibold text-white">Chat with your account team</p>
@@ -1486,7 +1490,47 @@
                 </section>
 
                 <!-- BILLING & RENEWAL / PAYG -->
-                <section id="view-billing" class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
+                <section <div id="view-support"
+                    class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4 hidden">
+                    <div class="max-w-xl mx-auto w-full space-y-4 pt-2 px-4">
+                        <h2 class="text-lg font-bold text-white">Support</h2>
+                        <p class="text-xs text-slate-400">Open a ticket or report a bug. For paid admin work, use Chat
+                            only when you have human time left (see Billing).</p>
+                        <label class="block text-xs text-slate-400">Subject
+                            <input id="supportSubject"
+                                class="mt-1 w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm" />
+                        </label>
+                        <label class="block text-xs text-slate-400">Details
+                            <textarea id="supportBody" rows="5"
+                                class="mt-1 w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm"></textarea>
+                        </label>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="clientSubmitTicket('support')"
+                                class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm">Open support
+                                ticket</button>
+                            <button type="button" onclick="clientSubmitTicket('bug')"
+                                class="px-4 py-2 rounded-lg bg-red-900/80 text-white text-sm">Report a bug</button>
+                        </div>
+                    </div>
+            </div>
+
+            <div id="view-billing" class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
+                <div id="systemCooldownBanner"
+                    class="hidden mx-4 mt-2 px-3 py-2 rounded-lg bg-amber-900/50 border border-amber-700 text-amber-100 text-xs">
+                </div>
+                <div class="max-w-4xl mx-auto w-full space-y-4 pt-2 px-2">
+                    <div class="flex items-center justify-between gap-2">
+                        <h2 class="text-lg font-bold text-white">Billing &amp; plans</h2>
+                        <button type="button" onclick="clientLoadBilling()"
+                            class="text-xs px-3 py-1.5 rounded bg-slate-800 text-slate-200">Refresh</button>
+                    </div>
+                    <p class="text-[11px] text-slate-500">All prices, upgrades, and add-ons appear here only — not
+                        scattered across the app.</p>
+                    <div id="billingUnifiedRoot" class="space-y-4">
+                        <p class="text-xs text-slate-500">Loading billing…</p>
+                    </div>
+                </div>
+                <div class="hidden">
                     <div class="max-w-2xl mx-auto w-full space-y-4 pt-2">
                         <div id="billingModelBadge" class="text-xs text-slate-400"></div>
                         <div id="billingModelSwitchRow"
@@ -1617,65 +1661,70 @@
                                 class="text-emerald-400 hover:underline">thevictorias.com.ng/policy</a>
                         </p>
                     </div>
-                </section>
+                    </section>
 
-                <!-- DONATE / SUPPORT US -->
-                <section id="view-donate" class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
-                    <div class="max-w-lg mx-auto w-full space-y-4 pt-2">
-                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
-                            <div class="text-center">
-                                <div
-                                    class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-3">
-                                    <i class="fa-solid fa-heart text-emerald-400 text-lg"></i>
+                    <!-- DONATE / SUPPORT US -->
+                    <section id="view-donate"
+                        class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
+                        <div class="max-w-lg mx-auto w-full space-y-4 pt-2">
+                            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+                                <div class="text-center">
+                                    <div
+                                        class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-3">
+                                        <i class="fa-solid fa-heart text-emerald-400 text-lg"></i>
+                                    </div>
+                                    <h3 class="text-base font-bold text-white">Support The Victorias</h3>
+                                    <p class="text-xs text-slate-400 mt-1">Secure one-time donation via Flutterwave.
+                                        Minimum
+                                        ₦100,000 (or equivalent).</p>
                                 </div>
-                                <h3 class="text-base font-bold text-white">Support The Victorias</h3>
-                                <p class="text-xs text-slate-400 mt-1">Secure one-time donation via Flutterwave. Minimum
-                                    ₦100,000 (or equivalent).</p>
-                            </div>
-                            <div>
-                                <label class="block text-xs text-slate-400 mb-1">Your name</label>
-                                <input type="text" id="donateName" placeholder="Full name"
-                                    class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500" />
-                            </div>
-                            <div>
-                                <label class="block text-xs text-slate-400 mb-1">Email</label>
-                                <input type="email" id="donateEmail" placeholder="you@example.com"
-                                    class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500" />
-                            </div>
-                            <div>
-                                <label class="block text-xs text-slate-400 mb-1">Amount (₦)</label>
-                                <div class="flex flex-wrap gap-2 mb-2">
-                                    <button type="button" onclick="document.getElementById('donateAmount').value=100000"
-                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦100,000</button>
-                                    <button type="button" onclick="document.getElementById('donateAmount').value=250000"
-                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦250,000</button>
-                                    <button type="button" onclick="document.getElementById('donateAmount').value=500000"
-                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦500,000</button>
-                                    <button type="button"
-                                        onclick="document.getElementById('donateAmount').value=1000000"
-                                        class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦1,000,000</button>
+                                <div>
+                                    <label class="block text-xs text-slate-400 mb-1">Your name</label>
+                                    <input type="text" id="donateName" placeholder="Full name"
+                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500" />
                                 </div>
-                                <input type="number" id="donateAmount" min="100000" step="1000"
-                                    placeholder="e.g. 100000"
-                                    class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500" />
+                                <div>
+                                    <label class="block text-xs text-slate-400 mb-1">Email</label>
+                                    <input type="email" id="donateEmail" placeholder="you@example.com"
+                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-400 mb-1">Amount (₦)</label>
+                                    <div class="flex flex-wrap gap-2 mb-2">
+                                        <button type="button"
+                                            onclick="document.getElementById('donateAmount').value=100000"
+                                            class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦100,000</button>
+                                        <button type="button"
+                                            onclick="document.getElementById('donateAmount').value=250000"
+                                            class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦250,000</button>
+                                        <button type="button"
+                                            onclick="document.getElementById('donateAmount').value=500000"
+                                            class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦500,000</button>
+                                        <button type="button"
+                                            onclick="document.getElementById('donateAmount').value=1000000"
+                                            class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">₦1,000,000</button>
+                                    </div>
+                                    <input type="number" id="donateAmount" min="100000" step="1000"
+                                        placeholder="e.g. 100000"
+                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-400 mb-1">Message (optional)</label>
+                                    <textarea id="donateMessage" rows="2" placeholder="A short note…"
+                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"></textarea>
+                                </div>
+                                <button id="donateSubmitBtn" onclick="submitDonation()"
+                                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 rounded-lg text-sm flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-lock"></i> Continue to Flutterwave
+                                </button>
+                                <p id="donateError" class="hidden text-xs text-red-400 text-center"></p>
+                                <p class="text-[10px] text-slate-600 text-center">You’ll be redirected to Flutterwave’s
+                                    secure checkout. We never see your card details.</p>
                             </div>
-                            <div>
-                                <label class="block text-xs text-slate-400 mb-1">Message (optional)</label>
-                                <textarea id="donateMessage" rows="2" placeholder="A short note…"
-                                    class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"></textarea>
-                            </div>
-                            <button id="donateSubmitBtn" onclick="submitDonation()"
-                                class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 rounded-lg text-sm flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-lock"></i> Continue to Flutterwave
-                            </button>
-                            <p id="donateError" class="hidden text-xs text-red-400 text-center"></p>
-                            <p class="text-[10px] text-slate-600 text-center">You’ll be redirected to Flutterwave’s
-                                secure checkout. We never see your card details.</p>
                         </div>
-                    </div>
-                </section>
+                    </section>
 
-            </div>
+                </div>
         </main>
     </div>
 
@@ -5918,6 +5967,37 @@
         </div>
     </div>
 
+
+    <script>
+        (function () {
+            var _sv = window.showView;
+            if (typeof _sv === 'function') {
+                window.showView = function (name, el) {
+                    _sv(name, el);
+                    if (name === 'billing') clientLoadBilling();
+                    if (name === 'chat') clientRefreshChatGate();
+                };
+            }
+            document.addEventListener('DOMContentLoaded', function () {
+                setTimeout(function () { try { clientRefreshChatGate(); } catch (_) { } }, 2000);
+            });
+        })();
+    </script>
+
+
+    <script>
+        (function () {
+            if (typeof callGateway !== 'function') return;
+            var _cg = callGateway;
+            window.callGateway = async function () {
+                var res = await _cg.apply(this, arguments);
+                if (res && (res.cooldown || res.retryAfterSec)) {
+                    if (typeof clientShowCooldown === 'function') clientShowCooldown(res);
+                }
+                return res;
+            };
+        })();
+    </script>
 </body>
 
 </html>
