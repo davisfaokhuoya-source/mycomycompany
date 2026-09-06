@@ -2901,15 +2901,41 @@
         function buildTierFeatureHtml(t) {
             if (!t) return '';
             const lines = [];
-            const h = fmtAlloc(t.hoursPerMonth, 'hrs/mo');
-            if (h) lines.push('<li><i class="fas fa-robot" style="color:var(--brand);"></i> <strong>' + h.replace(' hrs/mo', ' hrs/mo') + '</strong> AI-Human Hybrid VA Support</li>');
-            if (t.mailboxes != null) lines.push('<li><i class="fas fa-inbox"></i> ' + (Number(t.mailboxes) < 0 ? 'Unlimited' : t.mailboxes) + ' managed mailbox' + (Number(t.mailboxes) === 1 ? '' : 'es') + '</li>');
-            const em = fmtAlloc(t.emailsPerMonth, 'emails/month');
-            if (em) lines.push('<li><i class="fas fa-envelope"></i> ' + em + '</li>');
-            const pr = fmtAlloc(t.proposalsPerMonth, 'proposal(s)/month');
-            if (pr) lines.push('<li><i class="fas fa-file-alt"></i> ' + pr + '</li>');
-            const doc = fmtAlloc(t.documentsPerMonth, 'self-service documents/month');
-            if (doc) lines.push('<li><i class="fas fa-file-word"></i> ' + doc + '</li>');
+            const svc = t.services || {};
+            const labels = {
+                human_hours: 'Human VA hours',
+                ai_hours: 'AI-assisted hours',
+                documents: 'Self-service documents',
+                proposals: 'Proposals',
+                emails: 'Emails handled',
+                mailboxes: 'Managed mailboxes',
+                whatsapp_messages: 'WhatsApp messages',
+                lead_generation: 'Lead generation credits',
+                crm_connection: 'CRM connections',
+                compliance_tracking: 'Compliance tracking',
+                social_posts_per_week: 'Social posts / week',
+                platforms: 'Connected platforms',
+                linkedin_document_posts: 'LinkedIn document posts',
+                whatsapp_replies_week: 'WhatsApp replies / week',
+                video_posts: 'Video posts',
+                analytics_reports: 'Performance reports',
+                content_calendar: 'Content calendar',
+                paid_amplification: 'Paid amplification'
+            };
+            // Legacy flat fields
+            if (!Object.keys(svc).length) {
+                if (t.hoursPerMonth != null) svc.human_hours = t.hoursPerMonth;
+                if (t.documentsPerMonth != null) svc.documents = t.documentsPerMonth;
+                if (t.proposalsPerMonth != null) svc.proposals = t.proposalsPerMonth;
+                if (t.emailsPerMonth != null) svc.emails = t.emailsPerMonth;
+                if (t.mailboxes != null) svc.mailboxes = t.mailboxes;
+            }
+            Object.keys(labels).forEach(function (key) {
+                if (svc[key] == null || Number(svc[key]) === 0) return;
+                const n = Number(svc[key]);
+                const qty = (n < 0 || n >= 999) ? 'Unlimited' : String(n);
+                lines.push('<li><i class="fas fa-check" style="color:var(--brand);"></i> <strong>' + qty + '</strong> ' + labels[key] + '</li>');
+            });
             (t.features || []).forEach(function (f) {
                 lines.push('<li><i class="fas fa-check" style="color:var(--brand);"></i> ' + String(f).replace(/</g, '&lt;') + '</li>');
             });

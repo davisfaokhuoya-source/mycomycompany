@@ -461,6 +461,12 @@
                     class="hub-nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:bg-slate-900 hover:text-white border-l-2 border-transparent">
                     <i class="fa-solid fa-microchip w-5 text-slate-400"></i> AI Agent Control
                 </button>
+
+                <button onclick="switchMasterHub('pricing')" id="nav-pricing"
+                    class="hub-nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:bg-slate-900 hover:text-white border-l-2 border-transparent">
+                    <i class="fa-solid fa-tags w-5 text-slate-400"></i> Pricing & Tiers
+                </button>
+
                 <button onclick="switchMasterHub('publish')" id="nav-publish"
                     class="hub-nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:bg-slate-900 hover:text-white border-l-2 border-transparent">
                     <i class="fa-solid fa-share-nodes w-5 text-slate-400"></i> Social Publishing
@@ -3361,61 +3367,8 @@
                             <span id="adminDefaultSamplesStatus" class="text-[11px] text-slate-400 ml-2"></span>
                         </div>
 
-                        <!-- Service tiers, minute rate, admin time -->
-                        <!-- ===== Victorias Admin: Tiers · Minute rate · Time log · Upload progress helper ===== -->
-                        <section id="adminTiersPanel"
-                            class="p-4 rounded-xl border border-slate-700 bg-slate-900/80 space-y-4">
-                            <h3 class="text-lg font-semibold text-white">Service tiers & pricing</h3>
-                            <p class="text-xs text-slate-400">Add, edit, or remove plans. Hours/documents/mailboxes are
-                                monthly allocations charged against the client.</p>
-                            <div class="flex flex-wrap gap-2 items-end">
-                                <label class="text-xs text-slate-300">Admin cost per minute (NGN)
-                                    <input id="adminMinuteRateInput" type="number" min="0" step="1"
-                                        class="block mt-1 px-2 py-1 rounded bg-slate-800 border border-slate-600 text-white w-32" />
-                                </label>
-                                <button type="button" onclick="adminSaveMinuteRate()"
-                                    class="px-3 py-1.5 rounded bg-indigo-600 text-white text-xs">Save rate</button>
-                                <button type="button" onclick="adminLoadServiceTiers()"
-                                    class="px-3 py-1.5 rounded bg-slate-700 text-white text-xs">Refresh tiers</button>
-                            </div>
-                            <div id="adminTiersList" class="space-y-2 text-sm text-slate-200"></div>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                                <input id="tierId" placeholder="tier id (starter_ops)"
-                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
-                                <input id="tierName" placeholder="Name"
-                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
-                                <input id="tierPriceUsd" type="number" placeholder="USD / mo"
-                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
-                                <input id="tierPriceNgn" type="number" placeholder="NGN / mo"
-                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
-                                <input id="tierHours" type="number" placeholder="Hours / mo"
-                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
-                                <input id="tierDocs" type="number" placeholder="Documents / mo"
-                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
-                                <input id="tierProposals" type="number" placeholder="Proposals / mo"
-                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
-                                <input id="tierMailboxes" type="number" placeholder="Mailboxes"
-                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
-                            </div>
-                            <button type="button" onclick="adminSaveServiceTier()"
-                                class="px-4 py-2 rounded bg-emerald-600 text-white text-xs font-medium">Add / update
-                                tier</button>
 
-                            <h3 class="text-lg font-semibold text-white pt-4">Admin time on client work</h3>
-                            <p class="text-xs text-slate-400">Log minutes spent; cost = minutes × rate. Compare against
-                                tier hours included.</p>
-                            <div class="flex flex-wrap gap-2 items-end text-xs">
-                                <input id="timeClientId" placeholder="Client ID"
-                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
-                                <input id="timeMinutes" type="number" min="1" placeholder="Minutes"
-                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600 w-24" />
-                                <input id="timeNote" placeholder="Note"
-                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600 flex-1 min-w-[140px]" />
-                                <button type="button" onclick="adminLogTime()"
-                                    class="px-3 py-1.5 rounded bg-amber-600 text-white">Log time</button>
-                            </div>
-                            <div id="adminTimeStatus" class="text-xs text-slate-400"></div>
-                        </section>
+
 
                         <div>
                             <h3 class="text-lg font-bold text-white">Document Studio</h3>
@@ -4617,6 +4570,164 @@
                     </div>
                 </div>
             </section>
+
+            <!-- ========== PRICING & TIERS HUB ========== -->
+            <section id="hub-pricing" class="hidden flex-1 flex flex-col overflow-hidden bg-slate-950">
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h2 class="text-xl font-bold text-white">Pricing &amp; Tiers</h2>
+                            <p class="text-xs text-slate-400 mt-1 max-w-2xl">Configure Ops and Digital plans. Each tier
+                                includes quantities for every service you sell. These prices and service lists power the
+                                public homepage and client dashboards.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 items-end">
+                            <label class="text-[10px] text-slate-400">Admin ₦ / minute
+                                <input id="pricingMinuteRate" type="number" min="0"
+                                    class="block mt-1 w-28 px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm" />
+                            </label>
+                            <button type="button" onclick="pricingSaveMinuteRate()"
+                                class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs">Save
+                                rate</button>
+                            <button type="button" onclick="pricingLoadAll()"
+                                class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs">Refresh</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                        <!-- OPS TIERS -->
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-semibold text-emerald-400 uppercase tracking-wide"><i
+                                        class="fa-solid fa-briefcase mr-1"></i> Ops tiers</h3>
+                                <button type="button" onclick="pricingNewTier('ops')"
+                                    class="text-xs px-2.5 py-1 rounded bg-emerald-700/80 text-white">+ Add Ops
+                                    tier</button>
+                            </div>
+                            <div id="pricingOpsList" class="space-y-2"></div>
+                        </div>
+                        <!-- DIGITAL TIERS -->
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-semibold text-sky-400 uppercase tracking-wide"><i
+                                        class="fa-solid fa-bullhorn mr-1"></i> Digital tiers</h3>
+                                <button type="button" onclick="pricingNewTier('digital')"
+                                    class="text-xs px-2.5 py-1 rounded bg-sky-700/80 text-white">+ Add Digital
+                                    tier</button>
+                            </div>
+                            <div id="pricingDigitalList" class="space-y-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Editor -->
+                    <div id="pricingEditor"
+                        class="hidden border border-slate-700 rounded-xl bg-slate-900/90 p-5 space-y-4">
+                        <div class="flex items-center justify-between gap-2">
+                            <h3 class="text-base font-semibold text-white" id="pricingEditorTitle">Edit tier</h3>
+                            <button type="button" onclick="pricingCloseEditor()"
+                                class="text-slate-400 hover:text-white text-sm">Close</button>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                            <label class="text-slate-400">Tier ID
+                                <input id="pe_id"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"
+                                    placeholder="growth_ops" />
+                            </label>
+                            <label class="text-slate-400">Suite
+                                <select id="pe_suite"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white">
+                                    <option value="ops">Ops</option>
+                                    <option value="digital">Digital</option>
+                                </select>
+                            </label>
+                            <label class="text-slate-400">Name
+                                <input id="pe_name"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"
+                                    placeholder="Growth Ops" />
+                            </label>
+                            <label class="text-slate-400">Tagline
+                                <input id="pe_tagline"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white" />
+                            </label>
+                            <label class="text-slate-400">Price USD / mo
+                                <input id="pe_usd" type="number" min="0" step="1"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white" />
+                            </label>
+                            <label class="text-slate-400">Price NGN / mo
+                                <input id="pe_ngn" type="number" min="0" step="100"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white" />
+                            </label>
+                            <label class="text-slate-400 col-span-2">Extra feature bullets (comma-separated)
+                                <input id="pe_features"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"
+                                    placeholder="CRM connection, Medium lead gen" />
+                            </label>
+                        </div>
+                        <p class="text-[11px] text-slate-500">Service quantities — use <strong
+                                class="text-slate-400">-1</strong> for unlimited, <strong
+                                class="text-slate-400">0</strong> to exclude. All services you deliver appear below; set
+                            the number included in this tier.</p>
+                        <div id="pe_servicesGrid"
+                            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-80 overflow-y-auto custom-scrollbar">
+                        </div>
+                        <div class="flex flex-wrap gap-2 pt-2">
+                            <button type="button" onclick="pricingSaveTier()"
+                                class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium">Save
+                                tier</button>
+                            <button type="button" onclick="pricingDeleteTier()"
+                                class="px-4 py-2 rounded-lg bg-red-900/80 hover:bg-red-800 text-white text-sm">Delete
+                                tier</button>
+                        </div>
+                    </div>
+
+                    <!-- Assign to client -->
+                    <div class="border border-slate-700 rounded-xl bg-slate-900/60 p-5 space-y-3">
+                        <h3 class="text-sm font-semibold text-white">Assign tier to client (+ add-ons)</h3>
+                        <p class="text-[11px] text-slate-500">When a client buys a plan, set their Ops and/or Digital
+                            tier. Add-ons are extra service quantities on top of the tier (e.g. human_hours: 4).</p>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs">
+                            <label class="text-slate-400">Client ID
+                                <input id="pa_clientId"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"
+                                    placeholder="CLT-…" />
+                            </label>
+                            <label class="text-slate-400">Ops tier
+                                <select id="pa_opsTier"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"></select>
+                            </label>
+                            <label class="text-slate-400">Digital tier
+                                <select id="pa_digitalTier"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"></select>
+                            </label>
+                            <label class="text-slate-400">Add-ons JSON
+                                <input id="pa_addons"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"
+                                    placeholder='{"human_hours":4}' />
+                            </label>
+                        </div>
+                        <button type="button" onclick="pricingAssignClient()"
+                            class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm">Save client
+                            assignment</button>
+                        <p id="pa_status" class="text-[11px] text-slate-500"></p>
+                    </div>
+
+                    <div class="border border-slate-700 rounded-xl bg-slate-900/60 p-5 space-y-2">
+                        <h3 class="text-sm font-semibold text-white">Log admin time (billable minutes)</h3>
+                        <div class="flex flex-wrap gap-2 text-xs items-end">
+                            <input id="pt_clientId" placeholder="Client ID"
+                                class="px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white" />
+                            <input id="pt_minutes" type="number" min="1" placeholder="Minutes"
+                                class="w-24 px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white" />
+                            <input id="pt_note" placeholder="Note"
+                                class="px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white flex-1 min-w-[120px]" />
+                            <button type="button" onclick="pricingLogTime()"
+                                class="px-3 py-1.5 rounded bg-slate-600 text-white">Log</button>
+                        </div>
+                        <p id="pt_status" class="text-[11px] text-slate-500"></p>
+                    </div>
+                </div>
+            </section>
+
 
         </main>
     </div>
@@ -7663,6 +7774,9 @@
 
         function switchMasterHub(hubId) {
             currentHub = hubId;
+            if (hubId === 'pricing' && typeof pricingLoadAll === 'function') {
+                try { pricingLoadAll(); } catch (e) { console.warn(e); }
+            }
 
             document.querySelectorAll('[id^="view-"]').forEach(v => {
                 v.classList.add('hidden');
@@ -17985,6 +18099,211 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             });
         }
     </script>
+
+    <script>
+        /* ===== Pricing & Tiers hub (Ops + Digital) ===== */
+        window.PRICING_STATE = { catalog: [], tiers: [], editingId: null };
+
+        async function pricingLoadAll() {
+            try {
+                const res = await executeSecureBridgeCall('agent', 'agent-list-service-tiers', {});
+                if (!res || !res.success) {
+                    if (typeof showToast === 'function') showToast((res && res.message) || 'Failed to load tiers', 'error');
+                    return;
+                }
+                window.PRICING_STATE.catalog = res.catalog || [];
+                window.PRICING_STATE.tiers = res.tiers || [];
+                const rateEl = document.getElementById('pricingMinuteRate');
+                if (rateEl && res.minuteRate != null) rateEl.value = res.minuteRate;
+                pricingRenderLists();
+                pricingFillAssignSelects();
+            } catch (e) {
+                if (typeof showToast === 'function') showToast(String(e.message || e), 'error');
+            }
+        }
+
+        function pricingRenderLists() {
+            const ops = document.getElementById('pricingOpsList');
+            const dig = document.getElementById('pricingDigitalList');
+            if (!ops || !dig) return;
+            const tiers = window.PRICING_STATE.tiers || [];
+            function card(t) {
+                const svc = t.services || {};
+                const bits = Object.keys(svc).filter(function (k) { return Number(svc[k]) !== 0; }).slice(0, 6).map(function (k) {
+                    const v = svc[k];
+                    return k.replace(/_/g, ' ') + ': ' + (Number(v) < 0 ? '\u221e' : v);
+                }).join(' \u00b7 ');
+                return '<div class="border border-slate-700 rounded-lg p-3 bg-slate-900/80 hover:border-slate-500 cursor-pointer" onclick="pricingEditTier(\'' + String(t.id).replace(/'/g, '') + '\')">' +
+                    '<div class="flex justify-between gap-2"><span class="font-semibold text-white text-sm">' + (t.name || t.id) + '</span>' +
+                    '<span class="text-[10px] text-slate-400">' + (t.id) + '</span></div>' +
+                    '<p class="text-[11px] text-slate-400 mt-0.5">' + (t.tagline || '') + '</p>' +
+                    '<p class="text-sm text-emerald-400 mt-1">$' + (t.priceUsd || 0) + ' \u00b7 \u20a6' + Number(t.priceNgn || 0).toLocaleString() + '/mo</p>' +
+                    '<p class="text-[10px] text-slate-500 mt-1">' + bits + '</p></div>';
+            }
+            ops.innerHTML = tiers.filter(function (t) { return (t.suite || 'ops') === 'ops'; }).map(card).join('') || '<p class="text-xs text-slate-500">No Ops tiers yet.</p>';
+            dig.innerHTML = tiers.filter(function (t) { return t.suite === 'digital'; }).map(card).join('') || '<p class="text-xs text-slate-500">No Digital tiers yet.</p>';
+        }
+
+        function pricingFillAssignSelects() {
+            const tiers = window.PRICING_STATE.tiers || [];
+            const ops = document.getElementById('pa_opsTier');
+            const dig = document.getElementById('pa_digitalTier');
+            if (ops) {
+                ops.innerHTML = '<option value="">\u2014 none \u2014</option>' + tiers.filter(function (t) { return (t.suite || 'ops') === 'ops'; }).map(function (t) {
+                    return '<option value="' + t.id + '">' + t.name + '</option>';
+                }).join('');
+            }
+            if (dig) {
+                dig.innerHTML = '<option value="">\u2014 none \u2014</option>' + tiers.filter(function (t) { return t.suite === 'digital'; }).map(function (t) {
+                    return '<option value="' + t.id + '">' + t.name + '</option>';
+                }).join('');
+            }
+        }
+
+        function pricingNewTier(suite) {
+            window.PRICING_STATE.editingId = null;
+            var ed = document.getElementById('pricingEditor');
+            if (ed) ed.classList.remove('hidden');
+            document.getElementById('pricingEditorTitle').textContent = suite === 'digital' ? 'New Digital tier' : 'New Ops tier';
+            document.getElementById('pe_id').value = '';
+            document.getElementById('pe_id').readOnly = false;
+            document.getElementById('pe_suite').value = suite || 'ops';
+            document.getElementById('pe_name').value = '';
+            document.getElementById('pe_tagline').value = '';
+            document.getElementById('pe_usd').value = '';
+            document.getElementById('pe_ngn').value = '';
+            document.getElementById('pe_features').value = '';
+            pricingRenderServiceInputs({});
+        }
+
+        function pricingEditTier(id) {
+            const t = (window.PRICING_STATE.tiers || []).find(function (x) { return x.id === id; });
+            if (!t) return;
+            window.PRICING_STATE.editingId = id;
+            document.getElementById('pricingEditor').classList.remove('hidden');
+            document.getElementById('pricingEditorTitle').textContent = 'Edit: ' + t.name;
+            document.getElementById('pe_id').value = t.id;
+            document.getElementById('pe_id').readOnly = true;
+            document.getElementById('pe_suite').value = t.suite || 'ops';
+            document.getElementById('pe_name').value = t.name || '';
+            document.getElementById('pe_tagline').value = t.tagline || '';
+            document.getElementById('pe_usd').value = t.priceUsd || 0;
+            document.getElementById('pe_ngn').value = t.priceNgn || 0;
+            document.getElementById('pe_features').value = (t.features || []).join(', ');
+            pricingRenderServiceInputs(t.services || {});
+        }
+
+        function pricingRenderServiceInputs(services) {
+            const cat = window.PRICING_STATE.catalog || [];
+            const suite = (document.getElementById('pe_suite') && document.getElementById('pe_suite').value) || 'ops';
+            const grid = document.getElementById('pe_servicesGrid');
+            if (!grid) return;
+            const ordered = cat.slice().sort(function (a, b) {
+                const aa = a.suite === suite ? 0 : 1;
+                const bb = b.suite === suite ? 0 : 1;
+                return aa - bb || String(a.group || '').localeCompare(String(b.group || ''));
+            });
+            grid.innerHTML = ordered.map(function (s) {
+                const val = services[s.key] != null ? services[s.key] : 0;
+                const dim = s.suite !== suite ? 'opacity-60' : '';
+                return '<label class="text-[10px] text-slate-400 border border-slate-800 rounded-lg p-2 ' + dim + '">' +
+                    '<span class="text-slate-300">' + s.label + '</span> <span class="text-slate-600">(' + s.unit + ')</span>' +
+                    '<input type="number" data-svc-key="' + s.key + '" value="' + val + '" class="mt-1 w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 text-white text-xs" />' +
+                    '</label>';
+            }).join('');
+        }
+
+        document.addEventListener('change', function (e) {
+            if (e.target && e.target.id === 'pe_suite') {
+                const services = {};
+                document.querySelectorAll('#pe_servicesGrid [data-svc-key]').forEach(function (inp) {
+                    services[inp.getAttribute('data-svc-key')] = Number(inp.value) || 0;
+                });
+                pricingRenderServiceInputs(services);
+            }
+        });
+
+        function pricingCloseEditor() {
+            var ed = document.getElementById('pricingEditor');
+            if (ed) ed.classList.add('hidden');
+        }
+
+        async function pricingSaveTier() {
+            const services = {};
+            document.querySelectorAll('#pe_servicesGrid [data-svc-key]').forEach(function (inp) {
+                services[inp.getAttribute('data-svc-key')] = Number(inp.value);
+            });
+            const features = (document.getElementById('pe_features').value || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+            const tier = {
+                id: document.getElementById('pe_id').value.trim(),
+                suite: document.getElementById('pe_suite').value,
+                name: document.getElementById('pe_name').value.trim(),
+                tagline: document.getElementById('pe_tagline').value.trim(),
+                priceUsd: Number(document.getElementById('pe_usd').value) || 0,
+                priceNgn: Number(document.getElementById('pe_ngn').value) || 0,
+                features: features,
+                services: services,
+                active: true
+            };
+            if (!tier.id || !tier.name) {
+                if (typeof showToast === 'function') showToast('Tier ID and name required', 'error');
+                return;
+            }
+            const res = await executeSecureBridgeCall('agent', 'agent-save-service-tier', { tier: tier });
+            if (typeof showToast === 'function') showToast((res && res.message) || 'Saved', res && res.success === false ? 'error' : 'success');
+            if (res && res.success) {
+                await pricingLoadAll();
+                pricingCloseEditor();
+            }
+        }
+
+        async function pricingDeleteTier() {
+            const id = document.getElementById('pe_id').value.trim();
+            if (!id || !confirm('Delete tier ' + id + '?')) return;
+            const res = await executeSecureBridgeCall('agent', 'agent-delete-service-tier', { id: id });
+            if (typeof showToast === 'function') showToast((res && res.message) || 'Deleted', res && res.success === false ? 'error' : 'success');
+            await pricingLoadAll();
+            pricingCloseEditor();
+        }
+
+        async function pricingSaveMinuteRate() {
+            const rate = Number(document.getElementById('pricingMinuteRate').value);
+            const res = await executeSecureBridgeCall('agent', 'agent-set-minute-rate', { rate: rate });
+            if (typeof showToast === 'function') showToast((res && res.message) || 'Rate saved', res && res.success === false ? 'error' : 'success');
+        }
+
+        async function pricingAssignClient() {
+            let addons = {};
+            try {
+                const raw = (document.getElementById('pa_addons').value || '').trim();
+                if (raw) addons = JSON.parse(raw);
+            } catch (e) {
+                if (typeof showToast === 'function') showToast('Add-ons must be valid JSON', 'error');
+                return;
+            }
+            const res = await executeSecureBridgeCall('agent', 'agent-assign-client-tier', {
+                clientId: document.getElementById('pa_clientId').value.trim(),
+                opsTier: document.getElementById('pa_opsTier').value,
+                digitalTier: document.getElementById('pa_digitalTier').value,
+                addons: addons
+            });
+            const st = document.getElementById('pa_status');
+            if (st) st.textContent = (res && res.message) || JSON.stringify(res);
+            if (typeof showToast === 'function') showToast((res && res.message) || 'Assigned', res && res.success === false ? 'error' : 'success');
+        }
+
+        async function pricingLogTime() {
+            const res = await executeSecureBridgeCall('agent', 'agent-log-admin-time', {
+                clientId: document.getElementById('pt_clientId').value.trim(),
+                minutes: Number(document.getElementById('pt_minutes').value),
+                note: document.getElementById('pt_note').value
+            });
+            const st = document.getElementById('pt_status');
+            if (st) st.textContent = (res && res.message) || '';
+            if (typeof showToast === 'function') showToast((res && res.message) || 'Logged', res && res.success === false ? 'error' : 'success');
+        }
+    </script>
+
 </body>
 
 </html>
