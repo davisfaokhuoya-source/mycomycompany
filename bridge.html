@@ -3361,6 +3361,62 @@
                             <span id="adminDefaultSamplesStatus" class="text-[11px] text-slate-400 ml-2"></span>
                         </div>
 
+                        <!-- Service tiers, minute rate, admin time -->
+                        <!-- ===== Victorias Admin: Tiers · Minute rate · Time log · Upload progress helper ===== -->
+                        <section id="adminTiersPanel"
+                            class="p-4 rounded-xl border border-slate-700 bg-slate-900/80 space-y-4">
+                            <h3 class="text-lg font-semibold text-white">Service tiers & pricing</h3>
+                            <p class="text-xs text-slate-400">Add, edit, or remove plans. Hours/documents/mailboxes are
+                                monthly allocations charged against the client.</p>
+                            <div class="flex flex-wrap gap-2 items-end">
+                                <label class="text-xs text-slate-300">Admin cost per minute (NGN)
+                                    <input id="adminMinuteRateInput" type="number" min="0" step="1"
+                                        class="block mt-1 px-2 py-1 rounded bg-slate-800 border border-slate-600 text-white w-32" />
+                                </label>
+                                <button type="button" onclick="adminSaveMinuteRate()"
+                                    class="px-3 py-1.5 rounded bg-indigo-600 text-white text-xs">Save rate</button>
+                                <button type="button" onclick="adminLoadServiceTiers()"
+                                    class="px-3 py-1.5 rounded bg-slate-700 text-white text-xs">Refresh tiers</button>
+                            </div>
+                            <div id="adminTiersList" class="space-y-2 text-sm text-slate-200"></div>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                <input id="tierId" placeholder="tier id (starter_ops)"
+                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
+                                <input id="tierName" placeholder="Name"
+                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
+                                <input id="tierPriceUsd" type="number" placeholder="USD / mo"
+                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
+                                <input id="tierPriceNgn" type="number" placeholder="NGN / mo"
+                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
+                                <input id="tierHours" type="number" placeholder="Hours / mo"
+                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
+                                <input id="tierDocs" type="number" placeholder="Documents / mo"
+                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
+                                <input id="tierProposals" type="number" placeholder="Proposals / mo"
+                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
+                                <input id="tierMailboxes" type="number" placeholder="Mailboxes"
+                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
+                            </div>
+                            <button type="button" onclick="adminSaveServiceTier()"
+                                class="px-4 py-2 rounded bg-emerald-600 text-white text-xs font-medium">Add / update
+                                tier</button>
+
+                            <h3 class="text-lg font-semibold text-white pt-4">Admin time on client work</h3>
+                            <p class="text-xs text-slate-400">Log minutes spent; cost = minutes × rate. Compare against
+                                tier hours included.</p>
+                            <div class="flex flex-wrap gap-2 items-end text-xs">
+                                <input id="timeClientId" placeholder="Client ID"
+                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600" />
+                                <input id="timeMinutes" type="number" min="1" placeholder="Minutes"
+                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600 w-24" />
+                                <input id="timeNote" placeholder="Note"
+                                    class="px-2 py-1 rounded bg-slate-800 border border-slate-600 flex-1 min-w-[140px]" />
+                                <button type="button" onclick="adminLogTime()"
+                                    class="px-3 py-1.5 rounded bg-amber-600 text-white">Log time</button>
+                            </div>
+                            <div id="adminTimeStatus" class="text-xs text-slate-400"></div>
+                        </section>
+
                         <div>
                             <h3 class="text-lg font-bold text-white">Document Studio</h3>
                             <p class="text-xs text-slate-400">Generate any catalog document for a client, or upload a
@@ -17849,6 +17905,84 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         </button>
         <p class="text-[10px] text-slate-500 mt-1">Client gets a link free for 30 days, then ₦10,000 to unlock.</p>
       </div>`;
+        }
+    </script>
+
+    <script>
+        /* Admin tiers + time + upload progress */
+        async function adminLoadServiceTiers() {
+            const res = await executeSecureBridgeCall('agent', 'agent-list-service-tiers', {});
+            const box = document.getElementById('adminTiersList');
+            const rateInput = document.getElementById('adminMinuteRateInput');
+            if (rateInput && res && res.minuteRate != null) rateInput.value = res.minuteRate;
+            if (!box) return;
+            if (!res || !res.success) { box.textContent = (res && res.message) || 'Failed to load tiers'; return; }
+            box.innerHTML = (res.tiers || []).map(t =>
+                `<div class="flex justify-between gap-2 border border-slate-700 rounded px-2 py-1">
+      <span><b>${t.name}</b> <span class="text-slate-500">(${t.id})</span> — $${t.priceUsd}/mo · ₦${t.priceNgn}/mo · ${t.hoursPerMonth}h · ${t.documentsPerMonth} docs</span>
+      <button type="button" class="text-red-400 text-xs" onclick="adminDeleteTier('${t.id}')">Remove</button>
+    </div>`
+            ).join('') || '<span class="text-slate-500">No tiers yet</span>';
+        }
+        async function adminSaveMinuteRate() {
+            const rate = Number(document.getElementById('adminMinuteRateInput').value);
+            const res = await executeSecureBridgeCall('agent', 'agent-set-minute-rate', { rate });
+            showToast((res && res.message) || 'Saved', res && res.success === false ? 'error' : 'success');
+        }
+        async function adminSaveServiceTier() {
+            const tier = {
+                id: document.getElementById('tierId').value.trim(),
+                name: document.getElementById('tierName').value.trim(),
+                priceUsd: Number(document.getElementById('tierPriceUsd').value) || 0,
+                priceNgn: Number(document.getElementById('tierPriceNgn').value) || 0,
+                hoursPerMonth: Number(document.getElementById('tierHours').value) || 0,
+                documentsPerMonth: Number(document.getElementById('tierDocs').value) || 0,
+                proposalsPerMonth: Number(document.getElementById('tierProposals').value) || 0,
+                mailboxes: Number(document.getElementById('tierMailboxes').value) || 0
+            };
+            const res = await executeSecureBridgeCall('agent', 'agent-save-service-tier', { tier });
+            showToast((res && res.message) || 'Saved', res && res.success === false ? 'error' : 'success');
+            adminLoadServiceTiers();
+        }
+        async function adminDeleteTier(id) {
+            if (!confirm('Remove tier ' + id + '?')) return;
+            const res = await executeSecureBridgeCall('agent', 'agent-delete-service-tier', { id });
+            showToast((res && res.message) || 'Removed', res && res.success === false ? 'error' : 'success');
+            adminLoadServiceTiers();
+        }
+        async function adminLogTime() {
+            const res = await executeSecureBridgeCall('agent', 'agent-log-admin-time', {
+                clientId: document.getElementById('timeClientId').value.trim(),
+                minutes: Number(document.getElementById('timeMinutes').value),
+                note: document.getElementById('timeNote').value
+            });
+            const el = document.getElementById('adminTimeStatus');
+            if (el) el.textContent = (res && res.message) || JSON.stringify(res);
+            showToast((res && res.message) || 'Logged', res && res.success === false ? 'error' : 'success');
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            try { adminLoadServiceTiers(); } catch (_) { }
+        });
+
+        /** Upload with progress (kb/mb) — use instead of fetch for large document uploads */
+        function uploadWithProgress(url, formData, onProgress) {
+            return new Promise(function (resolve, reject) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', url, true);
+                xhr.upload.onprogress = function (e) {
+                    if (!e.lengthComputable) return;
+                    var pct = Math.round((e.loaded / e.total) * 100);
+                    var loadedMb = (e.loaded / 1048576).toFixed(2);
+                    var totalMb = (e.total / 1048576).toFixed(2);
+                    if (typeof onProgress === 'function') onProgress({ pct: pct, loaded: e.loaded, total: e.total, label: loadedMb + ' / ' + totalMb + ' MB (' + pct + '%)' });
+                };
+                xhr.onload = function () {
+                    try { resolve(JSON.parse(xhr.responseText || '{}')); }
+                    catch (err) { resolve({ success: false, message: xhr.responseText }); }
+                };
+                xhr.onerror = function () { reject(new Error('Network error during upload')); };
+                xhr.send(formData);
+            });
         }
     </script>
 </body>

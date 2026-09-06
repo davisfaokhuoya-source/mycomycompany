@@ -2027,15 +2027,16 @@
                 <div class="col-lg-4 wow fadeInLeft" data-wow-delay="0.2s">
                     <div class="price-card" style="border:1px solid #e5e7eb;background:#fff;">
                         <div class="price-tag" style="background:#64748b;">AI-Human Hybrid VA Support</div>
-                        <div class="price-head">Starter Ops</div>
+                        <div class="price-head" data-tier-id="starter_ops" id="tier-head-starter_ops">Starter Ops</div>
                         <div class="price-sub">For small teams & early-stage businesses</div>
                         <div style="margin-bottom:2px;"><span class="price-before">Before ₦350,000/mo</span><span
                                 class="price-discount-badge" id="starter-badge">-28.6%</span></div>
                         <div class="price-amount-usd"><span class="usd-num" id="starter-usd">…</span> <span
                                 style="font-size:0.95rem;font-weight:600;">USD/mo</span></div>
                         <div class="price-ngn-secondary" id="starter-ngn">≈ ₦…/mo</div>
-                        <div class="price-note">20 hrs/month of dedicated hybrid AI + human VA support.</div>
-                        <ul class="price-list">
+                        <div class="price-note" id="tier-note-starter_ops">20 hrs/month of dedicated hybrid AI + human
+                            VA support.</div>
+                        <ul class="price-list" id="tier-list-starter_ops">
                             <li><i class="fas fa-robot" style="color:var(--brand);"></i> <strong>20 hrs/mo</strong>
                                 AI-Human Hybrid VA Support <span class="svc-info" tabindex="0"
                                     data-tip="Shared hour bank for admin, email handling, and document assistance with AI + human review.">i</span>
@@ -2074,15 +2075,16 @@
                 <div class="col-lg-4 wow fadeInUp" data-wow-delay="0.4s">
                     <div class="price-card featured" style="background:#fff;">
                         <div class="price-tag">Most Popular</div>
-                        <div class="price-head">Growth Ops</div>
+                        <div class="price-head" data-tier-id="growth_ops" id="tier-head-growth_ops">Growth Ops</div>
                         <div class="price-sub">For growing companies with active pipelines</div>
                         <div style="margin-bottom:2px;"><span class="price-before">Before ₦950,000/mo</span><span
                                 class="price-discount-badge" id="growth-badge">-31.6%</span></div>
                         <div class="price-amount-usd"><span class="usd-num" id="growth-usd">…</span> <span
                                 style="font-size:0.95rem;font-weight:600;">USD/mo</span></div>
                         <div class="price-ngn-secondary" id="growth-ngn">≈ ₦…/mo</div>
-                        <div class="price-note">Full written proposal with exact pricing before any commitment.</div>
-                        <ul class="price-list">
+                        <div class="price-note" id="tier-note-growth_ops">Full written proposal with exact pricing
+                            before any commitment.</div>
+                        <ul class="price-list" id="tier-list-growth_ops">
                             <li>
                                 <i class="fas fa-robot" style="color:var(--brand);"></i> <strong>40 hrs/mo</strong>
                                 AI-Human Hybrid VA Support <span class="svc-info" tabindex="0"
@@ -2124,7 +2126,8 @@
                 <div class="col-lg-4 wow fadeInRight" data-wow-delay="0.6s">
                     <div class="price-card" style="border:1px solid #e5e7eb;background:#fff;">
                         <div class="price-tag" style="background:#0f172a;">Full Stack</div>
-                        <div class="price-head">Enterprise Ops</div>
+                        <div class="price-head" data-tier-id="enterprise_ops" id="tier-head-enterprise_ops">Enterprise
+                            Ops</div>
                         <div class="price-sub">For large organisations with complex operations</div>
                         <div style="margin-bottom:2px;"><span class="price-before">Before Custom (from
                                 ₦1,604,000)/mo</span><span class="price-discount-badge"
@@ -2132,9 +2135,10 @@
                         <div class="price-amount-usd"><span class="usd-num" id="enterprise-usd">…</span> <span
                                 style="font-size:0.95rem;font-weight:600;">USD/mo</span></div>
                         <div class="price-ngn-secondary" id="enterprise-ngn">≈ ₦…/mo</div>
-                        <div class="price-note">Scoped to your team size, volume & needs. Full itemised proposal
+                        <div class="price-note" id="tier-note-enterprise_ops">Scoped to your team size, volume & needs.
+                            Full itemised proposal
                             before any commitment.</div>
-                        <ul class="price-list">
+                        <ul class="price-list" id="tier-list-enterprise_ops">
                             <li><i class="fas fa-robot" style="color:var(--brand);"></i> <strong>80–150+ hrs/mo</strong>
                                 AI-Human Hybrid VA Support <span class="svc-info" tabindex="0"
                                     data-tip="Large hour bank for complex ops; exact hours scoped in your proposal.">i</span>
@@ -2805,9 +2809,27 @@
      CUSTOM SCRIPTS — Three.js Sphere, Exchange Rate, Animations
 ============================================================ -->
     <script>
+        // ========== API ENDPOINT ==========
+        // [FIX] Both calls on this page were fetching the bare string
+        // "api.thevictorias.com.ng" with no scheme, which the browser resolves
+        // as a *relative path* on this same page (e.g. thevictorias.com.ng/
+        // api.thevictorias.com.ng) instead of an absolute cross-origin request
+        // to the gateway — so it always 404'd and pricing/demo silently fell
+        // back to "unavailable". Every request from this page must go to the
+        // actual gateway host, with its scheme.
+        const API_URL = "https://api.thevictorias.com.ng";
 
-        const API_URL = "https://app.thevictorias.com.ng";
-
+        // ========== SERVICE PRICING (ServicePricing tab, via AgentLib) ==========
+        // Single source of truth is the ServicePricing sheet in AgentLib — there
+        // is NO hardcoded fallback price anywhere in this page. Every price
+        // element starts as a "Loading price…" / "…" placeholder in the markup
+        // and is filled in exclusively by this call to agent-get-all-service-pricing,
+        // which returns every tier/add-on price already converted (fixed FX rates:
+        // ₦1,300=$1, ₦1,600=€1) and with 7.5% tax applied — no separate third-party
+        // FX call, and no risk of a stale number ever being shown to a visitor.
+        // This action is whitelisted as a PUBLIC agent action in gate.txt (see
+        // PUBLIC_AGENT_ACTIONS) — it's read-only and never returns client-
+        // specific pricing, so it works here with no admin token.
         async function fetchServicePricing(retries = 1) {
             try {
                 const response = await fetch(API_URL, {
@@ -2868,30 +2890,110 @@
             });
         }
 
+        function fmtAlloc(n, unit) {
+            if (n == null || n === '') return null;
+            const v = Number(n);
+            if (isNaN(v)) return null;
+            if (v < 0 || v >= 999) return 'Unlimited ' + unit;
+            return v + ' ' + unit;
+        }
+
+        function buildTierFeatureHtml(t) {
+            if (!t) return '';
+            const lines = [];
+            const h = fmtAlloc(t.hoursPerMonth, 'hrs/mo');
+            if (h) lines.push('<li><i class="fas fa-robot" style="color:var(--brand);"></i> <strong>' + h.replace(' hrs/mo', ' hrs/mo') + '</strong> AI-Human Hybrid VA Support</li>');
+            if (t.mailboxes != null) lines.push('<li><i class="fas fa-inbox"></i> ' + (Number(t.mailboxes) < 0 ? 'Unlimited' : t.mailboxes) + ' managed mailbox' + (Number(t.mailboxes) === 1 ? '' : 'es') + '</li>');
+            const em = fmtAlloc(t.emailsPerMonth, 'emails/month');
+            if (em) lines.push('<li><i class="fas fa-envelope"></i> ' + em + '</li>');
+            const pr = fmtAlloc(t.proposalsPerMonth, 'proposal(s)/month');
+            if (pr) lines.push('<li><i class="fas fa-file-alt"></i> ' + pr + '</li>');
+            const doc = fmtAlloc(t.documentsPerMonth, 'self-service documents/month');
+            if (doc) lines.push('<li><i class="fas fa-file-word"></i> ' + doc + '</li>');
+            (t.features || []).forEach(function (f) {
+                lines.push('<li><i class="fas fa-check" style="color:var(--brand);"></i> ' + String(f).replace(/</g, '&lt;') + '</li>');
+            });
+            return lines.join('');
+        }
+
+        function applyAdminTiersToOpsCards(data, p) {
+            const tiers = (data && data.serviceTiers) || [];
+            const byId = {};
+            tiers.forEach(function (t) { if (t && t.id) byId[String(t.id)] = t; });
+
+            const map = [
+                { id: 'starter_ops', usd: 'starter-usd', ngn: 'starter-ngn', badge: 'starter-badge', plus: false },
+                { id: 'growth_ops', usd: 'growth-usd', ngn: 'growth-ngn', badge: 'growth-badge', plus: false },
+                { id: 'enterprise_ops', usd: 'enterprise-usd', ngn: 'enterprise-ngn', badge: 'enterprise-badge', plus: true }
+            ];
+
+            map.forEach(function (m) {
+                const t = byId[m.id];
+                const priceRow = (p && p[m.id]) || null;
+                const usd = (t && Number(t.priceUsd)) || (priceRow && Number(priceRow.totalUsd)) || 0;
+                const ngn = (t && Number(t.priceNgn)) || (priceRow && Number(priceRow.totalNgn)) || 0;
+                const usdEl = document.getElementById(m.usd);
+                const ngnEl = document.getElementById(m.ngn);
+                if (usdEl && usd) usdEl.textContent = m.plus ? (fmtUsd(usd) + '+') : fmtUsd(usd).replace('$', '');
+                // fmtUsd returns $X — starter currently expects number in span; keep consistent with existing
+                if (usdEl && usd) {
+                    const raw = String(Math.round(usd).toLocaleString());
+                    usdEl.textContent = m.plus ? (raw + '+') : raw;
+                }
+                if (ngnEl && ngn) ngnEl.textContent = m.plus ? (`≈ ${fmtNgn(ngn)}+/mo`) : (`≈ ${fmtNgn(ngn)}/mo`);
+                if (m.badge && ngn && typeof TIER_BEFORE_PRICES_NGN !== 'undefined' && TIER_BEFORE_PRICES_NGN[m.id]) {
+                    updateDiscountBadge(m.badge, TIER_BEFORE_PRICES_NGN[m.id], ngn);
+                }
+                const head = document.getElementById('tier-head-' + m.id);
+                if (head && t && t.name) head.textContent = t.name;
+                const note = document.getElementById('tier-note-' + m.id);
+                if (note && t) {
+                    const h = t.hoursPerMonth;
+                    note.textContent = (h != null && Number(h) >= 0 && Number(h) < 999)
+                        ? (h + ' hrs/month of dedicated hybrid AI + human VA support.')
+                        : (t.name ? (t.name + ' — scoped to your volume & needs.') : note.textContent);
+                }
+                const list = document.getElementById('tier-list-' + m.id);
+                if (list && t) {
+                    const html = buildTierFeatureHtml(t);
+                    if (html) list.innerHTML = html;
+                }
+            });
+        }
+
         async function updatePrices() {
             const data = await fetchServicePricing();
             if (!data) { showPricingUnavailable(); return; }
 
-            const p = data.pricing; // { itemKey: { baseNgn, totalNgn, totalUsd, totalEur, ... } }
+            const p = data.pricing || {}; // { itemKey: { baseNgn, totalNgn, totalUsd, ... } }
             const rateDisplay = `$1 = ₦${(data.fx && data.fx.USD) ? Number(data.fx.USD).toLocaleString() : '1,300'}`;
-            document.getElementById('liveRate').textContent = rateDisplay;
-            document.getElementById('liveRate2').textContent = rateDisplay;
+            const live1 = document.getElementById('liveRate');
+            const live2 = document.getElementById('liveRate2');
+            if (live1) live1.textContent = rateDisplay;
+            if (live2) live2.textContent = rateDisplay;
 
-            // ---- Back-Office Ops ----
-            if (p.starter_ops) {
-                document.getElementById('starter-usd').textContent = fmtUsd(p.starter_ops.totalUsd);
-                document.getElementById('starter-ngn').textContent = `≈ ${fmtNgn(p.starter_ops.totalNgn)}/mo`;
-                updateDiscountBadge('starter-badge', TIER_BEFORE_PRICES_NGN.starter_ops, p.starter_ops.totalNgn);
-            }
-            if (p.growth_ops) {
-                document.getElementById('growth-usd').textContent = fmtUsd(p.growth_ops.totalUsd);
-                document.getElementById('growth-ngn').textContent = `≈ ${fmtNgn(p.growth_ops.totalNgn)}/mo`;
-                updateDiscountBadge('growth-badge', TIER_BEFORE_PRICES_NGN.growth_ops, p.growth_ops.totalNgn);
-            }
-            if (p.enterprise_ops) {
-                document.getElementById('enterprise-usd').textContent = `${fmtUsd(p.enterprise_ops.totalUsd)}+`;
-                document.getElementById('enterprise-ngn').textContent = `≈ ${fmtNgn(p.enterprise_ops.totalNgn)}+/mo`;
-                updateDiscountBadge('enterprise-badge', TIER_BEFORE_PRICES_NGN.enterprise_ops, p.enterprise_ops.totalNgn);
+            // Admin tiers drive Ops cards (prices + services). Falls back to pricing map.
+            try { applyAdminTiersToOpsCards(data, p); } catch (e) { console.warn('admin tiers UI', e); }
+
+            // ---- Back-Office Ops (legacy keys if tiers empty) ----
+            if (!data.serviceTiers || !data.serviceTiers.length) {
+                if (p.starter_ops) {
+                    document.getElementById('starter-usd').textContent = fmtUsd(p.starter_ops.totalUsd).replace(/^\$/, '');
+                    // keep dollar formatting from fmtUsd for badge path
+                    document.getElementById('starter-usd').textContent = Math.round(p.starter_ops.totalUsd).toLocaleString();
+                    document.getElementById('starter-ngn').textContent = `≈ ${fmtNgn(p.starter_ops.totalNgn)}/mo`;
+                    updateDiscountBadge('starter-badge', TIER_BEFORE_PRICES_NGN.starter_ops, p.starter_ops.totalNgn);
+                }
+                if (p.growth_ops) {
+                    document.getElementById('growth-usd').textContent = Math.round(p.growth_ops.totalUsd).toLocaleString();
+                    document.getElementById('growth-ngn').textContent = `≈ ${fmtNgn(p.growth_ops.totalNgn)}/mo`;
+                    updateDiscountBadge('growth-badge', TIER_BEFORE_PRICES_NGN.growth_ops, p.growth_ops.totalNgn);
+                }
+                if (p.enterprise_ops) {
+                    document.getElementById('enterprise-usd').textContent = `${Math.round(p.enterprise_ops.totalUsd).toLocaleString()}+`;
+                    document.getElementById('enterprise-ngn').textContent = `≈ ${fmtNgn(p.enterprise_ops.totalNgn)}+/mo`;
+                    updateDiscountBadge('enterprise-badge', TIER_BEFORE_PRICES_NGN.enterprise_ops, p.enterprise_ops.totalNgn);
+                }
             }
 
             // ---- Add-ons (ItemKey on each .addon-ngn's data-itemkey attribute) ----

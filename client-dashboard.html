@@ -414,6 +414,39 @@
                 min-height: 2.5rem;
             }
         }
+
+        /* Document generation: use width on desktop so forms are readable */
+        @media (min-width: 1024px) {
+            #view-generate {
+                max-width: 72rem !important;
+                /* ~6xl — wider forms on desktop */
+                width: 100% !important;
+                margin-left: auto;
+                margin-right: auto;
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+
+            #view-generate .directive-panel.open {
+                max-width: 100%;
+            }
+
+            #view-generate .directive-panel.open input,
+            #view-generate .directive-panel.open select,
+            #view-generate .directive-panel.open textarea {
+                font-size: 0.875rem;
+            }
+
+            #view-generate .grid {
+                max-width: 100%;
+            }
+        }
+
+        @media (min-width: 1280px) {
+            #view-generate {
+                max-width: 80rem !important;
+            }
+        }
     </style>
 </head>
 
@@ -611,6 +644,32 @@
                             <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-3">
                                 <div id="barDocuments" class="h-1.5 bg-emerald-500 rounded-full" style="width:0%"></div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Plan services + cost progress (from admin tiers) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+                            <p class="text-sm font-semibold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-layer-group text-indigo-400"></i> Your plan &amp; services
+                            </p>
+                            <p id="planServicesLabel" class="text-xs text-slate-400">Loading plan…</p>
+                            <ul id="planServicesList" class="text-xs text-slate-300 space-y-1 list-disc list-inside">
+                            </ul>
+                            <p id="planPriceDetail" class="text-[11px] text-slate-500 pt-1"></p>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+                            <p class="text-sm font-semibold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-naira-sign text-amber-400"></i> Cost &amp; hours progress
+                            </p>
+                            <p id="statCostHours" class="text-lg font-bold text-white">—</p>
+                            <p id="statCostMoney" class="text-sm text-slate-300">Admin time cost: —</p>
+                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                                <div id="barCostHours" class="h-2 bg-emerald-500 rounded-full transition-all"
+                                    style="width:0%"></div>
+                            </div>
+                            <p id="statCostHint" class="text-[10px] text-slate-500">Hours used vs hours included in your
+                                tier. Cost uses admin minute rate when ops time is logged.</p>
                         </div>
                     </div>
 
@@ -871,7 +930,8 @@
                 <!-- GENERATE -->
                 <section id="view-generate"
                     class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
-                    <p class="text-xs text-slate-400 max-w-2xl">Generate a document on demand from your own data. Each
+                    <p class="text-xs text-slate-400 max-w-5xl w-full">Generate a document on demand from your own data.
+                        Each
                         one counts against your plan's monthly allotment (shown on the Overview tab). Click an
                         available card to add instructions, then hit Send. Cards you've used up for this period, or
                         that aren't part of your plan, are shown greyed out with the reason underneath.</p>
@@ -881,7 +941,7 @@
                          Bigger documents (reports, plans, proposals) never need your approval either way, they
                          just don't have a "recipient" to send to in the same sense. -->
                     <div
-                        class="max-w-3xl rounded-lg border border-slate-700 bg-slate-800/60 p-4 flex items-start justify-between gap-4">
+                        class="max-w-5xl w-full rounded-lg border border-slate-700 bg-slate-800/60 p-4 flex items-start justify-between gap-4">
                         <div>
                             <div class="text-sm font-semibold text-white">Auto-send receipts & confirmations</div>
                             <p class="text-xs text-slate-400 mt-1 max-w-xl"><strong class="text-slate-300">On:</strong>
@@ -2079,6 +2139,72 @@
             renderQuotaStat('statEmails', 'barEmails', u.emailsUsed || 0, lim.emails ?? '—', qOpts);
             renderQuotaStat('statProposals', 'barProposals', u.proposalsUsed || 0, lim.proposals ?? '—', qOpts);
             renderQuotaStat('statDocuments', 'barDocuments', u.documentsUsed || 0, lim.documents ?? '—', qOpts);
+
+            // Plan services + cost progress from admin tiers
+            try {
+                const st = res.serviceTier || {};
+                const active = st.active || null;
+                const svcLabel = document.getElementById('planServicesLabel');
+                const svcList = document.getElementById('planServicesList');
+                const priceDetail = document.getElementById('planPriceDetail');
+                if (svcLabel) {
+                    svcLabel.textContent = active
+                        ? ((active.name || active.id) + ' — monthly allocations from your plan')
+                        : ((res.pricing && res.pricing.label) ? (res.pricing.label + ' plan') : 'Your subscription services');
+                }
+                if (svcList) {
+                    const features = (active && active.features) ? active.features.slice() : [];
+                    if (active) {
+                        if (active.hoursPerMonth != null) features.unshift((active.hoursPerMonth < 0 ? 'Unlimited' : active.hoursPerMonth) + ' VA hours / month');
+                        if (active.documentsPerMonth != null) features.push((active.documentsPerMonth < 0 ? 'Unlimited' : active.documentsPerMonth) + ' self-service documents / month');
+                        if (active.proposalsPerMonth != null) features.push((active.proposalsPerMonth < 0 ? 'Unlimited' : active.proposalsPerMonth) + ' proposals / month');
+                        if (active.emailsPerMonth != null) features.push((active.emailsPerMonth < 0 ? 'Unlimited' : active.emailsPerMonth) + ' emails / month');
+                        if (active.mailboxes != null) features.push(active.mailboxes + ' managed mailbox(es)');
+                    }
+                    svcList.innerHTML = features.length
+                        ? features.map(function (f) { return '<li>' + String(f).replace(/</g, '&lt;') + '</li>'; }).join('')
+                        : '<li class="text-slate-500">Service details appear when your tier is set by admin.</li>';
+                }
+                if (priceDetail && res.pricing) {
+                    const usd = res.pricing.priceUsd != null ? Number(res.pricing.priceUsd) : null;
+                    const ngn = res.pricing.priceNgn != null ? Number(res.pricing.priceNgn) : null;
+                    let bits = [];
+                    if (usd) bits.push('$' + usd.toLocaleString() + ' USD/mo');
+                    if (ngn) bits.push('₦' + ngn.toLocaleString() + '/mo');
+                    if (active && active.priceUsd) bits.push('Tier card $' + Number(active.priceUsd).toLocaleString());
+                    priceDetail.textContent = bits.length ? bits.join(' · ') : '';
+                }
+                const cp = res.costProgress || {};
+                const hoursUsed = parseFloat(u.hoursUsed) || parseFloat(cp.hoursUsed) || 0;
+                const hoursInc = cp.hoursIncluded != null ? Number(cp.hoursIncluded) : (lim.hours != null ? Number(lim.hours) : null);
+                const costEl = document.getElementById('statCostHours');
+                const moneyEl = document.getElementById('statCostMoney');
+                const barCost = document.getElementById('barCostHours');
+                const hintEl = document.getElementById('statCostHint');
+                if (costEl) {
+                    if (hoursInc != null && hoursInc < 999) costEl.textContent = hoursUsed + ' / ' + hoursInc + ' hours';
+                    else costEl.textContent = hoursUsed + ' hours used';
+                }
+                if (moneyEl) {
+                    const cost = Number(cp.adminCostNgn) || 0;
+                    const rate = Number(cp.minuteRateNgn) || 0;
+                    const mins = Number(cp.adminMinutesUsed) || 0;
+                    moneyEl.textContent = cost > 0
+                        ? ('Ops time logged: ' + mins + ' min · ₦' + cost.toLocaleString() + (rate ? (' @ ₦' + rate + '/min') : ''))
+                        : (rate ? ('Minute rate ₦' + rate + ' — no ops time logged yet this period') : 'Cost tracking when admin logs time against your account');
+                }
+                if (barCost) {
+                    const pct = (hoursInc != null && hoursInc > 0 && hoursInc < 999)
+                        ? Math.min(100, (hoursUsed / hoursInc) * 100)
+                        : 8;
+                    barCost.style.width = pct + '%';
+                    barCost.classList.toggle('bg-amber-500', pct >= 90);
+                    barCost.classList.toggle('bg-emerald-500', pct < 90);
+                }
+                if (hintEl && hoursInc != null && hoursInc < 999 && cp.costIncludedNgn) {
+                    hintEl.textContent = 'Included capacity about ₦' + Number(cp.costIncludedNgn).toLocaleString() + ' of ops time at current minute rate (' + hoursInc + 'h).';
+                }
+            } catch (planErr) { console.warn('plan/cost UI', planErr); }
 
             // Lifetime totals (from usage.lifetime when present)
             const life = u.lifetime || {};
@@ -4923,7 +5049,7 @@
             const fieldsHtml = clientGenBuildOverlayFieldsHtml(docType, bag, idx);
             host.innerHTML =
                 '<div class="fixed inset-0 z-[80] flex items-start justify-center p-4 sm:p-8 overflow-y-auto" style="background:rgba(2,6,23,0.82);backdrop-filter:blur(4px)">' +
-                '<div class="w-full max-w-lg bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl my-4">' +
+                '<div class="w-full max-w-4xl lg:max-w-5xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl my-4">' +
                 '<div class="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-800">' +
                 '<div><p class="text-sm font-semibold text-white">Client #' + (idx + 2) + ' — full form</p>' +
                 '<p class="text-[10px] text-slate-500">Same fields as the main form. Saved into this multi-client run.</p></div>' +
