@@ -4573,160 +4573,163 @@
 
             <!-- ========== PRICING & TIERS HUB ========== -->
             <section id="hub-pricing" class="hidden flex-1 flex flex-col overflow-hidden bg-slate-950">
-                <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-5">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <h2 class="text-xl font-bold text-white">Pricing &amp; Tiers</h2>
-                            <p class="text-xs text-slate-400 mt-1 max-w-2xl">Single billing pattern: AI included in jobs
-                                (never sold by hour). Human time, CRM, leads, compliance tracking, training, video,
-                                assets, paid ads = add-ons only. Local NGN + offshore USD.</p>
+                            <h2 class="text-xl font-bold text-white">Pricing, Tiers &amp; Add-ons</h2>
+                            <p class="text-xs text-slate-400 mt-1 max-w-2xl">One place for Ops tiers, Digital tiers,
+                                add-on catalog, and client assignment. Homepage reads from here.</p>
                         </div>
-                        <div
-                            class="flex flex-wrap gap-2 items-end border border-slate-700 rounded-xl p-3 bg-slate-900/50">
-                            <label class="text-[10px] text-slate-400">USD → NGN rate
-                                <input id="pricingFxRate" type="number" min="100" step="1"
-                                    class="block mt-1 w-32 px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-sm"
-                                    placeholder="1300" />
-                            </label>
-                            <button type="button" onclick="pricingSaveFx()"
-                                class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs">Save FX</button>
-                            <button type="button" onclick="pricingSeedConstitution()"
-                                class="px-3 py-1.5 rounded-lg bg-emerald-800 text-white text-xs">Load standard billing
-                                catalog</button>
-                            <span id="pricingFxStatus" class="text-[10px] text-slate-500"></span>
-                        </div>
-
                         <div class="flex flex-wrap gap-2 items-end">
-                            <label class="text-[10px] text-slate-400">Admin ₦ / minute
+                            <label class="text-[10px] text-slate-400">USD→NGN
+                                <input id="pricingFxRate" type="number" min="100"
+                                    class="block mt-1 w-28 px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm"
+                                    value="1300" />
+                            </label>
+                            <label class="text-[10px] text-slate-400">Admin ₦/min
                                 <input id="pricingMinuteRate" type="number" min="0"
                                     class="block mt-1 w-28 px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm" />
                             </label>
                             <button type="button" onclick="pricingSaveMinuteRate()"
-                                class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs">Save
-                                rate</button>
+                                class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs">Save rate</button>
                             <button type="button" onclick="pricingLoadAll()"
-                                class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs">Refresh</button>
+                                class="px-3 py-1.5 rounded-lg bg-slate-700 text-white text-xs">Refresh</button>
+                            <button type="button" onclick="pricingForceResetCatalog()"
+                                class="px-3 py-1.5 rounded-lg bg-red-900/80 text-white text-xs">Force reset
+                                catalog</button>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                        <!-- OPS TIERS -->
-                        <div class="space-y-3">
-                            <div class="flex items-center justify-between">
-                                <h3 class="text-sm font-semibold text-emerald-400 uppercase tracking-wide"><i
-                                        class="fa-solid fa-briefcase mr-1"></i> Ops tiers</h3>
-                                <button type="button" onclick="pricingNewTier('ops')"
-                                    class="text-xs px-2.5 py-1 rounded bg-emerald-700/80 text-white">+ Add Ops
-                                    tier</button>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="text-[10px] text-slate-400">Section
+                            <select id="pricingSectionSelect" onchange="pricingShowSection(this.value)"
+                                class="block mt-1 px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm min-w-[240px]">
+                                <option value="ops">Ops tiers</option>
+                                <option value="digital">Digital tiers</option>
+                                <option value="addons">Add-on catalog &amp; prices</option>
+                                <option value="assign">Assign to client</option>
+                                <option value="time">Log admin time</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <div id="pricingSec-ops" class="pricing-sec space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-semibold text-emerald-400 uppercase tracking-wide"><i
+                                    class="fa-solid fa-briefcase mr-1"></i> Ops tiers</h3>
+                            <button type="button" onclick="pricingNewTier('ops')"
+                                class="text-xs px-2.5 py-1 rounded bg-emerald-700/80 text-white">+ Add Ops tier</button>
+                        </div>
+                        <div id="pricingOpsList" class="space-y-2"></div>
+                    </div>
+
+                    <div id="pricingSec-digital" class="pricing-sec hidden space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-semibold text-sky-400 uppercase tracking-wide"><i
+                                    class="fa-solid fa-bullhorn mr-1"></i> Digital tiers</h3>
+                            <button type="button" onclick="pricingNewTier('digital')"
+                                class="text-xs px-2.5 py-1 rounded bg-sky-700/80 text-white">+ Add Digital tier</button>
+                        </div>
+                        <div id="pricingDigitalList" class="space-y-2"></div>
+                    </div>
+
+                    <div id="pricingSec-addons" class="pricing-sec hidden space-y-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <h3 class="text-sm font-semibold text-amber-400 uppercase tracking-wide"><i
+                                    class="fa-solid fa-cart-plus mr-1"></i> Add-on catalog</h3>
+                            <button type="button" onclick="pricingNewAddon()"
+                                class="text-xs px-2.5 py-1 rounded bg-amber-700/80 text-white">+ New add-on</button>
+                        </div>
+                        <p class="text-[11px] text-slate-500">Edit labels and NGN prices. Shown on the public site and
+                            when assigning to clients.</p>
+                        <div class="overflow-x-auto border border-slate-700 rounded-xl">
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-slate-900 text-slate-400 uppercase tracking-wide">
+                                    <tr>
+                                        <th class="px-3 py-2">Key</th>
+                                        <th class="px-3 py-2">Label</th>
+                                        <th class="px-3 py-2">Price ₦</th>
+                                        <th class="px-3 py-2">≈ USD</th>
+                                        <th class="px-3 py-2">Active</th>
+                                        <th class="px-3 py-2"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pricingAddonTableBody" class="text-slate-200"></tbody>
+                            </table>
+                        </div>
+                        <div id="pricingAddonEditor"
+                            class="hidden border border-slate-700 rounded-xl p-4 bg-slate-900/80 space-y-3 max-w-xl">
+                            <h4 class="text-sm font-semibold text-white">Edit add-on</h4>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <label class="text-slate-400">Item key<input id="pae_key"
+                                        class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white" /></label>
+                                <label class="text-slate-400">Label<input id="pae_label"
+                                        class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white" /></label>
+                                <label class="text-slate-400">Price NGN<input id="pae_ngn" type="number" min="0"
+                                        class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white" /></label>
+                                <label class="text-slate-400 flex items-center gap-2 mt-5"><input id="pae_active"
+                                        type="checkbox" checked class="rounded" /> Active</label>
                             </div>
-                            <div id="pricingOpsList" class="space-y-2"></div>
-                        </div>
-                        <!-- DIGITAL TIERS -->
-                        <div class="space-y-3">
-                            <div class="flex items-center justify-between">
-                                <h3 class="text-sm font-semibold text-sky-400 uppercase tracking-wide"><i
-                                        class="fa-solid fa-bullhorn mr-1"></i> Digital tiers</h3>
-                                <button type="button" onclick="pricingNewTier('digital')"
-                                    class="text-xs px-2.5 py-1 rounded bg-sky-700/80 text-white">+ Add Digital
-                                    tier</button>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="pricingSaveAddon()"
+                                    class="px-3 py-1.5 rounded bg-emerald-600 text-white text-xs">Save add-on</button>
+                                <button type="button"
+                                    onclick="document.getElementById('pricingAddonEditor').classList.add('hidden')"
+                                    class="px-3 py-1.5 rounded bg-slate-700 text-white text-xs">Cancel</button>
                             </div>
-                            <div id="pricingDigitalList" class="space-y-2"></div>
                         </div>
                     </div>
 
-                    <!-- Editor -->
-                    <div id="pricingEditor"
-                        class="hidden border border-slate-700 rounded-xl bg-slate-900/90 p-5 space-y-4">
-                        <div class="flex items-center justify-between gap-2">
-                            <h3 class="text-base font-semibold text-white" id="pricingEditorTitle">Edit tier</h3>
-                            <button type="button" onclick="pricingCloseEditor()"
-                                class="text-slate-400 hover:text-white text-sm">Close</button>
+                    <div id="pricingSec-assign"
+                        class="pricing-sec hidden space-y-4 border border-slate-700 rounded-xl bg-slate-900/60 p-5">
+                        <h3 class="text-sm font-semibold text-white">Assign plan + add-ons to client</h3>
+                        <p class="text-[11px] text-slate-500">1) Set Ops/Digital tier. 2) <strong
+                                class="text-slate-300">Active add-ons are locked</strong> (cannot remove or reduce). 3)
+                            Tick new add-ons and quantities to <strong class="text-slate-300">add on top</strong> only.
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs items-end">
+                            <label class="text-slate-400 md:col-span-2">Client ID
+                                <div class="flex gap-2 mt-1">
+                                    <input id="pa_clientId"
+                                        class="flex-1 px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"
+                                        placeholder="CLT-…" />
+                                    <button type="button" onclick="pricingLoadClientGrants()"
+                                        class="px-3 py-1.5 rounded-lg bg-slate-700 text-white whitespace-nowrap">Load
+                                        client</button>
+                                </div>
+                            </label>
+                            <label class="text-slate-400">Ops tier<select id="pa_opsTier"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"></select></label>
+                            <label class="text-slate-400">Digital tier<select id="pa_digitalTier"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"></select></label>
                         </div>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                            <label class="text-slate-400">Tier ID
-                                <input id="pe_id"
-                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"
-                                    placeholder="growth_ops" />
-                            </label>
-                            <label class="text-slate-400">Suite
-                                <select id="pe_suite"
-                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white">
-                                    <option value="ops">Ops</option>
-                                    <option value="digital">Digital</option>
-                                </select>
-                            </label>
-                            <label class="text-slate-400">Name
-                                <input id="pe_name"
-                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"
-                                    placeholder="Growth Ops" />
-                            </label>
-                            <label class="text-slate-400">Tagline
-                                <input id="pe_tagline"
-                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white" />
-                            </label>
-                            <label class="text-slate-400">Price USD / mo
-                                <input id="pe_usd" type="number" min="0" step="1"
-                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white" />
-                            </label>
-                            <label class="text-slate-400">Price NGN / mo
-                                <input id="pe_ngn" type="number" min="0" step="100"
-                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white" />
-                            </label>
-                            <label class="text-slate-400 col-span-2">Extra feature bullets (comma-separated)
-                                <input id="pe_features"
-                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"
-                                    placeholder="CRM connection, Medium lead gen" />
-                            </label>
+                        <div class="border border-slate-800 rounded-lg p-3 bg-slate-950/50">
+                            <p class="text-[11px] font-semibold text-emerald-400 mb-2"><i
+                                    class="fa-solid fa-lock mr-1"></i> Active on this client (read-only)</p>
+                            <div id="pa_activeAddons" class="text-xs text-slate-400 min-h-[2rem]">Load a client to see
+                                active add-ons.</div>
+                            <p id="pa_humanBal" class="text-[10px] text-slate-500 mt-2"></p>
                         </div>
-                        <p class="text-[11px] text-slate-500">Service quantities — use <strong
-                                class="text-slate-400">-1</strong> for unlimited, <strong
-                                class="text-slate-400">0</strong> to exclude. All services you deliver appear below; set
-                            the number included in this tier.</p>
-                        <div id="pe_servicesGrid"
-                            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-80 overflow-y-auto custom-scrollbar">
+                        <div>
+                            <p class="text-[11px] font-semibold text-amber-400 mb-2"><i
+                                    class="fa-solid fa-plus mr-1"></i> Append add-ons (tick + quantity to ADD)</p>
+                            <div id="pa_addonChecks"
+                                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-72 overflow-y-auto custom-scrollbar">
+                            </div>
                         </div>
-                        <div class="flex flex-wrap gap-2 pt-2">
-                            <button type="button" onclick="pricingSaveTier()"
-                                class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium">Save
-                                tier</button>
-                            <button type="button" onclick="pricingDeleteTier()"
-                                class="px-4 py-2 rounded-lg bg-red-900/80 hover:bg-red-800 text-white text-sm">Delete
-                                tier</button>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="pricingAssignClient()"
+                                class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium">Save
+                                tiers only</button>
+                            <button type="button" onclick="pricingAppendClientAddons()"
+                                class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium">Append
+                                selected add-ons</button>
                         </div>
-                    </div>
-
-                    <!-- Assign to client -->
-                    <div class="border border-slate-700 rounded-xl bg-slate-900/60 p-5 space-y-3">
-                        <h3 class="text-sm font-semibold text-white">Assign tier to client (+ add-ons)</h3>
-                        <p class="text-[11px] text-slate-500">When a client buys a plan, set their Ops and/or Digital
-                            tier. Add-ons are extra service quantities on top of the tier (e.g. human_hours: 4).</p>
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs">
-                            <label class="text-slate-400">Client ID
-                                <input id="pa_clientId"
-                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"
-                                    placeholder="CLT-…" />
-                            </label>
-                            <label class="text-slate-400">Ops tier
-                                <select id="pa_opsTier"
-                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"></select>
-                            </label>
-                            <label class="text-slate-400">Digital tier
-                                <select id="pa_digitalTier"
-                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"></select>
-                            </label>
-                            <label class="text-slate-400">Add-ons JSON
-                                <input id="pa_addons"
-                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"
-                                    placeholder='{"human_hours":4}' />
-                            </label>
-                        </div>
-                        <button type="button" onclick="pricingAssignClient()"
-                            class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm">Save client
-                            assignment</button>
                         <p id="pa_status" class="text-[11px] text-slate-500"></p>
                     </div>
 
-                    <div class="border border-slate-700 rounded-xl bg-slate-900/60 p-5 space-y-2">
+                    <div id="pricingSec-time"
+                        class="pricing-sec hidden border border-slate-700 rounded-xl bg-slate-900/60 p-5 space-y-2">
                         <h3 class="text-sm font-semibold text-white">Log admin time (billable minutes)</h3>
                         <div class="flex flex-wrap gap-2 text-xs items-end">
                             <input id="pt_clientId" placeholder="Client ID"
@@ -4740,8 +4743,54 @@
                         </div>
                         <p id="pt_status" class="text-[11px] text-slate-500"></p>
                     </div>
+
+                    <div id="pricingEditor"
+                        class="hidden border border-slate-700 rounded-xl bg-slate-900/90 p-5 space-y-4">
+                        <div class="flex items-center justify-between gap-2">
+                            <h3 class="text-base font-semibold text-white" id="pricingEditorTitle">Edit tier</h3>
+                            <button type="button" onclick="pricingCloseEditor()"
+                                class="text-slate-400 hover:text-white text-sm">Close</button>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                            <label class="text-slate-400">Tier ID<input id="pe_id"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white" /></label>
+                            <label class="text-slate-400">Suite
+                                <select id="pe_suite"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white">
+                                    <option value="ops">Ops</option>
+                                    <option value="digital">Digital</option>
+                                </select>
+                            </label>
+                            <label class="text-slate-400">Name<input id="pe_name"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white" /></label>
+                            <label class="text-slate-400">Tagline<input id="pe_tagline"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white" /></label>
+                            <label class="text-slate-400">Price USD / mo<input id="pe_usd" type="number" min="0"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white" /></label>
+                            <label class="text-slate-400">Price NGN / mo<input id="pe_ngn" type="number" min="0"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white" /></label>
+                            <label class="text-slate-400 col-span-2">Feature bullets (comma-separated)<input
+                                    id="pe_features"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white" /></label>
+                        </div>
+                        <p class="text-[11px] text-slate-500">Tick services to include on this tier, then set quantity.
+                            <strong class="text-slate-400">-1</strong> = unlimited. Unticked services are not on the
+                            tier. Add-on-only items stay available under Assign to client.
+                        </p>
+                        <div id="pe_servicesGrid"
+                            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-80 overflow-y-auto custom-scrollbar">
+                        </div>
+                        <div class="flex flex-wrap gap-2 pt-2">
+                            <button type="button" onclick="pricingSaveTier()"
+                                class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium">Save
+                                tier</button>
+                            <button type="button" onclick="pricingDeleteTier()"
+                                class="px-4 py-2 rounded-lg bg-red-900/80 text-white text-sm">Delete tier</button>
+                        </div>
+                    </div>
                 </div>
             </section>
+
 
 
         </main>
@@ -7048,7 +7097,7 @@
          view-publish-settings). -->
 
     <script>
-        let WEBAPP_URL = localStorage.getItem('app.thevictorias.com.ng');
+        let WEBAPP_URL = localStorage.getItem('api.thevictorias.com.ng');
         let SESSION_MASTER_TOKEN = localStorage.getItem('VIC_MASTER_TOKEN') || "";
         let CURRENT_ADMIN_IDENTITY = localStorage.getItem('VIC_ADMIN_EMAIL') || "Unauthenticated Session";
 
@@ -13104,58 +13153,12 @@
         }
 
         async function loadAgentAddonsUI() {
-
-            populateAllClientsSelector('addonCartClientSelector');
-            await populateAddonCartCatalog();
-            ADDON_CART = [];
-            renderAddonCartTable();
-            loadRecentAddonPurchases();
-
-            const tbodyId = 'agentAddonsTableBody';
-            showTableSkeleton(tbodyId, 7);
-
-            const clientRows = await _addonFetchAllClientsWithAddons();
-            const tbody = document.getElementById(tbodyId);
-            if (!tbody) return;
-
-            const flat = [];
-            clientRows.forEach(c => {
-                const addons = _parseAddonsJson(c.addonsRaw);
-                addons.forEach((a, idx) => {
-                    flat.push({
-                        clientId: c.clientId,
-                        kind: c.kind,
-                        displayName: c.displayName,
-                        index: idx,
-                        addon: a
-                    });
-                });
-            });
-
-            if (!flat.length) {
-                tbody.innerHTML = emptyRow('No add-ons configured yet.', 7);
-                return;
-            }
-
-            tbody.innerHTML = flat.map(r => {
-                const a = r.addon;
-                const statusVal = a.status || 'Active';
-                return `
-        <tr>
-            <td class="p-3 text-slate-300">${escapeHtml(r.displayName)}</td>
-            <td class="p-3 font-medium text-slate-200">${escapeHtml(a.name || '—')}</td>
-            <td class="p-3 text-slate-400">${escapeHtml(a.type || 'Other')}</td>
-            <td class="p-3 text-right font-mono text-emerald-400">${fmtNaira(a.priceNgn || 0)}</td>
-            <td class="p-3 text-center">${badge(statusVal)}</td>
-            <td class="p-3 text-slate-500">${a.expiryDate ? fmtDate(a.expiryDate) : '—'}</td>
-            <td class="p-3 text-center flex gap-1 justify-center">
-                <button onclick='openAddAddonModal("${escapeHtml(r.clientId)}", ${r.index})'
-                    class="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white">Edit</button>
-                <button onclick="deleteAgentAddon('${escapeHtml(r.clientId)}', ${r.index})"
-                    class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Delete</button>
-            </td>
-        </tr>`;
-            }).join('');
+            // Merged into Pricing & Tiers hub
+            if (typeof switchMasterHub === 'function') switchMasterHub('pricing');
+            var sel = document.getElementById('pricingSectionSelect');
+            if (sel) { sel.value = 'addons'; }
+            if (typeof pricingShowSection === 'function') pricingShowSection('addons');
+            if (typeof pricingLoadAll === 'function') pricingLoadAll();
         }
 
         function runDocReconcileSweep(btnEl) {
@@ -17584,7 +17587,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             const hint = document.getElementById('integCredentialsHint');
             const examples = {
                 email: '{"provider":"sendgrid","apiKey":"SG.xxx","fromAddress":"no-reply@client.com"}',
-                crm: '{"apiKey":"...","baseUrl":"https://app.theircrm.com"}',
+                crm: '{"apiKey":"...","baseUrl":"https://api.theircrm.com"}',
                 database: '{"connectionString":"..."}',
                 api: '{"apiKey":"...","baseUrl":"..."}'
             };
@@ -18131,64 +18134,118 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         }
     </script>
 
+
     <script>
-        /* ===== Pricing & Tiers hub (Ops + Digital) ===== */
-        window.PRICING_STATE = { catalog: [], tiers: [], editingId: null };
+        /* ===== Pricing, Tiers & Add-ons (merged hub) ===== */
+        window.PRICING_STATE = { catalog: [], tiers: [], addons: [], editingId: null, fx: 1300 };
+
+        function pricingShowSection(which) {
+            document.querySelectorAll('.pricing-sec').forEach(function (el) { el.classList.add('hidden'); });
+            var el = document.getElementById('pricingSec-' + which);
+            if (el) el.classList.remove('hidden');
+            // Keep tier editor available when on ops/digital
+            if (which !== 'ops' && which !== 'digital') {
+                var ed = document.getElementById('pricingEditor');
+                if (ed) ed.classList.add('hidden');
+            }
+        }
 
         async function pricingLoadAll() {
             try {
-                let res = await executeSecureBridgeCall('agent', 'agent-get-billing-catalog', { region: 'NG' });
-                if (res && res.success && (res.opsTiers || res.digitalTiers)) {
-                    const tiers = [].concat(res.opsTiers || [], res.digitalTiers || []).map(function (t) {
-                        return {
-                            id: t.id,
-                            suite: t.suite,
-                            name: t.name,
-                            tagline: t.tagline,
-                            priceUsd: t.priceOffshoreUsd != null ? t.priceOffshoreUsd : (t.price && t.price.currency === 'USD' ? t.price.amount : 0),
-                            priceNgn: t.priceLocalNgn != null ? t.priceLocalNgn : (t.price && t.price.currency === 'NGN' ? t.price.amount : 0),
-                            services: t.services || {},
-                            features: t.features || []
-                        };
-                    });
-                    window.PRICING_STATE.tiers = tiers;
-                    window.PRICING_STATE.catalog = [];
-                    window.PRICING_STATE.addons = res.addons || [];
-                    window.PRICING_STATE.payg = res.payg || [];
-                    const fxEl = document.getElementById('pricingFxRate');
-                    if (fxEl && res.fxUsdNgn) fxEl.value = res.fxUsdNgn;
-                } else {
-                    res = await executeSecureBridgeCall('agent', 'agent-list-service-tiers', {});
-                    if (!res || !res.success) {
-                        if (typeof showToast === 'function') showToast((res && res.message) || 'Failed to load tiers', 'error');
-                        return;
-                    }
+                var res = await executeSecureBridgeCall('agent', 'agent-list-service-tiers', {});
+                if (res && res.success) {
                     window.PRICING_STATE.catalog = res.catalog || [];
                     window.PRICING_STATE.tiers = res.tiers || [];
+                    var rateEl = document.getElementById('pricingMinuteRate');
+                    if (rateEl && res.minuteRate != null) rateEl.value = res.minuteRate;
                 }
-                const rateEl = document.getElementById('pricingMinuteRate');
-                if (rateEl && res.minuteRate != null) rateEl.value = res.minuteRate;
+                var billCat = await executeSecureBridgeCall('agent', 'agent-get-billing-catalog', { region: 'NG' });
+                if (billCat && billCat.success) {
+                    if (billCat.fxUsdNgn) {
+                        window.PRICING_STATE.fx = Number(billCat.fxUsdNgn) || 1300;
+                        var fxEl0 = document.getElementById('pricingFxRate');
+                        if (fxEl0) fxEl0.value = window.PRICING_STATE.fx;
+                    }
+                    if (Array.isArray(billCat.addons) && billCat.addons.length) {
+                        window.PRICING_STATE.addons = billCat.addons.map(function (a) {
+                            return {
+                                key: a.id || a.key,
+                                label: a.label || a.id,
+                                priceNgn: Number(a.priceLocalNgn) || 0,
+                                priceUsd: Number(a.priceOffshoreUsd) || 0,
+                                active: true
+                            };
+                        });
+                    }
+                    // If tiers empty from list, mirror from catalog
+                    if (!(window.PRICING_STATE.tiers || []).length) {
+                        var mirrored = [];
+                        (billCat.opsTiers || []).forEach(function (t) {
+                            mirrored.push({ id: t.id, suite: 'ops', name: t.name, tagline: t.tagline, priceUsd: t.priceOffshoreUsd, priceNgn: t.priceLocalNgn, services: t.services || {}, features: t.features || [], active: true });
+                        });
+                        (billCat.digitalTiers || []).forEach(function (t) {
+                            mirrored.push({ id: t.id, suite: 'digital', name: t.name, tagline: t.tagline, priceUsd: t.priceOffshoreUsd, priceNgn: t.priceLocalNgn, services: t.services || {}, features: t.features || [], active: true });
+                        });
+                        if (mirrored.length) window.PRICING_STATE.tiers = mirrored;
+                    }
+                }
+                var priceRes = await executeSecureBridgeCall('agent', 'agent-get-all-service-pricing', {});
+                if (priceRes && priceRes.success) {
+                    var p = priceRes.pricing || {};
+                    if (priceRes.fx && priceRes.fx.USD) {
+                        window.PRICING_STATE.fx = Number(priceRes.fx.USD) || 1300;
+                        var fxEl = document.getElementById('pricingFxRate');
+                        if (fxEl) fxEl.value = window.PRICING_STATE.fx;
+                    }
+                    // Build addons list: keys that look like extras / known addons
+                    var addons = [];
+                    Object.keys(p).forEach(function (key) {
+                        var row = p[key];
+                        if (!row) return;
+                        var isTier = /_ops$|^digital_|ops_/.test(key) || (row.suite);
+                        if (isTier && row.services) return;
+                        // Prefer items with fromAdminTier false or category add-on patterns
+                        if (row.fromAdminTier && row.services) return;
+                        addons.push({
+                            key: key,
+                            label: row.label || key,
+                            priceNgn: Number(row.totalNgn || row.baseNgn) || 0,
+                            priceUsd: Number(row.totalUsd) || 0,
+                            active: row.active !== false
+                        });
+                    });
+                    // Prefer explicit addon-like keys first in display
+                    var preferred = ['extra_50_emails', 'extra_proposal', 'extra_mailbox', 'compliance_doc_tracking', 'extra_10_hrs_ai', 'extra_human_hours', 'payg_document', 'payg_proposal'];
+                    addons.sort(function (a, b) {
+                        var ia = preferred.indexOf(a.key); var ib = preferred.indexOf(b.key);
+                        if (ia >= 0 || ib >= 0) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+                        return a.key.localeCompare(b.key);
+                    });
+                    window.PRICING_STATE.addons = addons;
+                }
                 pricingRenderLists();
+                pricingRenderAddonTable();
                 pricingFillAssignSelects();
+                pricingRenderAssignAddons();
             } catch (e) {
                 if (typeof showToast === 'function') showToast(String(e.message || e), 'error');
             }
         }
 
         function pricingRenderLists() {
-            const ops = document.getElementById('pricingOpsList');
-            const dig = document.getElementById('pricingDigitalList');
+            var ops = document.getElementById('pricingOpsList');
+            var dig = document.getElementById('pricingDigitalList');
             if (!ops || !dig) return;
-            const tiers = window.PRICING_STATE.tiers || [];
+            var tiers = window.PRICING_STATE.tiers || [];
             function card(t) {
-                const svc = t.services || {};
-                const bits = Object.keys(svc).filter(function (k) { return Number(svc[k]) !== 0; }).slice(0, 6).map(function (k) {
-                    const v = svc[k];
+                var svc = t.services || {};
+                var bits = Object.keys(svc).filter(function (k) { return Number(svc[k]) !== 0; }).slice(0, 6).map(function (k) {
+                    var v = svc[k];
                     return k.replace(/_/g, ' ') + ': ' + (Number(v) < 0 ? '\u221e' : v);
                 }).join(' \u00b7 ');
                 return '<div class="border border-slate-700 rounded-lg p-3 bg-slate-900/80 hover:border-slate-500 cursor-pointer" onclick="pricingEditTier(\'' + String(t.id).replace(/'/g, '') + '\')">' +
                     '<div class="flex justify-between gap-2"><span class="font-semibold text-white text-sm">' + (t.name || t.id) + '</span>' +
-                    '<span class="text-[10px] text-slate-400">' + (t.id) + '</span></div>' +
+                    '<span class="text-[10px] text-slate-400">' + t.id + '</span></div>' +
                     '<p class="text-[11px] text-slate-400 mt-0.5">' + (t.tagline || '') + '</p>' +
                     '<p class="text-sm text-emerald-400 mt-1">$' + (t.priceUsd || 0) + ' \u00b7 \u20a6' + Number(t.priceNgn || 0).toLocaleString() + '/mo</p>' +
                     '<p class="text-[10px] text-slate-500 mt-1">' + bits + '</p></div>';
@@ -18197,10 +18254,69 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             dig.innerHTML = tiers.filter(function (t) { return t.suite === 'digital'; }).map(card).join('') || '<p class="text-xs text-slate-500">No Digital tiers yet.</p>';
         }
 
+        function pricingRenderAddonTable() {
+            var body = document.getElementById('pricingAddonTableBody');
+            if (!body) return;
+            var fx = Number(window.PRICING_STATE.fx) || 1300;
+            var rows = window.PRICING_STATE.addons || [];
+            body.innerHTML = rows.map(function (a) {
+                var usd = a.priceUsd || (fx ? Math.round(a.priceNgn / fx) : 0);
+                return '<tr class="border-t border-slate-800 hover:bg-slate-900/50">' +
+                    '<td class="px-3 py-2 font-mono text-[10px] text-slate-400">' + a.key + '</td>' +
+                    '<td class="px-3 py-2">' + (a.label || '') + '</td>' +
+                    '<td class="px-3 py-2">\u20a6' + Number(a.priceNgn || 0).toLocaleString() + '</td>' +
+                    '<td class="px-3 py-2">$' + Number(usd).toLocaleString() + '</td>' +
+                    '<td class="px-3 py-2">' + (a.active === false ? '<span class="text-red-400">Off</span>' : '<span class="text-emerald-400">On</span>') + '</td>' +
+                    '<td class="px-3 py-2"><button type="button" class="text-indigo-400 hover:underline" onclick="pricingEditAddon(\'' + a.key.replace(/'/g, '') + '\')">Edit</button></td>' +
+                    '</tr>';
+            }).join('') || '<tr><td colspan="6" class="px-3 py-6 text-center text-slate-500">No add-ons in pricing map yet. Click + New add-on.</td></tr>';
+        }
+
+        function pricingEditAddon(key) {
+            var a = (window.PRICING_STATE.addons || []).find(function (x) { return x.key === key; }) || { key: key, label: key, priceNgn: 0, active: true };
+            document.getElementById('pricingAddonEditor').classList.remove('hidden');
+            document.getElementById('pae_key').value = a.key;
+            document.getElementById('pae_key').readOnly = !!key;
+            document.getElementById('pae_label').value = a.label || '';
+            document.getElementById('pae_ngn').value = a.priceNgn || 0;
+            document.getElementById('pae_active').checked = a.active !== false;
+        }
+
+        function pricingNewAddon() {
+            document.getElementById('pricingAddonEditor').classList.remove('hidden');
+            document.getElementById('pae_key').value = '';
+            document.getElementById('pae_key').readOnly = false;
+            document.getElementById('pae_label').value = '';
+            document.getElementById('pae_ngn').value = '';
+            document.getElementById('pae_active').checked = true;
+        }
+
+        async function pricingSaveAddon() {
+            var itemKey = document.getElementById('pae_key').value.trim();
+            var label = document.getElementById('pae_label').value.trim();
+            var priceNgn = Number(document.getElementById('pae_ngn').value) || 0;
+            var active = document.getElementById('pae_active').checked;
+            if (!itemKey) {
+                if (typeof showToast === 'function') showToast('Item key required', 'error');
+                return;
+            }
+            var res = await executeSecureBridgeCall('agent', 'agent-set-service-pricing', {
+                itemKey: itemKey,
+                label: label || itemKey,
+                priceNgn: priceNgn,
+                active: active
+            });
+            if (typeof showToast === 'function') showToast((res && res.message) || 'Saved', res && res.success === false ? 'error' : 'success');
+            if (res && res.success !== false) {
+                document.getElementById('pricingAddonEditor').classList.add('hidden');
+                await pricingLoadAll();
+            }
+        }
+
         function pricingFillAssignSelects() {
-            const tiers = window.PRICING_STATE.tiers || [];
-            const ops = document.getElementById('pa_opsTier');
-            const dig = document.getElementById('pa_digitalTier');
+            var tiers = window.PRICING_STATE.tiers || [];
+            var ops = document.getElementById('pa_opsTier');
+            var dig = document.getElementById('pa_digitalTier');
             if (ops) {
                 ops.innerHTML = '<option value="">\u2014 none \u2014</option>' + tiers.filter(function (t) { return (t.suite || 'ops') === 'ops'; }).map(function (t) {
                     return '<option value="' + t.id + '">' + t.name + '</option>';
@@ -18211,6 +18327,20 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                     return '<option value="' + t.id + '">' + t.name + '</option>';
                 }).join('');
             }
+        }
+
+        function pricingRenderAssignAddons() {
+            var host = document.getElementById('pa_addonChecks');
+            if (!host) return;
+            var addons = window.PRICING_STATE.addons || [];
+            host.innerHTML = addons.filter(function (a) { return a.active !== false; }).map(function (a) {
+                return '<label class="flex items-start gap-2 border border-slate-700 rounded-lg p-2 bg-slate-950/60 text-[11px] text-slate-300 cursor-pointer hover:border-slate-500">' +
+                    '<input type="checkbox" class="mt-0.5 pa-addon-cb" data-addon-key="' + a.key + '" />' +
+                    '<span class="flex-1"><span class="text-white font-medium">' + (a.label || a.key) + '</span>' +
+                    '<span class="block text-slate-500">\u20a6' + Number(a.priceNgn || 0).toLocaleString() + '</span></span>' +
+                    '<input type="number" min="1" value="1" class="w-14 px-1 py-0.5 rounded bg-slate-900 border border-slate-700 text-white pa-addon-qty" data-addon-key="' + a.key + '" title="Qty" />' +
+                    '</label>';
+            }).join('') || '<p class="text-xs text-slate-500">No active add-ons. Configure them under Add-on catalog.</p>';
         }
 
         function pricingNewTier(suite) {
@@ -18227,10 +18357,11 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             document.getElementById('pe_ngn').value = '';
             document.getElementById('pe_features').value = '';
             pricingRenderServiceInputs({});
+            pricingShowSection(suite === 'digital' ? 'digital' : 'ops');
         }
 
         function pricingEditTier(id) {
-            const t = (window.PRICING_STATE.tiers || []).find(function (x) { return x.id === id; });
+            var t = (window.PRICING_STATE.tiers || []).find(function (x) { return x.id === id; });
             if (!t) return;
             window.PRICING_STATE.editingId = id;
             document.getElementById('pricingEditor').classList.remove('hidden');
@@ -18244,33 +18375,61 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             document.getElementById('pe_ngn').value = t.priceNgn || 0;
             document.getElementById('pe_features').value = (t.features || []).join(', ');
             pricingRenderServiceInputs(t.services || {});
+            pricingShowSection((t.suite === 'digital') ? 'digital' : 'ops');
         }
 
         function pricingRenderServiceInputs(services) {
-            const cat = window.PRICING_STATE.catalog || [];
-            const suite = (document.getElementById('pe_suite') && document.getElementById('pe_suite').value) || 'ops';
-            const grid = document.getElementById('pe_servicesGrid');
+            var cat = window.PRICING_STATE.catalog || [];
+            var suite = (document.getElementById('pe_suite') && document.getElementById('pe_suite').value) || 'ops';
+            var grid = document.getElementById('pe_servicesGrid');
             if (!grid) return;
-            const ordered = cat.slice().sort(function (a, b) {
-                const aa = a.suite === suite ? 0 : 1;
-                const bb = b.suite === suite ? 0 : 1;
-                return aa - bb || String(a.group || '').localeCompare(String(b.group || ''));
+            services = services || {};
+            // Prefer tier-eligible services for this suite; still show others dimmed
+            var ordered = cat.slice().filter(function (s) {
+                if (s.neverBillSeparately) return false;
+                if (s.addonOnly) return false;
+                return true;
+            }).sort(function (a, b) {
+                var aa = a.suite === suite ? 0 : 1;
+                var bb = b.suite === suite ? 0 : 1;
+                return aa - bb || String(a.group || '').localeCompare(String(b.group || '')) || String(a.label).localeCompare(String(b.label));
             });
             grid.innerHTML = ordered.map(function (s) {
-                const val = services[s.key] != null ? services[s.key] : 0;
-                const dim = s.suite !== suite ? 'opacity-60' : '';
-                return '<label class="text-[10px] text-slate-400 border border-slate-800 rounded-lg p-2 ' + dim + '">' +
-                    '<span class="text-slate-300">' + s.label + '</span> <span class="text-slate-600">(' + s.unit + ')</span>' +
-                    '<input type="number" data-svc-key="' + s.key + '" value="' + val + '" class="mt-1 w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 text-white text-xs" />' +
+                var val = services[s.key] != null ? Number(services[s.key]) : 0;
+                var on = val !== 0 && services[s.key] != null;
+                if (services[s.key] === 0) on = false;
+                if (services[s.key] != null && Number(services[s.key]) !== 0) on = true;
+                var dim = s.suite !== suite ? 'opacity-50' : '';
+                return '<label class="text-[10px] text-slate-400 border border-slate-800 rounded-lg p-2 flex flex-col gap-1 ' + dim + '">' +
+                    '<span class="flex items-center gap-2">' +
+                    '<input type="checkbox" class="pe-svc-on rounded border-slate-600" data-svc-key="' + s.key + '" ' + (on ? 'checked' : '') + ' />' +
+                    '<span class="text-slate-200 font-medium">' + s.label + '</span>' +
+                    '</span>' +
+                    '<span class="text-slate-600">' + (s.group || '') + ' · ' + (s.unit || '') + '</span>' +
+                    '<input type="number" data-svc-qty="' + s.key + '" value="' + (on ? val : 1) + '" min="-1" ' +
+                    'class="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 text-white text-xs" ' + (on ? '' : 'disabled') + ' />' +
                     '</label>';
-            }).join('');
+            }).join('') || '<p class="text-xs text-slate-500">No services in catalog. Run Force reset catalog.</p>';
+
+            grid.querySelectorAll('.pe-svc-on').forEach(function (cb) {
+                cb.addEventListener('change', function () {
+                    var key = cb.getAttribute('data-svc-key');
+                    var qty = grid.querySelector('[data-svc-qty="' + key + '"]');
+                    if (qty) {
+                        qty.disabled = !cb.checked;
+                        if (cb.checked && (!qty.value || qty.value === '0')) qty.value = '1';
+                    }
+                });
+            });
         }
 
         document.addEventListener('change', function (e) {
             if (e.target && e.target.id === 'pe_suite') {
-                const services = {};
-                document.querySelectorAll('#pe_servicesGrid [data-svc-key]').forEach(function (inp) {
-                    services[inp.getAttribute('data-svc-key')] = Number(inp.value) || 0;
+                var services = {};
+                document.querySelectorAll('#pe_servicesGrid .pe-svc-on:checked').forEach(function (cb) {
+                    var key = cb.getAttribute('data-svc-key');
+                    var qty = document.querySelector('#pe_servicesGrid [data-svc-qty="' + key + '"]');
+                    services[key] = qty ? Number(qty.value) || 1 : 1;
                 });
                 pricingRenderServiceInputs(services);
             }
@@ -18282,12 +18441,16 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         }
 
         async function pricingSaveTier() {
-            const services = {};
-            document.querySelectorAll('#pe_servicesGrid [data-svc-key]').forEach(function (inp) {
-                services[inp.getAttribute('data-svc-key')] = Number(inp.value);
+            var services = {};
+            document.querySelectorAll('#pe_servicesGrid .pe-svc-on:checked').forEach(function (cb) {
+                var key = cb.getAttribute('data-svc-key');
+                var qty = document.querySelector('#pe_servicesGrid [data-svc-qty="' + key + '"]');
+                var n = qty ? Number(qty.value) : 1;
+                if (isNaN(n)) n = 1;
+                services[key] = n;
             });
-            const features = (document.getElementById('pe_features').value || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
-            const tier = {
+            var features = (document.getElementById('pe_features').value || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+            var tier = {
                 id: document.getElementById('pe_id').value.trim(),
                 suite: document.getElementById('pe_suite').value,
                 name: document.getElementById('pe_name').value.trim(),
@@ -18302,7 +18465,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 if (typeof showToast === 'function') showToast('Tier ID and name required', 'error');
                 return;
             }
-            const res = await executeSecureBridgeCall('agent', 'agent-save-service-tier', { tier: tier });
+            var res = await executeSecureBridgeCall('agent', 'agent-save-service-tier', { tier: tier });
             if (typeof showToast === 'function') showToast((res && res.message) || 'Saved', res && res.success === false ? 'error' : 'success');
             if (res && res.success) {
                 await pricingLoadAll();
@@ -18311,54 +18474,127 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         }
 
         async function pricingDeleteTier() {
-            const id = document.getElementById('pe_id').value.trim();
+            var id = document.getElementById('pe_id').value.trim();
             if (!id || !confirm('Delete tier ' + id + '?')) return;
-            const res = await executeSecureBridgeCall('agent', 'agent-delete-service-tier', { id: id });
+            var res = await executeSecureBridgeCall('agent', 'agent-delete-service-tier', { id: id });
             if (typeof showToast === 'function') showToast((res && res.message) || 'Deleted', res && res.success === false ? 'error' : 'success');
             await pricingLoadAll();
             pricingCloseEditor();
         }
 
         async function pricingSaveMinuteRate() {
-            const rate = Number(document.getElementById('pricingMinuteRate').value);
-            const res = await executeSecureBridgeCall('agent', 'agent-set-minute-rate', { rate: rate });
+            var rate = Number(document.getElementById('pricingMinuteRate').value);
+            var res = await executeSecureBridgeCall('agent', 'agent-set-minute-rate', { rate: rate });
             if (typeof showToast === 'function') showToast((res && res.message) || 'Rate saved', res && res.success === false ? 'error' : 'success');
         }
 
-        async function pricingAssignClient() {
-            let addons = {};
-            try {
-                const raw = (document.getElementById('pa_addons').value || '').trim();
-                if (raw) addons = JSON.parse(raw);
-            } catch (e) {
-                if (typeof showToast === 'function') showToast('Add-ons must be valid JSON', 'error');
+        async function pricingLoadClientGrants() {
+            var clientId = (document.getElementById('pa_clientId') && document.getElementById('pa_clientId').value || '').trim();
+            var box = document.getElementById('pa_activeAddons');
+            var bal = document.getElementById('pa_humanBal');
+            if (!clientId) {
+                if (box) box.textContent = 'Enter a Client ID first.';
                 return;
             }
-            const res = await executeSecureBridgeCall('agent', 'agent-assign-client-tier', {
-                clientId: document.getElementById('pa_clientId').value.trim(),
+            if (box) box.textContent = 'Loading…';
+            var res = await executeSecureBridgeCall('agent', 'agent-get-client-service-grants', { clientId: clientId });
+            if (!res || res.success === false) {
+                if (box) box.textContent = (res && res.message) || 'Could not load grants.';
+                return;
+            }
+            if (res.opsTier && document.getElementById('pa_opsTier')) {
+                document.getElementById('pa_opsTier').value = res.opsTier;
+            }
+            if (res.digitalTier && document.getElementById('pa_digitalTier')) {
+                document.getElementById('pa_digitalTier').value = res.digitalTier;
+            }
+            var active = res.activeAddons || {};
+            var keys = Object.keys(active);
+            if (!keys.length) {
+                if (box) box.innerHTML = '<span class="text-slate-500">No active add-ons yet.</span>';
+            } else {
+                if (box) {
+                    box.innerHTML = keys.map(function (k) {
+                        return '<div class="flex justify-between gap-2 border border-slate-800 rounded px-2 py-1.5 mb-1 bg-slate-900/80">' +
+                            '<span class="text-slate-300">' + k + '</span>' +
+                            '<span class="text-emerald-400 font-mono">×' + active[k] + ' <i class="fa-solid fa-lock text-slate-600 text-[9px]"></i></span></div>';
+                    }).join('');
+                }
+            }
+            if (bal) bal.textContent = 'Human minutes balance: ' + (res.humanMinutesBalance != null ? res.humanMinutesBalance : '—');
+            window.PRICING_STATE.clientActiveAddons = active;
+        }
+
+        async function pricingAssignClient() {
+            var clientId = (document.getElementById('pa_clientId') && document.getElementById('pa_clientId').value || '').trim();
+            if (!clientId) {
+                if (typeof showToast === 'function') showToast('Client ID required', 'error');
+                return;
+            }
+            var res = await executeSecureBridgeCall('agent', 'agent-assign-client-tier', {
+                clientId: clientId,
                 opsTier: document.getElementById('pa_opsTier').value,
-                digitalTier: document.getElementById('pa_digitalTier').value,
+                digitalTier: document.getElementById('pa_digitalTier').value
+            });
+            var st = document.getElementById('pa_status');
+            if (st) st.textContent = (res && res.message) || JSON.stringify(res);
+            if (typeof showToast === 'function') showToast((res && res.message) || 'Tiers saved', res && res.success === false ? 'error' : 'success');
+            await pricingLoadClientGrants();
+        }
+
+        async function pricingAppendClientAddons() {
+            var clientId = (document.getElementById('pa_clientId') && document.getElementById('pa_clientId').value || '').trim();
+            if (!clientId) {
+                if (typeof showToast === 'function') showToast('Client ID required', 'error');
+                return;
+            }
+            var addons = {};
+            document.querySelectorAll('.pa-addon-cb:checked').forEach(function (cb) {
+                var key = cb.getAttribute('data-addon-key');
+                var qtyInp = document.querySelector('.pa-addon-qty[data-addon-key="' + key + '"]');
+                var qty = qtyInp ? (Number(qtyInp.value) || 1) : 1;
+                if (qty > 0) addons[key] = qty;
+            });
+            if (!Object.keys(addons).length) {
+                if (typeof showToast === 'function') showToast('Tick at least one add-on and set quantity to add', 'error');
+                return;
+            }
+            var res = await executeSecureBridgeCall('agent', 'agent-append-client-addons', {
+                clientId: clientId,
                 addons: addons
             });
-            const st = document.getElementById('pa_status');
+            // Optional: also run purchase effect for legacy quota keys
+            if (res && res.success !== false) {
+                for (var key in addons) {
+                    if (!addons.hasOwnProperty(key)) continue;
+                    try {
+                        await executeSecureBridgeCall('agent', 'agent-purchase-addon', {
+                            clientId: clientId,
+                            addonKey: key,
+                            quantity: addons[key]
+                        });
+                    } catch (_) { }
+                }
+            }
+            var st = document.getElementById('pa_status');
             if (st) st.textContent = (res && res.message) || JSON.stringify(res);
-            if (typeof showToast === 'function') showToast((res && res.message) || 'Assigned', res && res.success === false ? 'error' : 'success');
+            if (typeof showToast === 'function') showToast((res && res.message) || 'Add-ons appended', res && res.success === false ? 'error' : 'success');
+            // Clear checks after append
+            document.querySelectorAll('.pa-addon-cb:checked').forEach(function (cb) { cb.checked = false; });
+            await pricingLoadClientGrants();
         }
 
         async function pricingLogTime() {
-            const res = await executeSecureBridgeCall('agent', 'agent-log-admin-time', {
+            var res = await executeSecureBridgeCall('agent', 'agent-log-admin-time', {
                 clientId: document.getElementById('pt_clientId').value.trim(),
                 minutes: Number(document.getElementById('pt_minutes').value),
                 note: document.getElementById('pt_note').value
             });
-            const st = document.getElementById('pt_status');
+            var st = document.getElementById('pt_status');
             if (st) st.textContent = (res && res.message) || '';
             if (typeof showToast === 'function') showToast((res && res.message) || 'Logged', res && res.success === false ? 'error' : 'success');
         }
-    </script>
 
-
-    <script>
         async function pricingSaveFx() {
             const rate = Number(document.getElementById('pricingFxRate').value);
             const res = await executeSecureBridgeCall('agent', 'agent-set-fx-rate', { rate: rate });
@@ -18366,11 +18602,19 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             if (st) st.textContent = (res && res.message) || '';
             if (typeof showToast === 'function') showToast((res && res.message) || 'FX saved', res && res.success === false ? 'error' : 'success');
         }
+
         async function pricingSeedConstitution() {
-            if (!confirm('Load standard billing catalog?')) return;
+            if (!confirm('Load standard billing catalog? (only if empty)')) return;
             const res = await executeSecureBridgeCall('agent', 'agent-seed-billing-constitution', {});
             if (typeof pricingLoadAll === 'function') await pricingLoadAll();
             if (typeof showToast === 'function') showToast((res && res.message) || 'Seeded', res && res.success === false ? 'error' : 'success');
+        }
+
+        async function pricingForceResetCatalog() {
+            if (!confirm('FORCE RESET all Ops/Digital tiers and add-on prices to the standard catalog? This overwrites current tier settings.')) return;
+            const res = await executeSecureBridgeCall('agent', 'agent-force-reset-billing-constitution', {});
+            if (typeof pricingLoadAll === 'function') await pricingLoadAll();
+            if (typeof showToast === 'function') showToast((res && res.message) || 'Reset', res && res.success === false ? 'error' : 'success');
         }
     </script>
 </body>
