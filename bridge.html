@@ -18313,10 +18313,14 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 if (typeof showToast === 'function') showToast('Item key required', 'error');
                 return;
             }
+            var fx = Number(window.PRICING_STATE.fx) || 1300;
+            var priceUsd = fx > 0 ? Math.round((priceNgn / fx) * 100) / 100 : 0;
             var res = await executeSecureBridgeCall('agent', 'agent-set-service-pricing', {
                 itemKey: itemKey,
                 label: label || itemKey,
                 priceNgn: priceNgn,
+                priceUsd: priceUsd,
+                priceOffshoreUsd: priceUsd,
                 active: active
             });
             if (typeof showToast === 'function') showToast((res && res.message) || 'Saved', res && res.success === false ? 'error' : 'success');
