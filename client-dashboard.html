@@ -1871,14 +1871,28 @@
                 clearTimeout(t);
                 const text = await res.text();
                 const jsonStart = text.indexOf('{');
-                let json = JSON.parse(jsonStart !== -1 ? text.substring(jsonStart) : text || '{}');
+                const jsonEnd = text.lastIndexOf('}');
+                let json = {};
+                try {
+                    const slice = (jsonStart !== -1 && jsonEnd > jsonStart)
+                        ? text.substring(jsonStart, jsonEnd + 1)
+                        : (text || '{}');
+                    json = JSON.parse(slice);
+                } catch (parseErr) {
+                    try { console.error('[gateway] bad JSON', action, (text || '').slice(0, 180)); } catch (_) { }
+                    return {
+                        success: false,
+                        message: clientFriendlyError('Bad gateway response'),
+                        errorCode: clientErrorCode('Bad gateway response')
+                    };
+                }
                 // Client-facing failures: replace real statements with error codes only
                 if (json && json.success === false) {
                     const raw = json.message || json.error || 'request failed';
                     try { console.error('[gateway]', action, raw); } catch (_) { }
                     const code = clientErrorCode(raw);
                     // Session / auth: force logout — client must not stay on a coded error screen
-                    if (typeof forceLogoutOnAuthError === 'function' && forceLogoutOnAuthError(raw, code)) {
+                    if (action !== 'clientPortalLogin' && typeof forceLogoutOnAuthError === 'function' && forceLogoutOnAuthError(raw, code)) {
                         return {
                             success: false,
                             message: 'Error occurred — error code 4101',
@@ -1962,25 +1976,43 @@
 
         async function handleClientLogin(e) {
             e.preventDefault();
-            document.getElementById('loginError').classList.add('hidden');
+            e.stopPropagation();
+            const errEl = document.getElementById('loginError');
+            if (errEl) errEl.classList.add('hidden');
 
-            GW_URL = document.getElementById('gwUrl').value.trim();
-            const clientId = document.getElementById('loginClientId').value.trim();
-            const accessCode = document.getElementById('loginAccessCode').value.trim();
-            if (!GW_URL || !clientId || !accessCode) return;
+            const btn = (e.target && e.target.querySelector) ? e.target.querySelector('button[type="submit"]') : null;
+            const prevBtn = btn ? btn.innerHTML : '';
+            try {
+                GW_URL = (document.getElementById('gwUrl') && document.getElementById('gwUrl').value || '').trim();
+                const clientId = (document.getElementById('loginClientId') && document.getElementById('loginClientId').value || '').trim();
+                const accessCode = (document.getElementById('loginAccessCode') && document.getElementById('loginAccessCode').value || '').trim();
+                if (!GW_URL || !clientId || !accessCode) {
+                    showLoginError('Enter Gateway URL, Client ID, and access code.');
+                    return;
+                }
 
-            CLIENT_ID = clientId;
-            const res = await callGateway('clientportal', 'clientPortalLogin', { accessCode });
+                CLIENT_ID = clientId;
+                if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Signing in…'; }
 
-            if (res.success && res.token) {
-                SESSION_TOKEN = res.token;
-                localStorage.setItem('VIC_CLIENT_GW_URL', GW_URL);
-                localStorage.setItem('VIC_CLIENT_ID', CLIENT_ID);
-                localStorage.setItem('VIC_CLIENT_TOKEN', SESSION_TOKEN);
-                document.getElementById('companyNameLabel').textContent = res.displayName || CLIENT_ID;
-                enterDashboard();
-            } else {
-                showLoginError(res.message || 'Invalid Client ID or access code.');
+                const res = await callGateway('clientportal', 'clientPortalLogin', { accessCode }, { timeoutMs: 45000 });
+
+                if (res && res.success && res.token) {
+                    SESSION_TOKEN = res.token;
+                    localStorage.setItem('VIC_CLIENT_GW_URL', GW_URL);
+                    localStorage.setItem('VIC_CLIENT_ID', CLIENT_ID);
+                    localStorage.setItem('VIC_CLIENT_TOKEN', SESSION_TOKEN);
+                    const lab = document.getElementById('companyNameLabel');
+                    if (lab) lab.textContent = res.displayName || CLIENT_ID;
+                    enterDashboard();
+                } else {
+                    const msg = (res && (res.message || res.errorCode)) || 'Invalid Client ID or access code.';
+                    showLoginError(msg);
+                }
+            } catch (err) {
+                try { console.error('login', err); } catch (_) { }
+                showLoginError((err && err.message) ? err.message : 'Login failed. Check gateway URL and try again.');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = prevBtn || '<i class="fa-solid fa-right-to-bracket text-xs"></i> Sign In'; }
             }
         }
 
@@ -2011,9 +2043,16 @@
 
         // Restore a saved session on page load
         window.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('gwUrl').value = GW_URL;
-            document.getElementById('loginClientId').value = CLIENT_ID;
-            if (GW_URL && CLIENT_ID && SESSION_TOKEN) enterDashboard();
+            try {
+                if (!GW_URL) GW_URL = 'https://app.thevictorias.com.ng';
+                const gw = document.getElementById('gwUrl');
+                const cid = document.getElementById('loginClientId');
+                if (gw) gw.value = GW_URL || 'https://app.thevictorias.com.ng';
+                if (cid) cid.value = CLIENT_ID || '';
+                if (GW_URL && CLIENT_ID && SESSION_TOKEN) enterDashboard();
+            } catch (e) {
+                try { console.error('boot', e); } catch (_) { }
+            }
         });
 
         // =====================================================================
@@ -4745,16 +4784,16 @@
                 cols.forEach(function (col) {
                     html += '<td class="px-1 py-1"><input type="text" value="' + escapeHtml(r[col.key] || '') + '" ' +
                         'placeholder="' + escapeHtml(col.label) + '" ' +
-                        'onchange="CLIENT_GEN_TABLE_STATE['' + id + ''][' + i + ']['' + col.key + '']=this.value" ' +
-                            'class="w-full min-w-[4rem] bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white focus:border-emerald-600 outline-none" /></td>';
+                        'onchange="CLIENT_GEN_TABLE_STATE[\'' + id + '\'][' + i + '][\'' + col.key + '\']=this.value" ' +
+                        'class="w-full min-w-[4rem] bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white focus:border-emerald-600 outline-none" /></td>';
                 });
-                html += '<td class="px-1"><button type="button" onclick="clientGenRemoveTableRow('' +
-                escapeHtml(docType) + '', '' + escapeHtml(key) + '', ' + i + ')" ' +
-            'class="text-slate-500 hover:text-red-400 px-1" title="Remove row">&times;</button></td>';
-            html += '</tr>';
-        });
-        html += '</tbody></table></div>';
-        wrap.innerHTML = html;
+                html += '<td class="px-1"><button type="button" onclick="clientGenRemoveTableRow(\'' +
+                    escapeHtml(docType) + '\',\'' + escapeHtml(key) + '\',' + i + ')"  ' +
+                    'class="text-slate-500 hover:text-red-400 px-1" title="Remove row">&times;</button></td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+            wrap.innerHTML = html;
         }
 
         function clientGenAddTableColumn(docType, key) {
