@@ -4775,8 +4775,7 @@
                         </div>
                         <p class="text-[11px] text-slate-500">Tick services to include on this tier, then set quantity.
                             <strong class="text-slate-400">-1</strong> = unlimited. Unticked services are not on the
-                            tier. Add-on-only items stay available under Assign to client.
-                        </p>
+                            tier. Add-on-only items stay available under Assign to client.</p>
                         <div id="pe_servicesGrid"
                             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-80 overflow-y-auto custom-scrollbar">
                         </div>
@@ -18197,31 +18196,41 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                         var fxEl = document.getElementById('pricingFxRate');
                         if (fxEl) fxEl.value = window.PRICING_STATE.fx;
                     }
-                    // Build addons list: keys that look like extras / known addons
-                    var addons = [];
-                    Object.keys(p).forEach(function (key) {
-                        var row = p[key];
-                        if (!row) return;
-                        var isTier = /_ops$|^digital_|ops_/.test(key) || (row.suite);
-                        if (isTier && row.services) return;
-                        // Prefer items with fromAdminTier false or category add-on patterns
-                        if (row.fromAdminTier && row.services) return;
-                        addons.push({
-                            key: key,
-                            label: row.label || key,
-                            priceNgn: Number(row.totalNgn || row.baseNgn) || 0,
-                            priceUsd: Number(row.totalUsd) || 0,
-                            active: row.active !== false
+                    // Prefer explicit addons from agent-get-all-service-pricing if present
+                    if (Array.isArray(priceRes.addons) && priceRes.addons.length && !(window.PRICING_STATE.addons || []).length) {
+                        window.PRICING_STATE.addons = priceRes.addons.map(function (a) {
+                            return {
+                                key: a.id || a.key,
+                                label: a.label || a.id || a.key,
+                                priceNgn: Number(a.priceLocalNgn != null ? a.priceLocalNgn : a.priceNgn) || 0,
+                                priceUsd: Number(a.priceOffshoreUsd != null ? a.priceOffshoreUsd : a.priceUsd) || 0,
+                                active: a.active !== false
+                            };
                         });
-                    });
-                    // Prefer explicit addon-like keys first in display
-                    var preferred = ['extra_50_emails', 'extra_proposal', 'extra_mailbox', 'compliance_doc_tracking', 'extra_10_hrs_ai', 'extra_human_hours', 'payg_document', 'payg_proposal'];
-                    addons.sort(function (a, b) {
-                        var ia = preferred.indexOf(a.key); var ib = preferred.indexOf(b.key);
-                        if (ia >= 0 || ib >= 0) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
-                        return a.key.localeCompare(b.key);
-                    });
-                    window.PRICING_STATE.addons = addons;
+                    }
+                    // Only scrape pricing-map keys if catalog addons still empty
+                    if (!(window.PRICING_STATE.addons || []).length) {
+                        var addons = [];
+                        Object.keys(p).forEach(function (key) {
+                            var row = p[key];
+                            if (!row) return;
+                            var isTier = /_ops$|^digital_|ops_/.test(key) || (row.suite && row.services);
+                            if (isTier) return;
+                            if (row.fromAdminTier && row.services) return;
+                            addons.push({
+                                key: key,
+                                label: row.label || key,
+                                priceNgn: Number(row.totalNgn || row.baseNgn) || 0,
+                                priceUsd: Number(row.totalUsd) || 0,
+                                active: row.active !== false
+                            });
+                        });
+                        window.PRICING_STATE.addons = addons;
+                    }
+                }
+                // Final fallback: constitution defaults already applied via billCat above
+                if (!(window.PRICING_STATE.addons || []).length && priceRes && Array.isArray(priceRes.addons)) {
+                    window.PRICING_STATE.addons = priceRes.addons;
                 }
                 pricingRenderLists();
                 pricingRenderAddonTable();
@@ -18259,8 +18268,12 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             if (!body) return;
             var fx = Number(window.PRICING_STATE.fx) || 1300;
             var rows = window.PRICING_STATE.addons || [];
+            if (!rows.length) {
+                body.innerHTML = '<tr><td colspan="5" class="px-3 py-6 text-center text-slate-500">No add-ons loaded. Click <strong>Force reset catalog</strong> (or run populate in Apps Script), then <strong>Refresh</strong>.</td></tr>';
+                return;
+            }
             body.innerHTML = rows.map(function (a) {
-                var usd = a.priceUsd || (fx ? Math.round(a.priceNgn / fx) : 0);
+                var usd = a.priceUsd || (fx ? Math.round((Number(a.priceNgn) || 0) / fx * 100) / 100 : 0);
                 return '<tr class="border-t border-slate-800 hover:bg-slate-900/50">' +
                     '<td class="px-3 py-2 font-mono text-[10px] text-slate-400">' + a.key + '</td>' +
                     '<td class="px-3 py-2">' + (a.label || '') + '</td>' +
@@ -18594,7 +18607,11 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             if (st) st.textContent = (res && res.message) || '';
             if (typeof showToast === 'function') showToast((res && res.message) || 'Logged', res && res.success === false ? 'error' : 'success');
         }
+    </script>
 
+
+
+    <script>
         async function pricingSaveFx() {
             const rate = Number(document.getElementById('pricingFxRate').value);
             const res = await executeSecureBridgeCall('agent', 'agent-set-fx-rate', { rate: rate });
@@ -18602,14 +18619,12 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             if (st) st.textContent = (res && res.message) || '';
             if (typeof showToast === 'function') showToast((res && res.message) || 'FX saved', res && res.success === false ? 'error' : 'success');
         }
-
         async function pricingSeedConstitution() {
             if (!confirm('Load standard billing catalog? (only if empty)')) return;
             const res = await executeSecureBridgeCall('agent', 'agent-seed-billing-constitution', {});
             if (typeof pricingLoadAll === 'function') await pricingLoadAll();
             if (typeof showToast === 'function') showToast((res && res.message) || 'Seeded', res && res.success === false ? 'error' : 'success');
         }
-
         async function pricingForceResetCatalog() {
             if (!confirm('FORCE RESET all Ops/Digital tiers and add-on prices to the standard catalog? This overwrites current tier settings.')) return;
             const res = await executeSecureBridgeCall('agent', 'agent-force-reset-billing-constitution', {});
