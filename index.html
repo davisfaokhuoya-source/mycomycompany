@@ -2700,7 +2700,25 @@
             const seen = {};
             function normalizeBillingCatalog(data) {
                 if (!data || !data.success) return null;
-                if (!(data.opsTiers || data.digitalTiers)) return data;
+                // agent-get-all-service-pricing already has pricing + serviceTiers + addons
+                if (!(data.opsTiers || data.digitalTiers)) {
+                    if (data.pricing && !data.serviceTiers) {
+                        data.serviceTiers = Object.keys(data.pricing).map(function (id) {
+                            var row = data.pricing[id];
+                            return {
+                                id: id,
+                                name: row.label || row.name || id,
+                                tagline: row.tagline || '',
+                                priceUsd: Number(row.totalUsd) || 0,
+                                priceNgn: Number(row.totalNgn) || 0,
+                                services: row.services || {},
+                                features: row.features || [],
+                                suite: row.suite || ''
+                            };
+                        });
+                    }
+                    return data;
+                }
                 const pricing = {};
                 const serviceTiers = [];
                 function ingest(list, suite) {
@@ -2885,6 +2903,66 @@
         }
 
 
+
+        function applyAdminTiersToAllCards(data, p) {
+            const tiers = (data && data.serviceTiers) || [];
+            const byId = {};
+            tiers.forEach(function (t) {
+                if (!t) return;
+                if (t.id) byId[String(t.id)] = t;
+            });
+            // Also accept pricing map rows as tier sources
+            if (p && typeof p === 'object') {
+                Object.keys(p).forEach(function (id) {
+                    if (byId[id]) return;
+                    const row = p[id];
+                    if (!row) return;
+                    byId[id] = {
+                        id: id,
+                        name: row.label || row.name || id,
+                        tagline: row.tagline || '',
+                        priceUsd: Number(row.totalUsd || row.priceUsd) || 0,
+                        priceNgn: Number(row.totalNgn || row.priceNgn) || 0,
+                        services: row.services || {},
+                        features: row.features || [],
+                        suite: row.suite || ''
+                    };
+                });
+            }
+
+            const opsMap = [
+                { id: 'starter_ops', aliases: ['ops_lite', 'starter_ops'], usd: 'starter-usd', ngn: 'starter-ngn', badge: 'starter-badge', plus: false, detailsKey: 'starterOps' },
+                { id: 'growth_ops', aliases: ['ops_grow', 'growth_ops'], usd: 'growth-usd', ngn: 'growth-ngn', badge: 'growth-badge', plus: false, detailsKey: 'growthOps' },
+                { id: 'enterprise_ops', aliases: ['ops_firm', 'enterprise_ops'], usd: 'enterprise-usd', ngn: 'enterprise-ngn', badge: 'enterprise-badge', plus: true, detailsKey: 'enterpriseOps' }
+            ];
+            const digMap = [
+                { id: 'digital_launch', aliases: ['digital_start', 'digital_launch', 'launch'], usd: 'launch-usd', ngn: 'launch-ngn', badge: null, plus: false, detailsKey: 'digitalLaunch' },
+                { id: 'digital_accelerate', aliases: ['digital_steady', 'digital_accelerate', 'accelerate'], usd: 'accel-usd', ngn: 'accel-ngn', badge: null, plus: false, detailsKey: 'digitalAccelerate' },
+                { id: 'digital_scale', aliases: ['digital_push', 'digital_scale', 'scale'], usd: 'scale-usd', ngn: 'scale-ngn', badge: null, plus: true, detailsKey: 'digitalScale' }
+            ];
+
+            opsMap.concat(digMap).forEach(function (cfg) {
+                var t = null;
+                (cfg.aliases || [cfg.id]).forEach(function (a) {
+                    if (!t && byId[a]) t = byId[a];
+                });
+                if (!t && p && p[cfg.id]) {
+                    t = {
+                        id: cfg.id,
+                        name: p[cfg.id].label || cfg.id,
+                        priceUsd: Number(p[cfg.id].totalUsd) || 0,
+                        priceNgn: Number(p[cfg.id].totalNgn) || 0,
+                        services: p[cfg.id].services || {},
+                        features: p[cfg.id].features || []
+                    };
+                }
+                if (t) {
+                    try { applyOneTierCard(t, p, cfg); }
+                    catch (e) { console.warn('applyOneTierCard', cfg.id, e); }
+                }
+            });
+        }
+
         function applyOneTierCard(t, p, cfg) {
             if (!cfg || !t) return;
             const priceRow = (p && (p[cfg.id] || p[t.id])) || null;
@@ -2971,14 +3049,23 @@
             const host = document.getElementById('billingAddonsGrid');
             const list = (data && data.addons) || [];
             if (host && list.length) {
+                const iconMap = {
+                    human_hour: 'fa-user-clock', human_hours_5: 'fa-user-clock', human_hours_10: 'fa-user-clock',
+                    crm_connection: 'fa-network-wired', leads_20: 'fa-bullseye',
+                    compliance_track_5: 'fa-shield-alt', doc_training_1: 'fa-graduation-cap',
+                    social_assets_20: 'fa-images', video_post_slot: 'fa-video',
+                    paid_amplification: 'fa-ad', extra_mailbox: 'fa-inbox',
+                    extra_docs_10: 'fa-file-alt', extra_proposals_2: 'fa-file-contract'
+                };
                 host.innerHTML = list.map(function (a) {
                     const key = a.id || a.key || '';
                     const label = a.label || key;
                     const ngn = Number(a.priceLocalNgn != null ? a.priceLocalNgn : a.priceNgn) || 0;
                     const usd = Number(a.priceOffshoreUsd != null ? a.priceOffshoreUsd : a.priceUsd) || 0;
+                    const ic = iconMap[key] || 'fa-puzzle-piece';
                     return '<div class="col-6 col-md-3">' +
                         '<div class="impact-card" style="padding:1.25rem;">' +
-                        '<i class="fas fa-puzzle-piece" style="color:var(--brand);font-size:1.4rem;"></i>' +
+                        '<i class="fas ' + ic + '" style="color:var(--brand);font-size:1.4rem;"></i>' +
                         '<div style="font-weight:600;color:#111827;margin-top:8px;font-size:0.875rem;">' + label + '</div>' +
                         '<div style="font-family:\'Space Grotesk\',sans-serif;font-weight:700;color:var(--brand);margin-top:4px;">Local ' +
                         (ngn ? ('₦' + Math.round(ngn).toLocaleString()) : '—') + '</div>' +
@@ -3035,6 +3122,11 @@
 
             // Admin service tiers (Ops + Digital) drive cards when present
             try {
+                console.log('[pricing] applying', {
+                    keys: Object.keys(p),
+                    tiers: (data.serviceTiers || []).map(function (t) { return t.id; }),
+                    addons: (data.addons || []).length
+                });
                 applyAdminTiersToAllCards(data, p);
             } catch (e) { console.warn('admin tiers UI', e); }
             try {
