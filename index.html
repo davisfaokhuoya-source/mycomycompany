@@ -2693,8 +2693,9 @@
         async function fetchServicePricing(retries = 1) {
             const urls = [API_URL, 'https://app.thevictorias.com.ng/', 'https://app.thevictorias.com.ng'];
             const actions = [
-                { system: "agent", action: "agent-get-billing-catalog", region: "NG" },
-                { system: "agent", action: "agent-get-all-service-pricing" }
+                // Public (no admin token) — must work on homepage
+                { system: "agent", action: "agent-get-all-service-pricing" },
+                { system: "agent", action: "agent-get-billing-catalog", region: "NG" }
             ];
             const seen = {};
             function normalizeBillingCatalog(data) {
@@ -2749,7 +2750,11 @@
                             const norm = normalizeBillingCatalog(data);
                             return norm || data;
                         }
-                        if (data && data.message) console.warn('pricing:', data.message);
+                        if (data && data.message) {
+                            console.warn('pricing:', data.message, 'action=', actions[a] && actions[a].action);
+                            // Handshake on a non-public action → try next public action
+                            if (/handshake|not permitted|denied/i.test(String(data.message))) continue;
+                        }
                     } catch (error) {
                         console.error('Service pricing fetch error:', url, error);
                     }
