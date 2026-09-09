@@ -1248,7 +1248,7 @@
                         </div>
                     </div>
 
-                    <div id="id=" socialCalendarList" class="flex-1 overflow-y-auto custom-scrollbar space-y-2">
+                    <div id="socialCalendarList" class="flex-1 overflow-y-auto custom-scrollbar space-y-2">
                         <p class="text-slate-500 text-xs">Loading your social calendar…</p>
                     </div>
                 </section>
@@ -5992,11 +5992,16 @@
 
         async function loadSocialCalendar() {
             const listEl = document.getElementById('socialCalendarList');
-            const alreadyRendered = listEl.dataset.rendered === '1';
+            if (!listEl) {
+                try { console.error('[social] #socialCalendarList missing'); } catch (_) { }
+                return;
+            }
+            const alreadyRendered = listEl.dataset && listEl.dataset.rendered === '1';
             if (alreadyRendered) listEl.style.opacity = '0.6';
             else listEl.innerHTML = `<p class="text-slate-500 text-xs">Loading your social calendar…</p>`;
 
             const res = await callGateway('clientportal', 'clientPortalGetSocialCalendar');
+            if (!listEl) return;
             listEl.style.opacity = '1';
 
             if (!res.success) {
@@ -6034,8 +6039,10 @@
 
         function renderSocialCalendar() {
             const listEl = document.getElementById('socialCalendarList');
-            const batchId = document.getElementById('socialBatchSelector').value;
-            const posts = SOCIAL_CALENDAR_CACHE.filter(p => p.BatchID === batchId);
+            if (!listEl) return;
+            const sel = document.getElementById('socialBatchSelector');
+            const batchId = sel ? sel.value : '';
+            const posts = SOCIAL_CALENDAR_CACHE.filter(p => !batchId || p.BatchID === batchId);
 
             if (!posts.length) { listEl.innerHTML = `<p class="text-slate-500 text-xs">No posts in this batch.</p>`; return; }
 
