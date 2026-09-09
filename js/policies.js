@@ -799,37 +799,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="badge bg-secondary">All Services</span>
                         </div>
                     </div>
-                    <div class="row g-5 align-items-start">
-                        <div class="col-lg-8 wow fadeInLeft" data-wow-delay="0.2s">
-                            ${mainAccordionHTML}
-                        </div>
-                        <div class="col-lg-4 wow fadeInRight" data-wow-delay="0.3s">
-                            <div class="bg-primary rounded p-4 text-white mb-4 sticky-top" style="top:100px;">
-                                <h5 class="fw-bold mb-3"><i class="fas fa-shield-alt me-2"></i>Policy Quick Guide</h5>
-                                <ul class="list-unstyled mb-0" style="font-size:0.88rem;line-height:2;">
-                                    <li>📋 <strong>Section 1</strong> — Terms of Engagement</li>
-                                    <li>🤝 <strong>Section 2</strong> — Client Policy</li>
-                                    <li>🖥️ <strong>Section 3</strong> — Portal Users</li>
-                                    <li>👔 <strong>Section 4</strong> — Agents &amp; Partners</li>
-                                    <li>🔐 <strong>Section 5</strong> — Data Protection</li>
-                                    <li>🤐 <strong>Section 6</strong> — Confidentiality</li>
-                                    <li>💡 <strong>Section 7</strong> — Intellectual Property</li>
-                                    <li>⚙️ <strong>Section 8</strong> — Service Policies</li>
-                                    <li>🚫 <strong>Section 9</strong> — Anti-Fraud &amp; Ethics</li>
-                                    <li>⚖️ <strong>Section 10</strong> — Disputes &amp; Liability</li>
-                                    <li>🛡️ <strong>Section 11</strong> — Safety &amp; Security</li>
-                                    <li>🎓 <strong>Section 12</strong> — Assessment &amp; Certification (Trainings)</li>
-                                    <li>🌍 <strong>Section 13</strong> — Market Entry &amp; Local Support</li>
-                                </ul>
-                                <hr class="border-light mt-3 mb-3">
-                                <p class="mb-1" style="font-size:0.82rem;">Questions or concerns?</p>
-                                <a href="mailto:management@thevictorias.com.ng"
-                                   class="btn btn-light btn-sm w-100">
-                                    <i class="fas fa-envelope me-1"></i> Contact Us
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+                    
                 </div>
             </div>`;
     }
