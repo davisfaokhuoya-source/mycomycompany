@@ -742,6 +742,7 @@ document.addEventListener('DOMContentLoaded', () => {
         html += `</div>`;
         return html;
     }
+
     function generateMainTopicsHTML(topics) {
         let html = `<div class="accordion" id="accordionFlushTopics">`;
         topics.forEach((topic, index) => {
@@ -774,34 +775,79 @@ document.addEventListener('DOMContentLoaded', () => {
     function generateFullSectionHTML(data) {
         const mainAccordionHTML = generateMainTopicsHTML(data);
         return `
-            <div class="container-fluid faq-section pb-5" id="readfaq">
-                <div class="container pb-5 overflow-hidden">
-                    <div class="text-center mx-auto pb-5 wow fadeInUp" data-wow-delay="0.2s" style="max-width:860px;">
-                        <h4 class="text-primary"><br/>The Victorias Ltd.</h4>
-                        <h1 class="display-5 mb-4">Company Policies, Terms &amp; Conditions</h1>
-                        <p class="mb-1 text-muted">
-                            <strong>Effective Date:</strong> January 1, 2026 &nbsp;|&nbsp;
-                            <strong>Version:</strong> 2.2 &nbsp;|&nbsp;
-                            <strong>Last Updated:</strong> September 9, 2026 &nbsp;|&nbsp;
-                            <strong>Reviewed Annually</strong>
+            <div class="container-fluid policy-page-root py-4 py-md-5" id="readfaq" style="background:#faf9f7;">
+                <div class="container" style="max-width:820px;">
+                    <header class="text-center mb-4 mb-md-5 pb-3" style="border-bottom:1px solid #e8e4df;">
+                        <p class="text-uppercase mb-2" style="letter-spacing:0.12em;font-size:0.72rem;color:#CC5500;font-weight:600;">The Victorias Ltd.</p>
+                        <h1 class="mb-3" style="font-size:clamp(1.6rem,4vw,2.15rem);font-weight:700;color:#1a1a1a;line-height:1.25;">
+                            Company Policies, Terms &amp; Conditions
+                        </h1>
+                        <p class="mb-2" style="font-size:0.88rem;color:#6e6e6e;">
+                            <strong style="color:#1a1a1a;">Effective:</strong> 1 January 2026
+                            &nbsp;·&nbsp; <strong style="color:#1a1a1a;">Version:</strong> 2.2
+                            &nbsp;·&nbsp; <strong style="color:#1a1a1a;">Updated:</strong> 9 September 2026
                         </p>
-                        <p class="mb-0 small text-muted">
-                            Governing Law: Nigeria (NDPA 2023, NDPR 2019, CAMA 2020, FCCPA 2018, Cybercrimes Act 2015, ICPC Act 2000, EFCC Act 2004)
-                            &amp; Global Alignment (GDPR, ISO/IEC 27001, UNCAC, Berne Convention)
+                        <p class="mb-3 mx-auto" style="font-size:0.8rem;color:#8a8a8a;max-width:36rem;line-height:1.5;">
+                            Nigerian law (NDPA 2023, CAMA 2020, and related statutes), with international alignment where applicable.
                         </p>
-                        <div class="mt-3">
-                            <span class="badge bg-primary me-1">Clients</span>
-                            <span class="badge bg-success me-1">Partners &amp; Agents</span>
-                            <span class="badge bg-warning text-dark me-1">Portal Users</span>
-                            <span class="badge bg-info text-dark me-1">Trainees</span>
-                            <span class="badge bg-dark me-1">Market Entry Clients</span>
-                            <span class="badge bg-secondary">All Services</span>
+                        <div class="d-flex flex-wrap justify-content-center gap-2">
+                            <span class="badge rounded-pill px-3 py-2" style="background:#1a1a1a;color:#fff;font-weight:500;">Clients</span>
+                            <span class="badge rounded-pill px-3 py-2" style="background:#CC5500;color:#fff;font-weight:500;">Partners &amp; Agents</span>
+                            <span class="badge rounded-pill px-3 py-2" style="background:#e8e4df;color:#1a1a1a;font-weight:500;">Portal users</span>
                         </div>
+                    </header>
+
+                    <p class="mb-4" style="font-size:0.9rem;color:#5a5a5a;line-height:1.6;">
+                        Expand any section below to read the full text. These policies apply to our website, client portal, Career Hub, and related services.
+                    </p>
+
+                    <div class="policy-accordion-wrap rounded-3 overflow-hidden shadow-sm bg-white" style="border:1px solid #e8e4df;">
+                        ${mainAccordionHTML}
                     </div>
-                    
+
+                    <footer class="text-center mt-5 pt-4" style="border-top:1px solid #e8e4df;">
+                        <p class="mb-2" style="font-size:0.85rem;color:#6e6e6e;">Questions about these policies?</p>
+                        <a href="mailto:management@thevictorias.com.ng"
+                           class="btn btn-sm px-4 py-2"
+                           style="background:#CC5500;color:#fff;border:none;border-radius:999px;font-weight:600;">
+                            Email management@thevictorias.com.ng
+                        </a>
+                        <p class="mt-3 mb-0" style="font-size:0.75rem;color:#a0a0a0;">
+                            <a href="https://thevictorias.com.ng" style="color:#CC5500;text-decoration:none;">← Back to homepage</a>
+                        </p>
+                    </footer>
                 </div>
+                <style>
+                    .policy-page-root .accordion-button {
+                        font-size: 0.95rem;
+                        color: #1a1a1a;
+                        background: #fff;
+                        box-shadow: none !important;
+                    }
+                    .policy-page-root .accordion-button:not(.collapsed) {
+                        background: #fff8f3;
+                        color: #CC5500;
+                    }
+                    .policy-page-root .accordion-button::after {
+                        filter: none;
+                    }
+                    .policy-page-root .accordion-item {
+                        border-left: none;
+                        border-right: none;
+                        border-color: #eeeae4;
+                    }
+                    .policy-page-root .accordion-body {
+                        color: #3a3a3a;
+                        background: #fcfbfa;
+                    }
+                    .policy-page-root .accordion-flush .accordion-item .accordion-button {
+                        font-size: 0.9rem;
+                        font-weight: 500;
+                    }
+                </style>
             </div>`;
     }
+
 
     // =========================================================================
     // INJECT INTO PAGE
