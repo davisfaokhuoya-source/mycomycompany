@@ -6376,18 +6376,93 @@
     </div>
 
 
+
+    <script>
+        async function clientLoadBilling() {
+            try { if (typeof loadBillingPanel === 'function') await loadBillingPanel(); } catch (e) { console.error(e); }
+            try { if (typeof clientLoadBillingCatalog === 'function') await clientLoadBillingCatalog(); } catch (e) { console.error(e); }
+        }
+        async function clientRefreshChatGate() {
+            try {
+                var allowed = true, minutesLeft = null, message = '';
+                if (typeof callGateway === 'function') {
+                    var res = await callGateway('clientportal', 'clientPortalChatAllowed', {});
+                    if (res && res.success === false && /not allowed|locked|human|minute|quota/i.test(String(res.message || ''))) {
+                        allowed = false; message = res.message || 'Chat locked — no human time remaining.';
+                    } else if (res && res.success) {
+                        if (res.allowed === false || res.chatAllowed === false) {
+                            allowed = false;
+                            message = res.message || 'Chat locked — no human time remaining. See Billing.';
+                        }
+                        if (res.humanMinutesLeft != null) minutesLeft = res.humanMinutesLeft;
+                        if (res.minutesLeft != null) minutesLeft = res.minutesLeft;
+                    }
+                }
+                var el = document.getElementById('chatHumanTimeBanner');
+                if (!el) {
+                    var chatView = document.getElementById('view-chat');
+                    if (chatView) {
+                        el = document.createElement('div');
+                        el.id = 'chatHumanTimeBanner';
+                        el.className = 'hidden mb-2 px-3 py-2 rounded-lg text-xs border';
+                        chatView.insertBefore(el, chatView.firstChild);
+                    }
+                }
+                var input = document.getElementById('chatInput') || document.querySelector('#view-chat input[type="text"], #view-chat textarea');
+                var sendBtn = document.getElementById('chatSendBtn') || document.querySelector('#view-chat button[onclick*="sendChat"]');
+                if (el) {
+                    if (!allowed) {
+                        el.className = 'mb-2 px-3 py-2 rounded-lg text-xs border border-amber-700 bg-amber-900/40 text-amber-100';
+                        el.textContent = message || 'Chat is locked until human time is available.';
+                        el.classList.remove('hidden');
+                        if (input) { input.disabled = true; }
+                        if (sendBtn) sendBtn.disabled = true;
+                    } else {
+                        if (minutesLeft != null) {
+                            el.className = 'mb-2 px-3 py-2 rounded-lg text-xs border border-slate-700 bg-slate-900 text-slate-300';
+                            el.textContent = 'Human time remaining: ' + minutesLeft + ' min.';
+                            el.classList.remove('hidden');
+                        } else {
+                            el.classList.add('hidden');
+                        }
+                        if (input) input.disabled = false;
+                        if (sendBtn) sendBtn.disabled = false;
+                    }
+                }
+            } catch (e) { console.warn('clientRefreshChatGate', e); }
+        }
+        function clientShowCooldown(res) {
+            try {
+                var sec = (res && (res.retryAfterSec || res.cooldownSec)) || 30;
+                var msg = (res && res.message) || ('System busy — try again in ' + sec + 's');
+                if (typeof showToast === 'function') showToast(msg, 'info');
+            } catch (_) { }
+        }
+        function clientConfirmPaidUpgrade() {
+            try {
+                if (typeof showToast === 'function') showToast('After payment, use confirm in Billing or contact support with your reference.', 'info');
+            } catch (_) { }
+        }
+    </script>
+
     <script>
         (function () {
             var _sv = window.showView;
             if (typeof _sv === 'function') {
                 window.showView = function (name, el) {
                     _sv(name, el);
-                    if (name === 'billing') clientLoadBilling();
-                    if (name === 'chat') clientRefreshChatGate();
+                    if (name === 'billing') {
+                        try { if (typeof clientLoadBilling === 'function') clientLoadBilling(); } catch (e) { console.error(e); }
+                    }
+                    if (name === 'chat') {
+                        try { if (typeof clientRefreshChatGate === 'function') clientRefreshChatGate(); } catch (e) { console.error(e); }
+                    }
                 };
             }
             document.addEventListener('DOMContentLoaded', function () {
-                setTimeout(function () { try { clientRefreshChatGate(); } catch (_) { } }, 2000);
+                setTimeout(function () {
+                    try { if (typeof clientRefreshChatGate === 'function') clientRefreshChatGate(); } catch (_) { }
+                }, 2000);
             });
         })();
     </script>
