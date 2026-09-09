@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function () {
 
     const policiesData = [
 
@@ -710,106 +710,102 @@ document.addEventListener('DOMContentLoaded', () => {
             ]
         }
 
-    ]; // end policiesData
+    ];
 
-    // =========================================================================
-    // RENDERING ENGINE (unchanged structure, enhanced for new data)
-    // =========================================================================
+    function escapeAttr(s) {
+        return String(s || '').replace(/"/g, '&quot;');
+    }
 
-    function generateSubtopicsHTML(subtopics, parentAccordionId) {
-        let html = `<div class="accordion accordion-flush" id="${parentAccordionId}">`;
-        subtopics.forEach(sub => {
-            html += `
-                <div class="accordion-item">
-                    <h2 class="accordion-header" id="heading-${sub.id}">
-                        <button class="accordion-button collapsed" type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#collapse-${sub.id}"
-                            aria-expanded="false"
-                            aria-controls="collapse-${sub.id}">
-                            ${sub.title}
-                        </button>
-                    </h2>
-                    <div id="collapse-${sub.id}" class="accordion-collapse collapse"
-                        aria-labelledby="heading-${sub.id}"
-                        data-bs-parent="#${parentAccordionId}">
-                        <div class="accordion-body" style="line-height:1.75;font-size:0.95rem;">
-                            ${sub.content}
-                        </div>
-                    </div>
-                </div>`;
+    function renderPolicies(data) {
+        var html = '';
+        html += '<div class="vic-policy" id="readfaq">';
+        html += '<header class="vic-policy__header">';
+        html += '<p class="vic-policy__eyebrow">The Victorias Ltd.</p>';
+        html += '<h1 class="vic-policy__title">Company Policies, Terms &amp; Conditions</h1>';
+        html += '<p class="vic-policy__meta"><strong>Effective:</strong> 1 January 2026 &nbsp;·&nbsp; <strong>Version:</strong> 2.2 &nbsp;·&nbsp; <strong>Updated:</strong> 9 September 2026</p>';
+        html += '<p class="vic-policy__law">Governed primarily by Nigerian law, with international alignment where applicable.</p>';
+        html += '<div class="vic-policy__badges">';
+        html += '<span>Clients</span><span>Partners &amp; Agents</span><span>Portal users</span>';
+        html += '</div></header>';
+        html += '<p class="vic-policy__intro">Open any section to read the full text. These policies apply to our website, client portal, Career Hub, and related services.</p>';
+        html += '<div class="vic-policy__list">';
+        data.forEach(function (topic) {
+            html += '<details class="vic-policy__section">';
+            html += '<summary>' + topic.title + '</summary>';
+            html += '<div class="vic-policy__body">';
+            (topic.subtopics || []).forEach(function (sub) {
+                html += '<details class="vic-policy__sub">';
+                html += '<summary>' + sub.title + '</summary>';
+                html += '<div class="vic-policy__content">' + sub.content + '</div>';
+                html += '</details>';
+            });
+            html += '</div></details>';
         });
-        html += `</div>`;
+        html += '</div>';
+        html += '<footer class="vic-policy__footer">';
+        html += '<p>Questions about these policies?</p>';
+        html += '<a class="vic-policy__btn" href="mailto:management@thevictorias.com.ng">Email management@thevictorias.com.ng</a>';
+        html += '<p class="vic-policy__home"><a href="https://thevictorias.com.ng">← Back to homepage</a></p>';
+        html += '</footer></div>';
         return html;
     }
 
-    function generateMainTopicsHTML(topics) {
-        let html = `<div class="accordion" id="accordionFlushTopics">`;
-        topics.forEach((topic, index) => {
-            const parentAccordionId = `acc-${topic.id}`;
-            const subtopicsContent = generateSubtopicsHTML(topic.subtopics, parentAccordionId);
-            html += `
-                <div class="accordion-item">
-                    <h2 class="accordion-header" id="heading-${topic.id}">
-                        <button class="accordion-button collapsed fw-semibold" type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#collapse-${topic.id}"
-                            aria-expanded="false"
-                            aria-controls="collapse-${topic.id}">
-                            ${topic.title}
-                        </button>
-                    </h2>
-                    <div id="collapse-${topic.id}" class="accordion-collapse collapse"
-                        aria-labelledby="heading-${topic.id}"
-                        data-bs-parent="#accordionFlushTopics">
-                        <div class="accordion-body p-0">
-                            ${subtopicsContent}
-                        </div>
-                    </div>
-                </div>`;
-        });
-        html += `</div>`;
-        return html;
-    }
+    var css = document.createElement('style');
+    css.textContent = `
+      .vic-policy { max-width: 800px; margin: 0 auto; padding: 1.5rem 1rem 3rem; color: #1a1a1a; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+      .vic-policy__header { text-align: center; margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid #e8e4df; }
+      .vic-policy__eyebrow { margin: 0 0 0.5rem; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: #CC5500; font-weight: 600; }
+      .vic-policy__title { margin: 0 0 0.75rem; font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.25; font-weight: 700; }
+      .vic-policy__meta { margin: 0 0 0.5rem; font-size: 0.85rem; color: #6e6e6e; }
+      .vic-policy__law { margin: 0 auto 0.75rem; max-width: 36rem; font-size: 0.8rem; color: #8a8a8a; line-height: 1.5; }
+      .vic-policy__badges { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; }
+      .vic-policy__badges span { background: #1a1a1a; color: #fff; border-radius: 999px; padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 500; }
+      .vic-policy__badges span:nth-child(2) { background: #CC5500; }
+      .vic-policy__badges span:nth-child(3) { background: #e8e4df; color: #1a1a1a; }
+      .vic-policy__intro { font-size: 0.9rem; color: #5a5a5a; line-height: 1.55; margin-bottom: 1.25rem; }
+      .vic-policy__list { border: 1px solid #e8e4df; border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+      .vic-policy__section { border-bottom: 1px solid #eeeae4; }
+      .vic-policy__section:last-child { border-bottom: none; }
+      .vic-policy__section > summary { cursor: pointer; list-style: none; padding: 1rem 1.15rem; font-weight: 600; font-size: 0.95rem; background: #fff; }
+      .vic-policy__section > summary::-webkit-details-marker { display: none; }
+      .vic-policy__section > summary::after { content: "+"; float: right; color: #CC5500; font-weight: 700; }
+      .vic-policy__section[open] > summary { background: #fff8f3; color: #CC5500; }
+      .vic-policy__section[open] > summary::after { content: "−"; }
+      .vic-policy__body { padding: 0 0.5rem 0.75rem; background: #fcfbfa; }
+      .vic-policy__sub { border: 1px solid #eeeae4; border-radius: 8px; margin: 0.5rem 0.65rem; background: #fff; }
+      .vic-policy__sub > summary { cursor: pointer; list-style: none; padding: 0.7rem 0.9rem; font-size: 0.9rem; font-weight: 500; }
+      .vic-policy__sub > summary::-webkit-details-marker { display: none; }
+      .vic-policy__sub > summary::after { content: "+"; float: right; color: #999; }
+      .vic-policy__sub[open] > summary::after { content: "−"; color: #CC5500; }
+      .vic-policy__content { padding: 0 0.9rem 0.9rem; font-size: 0.92rem; line-height: 1.75; color: #3a3a3a; }
+      .vic-policy__footer { text-align: center; margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid #e8e4df; }
+      .vic-policy__footer p { margin: 0 0 0.75rem; color: #6e6e6e; font-size: 0.9rem; }
+      .vic-policy__btn { display: inline-block; background: #CC5500; color: #fff !important; text-decoration: none; padding: 0.55rem 1.25rem; border-radius: 999px; font-weight: 600; font-size: 0.85rem; }
+      .vic-policy__home { margin-top: 1rem !important; font-size: 0.8rem !important; }
+      .vic-policy__home a { color: #CC5500; text-decoration: none; }
+    `;
+    document.head.appendChild(css);
 
-    function generateFullSectionHTML(data) {
-        const mainAccordionHTML = generateMainTopicsHTML(data);
-        return `
-            <div class="container-fluid faq-section pb-5" id="readfaq">
-                <div class="container pb-5 overflow-hidden">
-                    <div class="text-center mx-auto pb-5 wow fadeInUp" data-wow-delay="0.2s" style="max-width:860px;">
-                        <h4 class="text-primary"><br/>The Victorias Ltd.</h4>
-                        <h1 class="display-5 mb-4">Company Policies, Terms &amp; Conditions</h1>
-                        <p class="mb-1 text-muted">
-                            <strong>Effective Date:</strong> January 1, 2026 &nbsp;|&nbsp;
-                            <strong>Version:</strong> 2.2 &nbsp;|&nbsp;
-                            <strong>Last Updated:</strong> September 9, 2026 &nbsp;|&nbsp;
-                            <strong>Reviewed Annually</strong>
-                        </p>
-                        <p class="mb-0 small text-muted">
-                            Governing Law: Nigeria (NDPA 2023, NDPR 2019, CAMA 2020, FCCPA 2018, Cybercrimes Act 2015, ICPC Act 2000, EFCC Act 2004)
-                            &amp; Global Alignment (GDPR, ISO/IEC 27001, UNCAC, Berne Convention)
-                        </p>
-                        <div class="mt-3">
-                            <span class="badge bg-primary me-1">Clients</span>
-                            <span class="badge bg-success me-1">Partners &amp; Agents</span>
-                            <span class="badge bg-warning text-dark me-1">Portal Users</span>
-                            <span class="badge bg-info text-dark me-1">Trainees</span>
-                            <span class="badge bg-dark me-1">Market Entry Clients</span>
-                            <span class="badge bg-secondary">All Services</span>
-                        </div>
-                    </div>
-                    
-                </div>
-            </div>`;
-    }
+    var html = renderPolicies(policiesData);
+    var target =
+        document.querySelector('#policy-container-target') ||
+        document.querySelector('#readfaq') ||
+        document.querySelector('.faq-section') ||
+        document.querySelector('main') ||
+        document.querySelector('.container.pb-5') ||
+        document.body;
 
-    // =========================================================================
-    // INJECT INTO PAGE
-    // =========================================================================
-    const targetElement = document.querySelector('#policy-container-target');
-    if (targetElement) {
-        targetElement.innerHTML = generateFullSectionHTML(policiesData);
+    // Prefer dedicated target; if page already has a static header only, append after it
+    if (document.querySelector('#policy-container-target')) {
+        document.querySelector('#policy-container-target').innerHTML = html;
+    } else if (document.querySelector('#readfaq')) {
+        document.querySelector('#readfaq').outerHTML = html;
+    } else {
+        var host = document.createElement('div');
+        host.innerHTML = html;
+        // Insert before site footer if present
+        var footer = document.querySelector('footer') || document.querySelector('.footer');
+        if (footer && footer.parentNode) footer.parentNode.insertBefore(host, footer);
+        else document.body.appendChild(host);
     }
-
-}); // end DOMContentLoaded
+});
