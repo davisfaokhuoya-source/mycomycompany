@@ -742,7 +742,6 @@ document.addEventListener('DOMContentLoaded', () => {
         html += `</div>`;
         return html;
     }
-
     function generateMainTopicsHTML(topics) {
         let html = `<div class="accordion" id="accordionFlushTopics">`;
         topics.forEach((topic, index) => {
