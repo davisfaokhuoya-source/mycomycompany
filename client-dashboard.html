@@ -1091,85 +1091,150 @@
                 </section>
 
                 <!-- SOCIAL CALENDAR -->
-                <section id="view-social" class="view flex-1 h-full flex-col overflow-hidden space-y-3">
-                    <div class="flex items-center justify-between shrink-0 gap-3">
-                        <div>
-                            <p class="text-xs text-slate-400">Create or review posts for this month. When you approve a
-                                post or Approve All, it is cleared to go live — admin does not need to approve again.
-                                You can still change dates, captions, and media before approving.</p>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-2 shrink-0">
-                            <div
-                                class="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2 items-end">
-                                <label class="block text-[10px] text-slate-500">From
-                                    <input id="clientSocialStart" type="date"
-                                        class="mt-0.5 w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white" />
-                                </label>
-                                <label class="block text-[10px] text-slate-500">To <span class="text-slate-600">(same
-                                        month)</span>
-                                    <input id="clientSocialEnd" type="date"
-                                        class="mt-0.5 w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white" />
-                                </label>
-                                <label class="block text-[10px] text-slate-500">Days <span
-                                        class="text-slate-600">(Ctrl/Cmd multi)</span>
-                                    <select id="clientSocialWeekdays" multiple size="5"
-                                        class="mt-0.5 w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white">
-                                        <option value="1" selected>Mon</option>
-                                        <option value="2" selected>Tue</option>
-                                        <option value="3" selected>Wed</option>
-                                        <option value="4" selected>Thu</option>
-                                        <option value="5" selected>Fri</option>
-                                        <option value="6">Sat</option>
-                                        <option value="0">Sun</option>
-                                    </select>
-                                </label>
-                                <label class="block text-[10px] text-slate-500">Platforms
-                                    <select id="clientSocialPlatforms" multiple size="5"
-                                        class="mt-0.5 w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white">
-                                        <option value="facebook" selected>Facebook</option>
-                                        <option value="instagram" selected>Instagram</option>
-                                        <option value="linkedin">LinkedIn</option>
-                                        <option value="tiktok">TikTok</option>
-                                        <option value="x">X</option>
-                                    </select>
-                                </label>
-                                <label class="block text-[10px] text-slate-500 sm:col-span-2 lg:col-span-1">Topics
-                                    (optional)
-                                    <input id="clientSocialTopics" type="text" placeholder="e.g. product launch, tips"
-                                        class="mt-0.5 w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white" />
-                                </label>
-                                <button type="button" onclick="clientGenerateSocialCalendar()"
-                                    class="text-xs px-3 py-1.5 bg-sky-700 hover:bg-sky-600 rounded text-white"
-                                    title="Uses one content-calendar credit; range must be within one month">
-                                    <i class="fa-solid fa-calendar-plus"></i> Generate calendar
+                <section id="view-social" class="view flex-1 h-full flex-col overflow-hidden space-y-3 p-1">
+                    <!-- Header -->
+                    <div class="shrink-0 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3">
+                        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                            <div class="min-w-0 flex-1">
+                                <h2 class="text-sm font-semibold text-white">Social calendar</h2>
+                                <p class="text-[11px] text-slate-400 mt-1 leading-relaxed max-w-2xl">
+                                    Dates default to this month — change only if needed (must stay in one calendar
+                                    month).
+                                    <strong class="text-slate-300">Approve</strong> clears a post to go live; admin does
+                                    not need to approve again.
+                                </p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                                <select id="socialBatchSelector" onchange="renderSocialCalendar()"
+                                    class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white min-w-[9rem]"></select>
+                                <button type="button" id="socialApproveAllBtn" onclick="approveSocialBatch()"
+                                    class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white font-medium">
+                                    <i class="fa-solid fa-check-double"></i> Approve all
+                                </button>
+                                <button type="button" onclick="toggleSocialPerformancePanel()"
+                                    class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-white">
+                                    <i class="fa-solid fa-chart-line"></i> Performance
+                                </button>
+                                <button type="button" onclick="loadSocialCalendar()"
+                                    class="text-xs px-2 py-1.5 text-slate-400 hover:text-white" title="Refresh">
+                                    <i class="fa-solid fa-rotate"></i>
                                 </button>
                             </div>
-                            <select id="socialBatchSelector" onchange="renderSocialCalendar()"
-                                class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white"></select>
-                            <button id="socialApproveAllBtn" onclick="approveSocialBatch()"
-                                class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white">
-                                <i class="fa-solid fa-check-double"></i> Approve All
-                            </button>
-                            <button onclick="toggleSocialPerformancePanel()"
-                                class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white">
-                                <i class="fa-solid fa-chart-line"></i> Performance
-                            </button>
-                            <button onclick="loadSocialCalendar()"
-                                class="text-xs px-2 py-1.5 text-slate-500 hover:text-slate-300">
-                                <i class="fa-solid fa-rotate"></i>
+                        </div>
+                    </div>
+
+                    <!-- Generate panel -->
+                    <div class="shrink-0 rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 space-y-3">
+                        <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Generate posts</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <label class="block text-[10px] text-slate-400">From
+                                <input id="clientSocialStart" type="date"
+                                    class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white" />
+                            </label>
+                            <label class="block text-[10px] text-slate-400">To <span class="text-slate-600">(same
+                                    month)</span>
+                                <input id="clientSocialEnd" type="date"
+                                    class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white" />
+                            </label>
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-slate-400 mb-1.5">Days of week</p>
+                            <div id="clientSocialWeekdayChips" class="flex flex-wrap gap-1.5">
+                                <label
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900 text-[11px] text-slate-200 cursor-pointer has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-950/40"><input
+                                        type="checkbox" class="client-soc-wd rounded border-slate-600" value="1"
+                                        checked /> Mon</label>
+                                <label
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900 text-[11px] text-slate-200 cursor-pointer"><input
+                                        type="checkbox" class="client-soc-wd rounded border-slate-600" value="2"
+                                        checked /> Tue</label>
+                                <label
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900 text-[11px] text-slate-200 cursor-pointer"><input
+                                        type="checkbox" class="client-soc-wd rounded border-slate-600" value="3"
+                                        checked /> Wed</label>
+                                <label
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900 text-[11px] text-slate-200 cursor-pointer"><input
+                                        type="checkbox" class="client-soc-wd rounded border-slate-600" value="4"
+                                        checked /> Thu</label>
+                                <label
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900 text-[11px] text-slate-200 cursor-pointer"><input
+                                        type="checkbox" class="client-soc-wd rounded border-slate-600" value="5"
+                                        checked /> Fri</label>
+                                <label
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900 text-[11px] text-slate-200 cursor-pointer"><input
+                                        type="checkbox" class="client-soc-wd rounded border-slate-600" value="6" />
+                                    Sat</label>
+                                <label
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900 text-[11px] text-slate-200 cursor-pointer"><input
+                                        type="checkbox" class="client-soc-wd rounded border-slate-600" value="0" />
+                                    Sun</label>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-slate-400 mb-1.5">Platforms</p>
+                            <div id="clientSocialPlatformChips" class="flex flex-wrap gap-1.5">
+                                <label
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900 text-[11px] text-slate-200 cursor-pointer"><input
+                                        type="checkbox" class="client-soc-plat rounded border-slate-600"
+                                        value="facebook" checked /> Facebook</label>
+                                <label
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900 text-[11px] text-slate-200 cursor-pointer"><input
+                                        type="checkbox" class="client-soc-plat rounded border-slate-600"
+                                        value="instagram" checked /> Instagram</label>
+                                <label
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900 text-[11px] text-slate-200 cursor-pointer"><input
+                                        type="checkbox" class="client-soc-plat rounded border-slate-600"
+                                        value="linkedin" /> LinkedIn</label>
+                                <label
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900 text-[11px] text-slate-200 cursor-pointer"><input
+                                        type="checkbox" class="client-soc-plat rounded border-slate-600"
+                                        value="tiktok" /> TikTok</label>
+                                <label
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900 text-[11px] text-slate-200 cursor-pointer"><input
+                                        type="checkbox" class="client-soc-plat rounded border-slate-600" value="x" />
+                                    X</label>
+                            </div>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-2 sm:items-end">
+                            <label class="block text-[10px] text-slate-400 flex-1">Topics (optional)
+                                <input id="clientSocialTopics" type="text"
+                                    placeholder="e.g. product launch, tips, testimonials"
+                                    class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white" />
+                            </label>
+                            <button type="button" id="clientSocialGenerateBtn" onclick="clientGenerateSocialCalendar()"
+                                class="text-sm px-4 py-2 bg-sky-600 hover:bg-sky-500 rounded-lg text-white font-medium shrink-0">
+                                <i class="fa-solid fa-calendar-plus"></i> Generate calendar
                             </button>
                         </div>
                     </div>
 
-                    <!-- Performance summary — how this client's published posts have actually
-                         done (impressions/engagement). Same data the agent studies to improve
-                         future posts for this client and, in aggregate, for every client. -->
+                    <!-- Media library (like admin) -->
+                    <div class="shrink-0 rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 space-y-2">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div>
+                                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Media
+                                    library</p>
+                                <p class="text-[11px] text-slate-400">Upload images (max 5 MB) or video (max 25 MB).
+                                    Attach to a post from the post card below.</p>
+                            </div>
+                            <label
+                                class="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer font-medium">
+                                <i class="fa-solid fa-cloud-arrow-up"></i> Upload photo / video
+                                <input type="file" class="hidden"
+                                    accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                                    onchange="clientUploadSocialMediaLibrary(this)" />
+                            </label>
+                        </div>
+                        <div id="clientSocialMediaLibrary" class="text-[11px] text-slate-500">No library items loaded
+                            yet — upload above or attach on each post.</div>
+                    </div>
+
                     <div id="socialPerformancePanel"
-                        class="directive-panel shrink-0 bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+                        class="directive-panel hidden shrink-0 bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
                         <div class="flex items-center justify-between">
                             <p class="text-xs font-semibold text-white"><i
-                                    class="fa-solid fa-chart-line text-emerald-400"></i> Post Performance</p>
-                            <button onclick="loadSocialPerformance()"
+                                    class="fa-solid fa-chart-line text-emerald-400"></i> Post performance</p>
+                            <button type="button" onclick="loadSocialPerformance()"
                                 class="text-[10px] text-slate-500 hover:text-slate-300">
                                 <i class="fa-solid fa-rotate"></i> Refresh
                             </button>
@@ -1179,7 +1244,7 @@
                         </div>
                     </div>
 
-                    <div id="socialCalendarList" class="flex-1 overflow-y-auto custom-scrollbar space-y-2">
+                    <div id="id=" socialCalendarList" class="flex-1 overflow-y-auto custom-scrollbar space-y-2">
                         <p class="text-slate-500 text-xs">Loading your social calendar…</p>
                     </div>
                 </section>
@@ -1574,6 +1639,9 @@
                     <div id="billingUnifiedRoot" class="space-y-4">
                         <p class="text-xs text-slate-500">Loading billing…</p>
                     </div>
+                    <div id="billingCatalogRoot" class="space-y-4 mt-4"></div>
+                    <p class="text-[11px] text-slate-500"><a href="#" class="text-emerald-400 hover:underline"
+                            onclick="clientConfirmPaidUpgrade(); return false;">I paid — confirm &amp; activate</a></p>
                 </div>
                 <div class="hidden">
                     <div class="max-w-2xl mx-auto w-full space-y-4 pt-2">
@@ -1958,7 +2026,7 @@
                     if (action !== 'clientPortalLogin' && typeof forceLogoutOnAuthError === 'function' && forceLogoutOnAuthError(raw, code)) {
                         return {
                             success: false,
-                            message: 'Error occurred — error code 4101',
+                            message: 'Session expired — please sign in again · code 4101',
                             errorCode: '4101',
                             _rawMessage: raw,
                             sessionExpired: true
@@ -1967,7 +2035,7 @@
                     // Signatory / settings: keep readable text on the form (still attach code)
                     const keepRaw = /Signatory|signatory|Preference|MailboxPrivacy|ServiceFlags/i.test(action);
                     json = Object.assign({}, json, {
-                        message: keepRaw ? raw : ('Error occurred — error code ' + code),
+                        message: keepRaw ? raw : ((raw ? String(raw) : 'Request failed') + (code ? ' · code ' + code : '')),
                         errorCode: code,
                         _rawMessage: raw
                     });
@@ -5766,69 +5834,82 @@
 
         // ---- Pay-first upgrade (Flutterwave via CareerHub; auto-grant, no admin) ----
         async function clientLoadBillingCatalog() {
-            const root = document.getElementById('billingUnifiedRoot');
+            const root = document.getElementById('billingCatalogRoot') || document.getElementById('billingUnifiedRoot');
             if (!root) return;
             root.innerHTML = '<p class="text-xs text-slate-500">Loading plans…</p>';
             try {
-                const res = await callGateway('agent', 'agent-get-billing-catalog', { region: 'NG' });
-                if (!res || !res.success) {
-                    // try client billing
-                    const b = await callGateway('clientportal', 'clientPortalGetBilling', {});
-                    if (b && b.success) {
-                        root.innerHTML = '<pre class="text-xs text-slate-400 whitespace-pre-wrap">' +
-                            escapeHtml(JSON.stringify(b, null, 2).slice(0, 2000)) + '</pre>';
-                        return;
+                let catalog = null;
+                let region = 'NG';
+                const portal = await callGateway('clientportal', 'clientPortalGetBilling', {});
+                if (portal && portal.success) {
+                    catalog = portal.catalog || null;
+                    region = portal.region || region;
+                    // Ensure summary is also filled if loadBillingPanel raced
+                    const summary = document.getElementById('billingUnifiedRoot');
+                    if (summary && portal.current) {
+                        const cur = portal.current;
+                        summary.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
+                            '<div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><p class="text-[10px] uppercase text-slate-500">Ops plan</p><p class="text-white font-semibold text-sm mt-1">' + escapeHtml(String(cur.opsTier || '—')) + '</p></div>' +
+                            '<div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><p class="text-[10px] uppercase text-slate-500">Digital plan</p><p class="text-white font-semibold text-sm mt-1">' + escapeHtml(String(cur.digitalTier || '—')) + '</p></div>' +
+                            '<div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><p class="text-[10px] uppercase text-slate-500">Human time left</p><p class="text-white font-semibold text-sm mt-1">' + escapeHtml(String(cur.humanMinutesLeft != null ? cur.humanMinutesLeft : '—')) + ' min</p></div>' +
+                            '<div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><p class="text-[10px] uppercase text-slate-500">FX (USD→NGN)</p><p class="text-white font-semibold text-sm mt-1">' + escapeHtml(String(portal.fxUsdNgn || '—')) + '</p></div>' +
+                            '</div>';
                     }
-                    root.innerHTML = '<p class="text-xs text-red-400">' + escapeHtml((res && res.message) || 'Could not load catalog') + '</p>';
+                }
+                if (!catalog) {
+                    const res = await callGateway('agent', 'agent-get-billing-catalog', { region: region });
+                    if (res && res.success) catalog = res.catalog || res;
+                }
+                if (!catalog) {
+                    root.innerHTML = '<p class="text-xs text-amber-400">Could not load public plan catalog. Your current plan is shown above when available.</p>';
                     return;
                 }
-                let html = '';
-                function tierCards(list, suite) {
+                const ops = (catalog.opsTiers || catalog.ops || []);
+                const dig = (catalog.digitalTiers || catalog.digital || []);
+                const addons = (catalog.addons || []);
+                function money(t) {
+                    const ngn = t.priceLocalNgn != null ? t.priceLocalNgn : (t.priceNgn != null ? t.priceNgn : null);
+                    const usd = t.priceOffshoreUsd != null ? t.priceOffshoreUsd : (t.priceUsd != null ? t.priceUsd : null);
+                    let s = '';
+                    if (ngn != null) s += '₦' + Number(ngn).toLocaleString() + '/mo';
+                    if (usd != null) s += (s ? ' · ' : '') + '$' + Number(usd).toLocaleString() + '/mo';
+                    return s || 'See proposal';
+                }
+                function cards(list, suite) {
                     if (!list || !list.length) return '';
-                    let h = '<div class="space-y-2"><p class="text-[10px] uppercase text-slate-500 font-semibold">' + suite + '</p><div class="grid grid-cols-1 sm:grid-cols-3 gap-2">';
-                    list.forEach(function (t) {
-                        const ngn = t.priceLocalNgn != null ? t.priceLocalNgn : (t.price && t.price.amount);
-                        const id = t.id;
-                        h += '<div class="border border-slate-700 rounded-xl p-3 bg-slate-900/80">' +
-                            '<p class="text-sm font-semibold text-white">' + escapeHtml(t.name || id) + '</p>' +
-                            '<p class="text-[10px] text-slate-500">' + escapeHtml(t.tagline || '') + '</p>' +
-                            '<p class="text-emerald-400 text-sm mt-1">₦' + Number(ngn || 0).toLocaleString() + '/mo</p>' +
-                            '<button type="button" class="mt-2 w-full text-xs py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white" ' +
-                            'onclick="clientRequestPaidUpgrade({opsTier:\'' + (suite === 'Ops' ? id : '') + '\',digitalTier:\'' + (suite === 'Digital' ? id : '') + '\'})">' +
-                            'Pay &amp; activate</button></div>';
+                    let h = '<div class="space-y-2"><p class="text-[10px] uppercase text-slate-500 font-semibold tracking-wide">' + suite + '</p><div class="grid grid-cols-1 sm:grid-cols-3 gap-3">';
+                    list.forEach(function (tier) {
+                        const id = tier.id || tier.tierId || '';
+                        h += '<div class="border border-slate-700 rounded-xl p-4 bg-slate-900/90 flex flex-col">' +
+                            '<p class="text-sm font-semibold text-white">' + escapeHtml(tier.name || id) + '</p>' +
+                            '<p class="text-[10px] text-slate-500 mt-0.5">' + escapeHtml(tier.tagline || '') + '</p>' +
+                            '<p class="text-emerald-400 text-sm mt-2 font-medium">' + escapeHtml(money(tier)) + '</p>' +
+                            '<button type="button" class="mt-auto pt-3 w-full text-xs py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium" ' +
+                            'onclick="clientRequestPaidUpgrade({' +
+                            (suite === 'Ops' ? 'opsTier' : 'digitalTier') + ':\'' + String(id).replace(/'/g, '') + '\'})">' +
+                            'Upgrade / pay</button></div>';
                     });
                     h += '</div></div>';
                     return h;
                 }
-                html += tierCards(res.opsTiers || [], 'Ops');
-                html += tierCards(res.digitalTiers || [], 'Digital');
-                if (res.addons && res.addons.length) {
-                    html += '<div class="space-y-2 mt-3"><p class="text-[10px] uppercase text-slate-500 font-semibold">Add-ons</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-2">';
-                    res.addons.forEach(function (a) {
-                        const id = a.id || a.key;
-                        const ngn = a.priceLocalNgn != null ? a.priceLocalNgn : a.priceNgn;
-                        html += '<div class="border border-slate-700 rounded-lg p-2 flex items-center justify-between gap-2">' +
-                            '<div><p class="text-xs text-white">' + escapeHtml(a.label || id) + '</p>' +
-                            '<p class="text-[10px] text-slate-500">₦' + Number(ngn || 0).toLocaleString() + '</p></div>' +
-                            '<button type="button" class="text-[10px] px-2 py-1 rounded bg-slate-700 text-white" ' +
-                            'onclick="clientRequestPaidUpgrade({addonId:\'' + id + '\'})">Pay</button></div>';
+                let html = '<div class="space-y-6">';
+                html += cards(ops, 'Ops');
+                html += cards(dig, 'Digital');
+                if (addons && addons.length) {
+                    html += '<div class="space-y-2"><p class="text-[10px] uppercase text-slate-500 font-semibold tracking-wide">Add-ons</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-2">';
+                    addons.forEach(function (a) {
+                        html += '<div class="border border-slate-800 rounded-lg p-3 bg-slate-900/60"><p class="text-xs text-white font-medium">' +
+                            escapeHtml(a.name || a.id || '') + '</p><p class="text-[10px] text-slate-500">' + escapeHtml(money(a)) + '</p></div>';
                     });
                     html += '</div></div>';
                 }
-                html += '<div id="upgradePaymentStatus" class="text-xs text-slate-400 mt-3"></div>';
-                html += '<button type="button" class="text-xs text-emerald-400 underline mt-2" onclick="clientConfirmUpgradePayment()">I paid — confirm &amp; activate</button>';
+                html += '</div>';
                 root.innerHTML = html;
-                // If returned from Flutterwave with query params
-                try {
-                    const q = new URLSearchParams(location.search);
-                    if (q.get('paid') === '1' || q.get('tx_ref') || q.get('transaction_id')) {
-                        clientConfirmUpgradePayment(q.get('tx_ref') || q.get('transaction_id'));
-                    }
-                } catch (_) { }
             } catch (e) {
-                root.innerHTML = '<p class="text-xs text-red-400">' + escapeHtml(String(e)) + '</p>';
+                root.innerHTML = '<p class="text-xs text-red-400">' + escapeHtml(e.message || String(e)) + '</p>';
             }
         }
+
 
         async function clientRequestPaidUpgrade(sel) {
             const st = document.getElementById('upgradePaymentStatus');
@@ -5887,13 +5968,11 @@
             const topics = (document.getElementById('clientSocialTopics') && document.getElementById('clientSocialTopics').value) || '';
             const startDate = document.getElementById('clientSocialStart') && document.getElementById('clientSocialStart').value;
             const endDate = document.getElementById('clientSocialEnd') && document.getElementById('clientSocialEnd').value;
-            function multiVals(id) {
-                const el = document.getElementById(id);
-                if (!el) return null;
-                return Array.from(el.selectedOptions || []).map(function (o) { return o.value; });
+            function chipVals(sel) {
+                return Array.from(document.querySelectorAll(sel + ':checked')).map(function (el) { return el.value; });
             }
-            const weekdays = multiVals('clientSocialWeekdays');
-            const platforms = multiVals('clientSocialPlatforms');
+            const weekdays = chipVals('.client-soc-wd');
+            const platforms = chipVals('.client-soc-plat');
             if (!startDate || !endDate) {
                 if (typeof showToast === 'function') showToast('Select start and end dates within the same month.', 'error');
                 else alert('Select start and end dates within the same month.');
@@ -5928,6 +6007,48 @@
             }
             if (typeof showToast === 'function') showToast('Date updated', 'success');
             loadSocialCalendar();
+        }
+
+
+        async function clientUploadSocialMediaLibrary(fileInput) {
+            const file = fileInput && fileInput.files && fileInput.files[0];
+            if (!file) return;
+            const isVideo = /^video\//i.test(file.type) || /\.(mp4|mov|webm)$/i.test(file.name);
+            const maxMb = isVideo ? (window.CLIENT_SOCIAL_MAX_VIDEO_MB || 25) : (window.CLIENT_SOCIAL_MAX_IMAGE_MB || 5);
+            if (file.size > maxMb * 1024 * 1024) {
+                if (typeof showToast === 'function') showToast('Max ' + maxMb + ' MB for ' + (isVideo ? 'video' : 'image'), 'error');
+                fileInput.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = async function () {
+                const dataUrl = String(reader.result || '');
+                const base64 = dataUrl.indexOf(',') >= 0 ? dataUrl.split(',')[1] : dataUrl;
+                // postId optional — library upload (backend may accept empty postId)
+                const res = await callGateway('clientportal', 'clientPortalUploadSocialMedia', {
+                    postId: '',
+                    libraryOnly: true,
+                    fileName: file.name,
+                    mimeType: file.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
+                    base64: base64
+                });
+                if (!res || !res.success) {
+                    if (typeof showToast === 'function') showToast((res && res.message) || 'Upload failed', 'error');
+                } else {
+                    if (typeof showToast === 'function') showToast('Media uploaded', 'success');
+                    const box = document.getElementById('clientSocialMediaLibrary');
+                    if (box) {
+                        const url = res.mediaUrl || res.MediaURL || res.url || '';
+                        box.innerHTML = (box.dataset.hasItems ? box.innerHTML : '') +
+                            '<div class="inline-flex items-center gap-2 mr-2 mb-2 px-2 py-1 rounded-lg bg-slate-900 border border-slate-700">' +
+                            (url ? '<a href="' + escapeHtml(url) + '" target="_blank" class="text-emerald-400 hover:underline">' + escapeHtml(file.name) + '</a>' : escapeHtml(file.name)) +
+                            '</div>';
+                        box.dataset.hasItems = '1';
+                    }
+                }
+                fileInput.value = '';
+            };
+            reader.readAsDataURL(file);
         }
 
         async function clientUploadSocialMedia(postId, fileInput) {
@@ -5978,20 +6099,7 @@
             const last = y + '-' + pad(m + 1) + '-' + pad(lastDay);
             if (!s.value) s.value = first;
             if (!e.value) e.value = last;
-            // Default weekdays Mon–Fri if none selected
-            const wd = document.getElementById('clientSocialWeekdays');
-            if (wd && !Array.from(wd.selectedOptions || []).length) {
-                Array.from(wd.options).forEach(function (o) {
-                    if (['1', '2', '3', '4', '5'].indexOf(o.value) >= 0) o.selected = true;
-                });
-            }
-            // Default platforms if none selected
-            const pl = document.getElementById('clientSocialPlatforms');
-            if (pl && !Array.from(pl.selectedOptions || []).length) {
-                Array.from(pl.options).forEach(function (o) {
-                    if (['facebook', 'instagram'].indexOf(o.value) >= 0) o.selected = true;
-                });
-            }
+
         }
 
         async function loadSocialCalendar() {
