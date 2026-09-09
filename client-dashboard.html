@@ -1098,7 +1098,43 @@
                                 and approving here is optional. Posts still go live once your admin approves them
                                 either way; approving here just lets you have a say before they do.</p>
                         </div>
-                        <div class="flex items-center gap-2 shrink-0">
+                        <div class="flex flex-wrap items-center gap-2 shrink-0">
+                            <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                                <input id="clientSocialStart" type="date"
+                                    class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white"
+                                    title="Start (same month)" />
+                                <span class="text-[10px] text-slate-500">to</span>
+                                <input id="clientSocialEnd" type="date"
+                                    class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white"
+                                    title="End (same month)" />
+                                <select id="clientSocialWeekdays" multiple
+                                    class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white min-w-[7rem]"
+                                    title="Days of week">
+                                    <option value="1">Mon</option>
+                                    <option value="2">Tue</option>
+                                    <option value="3">Wed</option>
+                                    <option value="4">Thu</option>
+                                    <option value="5">Fri</option>
+                                    <option value="6">Sat</option>
+                                    <option value="0">Sun</option>
+                                </select>
+                                <select id="clientSocialPlatforms" multiple
+                                    class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white min-w-[7rem]"
+                                    title="Platforms">
+                                    <option value="facebook">Facebook</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="linkedin">LinkedIn</option>
+                                    <option value="tiktok">TikTok</option>
+                                    <option value="x">X</option>
+                                </select>
+                                <input id="clientSocialTopics" type="text" placeholder="Topics (optional)"
+                                    class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white min-w-[8rem]" />
+                                <button type="button" onclick="clientGenerateSocialCalendar()"
+                                    class="text-xs px-3 py-1.5 bg-sky-700 hover:bg-sky-600 rounded text-white"
+                                    title="Uses one content-calendar credit; range must be within one month">
+                                    <i class="fa-solid fa-calendar-plus"></i> Generate calendar
+                                </button>
+                            </div>
                             <select id="socialBatchSelector" onchange="renderSocialCalendar()"
                                 class="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white"></select>
                             <button id="socialApproveAllBtn" onclick="approveSocialBatch()"
@@ -1521,7 +1557,7 @@
                 <div class="max-w-4xl mx-auto w-full space-y-4 pt-2 px-2">
                     <div class="flex items-center justify-between gap-2">
                         <h2 class="text-lg font-bold text-white">Billing &amp; plans</h2>
-                        <button type="button" onclick="clientLoadBilling()"
+                        <button type="button" onclick="loadBillingPanel(); clientLoadBillingCatalog();"
                             class="text-xs px-3 py-1.5 rounded bg-slate-800 text-slate-200">Refresh</button>
                     </div>
                     <p class="text-[11px] text-slate-500">All prices, upgrades, and add-ons appear here only — not
@@ -2089,6 +2125,10 @@
             if (name === 'documents') loadDocuments();
             if (name === 'generate') { loadDocumentCatalog(); loadAutoSendPreference(); }
             if (name === 'social') loadSocialCalendar();
+            if (name === 'billing') {
+                try { loadBillingPanel(); } catch (_) { }
+                try { clientLoadBillingCatalog(); } catch (_) { }
+            }
             if (name === 'appointments') loadAppointments();
             if (name === 'emailactivity') loadEmailActivity(1);
             if (name === 'whatsappactivity') {
@@ -5634,6 +5674,207 @@
         };
         let SOCIAL_CALENDAR_CACHE = []; // full, unfiltered — batch selector slices this client-side
 
+
+        // ---- Pay-first upgrade (Flutterwave via CareerHub; auto-grant, no admin) ----
+        async function clientLoadBillingCatalog() {
+            const root = document.getElementById('billingUnifiedRoot');
+            if (!root) return;
+            root.innerHTML = '<p class="text-xs text-slate-500">Loading plans…</p>';
+            try {
+                const res = await callGateway('agent', 'agent-get-billing-catalog', { region: 'NG' });
+                if (!res || !res.success) {
+                    // try client billing
+                    const b = await callGateway('clientportal', 'clientPortalGetBilling', {});
+                    if (b && b.success) {
+                        root.innerHTML = '<pre class="text-xs text-slate-400 whitespace-pre-wrap">' +
+                            escapeHtml(JSON.stringify(b, null, 2).slice(0, 2000)) + '</pre>';
+                        return;
+                    }
+                    root.innerHTML = '<p class="text-xs text-red-400">' + escapeHtml((res && res.message) || 'Could not load catalog') + '</p>';
+                    return;
+                }
+                let html = '';
+                function tierCards(list, suite) {
+                    if (!list || !list.length) return '';
+                    let h = '<div class="space-y-2"><p class="text-[10px] uppercase text-slate-500 font-semibold">' + suite + '</p><div class="grid grid-cols-1 sm:grid-cols-3 gap-2">';
+                    list.forEach(function (t) {
+                        const ngn = t.priceLocalNgn != null ? t.priceLocalNgn : (t.price && t.price.amount);
+                        const id = t.id;
+                        h += '<div class="border border-slate-700 rounded-xl p-3 bg-slate-900/80">' +
+                            '<p class="text-sm font-semibold text-white">' + escapeHtml(t.name || id) + '</p>' +
+                            '<p class="text-[10px] text-slate-500">' + escapeHtml(t.tagline || '') + '</p>' +
+                            '<p class="text-emerald-400 text-sm mt-1">₦' + Number(ngn || 0).toLocaleString() + '/mo</p>' +
+                            '<button type="button" class="mt-2 w-full text-xs py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white" ' +
+                            'onclick="clientRequestPaidUpgrade({opsTier:\'' + (suite === 'Ops' ? id : '') + '\',digitalTier:\'' + (suite === 'Digital' ? id : '') + '\'})">' +
+                            'Pay &amp; activate</button></div>';
+                    });
+                    h += '</div></div>';
+                    return h;
+                }
+                html += tierCards(res.opsTiers || [], 'Ops');
+                html += tierCards(res.digitalTiers || [], 'Digital');
+                if (res.addons && res.addons.length) {
+                    html += '<div class="space-y-2 mt-3"><p class="text-[10px] uppercase text-slate-500 font-semibold">Add-ons</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-2">';
+                    res.addons.forEach(function (a) {
+                        const id = a.id || a.key;
+                        const ngn = a.priceLocalNgn != null ? a.priceLocalNgn : a.priceNgn;
+                        html += '<div class="border border-slate-700 rounded-lg p-2 flex items-center justify-between gap-2">' +
+                            '<div><p class="text-xs text-white">' + escapeHtml(a.label || id) + '</p>' +
+                            '<p class="text-[10px] text-slate-500">₦' + Number(ngn || 0).toLocaleString() + '</p></div>' +
+                            '<button type="button" class="text-[10px] px-2 py-1 rounded bg-slate-700 text-white" ' +
+                            'onclick="clientRequestPaidUpgrade({addonId:\'' + id + '\'})">Pay</button></div>';
+                    });
+                    html += '</div></div>';
+                }
+                html += '<div id="upgradePaymentStatus" class="text-xs text-slate-400 mt-3"></div>';
+                html += '<button type="button" class="text-xs text-emerald-400 underline mt-2" onclick="clientConfirmUpgradePayment()">I paid — confirm &amp; activate</button>';
+                root.innerHTML = html;
+                // If returned from Flutterwave with query params
+                try {
+                    const q = new URLSearchParams(location.search);
+                    if (q.get('paid') === '1' || q.get('tx_ref') || q.get('transaction_id')) {
+                        clientConfirmUpgradePayment(q.get('tx_ref') || q.get('transaction_id'));
+                    }
+                } catch (_) { }
+            } catch (e) {
+                root.innerHTML = '<p class="text-xs text-red-400">' + escapeHtml(String(e)) + '</p>';
+            }
+        }
+
+        async function clientRequestPaidUpgrade(sel) {
+            const st = document.getElementById('upgradePaymentStatus');
+            if (st) st.textContent = 'Creating Flutterwave payment link…';
+            const body = Object.assign({}, sel || {});
+            const res = await callGateway('clientportal', 'clientPortalRequestUpgrade', body);
+            if (!res || !res.success) {
+                if (st) st.textContent = (res && res.message) || 'Could not start payment.';
+                if (typeof showToast === 'function') showToast((res && res.message) || 'Upgrade failed', 'error');
+                return;
+            }
+            if (res.paymentLink || res.pendingPayment) {
+                if (st) st.innerHTML = 'Pay ₦' + Number(res.amountNgn || 0).toLocaleString() +
+                    ' — <a class="text-emerald-400 underline" target="_blank" rel="noopener" href="' +
+                    escapeHtml(res.paymentLink || '#') + '">Open payment page</a>. After paying, click confirm below (or wait for auto-activate).';
+                try {
+                    sessionStorage.setItem('vic_upgrade_intent', res.intentId || '');
+                    sessionStorage.setItem('vic_upgrade_tx', res.txRef || '');
+                } catch (_) { }
+                if (res.paymentLink) window.open(res.paymentLink, '_blank');
+                return;
+            }
+            if (st) st.textContent = res.message || 'Done.';
+            if (typeof showToast === 'function') showToast(res.message || 'Updated', 'success');
+            loadBillingPanel();
+        }
+
+        async function clientConfirmUpgradePayment(txRefOpt) {
+            const st = document.getElementById('upgradePaymentStatus');
+            if (st) st.textContent = 'Verifying payment…';
+            let intentId = null, txRef = txRefOpt || null;
+            try {
+                intentId = sessionStorage.getItem('vic_upgrade_intent');
+                if (!txRef) txRef = sessionStorage.getItem('vic_upgrade_tx');
+            } catch (_) { }
+            const res = await callGateway('clientportal', 'clientPortalConfirmUpgradePayment', {
+                intentId: intentId || undefined,
+                txRef: txRef || undefined
+            });
+            if (!res || !res.success) {
+                if (st) st.textContent = (res && res.message) || 'Not confirmed yet.';
+                return;
+            }
+            if (st) st.textContent = res.message || 'Plan activated — no admin approval needed.';
+            if (typeof showToast === 'function') showToast(res.message || 'Activated', 'success');
+            try { sessionStorage.removeItem('vic_upgrade_intent'); sessionStorage.removeItem('vic_upgrade_tx'); } catch (_) { }
+            loadBillingPanel();
+            clientLoadBillingCatalog();
+        }
+
+        // ---- Client social calendar: generate + media upload (size-capped) ----
+        var CLIENT_SOCIAL_MAX_IMAGE_MB = 5;
+        var CLIENT_SOCIAL_MAX_VIDEO_MB = 25;
+
+        async function clientGenerateSocialCalendar() {
+            const topics = (document.getElementById('clientSocialTopics') && document.getElementById('clientSocialTopics').value) || '';
+            const startDate = document.getElementById('clientSocialStart') && document.getElementById('clientSocialStart').value;
+            const endDate = document.getElementById('clientSocialEnd') && document.getElementById('clientSocialEnd').value;
+            function multiVals(id) {
+                const el = document.getElementById(id);
+                if (!el) return null;
+                return Array.from(el.selectedOptions || []).map(function (o) { return o.value; });
+            }
+            const weekdays = multiVals('clientSocialWeekdays');
+            const platforms = multiVals('clientSocialPlatforms');
+            if (!startDate || !endDate) {
+                if (typeof showToast === 'function') showToast('Select start and end dates within the same month.', 'error');
+                else alert('Select start and end dates within the same month.');
+                return;
+            }
+            const res = await callGateway('clientportal', 'clientPortalGenerateSocialCalendar', {
+                monthOffset: 0,
+                startDate: startDate,
+                endDate: endDate,
+                weekdays: weekdays && weekdays.length ? weekdays.map(Number) : null,
+                platforms: platforms && platforms.length ? platforms : null,
+                topics: topics ? topics.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : null
+            });
+            if (!res || !res.success) {
+                if (typeof showToast === 'function') showToast((res && res.message) || 'Could not generate calendar (check plan limits)', 'error');
+                else alert((res && res.message) || 'Generate failed');
+                return;
+            }
+            if (typeof showToast === 'function') showToast(res.message || 'Calendar generated', 'success');
+            loadSocialCalendar();
+        }
+
+
+        async function clientUpdateSocialPostDate(postId, dateStr) {
+            if (!postId || !dateStr) return;
+            const res = await callGateway('clientportal', 'clientPortalUpdateSocialPostDate', {
+                postId: postId, newDate: dateStr
+            });
+            if (!res || !res.success) {
+                if (typeof showToast === 'function') showToast((res && res.message) || 'Could not move post', 'error');
+                return;
+            }
+            if (typeof showToast === 'function') showToast('Date updated', 'success');
+            loadSocialCalendar();
+        }
+
+        async function clientUploadSocialMedia(postId, fileInput) {
+            const file = fileInput && fileInput.files && fileInput.files[0];
+            if (!file || !postId) return;
+            const isVideo = /^video\//i.test(file.type) || /\.(mp4|mov|webm)$/i.test(file.name);
+            const maxMb = isVideo ? CLIENT_SOCIAL_MAX_VIDEO_MB : CLIENT_SOCIAL_MAX_IMAGE_MB;
+            if (file.size > maxMb * 1024 * 1024) {
+                const msg = 'Max ' + maxMb + ' MB for ' + (isVideo ? 'video' : 'image') + '. Your file is ' +
+                    (Math.round(file.size / 1024 / 1024 * 10) / 10) + ' MB.';
+                if (typeof showToast === 'function') showToast(msg, 'error');
+                else alert(msg);
+                fileInput.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = async function () {
+                const dataUrl = String(reader.result || '');
+                const base64 = dataUrl.indexOf(',') >= 0 ? dataUrl.split(',')[1] : dataUrl;
+                const res = await callGateway('clientportal', 'clientPortalUploadSocialMedia', {
+                    postId: postId,
+                    fileName: file.name,
+                    mimeType: file.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
+                    base64: base64
+                });
+                if (!res || !res.success) {
+                    if (typeof showToast === 'function') showToast((res && res.message) || 'Upload failed', 'error');
+                    return;
+                }
+                if (typeof showToast === 'function') showToast('Media attached', 'success');
+                loadSocialCalendar();
+            };
+            reader.readAsDataURL(file);
+        }
+
+
         async function loadSocialCalendar() {
             const listEl = document.getElementById('socialCalendarList');
             const alreadyRendered = listEl.dataset.rendered === '1';
@@ -5705,6 +5946,19 @@
                     ${p.CTA ? `<span><i class="fa-solid fa-bullhorn"></i> ${escapeHtml(p.CTA)}</span>` : ''}
                 </div>
                 ${clientDecided ? '' : `
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                            <label class="text-[10px] text-slate-400 cursor-pointer inline-flex items-center gap-1">
+                                <span class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200">Upload photo/video</span>
+                                <input type="file" class="hidden" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                                    onchange="clientUploadSocialMedia('${escapeHtml(p.PostID)}', this)" />
+                            </label>
+                            <span class="text-[9px] text-slate-600">Max 5 MB image · 25 MB video</span>
+                            <label class="text-[10px] text-slate-400 inline-flex items-center gap-1">Move
+                              <input type="date" class="bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-[10px] text-white"
+                                onchange="clientUpdateSocialPostDate('${escapeHtml(p.PostID)}', this.value)" />
+                            </label>
+                            ${(p.MediaURL || p.ImageID) ? ('<a class="text-[10px] text-sky-400 underline" target="_blank" rel="noopener" href="' + escapeHtml(p.MediaURL || ('https://drive.google.com/file/d/' + p.ImageID + '/view')) + '">View media</a>') : ''}
+                        </div>
                 <div class="flex gap-2 justify-end mt-3 pt-2 border-t border-slate-800">
                     <button onclick="rejectSocialPost('${escapeHtml(p.PostID)}')"
                         class="text-xs px-3 py-1 bg-slate-800 hover:bg-red-900/50 rounded text-slate-300">Reject</button>

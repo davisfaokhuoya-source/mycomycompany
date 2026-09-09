@@ -93,7 +93,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 {
                     id: 'client-4',
                     title: '2.4 Payment, Refunds & Cancellations',
-                    content: `<strong>Payment:</strong> All service fees are payable in full or as agreed upfront, through our official payment link issued via Flutterwave and official corporate. We do not accept cash payments, personal transfers to individual accounts, or any payment not processed through our official channels. Your payment receipt and Job Tracking Code are issued automatically upon successful payment.<br><br>
+                    content: `<strong>Payment:</strong> All service fees are payable in full or as agreed upfront, through our official payment link issued via Flutterwave and official corporate channels. We do not accept cash payments, personal transfers to individual accounts, or any payment not processed through our official channels. Your payment receipt and Job Tracking Code are issued automatically upon successful payment.<br><br>
+                    <strong>Client portal upgrades &amp; add-ons:</strong> When you upgrade a plan or purchase an add-on from the client dashboard, you are directed to an official Flutterwave payment link. On successful payment, your plan limits and entitlements are activated automatically — no further admin verification is required. If activation is delayed, use “I paid — confirm &amp; activate” on the Billing page or contact support with your payment reference.<br><br>
+                    <strong>Subscription cadence:</strong> Ops and Digital plans, document quotas, social calendars, and most add-ons renew <strong>monthly</strong>. Custom document AI training (trained layouts for specific document types) is an <strong>annual</strong> entitlement unless otherwise stated on your invoice.<br><br>
                     <strong>Refund Policy:</strong><br>
                     — <em>Full Refund:</em> Available within 24 hours of payment, provided no work has commenced.<br>
                     — <em>Partial Refund:</em> Where work has commenced, a refund of up to 50% of the service fee may be issued, at our discretion, based on the proportion of work completed.<br>
@@ -302,6 +304,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     (c) Where you have connected the relevant channel yourself (see Section 2.6), the underlying platform operators needed to deliver AI-assisted communication — including <strong>Meta Platforms, Inc.</strong> (via the WhatsApp Business Platform, for WhatsApp messaging), your email provider, and any social media or CRM platform you've connected — each acting as a processor strictly to transmit and receive the messages you've authorised;<br>
                     (d) Professional advisors (lawyers, auditors) under strict confidentiality obligations;<br>
                     (e) Law enforcement or courts, where required by a valid legal order.<br><br>
+                    <strong><br><br>
+                    <strong>System communications:</strong> Operational and transactional emails from our platforms are sent from <strong>noreply@thevictorias.com.ng</strong> (or another address on thevictorias.com.ng domain). We do not use personal staff Gmail accounts for system mail.<br><br>
                     <strong>We do not:</strong> Sell, rent, or trade your personal data to any third party for marketing or commercial purposes. We do not share your data with advertisers.`
                 },
                 {
@@ -454,7 +458,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     content: `<strong>Content Approval:</strong> We recommend a content approval process where you review and approve content before publishing. Where you grant us publishing autonomy, you assume responsibility for approving our content strategy and any brand-sensitive decisions made within agreed parameters.<br><br>
                     <strong>Platform Terms:</strong> Our services are bound by the terms of service of the social media platforms on which we operate (Meta, X, LinkedIn, TikTok, etc.). We are not liable for account suspensions or restrictions imposed by these platforms for content that you approved or for violations of platform-specific rules.<br><br>
                     <strong>Account Access:</strong> Where you grant us access to your social media accounts, you must not revoke that access unexpectedly during an active campaign without notice, as this may cause loss of scheduled content and planned engagements. We will surrender all access credentials immediately upon contract termination.<br><br>
-                    <strong>Performance Metrics:</strong> Social media results (followers, engagement, reach) depend on multiple factors including your product quality, budget, platform algorithms, and market conditions. We provide best-efforts service and transparent reporting but do not guarantee specific growth metrics.`
+                    <strong>Performance Metrics:</strong> Social media results (followers, engagement, reach) depend on multiple factors including your product quality, budget, platform algorithms, and market conditions. We provide best-efforts service and transparent reporting but do not guarantee specific growth metrics.<br><br>
+                    <strong>Client-generated calendars:</strong> Eligible clients may generate a content calendar for a date range within a single calendar month, choose weekdays (e.g. every Wednesday), and select connected platforms (e.g. Facebook and Instagram). Posts must not clash with existing scheduled posts on the same platform/day beyond the daily allowance on the plan.<br><br>
+                    <strong>Client approval:</strong> When a client approves a post or batch in the client dashboard, that approval is final for publishing — admin re-approval is not required. The system may publish according to the scheduled date once platform connections and quotas allow. All client-generated calendars, approvals, media uploads, and date edits remain visible to administrators for oversight.`
                 },
                 {
                     id: 'svc-3',
@@ -773,11 +779,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="container pb-5 overflow-hidden">
                     <div class="text-center mx-auto pb-5 wow fadeInUp" data-wow-delay="0.2s" style="max-width:860px;">
                         <h4 class="text-primary"><br/>The Victorias Ltd.</h4>
-                        <h1 class="display-5 mb-4">Company Policies & Terms</h1>
+                        <h1 class="display-5 mb-4">Company Policies, Terms &amp; Conditions</h1>
                         <p class="mb-1 text-muted">
                             <strong>Effective Date:</strong> January 1, 2026 &nbsp;|&nbsp;
-                            <strong>Version:</strong> 2.1 &nbsp;|&nbsp;
-                            <strong>Last Updated:</strong> July 7, 2026 &nbsp;|&nbsp;
+                            <strong>Version:</strong> 2.2 &nbsp;|&nbsp;
+                            <strong>Last Updated:</strong> September 9, 2026 &nbsp;|&nbsp;
                             <strong>Reviewed Annually</strong>
                         </p>
                         <p class="mb-0 small text-muted">
