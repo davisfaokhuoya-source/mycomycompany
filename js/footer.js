@@ -74,30 +74,7 @@ const footerHTML = `<!-- Victoria AI Bubble Integration -->
                 </div>
             </div>
         </div>
-        <!-- Footer End -->
-        
-        <!-- Copyright Start -->
-        <div class="container-fluid copyright py-4">
-            <div class="container">
-                <div class="row g-4 align-items-center">
-                    <div class="col-md-6 text-center text-md-start mb-md-0">
-                        <span class="text-body"><a href="#" class="border-bottom text-white"><i class="fas fa-copyright text-light me-2"></i>The Victorias Ltd</a>, All right reserved.</span>
-                    </div>
-                    <div class="col-md-6 text-center text-md-end text-body">
-                        Designed By The Victorias Ltd Tech Team.
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- 1. Add this Button anywhere on your page -->
-                <button id="victoria-btn" class="victoria-button">
-        💬 Live Chat
-        </button>
-
-        <!-- Container for iframe -->
-        <div id="victoriaai" class="victoriaai"></div>
-
-        
+        <!-- Footer End -->   
 `;
 
 function renderFooter() {
@@ -112,63 +89,6 @@ function renderFooter() {
 
 // Just call it directly
 renderFooter();
-
-document.addEventListener('DOMContentLoaded', function () {
-    const button = document.getElementById('victoria-btn');
-    const container = document.getElementById('victoriaai');
-
-    let isOpen = false;
-    let iframe = null;
-
-    button.addEventListener('click', function () {
-        if (isOpen) {
-            // Close
-            if (iframe) {
-                iframe.remove();
-                iframe = null;
-            }
-            isOpen = false;
-            button.innerHTML = '💬 Live Chat';
-            button.classList.remove('open');
-        } else {
-            // Open
-            iframe = document.createElement('iframe');
-            iframe.src = "https://victoria-ai-1021677502943.us-west1.run.app";
-            iframe.style.position = "fixed";
-            iframe.style.border = "none";
-            iframe.style.zIndex = "9999";
-            iframe.style.pointerEvents = "auto";
-            iframe.allow = "clipboard-write";
-
-            // Function to handle responsive styling
-            function applyResponsiveStyles() {
-                if (window.innerWidth <= 767) {
-                    // Mobile Styles
-                    iframe.style.bottom = "0px";
-                    iframe.style.right = "0px";
-                    iframe.style.width = "280px";
-                    iframe.style.height = "600px";
-                } else {
-                    // Desktop Styles
-                    iframe.style.bottom = "100px";
-                    iframe.style.right = "20px";
-                    iframe.style.width = "550px";
-                    iframe.style.height = "600px";
-                }
-            }
-
-            // Run on load and whenever the window is resized
-            applyResponsiveStyles();
-            window.addEventListener('resize', applyResponsiveStyles);
-
-            container.appendChild(iframe);
-
-            isOpen = true;
-            button.innerHTML = '💬 Close Chat';
-            button.classList.add('open');
-        }
-    });
-});
 
 function onClick(e) {
     e.preventDefault();
