@@ -3952,6 +3952,84 @@
                                     class="divide-y divide-slate-800/50 text-slate-300"></tbody>
                             </table>
                         </div>
+
+                        <!-- Eligibility + Social / Comment AI (admin connect & disconnect) -->
+                        <div id="adminIntegEligibility"
+                            class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 space-y-1 shrink-0">
+                            <p class="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">Plan eligibility
+                            </p>
+                            <p id="adminIntegEligText" class="text-slate-400">Select a client to see social/CRM limits.
+                            </p>
+                        </div>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 shrink-0">
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <h4 class="text-xs font-bold text-white">Social accounts</h4>
+                                    <div class="flex flex-wrap gap-1">
+                                        <button type="button" onclick="adminStartSocial('facebook')"
+                                            class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-200">+
+                                            FB</button>
+                                        <button type="button" onclick="adminStartSocial('instagram')"
+                                            class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-200">+
+                                            IG</button>
+                                        <button type="button" onclick="adminStartSocial('linkedin')"
+                                            class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-200">+
+                                            LI</button>
+                                        <button type="button" onclick="adminStartSocial('threads')"
+                                            class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-200">+
+                                            Threads</button>
+                                        <button type="button" onclick="adminStartSocial('tiktok','consumer')"
+                                            class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-200">+
+                                            TikTok</button>
+                                        <button type="button" onclick="adminStartSocial('tiktok','business')"
+                                            class="text-[10px] px-2 py-1 rounded bg-emerald-900/50 text-emerald-300 border border-emerald-800">+
+                                            Biz TikTok</button>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2 items-center">
+                                    <span class="text-[10px] text-slate-500">TikTok mode</span>
+                                    <button type="button" onclick="adminSetTikTokMode('consumer')"
+                                        class="text-[10px] px-2 py-1 rounded bg-slate-800 text-white">Standard</button>
+                                    <button type="button" onclick="adminSetTikTokMode('business')"
+                                        class="text-[10px] px-2 py-1 rounded bg-emerald-800 text-white">Business (AI
+                                        comments)</button>
+                                </div>
+                                <div id="adminSocialConnectionsList" class="space-y-1 text-xs text-slate-400">—</div>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
+                                <h4 class="text-xs font-bold text-white">AI comment replies</h4>
+                                <p class="text-[10px] text-slate-500">Per-platform master switch. TikTok requires
+                                    Business mode.</p>
+                                <div id="adminCommentReplyToggles" class="space-y-1.5 text-xs text-slate-300">Select a
+                                    client…</div>
+                                <div class="border-t border-slate-800 pt-2">
+                                    <label class="text-[10px] text-slate-500">Load comments for post</label>
+                                    <div class="flex gap-1 mt-1">
+                                        <select id="adminCommentPlatform"
+                                            class="bg-slate-900 border border-slate-800 rounded text-[10px] text-white px-1 py-1">
+                                            <option value="facebook">Facebook</option>
+                                            <option value="instagram">Instagram</option>
+                                            <option value="tiktok">TikTok</option>
+                                            <option value="threads">Threads</option>
+                                            <option value="linkedin">LinkedIn</option>
+                                        </select>
+                                        <input id="adminCommentPostId" placeholder="Post ID"
+                                            class="flex-1 bg-slate-900 border border-slate-800 rounded text-[10px] text-white px-2 py-1" />
+                                        <button type="button" onclick="adminLoadPostComments()"
+                                            class="text-[10px] px-2 py-1 rounded bg-slate-700 text-white">Load</button>
+                                    </div>
+                                    <div id="adminPostCommentsMount"
+                                        class="mt-2 max-h-40 overflow-auto text-[10px] text-slate-400"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2 shrink-0">
+                            <h4 class="text-xs font-bold text-white">Client disconnect requests</h4>
+                            <p class="text-[10px] text-slate-500">Clients cannot remove social/CRM themselves — they
+                                request here. Complete disconnect when ready.</p>
+                            <div id="adminDisconnectRequests" class="text-xs text-slate-400">Load with client selection
+                                (sheet DisconnectRequests).</div>
+                        </div>
                     </div>
                     <!-- CRM SYNC -->
                     <div id="view-agent-crmsync"
@@ -16040,11 +16118,149 @@ ${a.Status === 'Pending Review' ? `
 
         const CRM_INTEGRATION_TYPES = ['hubspot', 'zoho', 'salesforce', 'google_sheets', 'generic_rest'];
 
+
+        async function adminStartSocial(platform, tikTokMode) {
+            const clientId = document.getElementById('integrationsClientSelector')?.value;
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            const payload = { clientId, platform };
+            if (platform === 'tiktok' && tikTokMode) payload.tikTokMode = tikTokMode;
+            const res = await executeSecureBridgeCall('agent', 'agent-start-social-connect', payload);
+            if (!res || !res.success) {
+                showToast((res && res.message) || 'Connect failed (check plan limits).', 'error');
+                return;
+            }
+            if (res.authUrl) window.open(res.authUrl, '_blank');
+            else showToast(res.message || 'Started', 'success');
+            try { loadIntegrationsUI(); } catch (_) { }
+        }
+        async function adminSetTikTokMode(mode) {
+            const clientId = document.getElementById('integrationsClientSelector')?.value;
+            if (!clientId) { showToast('Select a client first.', 'error'); return; }
+            const res = await executeSecureBridgeCall('agent', 'agent-set-tiktok-mode', { clientId, mode });
+            showToast((res && res.message) || (res && res.success ? 'TikTok mode: ' + mode : 'Failed'), res && res.success ? 'success' : 'error');
+            try { loadIntegrationsUI(); } catch (_) { }
+        }
+        async function adminSetCommentReply(platform, enabled) {
+            const clientId = document.getElementById('integrationsClientSelector')?.value;
+            if (!clientId) return;
+            const res = await executeSecureBridgeCall('agent', 'agent-set-comment-reply', {
+                clientId, platform, postId: '*', enabled: !!enabled
+            });
+            showToast((res && res.message) || (res && res.success ? 'Saved' : 'Failed'), res && res.success ? 'success' : 'error');
+        }
+        async function adminLoadPostComments() {
+            const clientId = document.getElementById('integrationsClientSelector')?.value;
+            const platform = document.getElementById('adminCommentPlatform')?.value;
+            const postId = document.getElementById('adminCommentPostId')?.value?.trim();
+            const mount = document.getElementById('adminPostCommentsMount');
+            if (!clientId || !platform) { showToast('Client + platform required', 'error'); return; }
+            if (mount) mount.innerHTML = 'Loading…';
+            const res = await executeSecureBridgeCall('agent', 'agent-list-post-comments', { clientId, platform, postId });
+            if (!mount) return;
+            if (!res || !res.success) {
+                mount.innerHTML = '<span class="text-red-400">' + escapeHtml((res && res.message) || 'Failed') + '</span>';
+                return;
+            }
+            const comments = res.comments || [];
+            let html = '<div class="mb-1 text-slate-500">' + comments.length + ' comments';
+            if (res.tikTokMode) html += ' · TikTok ' + escapeHtml(res.tikTokMode);
+            html += ' · AI ' + (res.replyEnabled ? 'ON' : 'OFF') + '</div>';
+            if (!comments.length) html += '<p>No comments returned.</p>';
+            else {
+                html += '<ul class="space-y-1">';
+                comments.forEach(function (c) {
+                    html += '<li class="border border-slate-800 rounded px-2 py-1"><strong>' +
+                        escapeHtml(c.author || c.username || 'User') + '</strong>: ' +
+                        escapeHtml(c.text || c.message || '') + '</li>';
+                });
+                html += '</ul>';
+            }
+            mount.innerHTML = html;
+        }
+        async function adminDisconnectSocial(platform) {
+            const clientId = document.getElementById('integrationsClientSelector')?.value;
+            if (!clientId || !platform) return;
+            if (!confirm('Disconnect ' + platform + ' for this client?')) return;
+            const res = await executeSecureBridgeCall('agent', 'agent-disconnect-integration', {
+                clientId, category: 'social', platform: platform
+            });
+            showToast((res && res.message) || (res && res.success ? 'Disconnected' : 'Failed'), res && res.success ? 'success' : 'error');
+            loadIntegrationsUI();
+        }
+        async function adminLoadSocialAndElig(clientId) {
+            const eligEl = document.getElementById('adminIntegEligText');
+            const socEl = document.getElementById('adminSocialConnectionsList');
+            const togEl = document.getElementById('adminCommentReplyToggles');
+            if (eligEl) eligEl.textContent = 'Loading eligibility…';
+            if (socEl) socEl.textContent = 'Loading…';
+            // Eligibility via agent path: reuse list limits + get client flags
+            let elig = null;
+            try {
+                const lim = await executeSecureBridgeCall('agent', 'agent-get-social-limits', { clientId });
+                const flags = await executeSecureBridgeCall('agent', 'agent-get-service-flags', { clientId });
+                elig = { socialLimits: lim, flags: flags };
+            } catch (_) { }
+            try {
+                // Prefer dedicated eligibility if gateway routes it under agent with clientId
+                const e2 = await executeSecureBridgeCall('agent', 'agent-get-integration-eligibility', { clientId });
+                if (e2 && e2.success) elig = e2;
+            } catch (_) { }
+
+            if (eligEl) {
+                if (elig && elig.social) {
+                    eligEl.innerHTML =
+                        '<span class="text-slate-300">Social:</span> ' + (elig.social.used || 0) + '/' + (elig.social.limit || 0) +
+                        (elig.social.canConnect ? ' <span class="text-emerald-400">can connect</span>' : ' <span class="text-amber-400">locked</span> — ' + escapeHtml(elig.social.reason || '')) +
+                        '<br><span class="text-slate-300">CRM:</span> ' + (elig.crm ? ((elig.crm.used || 0) + '/' + (elig.crm.limit || 0)) : '—') +
+                        (elig.crm && elig.crm.canConnect ? ' <span class="text-emerald-400">can connect</span>' : (elig.crm ? ' <span class="text-amber-400">locked</span>' : ''));
+                } else if (elig && elig.socialLimits) {
+                    const L = elig.socialLimits;
+                    eligEl.textContent = 'Social limits: ' + JSON.stringify(L.limit != null ? { limit: L.limit, used: L.used } : L).slice(0, 180);
+                } else {
+                    eligEl.textContent = 'Eligibility loaded with client. Social needs Digital tier; CRM needs Ops CRM slots.';
+                }
+            }
+
+            try {
+                const soc = await executeSecureBridgeCall('agent', 'agent-list-social-connections', { clientId });
+                if (socEl) {
+                    const rows = (soc && soc.connections) || [];
+                    if (!rows.length) socEl.innerHTML = '<span class="text-slate-500">No social connections.</span>';
+                    else {
+                        socEl.innerHTML = rows.map(function (c) {
+                            const plat = escapeHtml(c.platform || '');
+                            return '<div class="flex justify-between items-center gap-2 border border-slate-800 rounded px-2 py-1">' +
+                                '<span>' + plat + ' · ' + escapeHtml(c.pageName || c.status || '') + '</span>' +
+                                '<button type="button" onclick="adminDisconnectSocial(\'' + plat + '\')" class="text-[10px] px-2 py-0.5 rounded bg-red-900/50 text-red-200">Disconnect</button></div>';
+                        }).join('');
+                    }
+                }
+            } catch (e) {
+                if (socEl) socEl.textContent = 'Could not load social connections.';
+            }
+
+            if (togEl) {
+                const plats = ['facebook', 'instagram', 'threads', 'linkedin', 'tiktok'];
+                togEl.innerHTML = plats.map(function (p) {
+                    return '<label class="flex items-center justify-between gap-2 border border-slate-800 rounded px-2 py-1.5 cursor-pointer">' +
+                        '<span class="capitalize">' + p + '</span>' +
+                        '<input type="checkbox" onchange="adminSetCommentReply(\'' + p + '\', this.checked)" /> AI replies</label>';
+                }).join('');
+            }
+        }
+
+
         async function loadIntegrationsUI() {
             const clientId = document.getElementById('integrationsClientSelector')?.value;
             const tbody = document.getElementById('agentIntegrationsTableBody');
-            if (!clientId) { tbody.innerHTML = emptyRow('Select a client.', 5); return; }
+            if (!clientId) {
+                tbody.innerHTML = emptyRow('Select a client.', 5);
+                const eligEl = document.getElementById('adminIntegEligText');
+                if (eligEl) eligEl.textContent = 'Select a client to see social/CRM limits.';
+                return;
+            }
             showTableSkeleton('agentIntegrationsTableBody', 5);
+            try { await adminLoadSocialAndElig(clientId); } catch (e) { console.warn(e); }
             const res = await executeSecureBridgeCall('agent', 'agent-list-integrations', { clientId });
 
             if (!res.success || !res.integrations?.length) { tbody.innerHTML = emptyRow('No integrations connected.', 5); return; }

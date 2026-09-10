@@ -1354,9 +1354,11 @@
                 <!-- INTEGRATIONS -->
                 <section id="view-integrations"
                     class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
-                    <p class="text-xs text-slate-400 max-w-2xl">Everything currently connected to your account.
-                        Revoking a connection here stops it immediately — the agent will no longer read from or send
-                        through it until you reconnect it with our team.</p>
+                    <p class="text-xs text-slate-400 max-w-2xl">Connect social and CRM yourself when your plan allows.
+                        To <strong class="text-slate-300">remove</strong> a
+                        connection, request disconnect — only your account team can complete removal. TikTok defaults to
+                        standard TikTok; choose <strong class="text-slate-300">Business TikTok</strong> to enable AI
+                        replies on comments.</p>
 
                     <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
                         <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
@@ -1488,15 +1490,58 @@
                     </div>
 
                     <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                        <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
-                                class="fa-solid fa-share-nodes text-slate-500"></i> Social Media</h3>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
+                                    class="fa-solid fa-share-nodes text-emerald-500"></i> Social Media</h3>
+                            <div class="flex flex-wrap gap-1.5">
+                                <button type="button" onclick="clientStartSocialConnect('facebook')"
+                                    class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-200 hover:bg-slate-700">+
+                                    Facebook</button>
+                                <button type="button" onclick="clientStartSocialConnect('instagram')"
+                                    class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-200 hover:bg-slate-700">+
+                                    Instagram</button>
+                                <button type="button" onclick="clientStartSocialConnect('linkedin')"
+                                    class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-200 hover:bg-slate-700">+
+                                    LinkedIn</button>
+                                <button type="button" onclick="clientStartSocialConnect('threads')"
+                                    class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-200 hover:bg-slate-700">+
+                                    Threads</button>
+                                <button type="button" onclick="clientStartSocialConnect('tiktok','consumer')"
+                                    class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-200 hover:bg-slate-700">+
+                                    TikTok</button>
+                                <button type="button" onclick="clientStartSocialConnect('tiktok','business')"
+                                    class="text-[10px] px-2 py-1 rounded bg-emerald-900/50 text-emerald-300 border border-emerald-800">+
+                                    Business TikTok</button>
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-slate-500 leading-relaxed">Account count is limited by your <strong
+                                class="text-slate-400">Digital tier</strong>. Default TikTok is standard (publish).
+                            <strong class="text-slate-400">Business TikTok</strong> enables AI comment replies. To
+                            remove a connection, request disconnect — admin completes it.</p>
+                        <div class="flex flex-wrap gap-2 items-center">
+                            <span class="text-[10px] text-slate-500">TikTok mode:</span>
+                            <button type="button" onclick="clientSetTikTokMode('consumer')"
+                                class="text-[10px] px-2 py-1 rounded bg-slate-800 text-white">Standard</button>
+                            <button type="button" onclick="clientSetTikTokMode('business')"
+                                class="text-[10px] px-2 py-1 rounded bg-emerald-800 text-white">Business (AI
+                                comments)</button>
+                        </div>
                         <div id="integrationsSocialList" class="space-y-2 text-xs"></div>
+                        <div id="postCommentsMount" class="mt-2 border-t border-slate-800 pt-2"></div>
                     </div>
 
                     <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
                         <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
                                 class="fa-solid fa-database text-slate-500"></i> CRM</h3>
                         <div id="integrationsCrmList" class="space-y-2 text-xs"></div>
+                        <div class="flex flex-wrap gap-1.5 pt-1">
+                            <button type="button" onclick="clientStartCrmConnect('hubspot')"
+                                class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-200">+ HubSpot</button>
+                            <button type="button" onclick="clientStartCrmConnect('zoho')"
+                                class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-200">+ Zoho</button>
+                            <button type="button" onclick="clientStartCrmConnect('salesforce')"
+                                class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-200">+ Salesforce</button>
+                        </div>
                     </div>
                 </section>
 
@@ -3454,6 +3499,134 @@
             }
         }
 
+
+        async function clientStartSocialConnect(platform, tikTokMode) {
+            const body = { platform: platform };
+            if (platform === 'tiktok' && tikTokMode) body.tikTokMode = tikTokMode;
+            const res = await callGateway('clientportal', 'clientPortalStartSocialConnect', body);
+            if (!res || !res.success) {
+                if (typeof showToast === 'function') showToast((res && res.message) || 'Could not start connect', 'error');
+                return;
+            }
+            if (res.authUrl) window.location.href = res.authUrl;
+            else if (typeof showToast === 'function') showToast(res.message || 'No auth URL returned', 'info');
+        }
+        async function clientStartCrmConnect(type) {
+            const res = await callGateway('clientportal', 'clientPortalStartCrmConnect', { type: type || 'hubspot' });
+            if (!res || !res.success) {
+                if (typeof showToast === 'function') showToast((res && res.message) || 'Could not start CRM connect', 'error');
+                return;
+            }
+            if (res.authUrl) window.location.href = res.authUrl;
+        }
+        async function clientRequestDisconnect(category, key) {
+            if (!confirm('Request removal of this connection? Only admin can complete disconnect.')) return;
+            const payload = { category: category };
+            if (category === 'social') payload.platform = key;
+            else if (category === 'crm') payload.type = key;
+            else if (category === 'mailbox') payload.mailboxId = key;
+            else if (category === 'whatsapp') payload.whatsAppId = key;
+            const res = await callGateway('clientportal', 'clientPortalRequestDisconnect', payload);
+            if (typeof showToast === 'function') {
+                showToast((res && res.message) || (res && res.success ? 'Request sent' : 'Request failed'), res && res.success ? 'success' : 'error');
+            }
+        }
+        async function clientSetTikTokMode(mode) {
+            const res = await callGateway('clientportal', 'clientPortalSetTikTokMode', { mode: mode });
+            if (typeof showToast === 'function') showToast((res && res.message) || (res && res.success ? 'TikTok mode updated' : 'Update failed'), res && res.success ? 'success' : 'error');
+            try { loadIntegrationsPanel(); } catch (_) { }
+        }
+        async function clientSetCommentReply(platform, postId, enabled) {
+            const res = await callGateway('clientportal', 'clientPortalSetCommentReply', {
+                platform: platform,
+                postId: postId || '*',
+                enabled: !!enabled
+            });
+            if (typeof showToast === 'function') showToast((res && res.message) || (res && res.success ? 'Saved' : 'Failed'), res && res.success ? 'success' : 'error');
+            return res;
+        }
+        async function clientLoadPostComments(platform, postId, mountId) {
+            const el = document.getElementById(mountId || 'postCommentsMount');
+            if (el) el.innerHTML = '<p class="text-xs text-slate-500">Loading comments…</p>';
+            const res = await callGateway('clientportal', 'clientPortalListPostComments', { platform: platform, postId: postId });
+            if (!el) return res;
+            if (!res || !res.success) {
+                el.innerHTML = '<p class="text-xs text-red-400">' + escapeHtml((res && res.message) || 'Could not load') + '</p>';
+                return res;
+            }
+            const comments = res.comments || [];
+            let html = '<div class="flex items-center justify-between gap-2 mb-2">';
+            html += '<span class="text-[10px] text-slate-400">' + comments.length + ' comments';
+            if (res.tikTokMode) html += ' · TikTok: ' + escapeHtml(res.tikTokMode);
+            html += '</span>';
+            html += '<label class="text-[10px] text-slate-300 flex items-center gap-1.5 cursor-pointer">';
+            html += '<input type="checkbox" ' + (res.replyEnabled ? 'checked' : '') +
+                ' onchange="clientSetCommentReply(\'' + escapeHtml(platform) + '\',\'' + escapeHtml(postId) + '\', this.checked)" />';
+            html += ' AI replies</label></div>';
+            if (!comments.length) {
+                html += '<p class="text-[11px] text-slate-500">No comments yet (or Business APIs not connected for this platform).</p>';
+            } else {
+                html += '<ul class="space-y-2 max-h-48 overflow-y-auto">';
+                comments.forEach(function (c) {
+                    html += '<li class="text-[11px] border border-slate-800 rounded-lg px-2 py-1.5 bg-slate-950">';
+                    html += '<span class="text-slate-400">' + escapeHtml(c.author || c.username || 'User') + '</span>';
+                    html += '<p class="text-slate-200 mt-0.5">' + escapeHtml(c.text || c.message || '') + '</p></li>';
+                });
+                html += '</ul>';
+            }
+            el.innerHTML = html;
+            return res;
+        }
+
+
+
+        async function applyIntegrationLocks() {
+            try {
+                const res = await callGateway('clientportal', 'clientPortalGetIntegrationEligibility', {});
+                const el = (res && res.success && res.social) ? res : (res && res.eligibility) ? res.eligibility : res;
+                // shape from _getClientIntegrationEligibility_
+                const social = res.social || (res.eligibility && res.eligibility.social);
+                const crm = res.crm || (res.eligibility && res.eligibility.crm);
+                const root = document.getElementById('integrationsSocialList');
+                const socialCard = root && root.closest('.bg-slate-950');
+                const btns = socialCard ? socialCard.querySelectorAll('button') : [];
+                if (social && social.canConnect === false) {
+                    btns.forEach(function (b) {
+                        if (/TikTok|Facebook|Instagram|LinkedIn|Threads|Business/i.test(b.textContent) || b.getAttribute('onclick') && b.getAttribute('onclick').indexOf('SocialConnect') >= 0) {
+                            b.disabled = true;
+                            b.title = social.reason || 'Locked on your plan';
+                            b.classList.add('opacity-40', 'cursor-not-allowed');
+                        }
+                    });
+                    if (socialCard && !document.getElementById('socialLockBanner')) {
+                        const ban = document.createElement('p');
+                        ban.id = 'socialLockBanner';
+                        ban.className = 'text-[10px] text-amber-400/90';
+                        ban.textContent = social.reason || ('Social locked — used ' + (social.used || 0) + '/' + (social.limit || 0));
+                        socialCard.insertBefore(ban, socialCard.firstChild.nextSibling);
+                    }
+                }
+                const crmList = document.getElementById('integrationsCrmList');
+                const crmCard = crmList && crmList.closest('.bg-slate-950');
+                if (crm && crm.canConnect === false && crmCard) {
+                    crmCard.querySelectorAll('button').forEach(function (b) {
+                        if (b.getAttribute('onclick') && b.getAttribute('onclick').indexOf('CrmConnect') >= 0) {
+                            b.disabled = true;
+                            b.title = crm.reason || 'CRM locked';
+                            b.classList.add('opacity-40', 'cursor-not-allowed');
+                        }
+                    });
+                    if (!document.getElementById('crmLockBanner')) {
+                        const ban = document.createElement('p');
+                        ban.id = 'crmLockBanner';
+                        ban.className = 'text-[10px] text-amber-400/90';
+                        ban.textContent = crm.reason || ('CRM locked — ' + (crm.used || 0) + '/' + (crm.limit || 0));
+                        crmCard.appendChild(ban);
+                    }
+                }
+            } catch (e) { console.warn('applyIntegrationLocks', e); }
+        }
+
         async function loadIntegrationsPanel() {
             try { loadClientSignatory(); } catch (_) { }
             try { loadClientServiceFlags(); } catch (_) { }
@@ -3527,9 +3700,12 @@
         }
 
         async function revokeIntegration(category, idFields, displayLabel) {
-            const warning = category === 'social'
-                ? `Remove "${displayLabel}"? It will be deleted from this account. Connect the platform again when you want it back.`
-                : `Revoke "${displayLabel}"? The agent will stop using it immediately. You can reconnect it yourself any time.`;
+            // Social & CRM: client cannot fully disconnect — request admin
+            if (category === 'social' || category === 'crm') {
+                const key = (idFields && (idFields.platform || idFields.type || idFields.connectionId)) || displayLabel;
+                return clientRequestDisconnect(category, key);
+            }
+            const warning = `Revoke "${displayLabel}"? The agent will stop using it immediately. You can reconnect it yourself any time.`;
             if (!confirm(warning)) return;
             const res = await callGateway('clientportal', 'clientPortalRevokeIntegration', { category, ...idFields });
             if (!res.success) { alert(res.message || 'Failed to revoke.'); }
