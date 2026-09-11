@@ -1833,7 +1833,8 @@
         let CLIENT_ID = localStorage.getItem('VIC_CLIENT_ID') || "";
         let SESSION_TOKEN = localStorage.getItem('VIC_CLIENT_TOKEN') || "";
         let PRESENCE_TIMER = null;
-        let CHAT_TIMER = null;
+        var CHAT_TIMER = null;
+        var MYWORK_TIMER = null;
         let EMAIL_ACTIVITY_PAGE = 1;
         let WHATSAPP_ACTIVITY_PAGE = 1;
 
@@ -2122,7 +2123,7 @@
             try { closeMobileSidebar(); } catch (_) { }
 
             clearInterval(PRESENCE_TIMER);
-            clearInterval(CHAT_TIMER);
+            try { if (typeof CHAT_TIMER !== 'undefined' && CHAT_TIMER) clearInterval(CHAT_TIMER); } catch (_e) { }
             clearInterval(CLIENT_NOTIF_TIMER);
             localStorage.removeItem('VIC_CLIENT_TOKEN');
             SESSION_TOKEN = '';
@@ -2224,14 +2225,14 @@
             if (name === 'chat') {
                 loadChat();
                 startChatPolling();
-                clearInterval(MYWORK_TIMER);
+                try { if (typeof MYWORK_TIMER !== 'undefined' && MYWORK_TIMER) clearInterval(MYWORK_TIMER); } catch (_e) { }
             } else if (name === 'mywork') {
-                loadMyWork();
-                startMyWorkPolling();
-                clearInterval(CHAT_TIMER);
+                try { if (typeof loadMyWork === 'function') loadMyWork(); } catch (_mw2) { }
+                try { if (typeof startMyWorkPolling === 'function') startMyWorkPolling(); } catch (_mw) { }
+                try { if (typeof CHAT_TIMER !== 'undefined' && CHAT_TIMER) clearInterval(CHAT_TIMER); } catch (_e) { }
             } else {
-                clearInterval(CHAT_TIMER);
-                clearInterval(MYWORK_TIMER);
+                try { if (typeof CHAT_TIMER !== 'undefined' && CHAT_TIMER) clearInterval(CHAT_TIMER); } catch (_e) { }
+                try { if (typeof MYWORK_TIMER !== 'undefined' && MYWORK_TIMER) clearInterval(MYWORK_TIMER); } catch (_e) { }
             }
         }
 
@@ -5737,8 +5738,46 @@
             }
         }
 
+
+        // Polling timers (must exist before showView)
+        var CHAT_TIMER = (typeof CHAT_TIMER !== 'undefined') ? CHAT_TIMER : null;
+        var MYWORK_TIMER = (typeof MYWORK_TIMER !== 'undefined') ? MYWORK_TIMER : null;
+
+        function startMyWorkPolling() {
+            try {
+                if (typeof MYWORK_TIMER !== 'undefined' && MYWORK_TIMER) clearInterval(MYWORK_TIMER);
+            } catch (_) { }
+            if (typeof loadMyWork === 'function') {
+                MYWORK_TIMER = setInterval(function () {
+                    try { try { if (typeof loadMyWork === 'function') loadMyWork(); } catch (_mw2) { } } catch (e) { console.warn('loadMyWork', e); }
+                }, 15000);
+            }
+        }
+
+        function loadMyWork() {
+            // Optional view — soft-load tasks/jobs if API exists
+            var root = document.getElementById('myWorkRoot') || document.getElementById('myworkRoot') || document.getElementById('view-mywork');
+            if (!root) return;
+            if (root.dataset.loading === '1') return;
+            root.dataset.loading = '1';
+            Promise.resolve()
+                .then(function () {
+                    if (typeof callGateway !== 'function') return null;
+                    return callGateway('clientportal', 'clientPortalGetMyWork', {}).catch(function () { return null; });
+                })
+                .then(function (res) {
+                    root.dataset.loading = '0';
+                    if (!res || !res.success) return;
+                    // If a dedicated renderer exists, prefer it
+                    if (typeof renderMyWork === 'function') {
+                        try { renderMyWork(res); } catch (_) { }
+                    }
+                })
+                .catch(function () { root.dataset.loading = '0'; });
+        }
+
         function startChatPolling() {
-            clearInterval(CHAT_TIMER);
+            try { if (typeof CHAT_TIMER !== 'undefined' && CHAT_TIMER) clearInterval(CHAT_TIMER); } catch (_e) { }
             CHAT_TIMER = setInterval(loadChat, 3000);
         }
 
