@@ -1542,10 +1542,16 @@
                         <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
                                 class="fa-solid fa-comments text-emerald-500"></i> Comments (by post)</h3>
                         <p class="text-[10px] text-slate-500">Requires <strong class="text-slate-400">AI comment
-                                replies</strong> or <strong class="text-slate-400">spam delete</strong> add-on. <a
-                                href="#" class="text-emerald-400 underline"
+                                replies</strong> or <strong class="text-slate-400">spam delete</strong> add-on.
+                            Moderation counts from addon start / renewal. <a href="#" class="text-emerald-400 underline"
                                 onclick="goBillingUpgrade('Open Billing to add comment tools');return false;">Upgrade /
                                 Billing</a></p>
+                        <div class="flex flex-wrap gap-2 items-center mb-2">
+                            <button type="button" onclick="clientLoadCommentActivityPosts()"
+                                class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white">Posts
+                                with AI activity (30 days)</button>
+                        </div>
+                        <div id="commentActivityPostsRoot" class="space-y-1 mb-2 text-[11px]"></div>
                         <div class="flex flex-wrap gap-2 items-end">
                             <div>
                                 <label class="text-[9px] text-slate-500 block">Platform</label>
@@ -3547,6 +3553,38 @@
         }
 
 
+
+        function clientStartSocialConnectFromSelect() {
+            try {
+                var sel = document.getElementById('socialConnectPlatform');
+                var v = sel && sel.value;
+                if (!v) {
+                    if (typeof showToast === 'function') showToast('Choose a platform first', 'error');
+                    else alert('Choose a platform first');
+                    return;
+                }
+                if (v === 'tiktok_business') return clientStartSocialConnect('tiktok', 'business');
+                if (v === 'tiktok') return clientStartSocialConnect('tiktok', 'consumer');
+                return clientStartSocialConnect(v);
+            } catch (e) {
+                console.error(e);
+                if (typeof showToast === 'function') showToast(e.message || 'Connect failed', 'error');
+            }
+        }
+        function clientStartCrmConnectFromSelect() {
+            try {
+                var sel = document.getElementById('crmConnectType');
+                var v = sel && sel.value;
+                if (!v) {
+                    if (typeof showToast === 'function') showToast('Choose a CRM first', 'error');
+                    return;
+                }
+                if (typeof clientStartCrmConnect === 'function') return clientStartCrmConnect(v);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
         async function clientStartSocialConnect(platform, tikTokMode) {
             const body = { platform: platform };
             if (platform === 'tiktok' && tikTokMode) body.tikTokMode = tikTokMode;
@@ -3592,6 +3630,30 @@
             if (typeof showToast === 'function') showToast((res && res.message) || (res && res.success ? 'Saved' : 'Failed'), res && res.success ? 'success' : 'error');
             return res;
         }
+
+        async function clientLoadCommentActivityPosts() {
+            const root = document.getElementById('commentActivityPostsRoot');
+            if (root) root.innerHTML = '<p class="text-slate-500">Loading activity…</p>';
+            const res = await callGateway('clientportal', 'clientPortalListCommentActivityPosts', {});
+            if (!res || !res.success) {
+                if (root) root.innerHTML = '<p class="text-amber-400">' + escapeHtml((res && res.message) || 'Could not load') + '</p>';
+                return;
+            }
+            const posts = res.posts || [];
+            if (!posts.length) {
+                if (root) root.innerHTML = '<p class="text-slate-500">No AI replies/hides in the last 30 days (since addon start).</p>';
+                return;
+            }
+            if (root) root.innerHTML = posts.map(function (p) {
+                return '<button type="button" class="w-full text-left px-2 py-1.5 rounded border border-slate-800 hover:bg-slate-900 text-slate-300" ' +
+                    'onclick="document.getElementById(\'commentPlatform\').value=\'' + escapeHtml(p.platform) + '\';' +
+                    'document.getElementById(\'commentPostId\').value=\'' + escapeHtml(p.postId) + '\';clientLoadPostComments();">' +
+                    escapeHtml(p.platform) + ' · ' + escapeHtml(p.postId) +
+                    ' <span class="text-emerald-400/80">replies ' + (p.replies || 0) + '</span>' +
+                    ' <span class="text-amber-400/80">hidden ' + (p.deleted || 0) + '</span></button>';
+            }).join('');
+        }
+
         async function clientLoadPostComments(platform, postId, mountId) {
             const el = document.getElementById(mountId || 'postCommentsMount');
             if (el) el.innerHTML = '<p class="text-xs text-slate-500">Loading comments…</p>';
