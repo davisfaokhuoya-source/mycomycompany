@@ -1517,6 +1517,7 @@
                                     <option value="instagram">Instagram</option>
                                     <option value="linkedin">LinkedIn</option>
                                     <option value="threads">Threads</option>
+                                    <option value="x">X (Twitter)</option>
                                     <option value="tiktok">TikTok (publish)</option>
                                     <option value="tiktok_business">Business TikTok</option>
                                 </select>
@@ -1546,12 +1547,17 @@
                             Moderation counts from addon start / renewal. <a href="#" class="text-emerald-400 underline"
                                 onclick="goBillingUpgrade('Open Billing to add comment tools');return false;">Upgrade /
                                 Billing</a></p>
-                        <div class="flex flex-wrap gap-2 items-center mb-2">
-                            <button type="button" onclick="clientLoadCommentActivityPosts()"
-                                class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white">Posts
-                                with AI activity (30 days)</button>
+                        <div class="space-y-2 mb-2">
+                            <label class="text-[9px] text-slate-500 block">Posts AI replied to / hid (last 30
+                                days)</label>
+                            <select id="commentActivitySelect"
+                                class="w-full bg-slate-900 border border-slate-700 rounded-lg text-[11px] text-white px-2 py-2"
+                                onchange="clientPickActivityPost()">
+                                <option value="">Loading moderated posts…</option>
+                            </select>
+                            <p class="text-[9px] text-slate-600">Auto-filled from AI reply &amp; hide activity since
+                                add-on start. Pick a row then load comments.</p>
                         </div>
-                        <div id="commentActivityPostsRoot" class="space-y-1 mb-2 text-[11px]"></div>
                         <div class="flex flex-wrap gap-2 items-end">
                             <div>
                                 <label class="text-[9px] text-slate-500 block">Platform</label>
@@ -1561,12 +1567,13 @@
                                     <option value="instagram">Instagram</option>
                                     <option value="threads">Threads</option>
                                     <option value="linkedin">LinkedIn</option>
+                                    <option value="x">X (Twitter)</option>
                                     <option value="tiktok_business">Business TikTok</option>
                                 </select>
                             </div>
                             <div class="flex-1 min-w-[140px]">
-                                <label class="text-[9px] text-slate-500 block">Post ID</label>
-                                <input id="commentPostId" placeholder="Platform post / media id"
+                                <label class="text-[9px] text-slate-500 block">Post ID (or choose above)</label>
+                                <input id="commentPostId" placeholder="Or paste post / media id"
                                     class="w-full bg-slate-900 border border-slate-700 rounded-lg text-[11px] text-white px-2 py-1.5" />
                             </div>
                             <button type="button" onclick="clientLoadPostComments()"
@@ -1576,6 +1583,7 @@
                                     id="commentAiToggle" onchange="clientSetCommentReplyFromUi()"
                                     class="rounded border-slate-600 text-emerald-500" /> AI replies on</label>
                         </div>
+                        <div id="commentActivityPostsRoot" class="hidden"></div>
                         <div id="commentsListRoot" class="space-y-2 max-h-64 overflow-auto text-xs"></div>
                     </div>
 
@@ -2219,7 +2227,7 @@
                 });
             }
             if (name === 'overview') loadOverview();
-            if (name === 'integrations') loadIntegrationsPanel();
+            if (name === 'integrations' /*auto-comments*/) loadIntegrationsPanel();
             if (name === 'donate') prefillDonationForm();
             if (name === 'billing') {
                 const err = document.getElementById('renewError');
@@ -3632,26 +3640,40 @@
         }
 
         async function clientLoadCommentActivityPosts() {
+            const sel = document.getElementById('commentActivitySelect');
             const root = document.getElementById('commentActivityPostsRoot');
-            if (root) root.innerHTML = '<p class="text-slate-500">Loading activity…</p>';
+            if (sel) sel.innerHTML = '<option value="">Loading…</option>';
             const res = await callGateway('clientportal', 'clientPortalListCommentActivityPosts', {});
             if (!res || !res.success) {
-                if (root) root.innerHTML = '<p class="text-amber-400">' + escapeHtml((res && res.message) || 'Could not load') + '</p>';
+                if (sel) sel.innerHTML = '<option value="">' + escapeHtml((res && res.message) || 'Could not load activity') + '</option>';
                 return;
             }
             const posts = res.posts || [];
+            window.__commentActivityPosts = posts;
             if (!posts.length) {
-                if (root) root.innerHTML = '<p class="text-slate-500">No AI replies/hides in the last 30 days (since addon start).</p>';
+                if (sel) sel.innerHTML = '<option value="">No AI replies/hides in the last 30 days</option>';
                 return;
             }
-            if (root) root.innerHTML = posts.map(function (p) {
-                return '<button type="button" class="w-full text-left px-2 py-1.5 rounded border border-slate-800 hover:bg-slate-900 text-slate-300" ' +
-                    'onclick="document.getElementById(\'commentPlatform\').value=\'' + escapeHtml(p.platform) + '\';' +
-                    'document.getElementById(\'commentPostId\').value=\'' + escapeHtml(p.postId) + '\';clientLoadPostComments();">' +
-                    escapeHtml(p.platform) + ' · ' + escapeHtml(p.postId) +
-                    ' <span class="text-emerald-400/80">replies ' + (p.replies || 0) + '</span>' +
-                    ' <span class="text-amber-400/80">hidden ' + (p.deleted || 0) + '</span></button>';
-            }).join('');
+            if (sel) {
+                sel.innerHTML = '<option value="">Select a moderated post (' + posts.length + ')</option>' +
+                    posts.map(function (p, i) {
+                        const label = (p.platform || '') + ' · ' + (p.postId || '') +
+                            ' · replies ' + (p.replies || 0) + ' · hidden ' + (p.deleted || 0);
+                        return '<option value="' + i + '">' + escapeHtml(label) + '</option>';
+                    }).join('');
+            }
+        }
+        function clientPickActivityPost() {
+            const sel = document.getElementById('commentActivitySelect');
+            const posts = window.__commentActivityPosts || [];
+            const i = sel ? Number(sel.value) : -1;
+            if (isNaN(i) || i < 0 || !posts[i]) return;
+            const p = posts[i];
+            const plat = document.getElementById('commentPlatform');
+            const pid = document.getElementById('commentPostId');
+            if (plat) plat.value = p.platform || 'facebook';
+            if (pid) pid.value = p.postId || '';
+            clientLoadPostComments();
         }
 
         async function clientLoadPostComments(platform, postId, mountId) {
@@ -6408,6 +6430,20 @@
                     if (typeof clientShowCooldown === 'function') clientShowCooldown(res);
                 }
                 return res;
+            };
+        })();
+    </script>
+    <script>
+        // Auto-load 30-day moderated posts when Integrations is opened
+        (function () {
+            var _sv = window.showView;
+            if (typeof _sv !== 'function') return;
+            window.showView = function (name, el) {
+                var r = _sv.apply(this, arguments);
+                if (name === 'integrations') {
+                    try { if (typeof clientLoadCommentActivityPosts === 'function') clientLoadCommentActivityPosts(); } catch (_) { }
+                }
+                return r;
             };
         })();
     </script>
