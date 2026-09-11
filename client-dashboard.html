@@ -1528,8 +1528,7 @@
                         <p class="text-[10px] text-slate-500 leading-relaxed">Account count is limited by your <strong
                                 class="text-slate-400">Digital tier</strong>. Default TikTok is standard (publish).
                             <strong class="text-slate-400">Business TikTok</strong> enables AI comment replies. To
-                            remove a connection, request disconnect — admin completes it.
-                        </p>
+                            remove a connection, request disconnect — admin completes it.</p>
                         <div class="flex flex-wrap gap-2 items-center text-[10px] text-slate-500">
                             <span>TikTok type is chosen when you connect (Publish vs Business). No default
                                 selection.</span>
@@ -1860,6 +1859,7 @@
         let PRESENCE_TIMER = null;
         var CHAT_TIMER = null;
         var MYWORK_TIMER = null;
+        var CLIENT_NOTIF_TIMER = null;
         let EMAIL_ACTIVITY_PAGE = 1;
         let WHATSAPP_ACTIVITY_PAGE = 1;
 
@@ -2144,12 +2144,86 @@
         }
 
         function logoutClient_closeSb() { try { closeMobileSidebar(); } catch (_) { } }
+
+        async function loadClientNotifications() {
+            try {
+                if (!SESSION_TOKEN) return;
+                var res = await callGateway('clientportal', 'clientPortalGetNotifications', {
+                    unreadOnly: false,
+                    limit: 20
+                });
+                if (!res || res.success === false) return;
+                var items = res.notifications || res.items || [];
+                var unread = Number(res.unreadCount);
+                if (isNaN(unread)) {
+                    unread = items.filter(function (n) { return n && (n.read === false || n.unread === true); }).length;
+                }
+                var badge = document.getElementById('clientNotifBadge');
+                if (badge) {
+                    if (unread > 0) {
+                        badge.textContent = unread > 99 ? '99+' : String(unread);
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+                var panel = document.getElementById('clientNotifPanel');
+                if (panel && !panel.classList.contains('hidden')) {
+                    renderClientNotifPanel(items);
+                }
+                window.__clientNotifItems = items;
+            } catch (e) {
+                try { console.warn('loadClientNotifications', e); } catch (_) { }
+            }
+        }
+
+        function renderClientNotifPanel(items) {
+            var panel = document.getElementById('clientNotifPanel');
+            if (!panel) return;
+            items = items || window.__clientNotifItems || [];
+            if (!items.length) {
+                panel.innerHTML = '<div class="p-3 text-xs text-slate-500">No notifications</div>';
+                return;
+            }
+            panel.innerHTML = items.map(function (n) {
+                var title = (n.title || n.subject || n.type || 'Notice');
+                var body = (n.body || n.message || n.text || '');
+                var when = (n.createdAt || n.timestamp || '');
+                return '<div class="px-3 py-2 border-b border-slate-800 hover:bg-slate-800/50">' +
+                    '<div class="text-xs font-semibold text-white">' + (typeof escapeHtml === 'function' ? escapeHtml(String(title)) : String(title)) + '</div>' +
+                    (body ? '<div class="text-[11px] text-slate-400 mt-0.5">' + (typeof escapeHtml === 'function' ? escapeHtml(String(body).slice(0, 160)) : String(body).slice(0, 160)) + '</div>' : '') +
+                    (when ? '<div class="text-[10px] text-slate-600 mt-1">' + (typeof escapeHtml === 'function' ? escapeHtml(String(when)) : String(when)) + '</div>' : '') +
+                    '</div>';
+            }).join('');
+        }
+
+        function toggleClientNotifPanel() {
+            var panel = document.getElementById('clientNotifPanel');
+            if (!panel) return;
+            panel.classList.toggle('hidden');
+            if (!panel.classList.contains('hidden')) {
+                renderClientNotifPanel(window.__clientNotifItems || []);
+                loadClientNotifications();
+            }
+        }
+
+        function startClientNotifPolling() {
+            try {
+                if (CLIENT_NOTIF_TIMER) clearInterval(CLIENT_NOTIF_TIMER);
+            } catch (_) { }
+            CLIENT_NOTIF_TIMER = null;
+            loadClientNotifications();
+            CLIENT_NOTIF_TIMER = setInterval(function () {
+                loadClientNotifications();
+            }, 60000);
+        }
+
         function logoutClient() {
             try { closeMobileSidebar(); } catch (_) { }
 
-            clearInterval(PRESENCE_TIMER);
+            try { if (PRESENCE_TIMER) clearInterval(PRESENCE_TIMER); } catch (_e) { }
             try { if (typeof CHAT_TIMER !== 'undefined' && CHAT_TIMER) clearInterval(CHAT_TIMER); } catch (_e) { }
-            clearInterval(CLIENT_NOTIF_TIMER);
+            try { if (typeof CLIENT_NOTIF_TIMER !== 'undefined' && CLIENT_NOTIF_TIMER) clearInterval(CLIENT_NOTIF_TIMER); } catch (_e) { }
             localStorage.removeItem('VIC_CLIENT_TOKEN');
             SESSION_TOKEN = '';
             document.getElementById('mainView').classList.add('hidden');
@@ -2158,7 +2232,7 @@
 
         function enterDashboard() {
             document.getElementById('loginView').classList.add('hidden');
-            document.getElementById('mainView').classList.remove('hidden');
+            document.getElementById('mainView').classList.remove('hidden'); try { startClientNotifPolling(); } catch (_n) { }
             document.getElementById('gwUrl').value = GW_URL;
             // Primary dashboard only first — channel stats / presence / notifs
             // load in staggered batches so the main thread is not hit with 4–5
@@ -2573,6 +2647,8 @@
         }
 
         async function loadOverview() {
+            try { startClientNotifPolling(); } catch (_n) { }
+
             // Rule: Overview makes ONE portal action only.
             // Prefer clientPortalOverviewBundle. If the library does not support it yet,
             // fall back to clientPortalDashboard — and do NOT fire email/WA follow-up
