@@ -471,97 +471,7 @@
                     class="hub-nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:bg-slate-900 hover:text-white border-l-2 border-transparent">
                     <i class="fa-solid fa-share-nodes w-5 text-slate-400"></i> Social Publishing
 
-                    <div id="adminSocialCommentsCard"
-                        class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 my-4">
-                        <h3 class="text-sm font-bold text-white">Comments by post</h3>
-                        <p class="text-[11px] text-slate-500">Posts with AI replies or hides (30 days). Client +
-                            platform + post → load, AI reply, hide. Includes X (Twitter).</p>
-                        <div class="flex flex-wrap gap-2 items-end">
-                            <input id="adminCommentClientId" placeholder="Client ID"
-                                class="bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                            <select id="adminCommentPlatform"
-                                class="bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white">
-                                <option value="facebook">Facebook</option>
-                                <option value="instagram">Instagram</option>
-                                <option value="threads">Threads</option>
-                                <option value="linkedin">LinkedIn</option>
-                                <option value="x">X (Twitter)</option>
-                                <option value="tiktok_business">Business TikTok</option>
-                            </select>
-                            <input id="adminCommentPostId" placeholder="Post ID"
-                                class="bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white min-w-[140px]" />
-                            <button type="button" onclick="adminLoadCommentsByPost()"
-                                class="text-xs px-3 py-1.5 rounded bg-slate-700 text-white">Load comments</button>
-                            <button type="button" onclick="adminLoadCommentActivity()"
-                                class="text-xs px-3 py-1.5 rounded bg-emerald-800 text-white">AI activity 30d</button>
-                        </div>
-                        <select id="adminCommentActivitySelect"
-                            class="w-full bg-slate-950 border border-slate-700 rounded text-xs text-white px-2 py-2"
-                            onchange="adminPickActivityPost()">
-                            <option value="">Select client first, then load AI activity…</option>
-                        </select>
-                        <div id="adminCommentsList" class="text-xs space-y-2 max-h-72 overflow-auto"></div>
-                    </div>
-                    <script>
-                        async function adminApiAgent(action, body) {
-                            body = body || {};
-                            if (typeof callAdmin === 'function') return callAdmin('agent', action, body);
-                            if (typeof apiPost === 'function') return apiPost(Object.assign({ system: 'agent', action: action }, body));
-                            if (typeof callGateway === 'function') return callGateway('agent', action, body);
-                            throw new Error('No admin API helper');
-                        }
-                        async function adminLoadCommentsByPost() {
-                            var clientId = (document.getElementById('adminCommentClientId') || {}).value || '';
-                            var platform = (document.getElementById('adminCommentPlatform') || {}).value || 'facebook';
-                            var postId = (document.getElementById('adminCommentPostId') || {}).value || '';
-                            var root = document.getElementById('adminCommentsList');
-                            if (!clientId || !postId) { alert('Client ID and Post ID required'); return; }
-                            if (root) root.innerHTML = 'Loading…';
-                            try {
-                                var res = await adminApiAgent('agent-list-post-comments', { clientId: clientId, platform: platform, postId: postId });
-                                if (!res || !res.success) { if (root) root.innerHTML = (res && res.message) || 'Failed'; return; }
-                                var comments = res.comments || [];
-                                if (root) root.innerHTML = comments.length ? comments.map(function (c) {
-                                    return '<div class="border border-slate-800 rounded p-2"><b>' + (c.author || '') + '</b><div class="text-slate-400">' + (c.text || '') + '</div>' +
-                                        '<button type="button" class="text-[10px] mr-2 text-emerald-400" onclick="adminReplyComment(\'' + clientId + '\',\'' + platform + '\',\'' + postId + '\',\'' + (c.id || '') + '\')">AI reply</button>' +
-                                        '<button type="button" class="text-[10px] text-amber-400" onclick="adminHideComment(\'' + clientId + '\',\'' + platform + '\',\'' + (c.id || '') + '\',\'' + postId + '\')">Hide</button></div>';
-                                }).join('') : 'No comments';
-                            } catch (e) { if (root) root.innerHTML = e.message; }
-                        }
-                        async function adminLoadCommentActivity() {
-                            var clientId = (document.getElementById('adminCommentClientId') || {}).value || '';
-                            var sel = document.getElementById('adminCommentActivitySelect');
-                            if (!clientId) { alert('Client ID required'); return; }
-                            if (sel) sel.innerHTML = '<option>Loading…</option>';
-                            try {
-                                var res = await adminApiAgent('agent-list-comment-activity-posts', { clientId: clientId });
-                                var posts = (res && res.posts) || [];
-                                window.__adminCommentPosts = posts;
-                                if (sel) sel.innerHTML = posts.length
-                                    ? ('<option value="">' + posts.length + ' moderated posts — select</option>' + posts.map(function (p, i) {
-                                        return '<option value="' + i + '">' + (p.platform || '') + ' · ' + (p.postId || '') + ' · r' + (p.replies || 0) + ' h' + (p.deleted || 0) + '</option>';
-                                    }).join(''))
-                                    : '<option value="">No AI activity in 30 days</option>';
-                            } catch (e) { if (sel) sel.innerHTML = '<option>' + e.message + '</option>'; }
-                        }
-                        function adminPickActivityPost() {
-                            var sel = document.getElementById('adminCommentActivitySelect');
-                            var posts = window.__adminCommentPosts || [];
-                            var i = Number(sel && sel.value);
-                            if (isNaN(i) || !posts[i]) return;
-                            document.getElementById('adminCommentPlatform').value = posts[i].platform || 'facebook';
-                            document.getElementById('adminCommentPostId').value = posts[i].postId || '';
-                            adminLoadCommentsByPost();
-                        }
-                        async function adminReplyComment(clientId, platform, postId, commentId) {
-                            await adminApiAgent('agent-reply-to-comment', { clientId: clientId, platform: platform, postId: postId, commentId: commentId });
-                            adminLoadCommentsByPost();
-                        }
-                        async function adminHideComment(clientId, platform, commentId, postId) {
-                            await adminApiAgent('agent-hide-comment', { clientId: clientId, platform: platform, commentId: commentId, postId: postId });
-                            adminLoadCommentsByPost();
-                        }
-                    </script>
+
 
                 </button>
                 <button onclick="switchMasterHub('monitor')" id="nav-monitor"
@@ -19044,6 +18954,146 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
     </script>
 
 
+
+
+    <!-- Comments moderation — Social Publishing tools (not in sidebar) -->
+    <div id="adminSocialCommentsMount" class="hidden"></div>
+    <script>
+        (function () {
+            function ensureAdminCommentsPanel() {
+                var host = document.getElementById('view-social') ||
+                    document.getElementById('viewSocial') ||
+                    document.querySelector('[data-view="social"]') ||
+                    document.getElementById('socialPublishingView');
+                if (!host) {
+                    // Fallback: create a floating panel only when Social nav is active — attach to main content
+                    host = document.querySelector('main') || document.querySelector('.main-content') || document.body;
+                }
+                if (document.getElementById('adminSocialCommentsCard')) return;
+                var wrap = document.createElement('div');
+                wrap.innerHTML = `
+<div id="adminSocialCommentsCard" style="margin:16px 0;padding:16px;border:1px solid #334155;border-radius:12px;background:#0f172a;color:#e2e8f0;max-width:920px;">
+  <h3 style="margin:0 0 8px;font-size:14px;font-weight:700;">Comments by post</h3>
+  <p style="margin:0 0 12px;font-size:11px;color:#94a3b8;">AI replies &amp; hides (30 days). Enter Client ID, load activity, pick a post. No sticky bar.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;">
+    <input id="adminCommentClientId" placeholder="Client ID" style="background:#020617;border:1px solid #334155;border-radius:8px;padding:6px 10px;color:#fff;font-size:12px;" />
+    <button type="button" id="adminCommentActivityBtn" style="background:#065f46;color:#fff;border:0;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;">Load AI activity (30d)</button>
+  </div>
+  <select id="adminCommentActivitySelect" style="width:100%;background:#020617;border:1px solid #334155;border-radius:8px;padding:8px;color:#fff;font-size:12px;margin-bottom:8px;">
+    <option value="">Select client, then load activity…</option>
+  </select>
+  <div id="adminCommentsList" style="font-size:12px;max-height:280px;overflow:auto;"></div>
+</div>`;
+                var card = wrap.firstElementChild;
+                // Prefer appending inside social view when visible
+                var socialView = document.getElementById('view-social') || document.getElementById('panel-social');
+                if (socialView) socialView.appendChild(card);
+                else {
+                    var main = document.querySelector('#mainContent, main, .content-area, #content');
+                    (main || document.body).appendChild(card);
+                }
+
+                document.getElementById('adminCommentActivityBtn').onclick = adminLoadCommentActivity;
+                document.getElementById('adminCommentActivitySelect').onchange = adminPickActivityPost;
+            }
+
+            async function adminApiAgent(action, body) {
+                body = body || {};
+                if (typeof callAdmin === 'function') return callAdmin('agent', action, body);
+                if (typeof executeSecureBridgeCall === 'function') return executeSecureBridgeCall('agent', action, body);
+                if (typeof apiPost === 'function') return apiPost(Object.assign({ system: 'agent', action: action }, body));
+                throw new Error('No admin API');
+            }
+
+            window.adminLoadCommentActivity = async function () {
+                var clientId = (document.getElementById('adminCommentClientId') || {}).value || '';
+                var sel = document.getElementById('adminCommentActivitySelect');
+                if (!clientId) { alert('Client ID required'); return; }
+                if (sel) sel.innerHTML = '<option value="">Loading…</option>';
+                try {
+                    var res = await adminApiAgent('agent-list-comment-activity-posts', { clientId: clientId });
+                    var posts = (res && res.success && res.posts) ? res.posts : [];
+                    window.__adminCommentPosts = posts;
+                    if (sel) {
+                        if (!posts.length) {
+                            sel.innerHTML = '<option value="">No AI activity in last 30 days</option>';
+                        } else {
+                            sel.innerHTML = '<option value="">Select post (' + posts.length + ')</option>' +
+                                posts.map(function (p, i) {
+                                    return '<option value="' + i + '">' + (p.platform || '') + ' · ' + (p.postId || '') +
+                                        ' · replies ' + (p.replies || 0) + ' · hidden ' + (p.deleted || 0) + '</option>';
+                                }).join('');
+                        }
+                    }
+                } catch (e) {
+                    if (sel) sel.innerHTML = '<option value="">No activity available</option>';
+                }
+            };
+
+            window.adminPickActivityPost = async function () {
+                var sel = document.getElementById('adminCommentActivitySelect');
+                var posts = window.__adminCommentPosts || [];
+                var i = Number(sel && sel.value);
+                if (isNaN(i) || !posts[i]) return;
+                var p = posts[i];
+                var root = document.getElementById('adminCommentsList');
+                if (root) root.innerHTML = 'Loading comments…';
+                try {
+                    var res = await adminApiAgent('agent-list-post-comments', {
+                        clientId: (document.getElementById('adminCommentClientId') || {}).value,
+                        platform: p.platform,
+                        postId: p.postId
+                    });
+                    var comments = (res && res.comments) || [];
+                    if (!root) return;
+                    if (!comments.length) {
+                        root.innerHTML = '<p style="color:#94a3b8;">No comments</p>';
+                        return;
+                    }
+                    root.innerHTML = comments.map(function (c) {
+                        var id = String(c.id || '').replace(/'/g, '');
+                        var clientId = (document.getElementById('adminCommentClientId') || {}).value;
+                        return '<div style="border:1px solid #334155;border-radius:8px;padding:8px;margin:6px 0;">' +
+                            '<b>' + (c.author || '') + '</b><div style="color:#94a3b8;">' + (c.text || c.message || '') + '</div>' +
+                            '<button type="button" style="margin-top:6px;margin-right:8px;font-size:11px;cursor:pointer;" onclick="adminReplyComment(\'' +
+                            clientId + '\',\'' + (p.platform || '') + '\',\'' + (p.postId || '') + '\',\'' + id + '\')">AI reply</button>' +
+                            '<button type="button" style="margin-top:6px;font-size:11px;cursor:pointer;" onclick="adminHideComment(\'' +
+                            clientId + '\',\'' + (p.platform || '') + '\',\'' + id + '\',\'' + (p.postId || '') + '\')">Hide</button></div>';
+                    }).join('');
+                } catch (e) {
+                    if (root) root.innerHTML = '<p style="color:#94a3b8;">Could not load comments</p>';
+                }
+            };
+
+            window.adminReplyComment = async function (clientId, platform, postId, commentId) {
+                try {
+                    await adminApiAgent('agent-reply-to-comment', { clientId: clientId, platform: platform, postId: postId, commentId: commentId });
+                } catch (_) { }
+                adminPickActivityPost();
+            };
+            window.adminHideComment = async function (clientId, platform, commentId, postId) {
+                try {
+                    await adminApiAgent('agent-hide-comment', { clientId: clientId, platform: platform, commentId: commentId, postId: postId });
+                } catch (_) { }
+                adminPickActivityPost();
+            };
+
+            // Mount when DOM ready; re-run on social nav clicks if possible
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', ensureAdminCommentsPanel);
+            } else {
+                ensureAdminCommentsPanel();
+            }
+            document.addEventListener('click', function (ev) {
+                var t = ev.target;
+                if (!t) return;
+                var text = (t.textContent || '').toLowerCase();
+                if (text.indexOf('social publishing') >= 0 || (t.closest && t.closest('[data-view="social"]'))) {
+                    setTimeout(ensureAdminCommentsPanel, 50);
+                }
+            });
+        })();
+    </script>
 
 </body>
 
