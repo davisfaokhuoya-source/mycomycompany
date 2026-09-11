@@ -1548,16 +1548,47 @@
                             <a href="#" class="text-emerald-400 underline"
                                 onclick="try{goBillingUpgrade();}catch(e){}return false;">Upgrade / Billing</a>
                         </p>
-                        <div>
-                            <label class="text-[9px] text-slate-500 block mb-1">Posts AI replied to or hid (last 30
-                                days)</label>
-                            <select id="commentActivitySelect"
-                                class="w-full bg-slate-900 border border-slate-700 rounded-lg text-[11px] text-white px-2 py-2"
-                                onchange="clientPickActivityPost()">
-                                <option value="">Loading…</option>
-                            </select>
-                            <p class="text-[9px] text-slate-600 mt-1">Choose a post from this list only. Comments load
-                                automatically.</p>
+                        <div class="space-y-2">
+                            <div class="flex flex-wrap gap-2 items-end">
+                                <div>
+                                    <label class="text-[9px] text-slate-500 block mb-0.5">Platform</label>
+                                    <select id="commentFilterPlatform"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg text-[11px] text-white px-2 py-1.5"
+                                        onchange="clientLoadCommentActivityPosts()">
+                                        <option value="">All platforms</option>
+                                        <option value="facebook">Facebook</option>
+                                        <option value="instagram">Instagram</option>
+                                        <option value="threads">Threads</option>
+                                        <option value="linkedin">LinkedIn</option>
+                                        <option value="x">X (Twitter)</option>
+                                        <option value="tiktok_business">Business TikTok</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-slate-500 block mb-0.5">From</label>
+                                    <input type="date" id="commentFilterFrom"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg text-[11px] text-white px-2 py-1.5"
+                                        onchange="clientLoadCommentActivityPosts()" />
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-slate-500 block mb-0.5">To</label>
+                                    <input type="date" id="commentFilterTo"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg text-[11px] text-white px-2 py-1.5"
+                                        onchange="clientLoadCommentActivityPosts()" />
+                                </div>
+                                <button type="button" onclick="clientLoadCommentActivityPosts()"
+                                    class="text-[11px] px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white border border-slate-700">Apply</button>
+                            </div>
+                            <div>
+                                <label class="text-[9px] text-slate-500 block mb-1">Posts AI replied to or hid</label>
+                                <select id="commentActivitySelect"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg text-[11px] text-white px-2 py-2"
+                                    onchange="clientPickActivityPost()">
+                                    <option value="">Loading…</option>
+                                </select>
+                                <p class="text-[9px] text-slate-600 mt-1">Filtered list only. Pick a post — comments
+                                    load automatically.</p>
+                            </div>
                         </div>
                         <label class="flex items-center gap-1.5 text-[10px] text-slate-300">
                             <input type="checkbox" id="commentAiToggle" onchange="clientSetCommentReplyFromUi()"
@@ -3623,23 +3654,52 @@
         async function clientLoadCommentActivityPosts() {
             var sel = document.getElementById('commentActivitySelect');
             if (!sel) return;
+            // Default date range = last 30 days
+            var fromEl = document.getElementById('commentFilterFrom');
+            var toEl = document.getElementById('commentFilterTo');
+            var endD = new Date();
+            var startD = new Date();
+            startD.setDate(endD.getDate() - 30);
+            if (toEl && !toEl.value) toEl.value = endD.toISOString().slice(0, 10);
+            if (fromEl && !fromEl.value) fromEl.value = startD.toISOString().slice(0, 10);
+            var platform = ((document.getElementById('commentFilterPlatform') || {}).value || '').trim().toLowerCase();
+            var dateFrom = (fromEl && fromEl.value) || '';
+            var dateTo = (toEl && toEl.value) || '';
             sel.innerHTML = '<option value="">Loading moderated posts…</option>';
             window.__commentActivityPosts = [];
             var res = null;
             try {
-                res = await callGateway('clientportal', 'clientPortalListCommentActivityPosts', {});
+                res = await callGateway('clientportal', 'clientPortalListCommentActivityPosts', {
+                    platform: platform || undefined,
+                    dateFrom: dateFrom || undefined,
+                    dateTo: dateTo || undefined
+                });
             } catch (e) {
                 res = null;
             }
-            // Soft-fail: never surface gateway error codes in the dropdown
             if (!res || res.success === false) {
                 sel.innerHTML = '<option value="">No moderated posts yet</option>';
                 return;
             }
-            var posts = res.posts || [];
+            var posts = (res.posts || []).slice();
+            // Client-side filters (also if API ignored params)
+            if (platform) {
+                posts = posts.filter(function (p) {
+                    return String(p.platform || '').toLowerCase() === platform;
+                });
+            }
+            var fromMs = dateFrom ? Date.parse(dateFrom + 'T00:00:00') : NaN;
+            var toMs = dateTo ? Date.parse(dateTo + 'T23:59:59') : NaN;
+            posts = posts.filter(function (p) {
+                var t = Date.parse(p.lastAt || p.lastActivity || '');
+                if (isNaN(t)) return true;
+                if (!isNaN(fromMs) && t < fromMs) return false;
+                if (!isNaN(toMs) && t > toMs) return false;
+                return true;
+            });
             window.__commentActivityPosts = posts;
             if (!posts.length) {
-                sel.innerHTML = '<option value="">No AI replies/hides in the last 30 days</option>';
+                sel.innerHTML = '<option value="">No posts for this platform / date range</option>';
                 return;
             }
             sel.innerHTML = '<option value="">Select a post (' + posts.length + ')</option>' +

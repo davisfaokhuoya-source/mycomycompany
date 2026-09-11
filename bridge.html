@@ -4460,6 +4460,19 @@
                                         class="bg-slate-900 border border-slate-700 rounded-lg text-xs text-white px-2.5 py-1.5 min-w-[140px]" />
                                 </div>
                                 <div>
+                                    <label class="text-[10px] text-slate-500 block mb-0.5">Platform</label>
+                                    <select id="pubCommentsPlatform"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg text-xs text-white px-2.5 py-1.5">
+                                        <option value="">All platforms</option>
+                                        <option value="facebook">Facebook</option>
+                                        <option value="instagram">Instagram</option>
+                                        <option value="threads">Threads</option>
+                                        <option value="linkedin">LinkedIn</option>
+                                        <option value="x">X (Twitter)</option>
+                                        <option value="tiktok_business">Business TikTok</option>
+                                    </select>
+                                </div>
+                                <div>
                                     <label class="text-[10px] text-slate-500 block mb-0.5">From</label>
                                     <input id="pubCommentsDateFrom" type="date"
                                         class="bg-slate-900 border border-slate-700 rounded-lg text-xs text-white px-2.5 py-1.5" />
@@ -19080,10 +19093,12 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="px-3 py-8 text-center text-slate-500">Loading…</td></tr>';
                 var dateFrom = (document.getElementById('pubCommentsDateFrom') || {}).value || '';
                 var dateTo = (document.getElementById('pubCommentsDateTo') || {}).value || '';
+                var platform = ((document.getElementById('pubCommentsPlatform') || {}).value || '').trim().toLowerCase();
                 var res;
                 try {
                     res = await adminCommentsApi('agent-list-comment-activity-posts', {
                         clientId: clientId,
+                        platform: platform || undefined,
                         dateFrom: dateFrom,
                         dateTo: dateTo
                     });
@@ -19092,18 +19107,20 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                     return;
                 }
                 var posts = (res && res.success && res.posts) ? res.posts.slice() : [];
-                // Client-side date filter (ms)
-                var fromMs = dateFrom ? Date.parse(dateFrom + 'T00:00:00') : 0;
-                var toMs = dateTo ? Date.parse(dateTo + 'T23:59:59') : Date.now();
-                if (!isNaN(fromMs) || !isNaN(toMs)) {
+                if (platform) {
                     posts = posts.filter(function (p) {
-                        var t = Date.parse(p.lastAt || p.lastActivity || '');
-                        if (isNaN(t)) return true;
-                        if (!isNaN(fromMs) && t < fromMs) return false;
-                        if (!isNaN(toMs) && t > toMs) return false;
-                        return true;
+                        return String(p.platform || '').toLowerCase() === platform;
                     });
                 }
+                var fromMs = dateFrom ? Date.parse(dateFrom + 'T00:00:00') : NaN;
+                var toMs = dateTo ? Date.parse(dateTo + 'T23:59:59') : NaN;
+                posts = posts.filter(function (p) {
+                    var t = Date.parse(p.lastAt || p.lastActivity || '');
+                    if (isNaN(t)) return true;
+                    if (!isNaN(fromMs) && t < fromMs) return false;
+                    if (!isNaN(toMs) && t > toMs) return false;
+                    return true;
+                });
                 window.__pubCommentPosts = posts;
                 if (!posts.length) {
                     if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="px-3 py-8 text-center text-slate-500">No AI reply/hide activity in this date range.</td></tr>';
