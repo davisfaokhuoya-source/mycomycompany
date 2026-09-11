@@ -4896,8 +4896,7 @@
                         </div>
                         <p class="text-[11px] text-slate-500">Tick services to include on this tier, then set quantity.
                             <strong class="text-slate-400">-1</strong> = unlimited. Unticked services are not on the
-                            tier. Add-on-only items stay available under Assign to client.
-                        </p>
+                            tier. Add-on-only items stay available under Assign to client.</p>
                         <div id="pe_servicesGrid"
                             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-80 overflow-y-auto custom-scrollbar">
                         </div>
@@ -18950,6 +18949,56 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             if (typeof showToast === 'function') showToast((res && res.message) || 'Reset', res && res.success === false ? 'error' : 'success');
         }
     </script>
+
+    <div id="adminCommentsPanel" style="margin:12px 0;padding:12px;border:1px solid #333;border-radius:8px;">
+        <h4>Comments by post</h4>
+        <p style="font-size:12px;opacity:0.8">Client ID, platform, post ID → load / AI reply / hide</p>
+        <input id="adminCommentClientId" placeholder="Client ID" style="margin:4px;" />
+        <select id="adminCommentPlatform">
+            <option value="facebook">facebook</option>
+            <option value="instagram">instagram</option>
+            <option value="threads">threads</option>
+            <option value="linkedin">linkedin</option>
+            <option value="tiktok_business">tiktok_business</option>
+        </select>
+        <input id="adminCommentPostId" placeholder="Post ID" style="margin:4px;min-width:180px;" />
+        <button type="button" onclick="adminLoadCommentsByPost()">Load</button>
+        <div id="adminCommentsList"></div>
+    </div>
+    <script>
+        async function adminLoadCommentsByPost() {
+            var clientId = (document.getElementById('adminCommentClientId') || {}).value || '';
+            var platform = (document.getElementById('adminCommentPlatform') || {}).value || 'facebook';
+            var postId = (document.getElementById('adminCommentPostId') || {}).value || '';
+            var root = document.getElementById('adminCommentsList');
+            if (!clientId || !postId) { alert('Client ID and Post ID required'); return; }
+            if (root) root.innerHTML = 'Loading…';
+            var res = await (window.adminApi || window.callGateway || fetch) && null;
+            try {
+                if (typeof callAdmin === 'function') {
+                    res = await callAdmin('agent', 'agent-list-post-comments', { clientId: clientId, platform: platform, postId: postId });
+                } else if (typeof apiPost === 'function') {
+                    res = await apiPost({ system: 'agent', action: 'agent-list-post-comments', clientId: clientId, platform: platform, postId: postId });
+                }
+            } catch (e) { if (root) root.innerHTML = e.message; return; }
+            if (!res || !res.success) { if (root) root.innerHTML = (res && res.message) || 'Failed'; return; }
+            var comments = res.comments || [];
+            if (root) root.innerHTML = comments.map(function (c) {
+                return '<div style="border:1px solid #444;margin:6px 0;padding:8px;"><b>' + (c.author || '') + '</b><div>' + (c.text || '') + '</div>' +
+                    '<button onclick="adminReplyComment(\'' + clientId + '\',\'' + platform + '\',\'' + postId + '\',\'' + (c.id || '') + '\')">AI reply</button> ' +
+                    '<button onclick="adminHideComment(\'' + clientId + '\',\'' + platform + '\',\'' + (c.id || '') + '\')">Hide</button></div>';
+            }).join('') || 'No comments';
+        }
+        async function adminReplyComment(clientId, platform, postId, commentId) {
+            if (typeof callAdmin === 'function') await callAdmin('agent', 'agent-reply-to-comment', { clientId: clientId, platform: platform, postId: postId, commentId: commentId });
+            adminLoadCommentsByPost();
+        }
+        async function adminHideComment(clientId, platform, commentId) {
+            if (typeof callAdmin === 'function') await callAdmin('agent', 'agent-hide-comment', { clientId: clientId, platform: platform, commentId: commentId });
+            adminLoadCommentsByPost();
+        }
+    </script>
+
 </body>
 
 </html>
