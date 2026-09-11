@@ -4355,6 +4355,7 @@
                     <button class="agent-subview-link active" data-target-view="publish-connections">Social
                         Connections</button>
                     <button class="agent-subview-link" data-target-view="publish-queue">Publish Queue</button>
+                    <button class="agent-subview-link" data-target-view="publish-comments">Comments by post</button>
                     <button class="agent-subview-link" data-target-view="publish-settings">Global Settings</button>
                 </div>
 
@@ -4436,31 +4437,108 @@
                     </div>
 
                     <!-- GLOBAL SETTINGS -->
-                    <div id="view-publish-settings"
-                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
-                        <div>
-                            <h3 class="text-lg font-bold text-white">Global Auto-Publishing Switch</h3>
-                            <p class="text-xs text-slate-400">Master kill switch. When off, queued posts accumulate with
-                                zero behavior change — nothing publishes anywhere, for any client.</p>
-                        </div>
-                        <div
-                            class="bg-slate-950 border border-slate-800 rounded-xl p-6 max-w-md flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-bold text-white">Auto-Publishing Enabled</p>
-                                <p id="publishGlobalSwitchStatus" class="text-xs text-slate-500 mt-1">Loading…</p>
+                    <div <!-- COMMENTS BY POST -->
+                        <div id="view-publish-comments"
+                            class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                            <div class="flex justify-between items-center shrink-0 flex-wrap gap-2">
+                                <div>
+                                    <h3 class="text-lg font-bold text-white">Comments by post</h3>
+                                    <p class="text-xs text-slate-400">Posts where AI replied or hid comments (default
+                                        last 30 days). Filter by client and date range.</p>
+                                </div>
+                                <button type="button" onclick="adminCommentsRefresh()"
+                                    class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700 transition-colors flex items-center gap-1">
+                                    <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                                </button>
                             </div>
-                            <button id="publishGlobalSwitchToggle" onclick="togglePublishGlobalSwitch()"
-                                class="px-4 py-2 rounded text-xs font-bold transition-colors bg-slate-800 text-slate-400 border border-slate-700">
-                                Toggle
+
+                            <div
+                                class="flex flex-wrap gap-2 items-end shrink-0 bg-slate-950 border border-slate-800 rounded-xl p-3">
+                                <div>
+                                    <label class="text-[10px] text-slate-500 block mb-0.5">Client ID</label>
+                                    <input id="pubCommentsClientId" type="text" placeholder="e.g. CLT-…"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg text-xs text-white px-2.5 py-1.5 min-w-[140px]" />
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-slate-500 block mb-0.5">From</label>
+                                    <input id="pubCommentsDateFrom" type="date"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg text-xs text-white px-2.5 py-1.5" />
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-slate-500 block mb-0.5">To</label>
+                                    <input id="pubCommentsDateTo" type="date"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg text-xs text-white px-2.5 py-1.5" />
+                                </div>
+                                <button type="button" onclick="adminCommentsLoadActivity()"
+                                    class="bg-emerald-700 hover:bg-emerald-600 text-xs text-white font-medium py-1.5 px-3 rounded transition-colors">
+                                    Load activity
+                                </button>
+                            </div>
+
+                            <div
+                                class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner min-h-[200px]">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead
+                                        class="sticky top-0 bg-slate-900 text-slate-400 uppercase tracking-wider text-[10px]">
+                                        <tr>
+                                            <th class="px-3 py-2 font-semibold">Platform</th>
+                                            <th class="px-3 py-2 font-semibold">Post ID</th>
+                                            <th class="px-3 py-2 font-semibold">Replies</th>
+                                            <th class="px-3 py-2 font-semibold">Hidden</th>
+                                            <th class="px-3 py-2 font-semibold">Last activity</th>
+                                            <th class="px-3 py-2 font-semibold">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pubCommentsActivityBody"
+                                        class="text-slate-300 divide-y divide-slate-800">
+                                        <tr>
+                                            <td colspan="6" class="px-3 py-8 text-center text-slate-500">Enter a Client
+                                                ID and click Load activity.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div
+                                class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto custom-scrollbar shadow-inner min-h-[180px] flex flex-col">
+                                <div
+                                    class="px-3 py-2 border-b border-slate-800 shrink-0 flex justify-between items-center">
+                                    <span class="text-xs font-semibold text-white">Comments on selected post</span>
+                                    <span id="pubCommentsSelectedLabel" class="text-[10px] text-slate-500"></span>
+                                </div>
+                                <div id="pubCommentsList" class="p-3 space-y-2 text-xs flex-1 overflow-auto">
+                                    <p class="text-slate-500 text-center py-6">Select a post from the table above.</p>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div id="view-publish-settings"
+                            class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Global Auto-Publishing Switch</h3>
+                                <p class="text-xs text-slate-400">Master kill switch. When off, queued posts accumulate
+                                    with
+                                    zero behavior change — nothing publishes anywhere, for any client.</p>
+                            </div>
+                            <div
+                                class="bg-slate-950 border border-slate-800 rounded-xl p-6 max-w-md flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-bold text-white">Auto-Publishing Enabled</p>
+                                    <p id="publishGlobalSwitchStatus" class="text-xs text-slate-500 mt-1">Loading…</p>
+                                </div>
+                                <button id="publishGlobalSwitchToggle" onclick="togglePublishGlobalSwitch()"
+                                    class="px-4 py-2 rounded text-xs font-bold transition-colors bg-slate-800 text-slate-400 border border-slate-700">
+                                    Toggle
+                                </button>
+                            </div>
+                            <button onclick="runPublishBatchNow()"
+                                class="max-w-md bg-blue-600 hover:bg-blue-500 text-xs text-white font-medium py-2 px-4 rounded transition-colors shadow flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-bolt"></i> Run Publish Batch Now
                             </button>
                         </div>
-                        <button onclick="runPublishBatchNow()"
-                            class="max-w-md bg-blue-600 hover:bg-blue-500 text-xs text-white font-medium py-2 px-4 rounded transition-colors shadow flex items-center justify-center gap-1">
-                            <i class="fa-solid fa-bolt"></i> Run Publish Batch Now
-                        </button>
-                    </div>
 
-                </div>
+                    </div>
             </section>
 
             <!-- ================================================================
@@ -18957,140 +19035,171 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
 
 
     <!-- Comments moderation — Social Publishing tools (not in sidebar) -->
-    <div id="adminSocialCommentsMount" class="hidden"></div>
+
+
+
+
     <script>
         (function () {
-            function ensureAdminCommentsPanel() {
-                var host = document.getElementById('view-social') ||
-                    document.getElementById('viewSocial') ||
-                    document.querySelector('[data-view="social"]') ||
-                    document.getElementById('socialPublishingView');
-                if (!host) {
-                    // Fallback: create a floating panel only when Social nav is active — attach to main content
-                    host = document.querySelector('main') || document.querySelector('.main-content') || document.body;
-                }
-                if (document.getElementById('adminSocialCommentsCard')) return;
-                var wrap = document.createElement('div');
-                wrap.innerHTML = `
-<div id="adminSocialCommentsCard" style="margin:16px 0;padding:16px;border:1px solid #334155;border-radius:12px;background:#0f172a;color:#e2e8f0;max-width:920px;">
-  <h3 style="margin:0 0 8px;font-size:14px;font-weight:700;">Comments by post</h3>
-  <p style="margin:0 0 12px;font-size:11px;color:#94a3b8;">AI replies &amp; hides (30 days). Enter Client ID, load activity, pick a post. No sticky bar.</p>
-  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;">
-    <input id="adminCommentClientId" placeholder="Client ID" style="background:#020617;border:1px solid #334155;border-radius:8px;padding:6px 10px;color:#fff;font-size:12px;" />
-    <button type="button" id="adminCommentActivityBtn" style="background:#065f46;color:#fff;border:0;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;">Load AI activity (30d)</button>
-  </div>
-  <select id="adminCommentActivitySelect" style="width:100%;background:#020617;border:1px solid #334155;border-radius:8px;padding:8px;color:#fff;font-size:12px;margin-bottom:8px;">
-    <option value="">Select client, then load activity…</option>
-  </select>
-  <div id="adminCommentsList" style="font-size:12px;max-height:280px;overflow:auto;"></div>
-</div>`;
-                var card = wrap.firstElementChild;
-                // Prefer appending inside social view when visible
-                var socialView = document.getElementById('view-social') || document.getElementById('panel-social');
-                if (socialView) socialView.appendChild(card);
-                else {
-                    var main = document.querySelector('#mainContent, main, .content-area, #content');
-                    (main || document.body).appendChild(card);
-                }
-
-                document.getElementById('adminCommentActivityBtn').onclick = adminLoadCommentActivity;
-                document.getElementById('adminCommentActivitySelect').onchange = adminPickActivityPost;
-            }
-
-            async function adminApiAgent(action, body) {
+            function adminCommentsApi(action, body) {
                 body = body || {};
                 if (typeof callAdmin === 'function') return callAdmin('agent', action, body);
                 if (typeof executeSecureBridgeCall === 'function') return executeSecureBridgeCall('agent', action, body);
                 if (typeof apiPost === 'function') return apiPost(Object.assign({ system: 'agent', action: action }, body));
-                throw new Error('No admin API');
+                return Promise.reject(new Error('No admin API'));
             }
 
-            window.adminLoadCommentActivity = async function () {
-                var clientId = (document.getElementById('adminCommentClientId') || {}).value || '';
-                var sel = document.getElementById('adminCommentActivitySelect');
-                if (!clientId) { alert('Client ID required'); return; }
-                if (sel) sel.innerHTML = '<option value="">Loading…</option>';
+            function adminCommentsDefaultDates() {
+                var to = document.getElementById('pubCommentsDateTo');
+                var from = document.getElementById('pubCommentsDateFrom');
+                if (!to || !from) return;
+                var end = new Date();
+                var start = new Date();
+                start.setDate(end.getDate() - 30);
+                if (!to.value) to.value = end.toISOString().slice(0, 10);
+                if (!from.value) from.value = start.toISOString().slice(0, 10);
+            }
+
+            window.adminCommentsRefresh = function () {
+                adminCommentsDefaultDates();
+                adminCommentsLoadActivity();
+            };
+
+            window.adminCommentsLoadActivity = async function () {
+                adminCommentsDefaultDates();
+                var clientId = ((document.getElementById('pubCommentsClientId') || {}).value || '').trim();
+                var tbody = document.getElementById('pubCommentsActivityBody');
+                var list = document.getElementById('pubCommentsList');
+                if (list) list.innerHTML = '<p class="text-slate-500 text-center py-6">Select a post from the table above.</p>';
+                var lab = document.getElementById('pubCommentsSelectedLabel');
+                if (lab) lab.textContent = '';
+                if (!clientId) {
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="px-3 py-8 text-center text-slate-500">Enter a Client ID first.</td></tr>';
+                    return;
+                }
+                if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="px-3 py-8 text-center text-slate-500">Loading…</td></tr>';
+                var dateFrom = (document.getElementById('pubCommentsDateFrom') || {}).value || '';
+                var dateTo = (document.getElementById('pubCommentsDateTo') || {}).value || '';
+                var res;
                 try {
-                    var res = await adminApiAgent('agent-list-comment-activity-posts', { clientId: clientId });
-                    var posts = (res && res.success && res.posts) ? res.posts : [];
-                    window.__adminCommentPosts = posts;
-                    if (sel) {
-                        if (!posts.length) {
-                            sel.innerHTML = '<option value="">No AI activity in last 30 days</option>';
-                        } else {
-                            sel.innerHTML = '<option value="">Select post (' + posts.length + ')</option>' +
-                                posts.map(function (p, i) {
-                                    return '<option value="' + i + '">' + (p.platform || '') + ' · ' + (p.postId || '') +
-                                        ' · replies ' + (p.replies || 0) + ' · hidden ' + (p.deleted || 0) + '</option>';
-                                }).join('');
-                        }
-                    }
+                    res = await adminCommentsApi('agent-list-comment-activity-posts', {
+                        clientId: clientId,
+                        dateFrom: dateFrom,
+                        dateTo: dateTo
+                    });
                 } catch (e) {
-                    if (sel) sel.innerHTML = '<option value="">No activity available</option>';
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="px-3 py-8 text-center text-slate-500">Could not load activity.</td></tr>';
+                    return;
+                }
+                var posts = (res && res.success && res.posts) ? res.posts.slice() : [];
+                // Client-side date filter (ms)
+                var fromMs = dateFrom ? Date.parse(dateFrom + 'T00:00:00') : 0;
+                var toMs = dateTo ? Date.parse(dateTo + 'T23:59:59') : Date.now();
+                if (!isNaN(fromMs) || !isNaN(toMs)) {
+                    posts = posts.filter(function (p) {
+                        var t = Date.parse(p.lastAt || p.lastActivity || '');
+                        if (isNaN(t)) return true;
+                        if (!isNaN(fromMs) && t < fromMs) return false;
+                        if (!isNaN(toMs) && t > toMs) return false;
+                        return true;
+                    });
+                }
+                window.__pubCommentPosts = posts;
+                if (!posts.length) {
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="px-3 py-8 text-center text-slate-500">No AI reply/hide activity in this date range.</td></tr>';
+                    return;
+                }
+                if (tbody) {
+                    tbody.innerHTML = posts.map(function (p, i) {
+                        return '<tr class="hover:bg-slate-900/80">' +
+                            '<td class="px-3 py-2">' + (p.platform || '') + '</td>' +
+                            '<td class="px-3 py-2 font-mono text-[11px]">' + (p.postId || '') + '</td>' +
+                            '<td class="px-3 py-2 text-emerald-400">' + (p.replies || 0) + '</td>' +
+                            '<td class="px-3 py-2 text-amber-400">' + (p.deleted || 0) + '</td>' +
+                            '<td class="px-3 py-2 text-slate-500">' + (p.lastAt || '') + '</td>' +
+                            '<td class="px-3 py-2"><button type="button" class="text-emerald-400 hover:underline" onclick="adminCommentsOpenPost(' + i + ')">Open</button></td>' +
+                            '</tr>';
+                    }).join('');
                 }
             };
 
-            window.adminPickActivityPost = async function () {
-                var sel = document.getElementById('adminCommentActivitySelect');
-                var posts = window.__adminCommentPosts || [];
-                var i = Number(sel && sel.value);
-                if (isNaN(i) || !posts[i]) return;
-                var p = posts[i];
-                var root = document.getElementById('adminCommentsList');
-                if (root) root.innerHTML = 'Loading comments…';
+            window.adminCommentsOpenPost = async function (index) {
+                var posts = window.__pubCommentPosts || [];
+                var p = posts[index];
+                if (!p) return;
+                var clientId = ((document.getElementById('pubCommentsClientId') || {}).value || '').trim();
+                var list = document.getElementById('pubCommentsList');
+                var lab = document.getElementById('pubCommentsSelectedLabel');
+                if (lab) lab.textContent = (p.platform || '') + ' · ' + (p.postId || '');
+                if (list) list.innerHTML = '<p class="text-slate-500">Loading comments…</p>';
+                var res;
                 try {
-                    var res = await adminApiAgent('agent-list-post-comments', {
-                        clientId: (document.getElementById('adminCommentClientId') || {}).value,
+                    res = await adminCommentsApi('agent-list-post-comments', {
+                        clientId: clientId,
                         platform: p.platform,
                         postId: p.postId
                     });
-                    var comments = (res && res.comments) || [];
-                    if (!root) return;
-                    if (!comments.length) {
-                        root.innerHTML = '<p style="color:#94a3b8;">No comments</p>';
-                        return;
-                    }
-                    root.innerHTML = comments.map(function (c) {
-                        var id = String(c.id || '').replace(/'/g, '');
-                        var clientId = (document.getElementById('adminCommentClientId') || {}).value;
-                        return '<div style="border:1px solid #334155;border-radius:8px;padding:8px;margin:6px 0;">' +
-                            '<b>' + (c.author || '') + '</b><div style="color:#94a3b8;">' + (c.text || c.message || '') + '</div>' +
-                            '<button type="button" style="margin-top:6px;margin-right:8px;font-size:11px;cursor:pointer;" onclick="adminReplyComment(\'' +
-                            clientId + '\',\'' + (p.platform || '') + '\',\'' + (p.postId || '') + '\',\'' + id + '\')">AI reply</button>' +
-                            '<button type="button" style="margin-top:6px;font-size:11px;cursor:pointer;" onclick="adminHideComment(\'' +
-                            clientId + '\',\'' + (p.platform || '') + '\',\'' + id + '\',\'' + (p.postId || '') + '\')">Hide</button></div>';
-                    }).join('');
                 } catch (e) {
-                    if (root) root.innerHTML = '<p style="color:#94a3b8;">Could not load comments</p>';
+                    if (list) list.innerHTML = '<p class="text-slate-500">Could not load comments.</p>';
+                    return;
+                }
+                var comments = (res && res.comments) || [];
+                if (!list) return;
+                if (!comments.length) {
+                    list.innerHTML = '<p class="text-slate-500 text-center py-4">No comments on this post.</p>';
+                    return;
+                }
+                list.innerHTML = comments.map(function (c) {
+                    var id = String(c.id || '').replace(/\\/g, '').replace(/'/g, '');
+                    return '<div class="border border-slate-800 rounded-lg p-2.5 bg-slate-900/50">' +
+                        '<div class="font-medium text-slate-200">' + (c.author || 'User') + '</div>' +
+                        '<div class="text-slate-400 mt-1">' + (c.text || c.message || '') + '</div>' +
+                        '<div class="mt-2 flex gap-2">' +
+                        '<button type="button" class="text-[11px] px-2 py-0.5 rounded bg-emerald-900/40 text-emerald-300" onclick="adminCommentsReply(\'' +
+                        (p.platform || '') + '\',\'' + (p.postId || '') + '\',\'' + id + '\')">AI reply</button>' +
+                        '<button type="button" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300" onclick="adminCommentsHide(\'' +
+                        (p.platform || '') + '\',\'' + id + '\',\'' + (p.postId || '') + '\')">Hide</button>' +
+                        '</div></div>';
+                }).join('');
+            };
+
+            window.adminCommentsReply = async function (platform, postId, commentId) {
+                var clientId = ((document.getElementById('pubCommentsClientId') || {}).value || '').trim();
+                try {
+                    await adminCommentsApi('agent-reply-to-comment', {
+                        clientId: clientId, platform: platform, postId: postId, commentId: commentId
+                    });
+                } catch (_) { }
+                // reload same post
+                var posts = window.__pubCommentPosts || [];
+                for (var i = 0; i < posts.length; i++) {
+                    if (posts[i].postId === postId && posts[i].platform === platform) {
+                        adminCommentsOpenPost(i);
+                        break;
+                    }
                 }
             };
 
-            window.adminReplyComment = async function (clientId, platform, postId, commentId) {
+            window.adminCommentsHide = async function (platform, commentId, postId) {
+                var clientId = ((document.getElementById('pubCommentsClientId') || {}).value || '').trim();
                 try {
-                    await adminApiAgent('agent-reply-to-comment', { clientId: clientId, platform: platform, postId: postId, commentId: commentId });
+                    await adminCommentsApi('agent-hide-comment', {
+                        clientId: clientId, platform: platform, commentId: commentId, postId: postId
+                    });
                 } catch (_) { }
-                adminPickActivityPost();
-            };
-            window.adminHideComment = async function (clientId, platform, commentId, postId) {
-                try {
-                    await adminApiAgent('agent-hide-comment', { clientId: clientId, platform: platform, commentId: commentId, postId: postId });
-                } catch (_) { }
-                adminPickActivityPost();
+                var posts = window.__pubCommentPosts || [];
+                for (var i = 0; i < posts.length; i++) {
+                    if (posts[i].postId === postId && posts[i].platform === platform) {
+                        adminCommentsOpenPost(i);
+                        break;
+                    }
+                }
             };
 
-            // Mount when DOM ready; re-run on social nav clicks if possible
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', ensureAdminCommentsPanel);
-            } else {
-                ensureAdminCommentsPanel();
-            }
+            // When sub-nav opens comments, set default dates
             document.addEventListener('click', function (ev) {
-                var t = ev.target;
-                if (!t) return;
-                var text = (t.textContent || '').toLowerCase();
-                if (text.indexOf('social publishing') >= 0 || (t.closest && t.closest('[data-view="social"]'))) {
-                    setTimeout(ensureAdminCommentsPanel, 50);
-                }
+                var btn = ev.target && ev.target.closest && ev.target.closest('[data-target-view="publish-comments"]');
+                if (btn) setTimeout(adminCommentsDefaultDates, 30);
             });
         })();
     </script>
