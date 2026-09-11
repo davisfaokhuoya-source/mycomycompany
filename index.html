@@ -4077,11 +4077,10 @@
 
     <section id="careerPricing" class="py-5" style="background:#F7F5F2;">
         <div class="container" style="max-width:960px;margin:0 auto;padding:0 1rem;">
-            <h2 class="mb-2" style="font-size:1.35rem;font-weight:700;color:#1A1A1A;">Career Hub & business registration
-            </h2>
-            <p class="text-muted mb-3" style="font-size:0.9rem;color:#6E6E6E;">CAC company registration, business name,
-                NGO, annual returns, tax orientation, and Career Hub agent packages — live from our backend catalog
-                (separate from client Ops/Digital plans).</p>
+            <h2 class="mb-2" style="font-size:1.35rem;font-weight:700;color:#1A1A1A;">Career Hub — agent packages</h2>
+            <p class="text-muted mb-3" style="font-size:0.9rem;color:#6E6E6E;">Live rates for professionals on our
+                Career Hub (separate from client Ops/Digital plans). Updated from our billing catalog when available.
+            </p>
             <div id="careerPricingGrid" class="row g-3">
                 <p class="text-muted">Loading Career Hub prices…</p>
             </div>
@@ -4095,87 +4094,41 @@
                 if (cur === "USD") return "$" + n.toLocaleString(undefined, { maximumFractionDigits: 0 });
                 return "₦" + n.toLocaleString(undefined, { maximumFractionDigits: 0 });
             }
-            function card(title, blurb, ngn, usd, unit) {
-                return '<div class="col-md-4 col-sm-6"><div class="p-3 h-100" style="background:#fff;border:1px solid #E8E4DF;border-radius:12px;">' +
-                    '<strong style="color:#1A1A1A;">' + title + '</strong>' +
-                    (blurb ? '<p style="font-size:0.8rem;color:#6E6E6E;margin:6px 0 8px;">' + blurb + '</p>' : '') +
-                    '<div style="margin-top:6px;color:#CC5500;font-weight:600;">' +
-                    '<span>Local ' + (ngn ? money(ngn, "NGN") : "—") + '</span>' +
-                    (usd ? '<br><span style="font-weight:500;color:#6E6E6E;font-size:0.85rem;">Offshore ' + money(usd, "USD") + '</span>' : '') +
-                    (unit ? ' <span style="font-weight:500;color:#6E6E6E;font-size:0.75rem;">/ ' + unit + '</span>' : '') +
-                    '</div></div></div>';
-            }
-            function paint(data) {
-                var grid = document.getElementById("careerPricingGrid");
-                if (!grid) return;
-                if (!data || data.success === false) {
-                    grid.innerHTML = '<p class="text-muted">Could not load Career Hub prices. Use the Interest form for CAC registration and agent packages.</p>';
-                    return;
-                }
-                var list = data.careerServices || [];
-                var pricing = data.pricing || {};
-                if (!list.length) {
-                    Object.keys(pricing).forEach(function (k) {
-                        var row = pricing[k] || {};
-                        if (/^cac_|career_|scuml|tin_tax/i.test(k) || row.category === "Career Hub" || row.suite === "career") {
-                            list.push({
-                                id: k,
-                                label: row.label || k,
-                                blurb: row.blurb || "",
-                                totalNgn: row.totalNgn,
-                                totalUsd: row.totalUsd,
-                                unit: row.unit || "job"
-                            });
-                        }
-                    });
-                }
-                if (!list.length) {
-                    grid.innerHTML = '<p class="text-muted" style="font-size:0.9rem;">Career Hub services will appear after pricing is seeded. Request a quote via Interest form.</p>';
-                    return;
-                }
-                grid.innerHTML = list.map(function (s) {
-                    return card(
-                        s.label || s.id,
-                        s.blurb || "",
-                        s.totalNgn || s.priceLocalNgn,
-                        s.totalUsd || s.priceOffshoreUsd,
-                        s.unit || "job"
-                    );
-                }).join("");
-            }
             fetch(API, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ system: "agent", action: "agent-get-all-service-pricing" })
             }).then(function (r) { return r.json(); }).then(function (data) {
-                if (data && data.careerServices && data.careerServices.length) {
-                    paint(data);
+                var grid = document.getElementById("careerPricingGrid");
+                if (!grid) return;
+                var pricing = (data && data.pricing) || {};
+                var addons = (data && data.addons) || [];
+                // Career-ish keys + comment addons for transparency
+                var keys = Object.keys(pricing).filter(function (k) {
+                    return /career|agent_package|va_|hub_/i.test(k) || k === "comment_reply" || k === "spam_comment_delete";
+                });
+                if (!keys.length && addons.length) {
+                    addons.forEach(function (a) { if (a.id || a.key) keys.push(a.id || a.key); });
+                }
+                // Always surface comment addons if present in pricing
+                ["comment_reply", "spam_comment_delete"].forEach(function (k) {
+                    if (pricing[k] && keys.indexOf(k) < 0) keys.push(k);
+                });
+                if (!keys.length) {
+                    grid.innerHTML = "<p class=\"text-muted\" style=\"font-size:0.9rem\">Career Hub package list loads from admin catalog. Client Ops/Digital prices are in the Pricing section above. AI comment replies and spam-delete are optional add-ons (not included in Digital tiers).</p>";
                     return;
                 }
-                // Secondary endpoint
-                return fetch(API, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ system: "agent", action: "agent-get-career-public-pricing" })
-                }).then(function (r) { return r.json(); }).then(function (d2) {
-                    if (d2 && !d2.careerServices && d2.pricing) {
-                        d2.careerServices = Object.keys(d2.pricing).map(function (k) {
-                            var row = d2.pricing[k] || {};
-                            return {
-                                id: k,
-                                label: row.label || k,
-                                blurb: row.blurb || "",
-                                totalNgn: row.totalNgn || row.priceNgn,
-                                totalUsd: row.totalUsd || row.priceUsd,
-                                unit: row.unit || "job"
-                            };
-                        });
-                    }
-                    paint(d2 || data);
-                });
+                grid.innerHTML = keys.map(function (k) {
+                    var p = pricing[k] || {};
+                    var label = p.label || k;
+                    var ngn = p.totalNgn || p.priceLocalNgn || p.baseNgn || 0;
+                    var usd = p.totalUsd || p.priceOffshoreUsd || 0;
+                    return "<div class=\"col-md-4\"><div class=\"p-3 h-100\" style=\"background:#fff;border:1px solid #E8E4DF;border-radius:12px;\"><strong>" + label + "</strong><div style=\"margin-top:6px;color:#CC5500;font-weight:600;\">" +
+                        (ngn ? money(ngn, "NGN") : "") + (ngn && usd ? " · " : "") + (usd ? money(usd, "USD") : "") + "</div></div></div>";
+                }).join("");
             }).catch(function () {
                 var grid = document.getElementById("careerPricingGrid");
-                if (grid) grid.innerHTML = '<p class="text-muted">Unable to reach pricing service. Contact us for CAC and Career Hub packages.</p>';
+                if (grid) grid.innerHTML = "<p class=\"text-muted\">Could not load live prices. See Pricing section or contact us.</p>";
             });
         })();
     </script>
