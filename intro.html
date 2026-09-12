@@ -466,12 +466,12 @@
 
 <body>
 
-    <!-- Vic site language (public pages; not admin) -->
+    <!-- Vic language switcher (public pages) -->
     <div id="vicSiteLangWrap"
-        style="position:fixed;top:12px;right:12px;z-index:10050;display:flex;align-items:center;gap:6px;background:rgba(15,23,42,0.92);border:1px solid rgba(204,85,0,0.35);border-radius:999px;padding:4px 10px 4px 12px;box-shadow:0 4px 16px rgba(0,0,0,0.25);">
+        style="position:fixed;top:12px;right:12px;z-index:10050;display:flex;align-items:center;gap:6px;background:rgba(15,23,42,0.92);border:1px solid rgba(204,85,0,0.45);border-radius:999px;padding:4px 10px 4px 12px;box-shadow:0 4px 16px rgba(0,0,0,0.25);font-family:system-ui,sans-serif;">
         <span style="color:#94a3b8;font-size:11px;font-weight:600;">Lang</span>
         <select id="vicSiteLangSelect" aria-label="Site language"
-            style="background:transparent;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;outline:none;max-width:130px;">
+            style="background:#0f172a;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;outline:none;max-width:140px;padding:2px 4px;border-radius:6px;">
             <option value="en">English</option>
             <option value="zh-CN">中文</option>
             <option value="fr">Français</option>
@@ -483,6 +483,105 @@
             <option value="ig">Igbo</option>
             <option value="hi">हिन्दी</option>
         </select>
+    </div>
+    <div id="google_translate_element" style="display:none!important;height:0;overflow:hidden;"></div>
+    <style>
+        .goog-te-banner-frame,
+        .goog-te-balloon-frame,
+        #goog-gt-tt,
+        .goog-te-spinner-pos {
+            display: none !important;
+        }
+
+        body {
+            top: 0 !important;
+        }
+
+        .skiptranslate {
+            display: none !important;
+        }
+    </style>
+    <script>
+        (function () {
+            var KEY = "vic_site_lang";
+            function rootDomain() {
+                var h = location.hostname;
+                if (!h || h === "localhost") return h;
+                var p = h.split(".");
+                if (p.length >= 2) return "." + p.slice(-2).join(".");
+                return h;
+            }
+            function clearGoogTrans() {
+                var domains = ["", location.hostname, rootDomain()];
+                domains.forEach(function (d) {
+                    var base = "googtrans=;path=/;max-age=0";
+                    if (d) base += ";domain=" + d;
+                    document.cookie = base;
+                });
+            }
+            function setGoogTrans(code) {
+                try { localStorage.setItem(KEY, code || "en"); } catch (e) { }
+                clearGoogTrans();
+                if (!code || code === "en") {
+                    try {
+                        if (location.hash && location.hash.indexOf("googtrans") >= 0) {
+                            history.replaceState(null, "", location.pathname + location.search);
+                        }
+                    } catch (e2) { }
+                    return;
+                }
+                var v = "/en/" + code;
+                document.cookie = "googtrans=" + v + ";path=/";
+                var rd = rootDomain();
+                if (rd) document.cookie = "googtrans=" + v + ";path=/;domain=" + rd;
+                try { location.hash = "googtrans(en|" + code + ")"; } catch (e3) { }
+            }
+            function readLang() {
+                try {
+                    var s = localStorage.getItem(KEY);
+                    if (s) return s;
+                } catch (e) { }
+                var m = document.cookie.match(/(?:^|; )googtrans=\/[^\/]+\/([^;]+)/);
+                return m ? decodeURIComponent(m[1]) : "en";
+            }
+            window.googleTranslateElementInit = function () {
+                try {
+                    new google.translate.TranslateElement({
+                        pageLanguage: "en",
+                        includedLanguages: "en,zh-CN,fr,es,ar,pt,ha,yo,ig,hi",
+                        autoDisplay: false
+                    }, "google_translate_element");
+                } catch (e) { }
+                setTimeout(function () {
+                    var code = readLang();
+                    if (!code || code === "en") return;
+                    var combo = document.querySelector(".goog-te-combo");
+                    if (combo) {
+                        combo.value = code;
+                        var evt = document.createEvent("HTMLEvents");
+                        evt.initEvent("change", true, true);
+                        combo.dispatchEvent(evt);
+                    }
+                }, 900);
+            };
+            function boot() {
+                var sel = document.getElementById("vicSiteLangSelect");
+                if (!sel) return;
+                var cur = readLang();
+                try { sel.value = cur; } catch (e) { }
+                sel.addEventListener("change", function () {
+                    setGoogTrans(sel.value || "en");
+                    location.reload();
+                });
+            }
+            if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+            else boot();
+        })();
+    </script>
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+
+
     </div>
     <script>
         (function () {
@@ -740,8 +839,7 @@
                     <h6><i class="fas fa-chart-simple"></i> Quotas, Pricing &amp; Discount Codes</h6>
                     <p>Quotas (documents, emails, proposals, social posts, etc.) match your Ops and Digital tiers. Open
                         <strong>Billing</strong> for the only full price list, upgrades, and add-ons. Discount codes may
-                        still apply when your account team issues them.
-                    </p>
+                        still apply when your account team issues them.</p>
                 </div>
                 <div class="tile">
                     <h6><i class="fas fa-list-check"></i> My Work</h6>
