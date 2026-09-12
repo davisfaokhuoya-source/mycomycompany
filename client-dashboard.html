@@ -1972,18 +1972,7 @@
             const c = String(code || '');
             return c === '4101' || /SESSION_EXPIRED|session expired|invalid client id|access code|unauthorized|token|sign.?in|login|auth/i.test(m);
         }
-        function force
-            <select id = "clientUiLang" title = "Interface & document language" style = "margin-left:8px;padding:4px 8px;border-radius:6px;border:1px solid #ccc;font-size:12px;">
-  <option value="en">English</option>
-            <option value="zh-CN">中文</option>
-            <option value="fr">Français</option>
-            <option value="es">Español</option>
-            <option value="ar">العربية</option>
-            <option value="pt">Português</option>
-            <option value="ha">Hausa</option>
-            <option value="yo">Yorùbá</option>
-</select >
-            LogoutOnAuthError(msg, code) {
+        function forceLogoutOnAuthError(msg, code) {
             if (!isSessionExpiredMessage(msg, code)) return false;
             try { showLoginError(clientFriendlyError(msg || 'Session expired. Please sign in again.')); } catch (_) { }
             try { logoutClient(); } catch (_) { }
@@ -4259,69 +4248,6 @@
                         try { if (typeof loadChat === 'function') loadChat(); } catch (_) { }
                     }, 8000);
                 } catch (_) { }
-            });
-        })();
-    </script>
-
-
-    <script>
-        (function () {
-            function getVicDocLang() {
-                var el = document.getElementById("clientUiLang") || document.getElementById("docOutputLanguage");
-                if (el && el.value) return el.value;
-                try { return localStorage.getItem("vic_client_lang") || "en"; } catch (e) { return "en"; }
-            }
-            window.getVicDocLang = getVicDocLang;
-            function applyClientLangChrome() {
-                var code = getVicDocLang();
-                try { localStorage.setItem("vic_client_lang", code); } catch (e) { }
-                document.documentElement.setAttribute("lang", code.split("-")[0] || "en");
-                // Optional: Google Translate cookie for full-page translate (same as public site)
-                if (code && code !== "en") {
-                    var v = "/en/" + code;
-                    document.cookie = "googtrans=" + v + ";path=/";
-                } else {
-                    document.cookie = "googtrans=;path=/;max-age=0";
-                }
-            }
-            document.addEventListener("DOMContentLoaded", function () {
-                var sel = document.getElementById("clientUiLang");
-                if (sel) {
-                    try { sel.value = localStorage.getItem("vic_client_lang") || "en"; } catch (e) { }
-                    sel.addEventListener("change", function () {
-                        applyClientLangChrome();
-                        if (typeof api === "function" || typeof executeSecureBridgeCall === "function") {
-                            var call = window.executeSecureBridgeCall || window.api;
-                            try {
-                                var cid = window.CLIENT_ID || (window.session && session.clientId);
-                                var tok = window.CLIENT_TOKEN || (window.session && session.token);
-                                if (cid && tok && call) {
-                                    Promise.resolve(call("agent", "clientPortalSetUiLanguage", {
-                                        clientId: cid, token: tok, language: sel.value, outputLanguage: sel.value
-                                    })).catch(function () { });
-                                }
-                            } catch (e2) { }
-                        }
-                        // Soft reload translate
-                        if (sel.value !== "en") location.reload();
-                    });
-                }
-                // Patch document generate payloads to include outputLanguage
-                var _fetch = window.fetch;
-                if (_fetch && !window._vicLangFetchPatched) {
-                    window._vicLangFetchPatched = true;
-                    window.fetch = function (url, opts) {
-                        try {
-                            if (opts && opts.body && typeof opts.body === "string" && opts.body.indexOf("clientPortalGenerateDocument") >= 0) {
-                                var o = JSON.parse(opts.body);
-                                o.outputLanguage = getVicDocLang();
-                                o.language = o.outputLanguage;
-                                opts = Object.assign({}, opts, { body: JSON.stringify(o) });
-                            }
-                        } catch (e3) { }
-                        return _fetch.call(this, url, opts);
-                    };
-                }
             });
         })();
     </script>
