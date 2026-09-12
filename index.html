@@ -2478,23 +2478,6 @@
     </section>
 
     <!-- ============================================================
-     FOOTER (your existing footer.js handles rendering)
-============================================================ -->
-
-    <section id="careerPricing" class="py-5" style="background:#F7F5F2;">
-        <div class="container" style="max-width:960px;margin:0 auto;padding:0 1rem;">
-            <h2 class="mb-2" style="font-size:1.35rem;font-weight:700;color:#1A1A1A;">Career Hub — CAC &amp; compliance
-                services</h2>
-            <p class="text-muted mb-3" style="font-size:0.9rem;color:#6E6E6E;">
-                Company registration and regulatory compliance support. Prices shown as Local (NGN) starting rates;
-                final quote depends on entity type and scope. Separate from client Ops/Digital plans.
-            </p>
-            <div id="careerPricingGrid" class="row g-3">
-                <p class="text-muted">Loading Career Hub services…</p>
-            </div>
-        </div>
-    </section>
-    <!-- ============================================================
      HOW WE WORK
 ============================================================ -->
     <section id="how-we-work" style="padding:80px 0;background:var(--bg-light);">
@@ -2766,6 +2749,31 @@
         </div>
     </section>
 
+    <!-- ============================================================
+     FOOTER (your existing footer.js handles rendering)
+============================================================ -->
+
+    <section id="careerPricing" class="py-5" style="background:#F7F5F2;">
+        <div class="container" style="max-width:960px;margin:0 auto;padding:0 1rem;">
+            <h2 class="mb-2" style="font-size:1.35rem;font-weight:700;color:#1A1A1A;">Career Hub — CAC &amp; compliance
+                services</h2>
+            <p class="text-muted mb-3" style="font-size:0.9rem;color:#6E6E6E;">
+                Company registration and regulatory compliance support. Prices shown as Local (NGN) starting rates;
+                final quote depends on entity type and scope. Separate from client Ops/Digital plans.
+            </p>
+            <div id="careerPricingGrid" class="row g-3">
+                <p class="text-muted">Loading Career Hub services…</p>
+            </div>
+            <div class="d-flex justify-content-center align-items-center gap-2 mt-3" id="careerCarouselNav"
+                style="display:none;">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="careerCarouselPrev"
+                    aria-label="Previous">‹</button>
+                <span class="text-muted small" id="careerCarouselStatus"></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="careerCarouselNext"
+                    aria-label="Next">›</button>
+            </div>
+        </div>
+    </section>
     <script>
         (function () {
             var API = "https://app.thevictorias.com.ng/";
@@ -2791,6 +2799,35 @@
                 if (row.category === "Career Hub" || row.suite === "career") return true;
                 return /^(cac_|scuml|tin_|pencom|bpp_|itf_|nsitf|trademark|career_)/i.test(k);
             }
+
+            var _careerAllCards = [];
+            var _careerPage = 0;
+            var CAREER_PAGE_SIZE = 3;
+            function renderCareerPage() {
+                var grid = document.getElementById("careerPricingGrid");
+                var nav = document.getElementById("careerCarouselNav");
+                var status = document.getElementById("careerCarouselStatus");
+                if (!grid) return;
+                var total = _careerAllCards.length;
+                var pages = Math.max(1, Math.ceil(total / CAREER_PAGE_SIZE));
+                if (_careerPage >= pages) _careerPage = 0;
+                if (_careerPage < 0) _careerPage = pages - 1;
+                var start = _careerPage * CAREER_PAGE_SIZE;
+                var slice = _careerAllCards.slice(start, start + CAREER_PAGE_SIZE);
+                grid.style.opacity = "0";
+                grid.style.transition = "opacity 0.35s ease";
+                setTimeout(function () {
+                    grid.innerHTML = slice.join("") || '<p class="text-muted">No Career Hub services listed.</p>';
+                    grid.style.opacity = "1";
+                }, 180);
+                if (nav) {
+                    nav.style.display = total > CAREER_PAGE_SIZE ? "flex" : "none";
+                }
+                if (status) {
+                    status.textContent = total ? ("Showing " + (start + 1) + "–" + Math.min(start + CAREER_PAGE_SIZE, total) + " of " + total) : "";
+                }
+            }
+
             function paint(data) {
                 var grid = document.getElementById("careerPricingGrid");
                 if (!grid) return;
@@ -2817,7 +2854,7 @@
                     grid.innerHTML = '<p class="text-muted" style="font-size:0.9rem;">Services will load shortly. For CAC registration and compliance, use the Interest form or contact us.</p>';
                     return;
                 }
-                grid.innerHTML = list.map(function (s) {
+                _careerAllCards = list.map(function (s) {
                     return card(
                         s.label || s.id,
                         s.blurb || "",
@@ -2826,6 +2863,7 @@
                         s.unit || "job"
                     );
                 }).join("");
+                _careerPage = 0; renderCareerPage();
             }
             fetch(API, {
                 method: "POST",
@@ -4174,9 +4212,6 @@
             });
         })();
     </script>
-
-
-
 
 </body>
 

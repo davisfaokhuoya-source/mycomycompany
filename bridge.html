@@ -4821,6 +4821,7 @@
                                 class="block mt-1 px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm min-w-[240px]">
                                 <option value="ops">Ops tiers</option>
                                 <option value="digital">Digital tiers</option>
+                                <option value="career">Career Hub (CAC &amp; compliance)</option>
                                 <option value="addons">Add-on catalog &amp; prices</option>
                                 <option value="assign">Assign to client</option>
                                 <option value="time">Log admin time</option>
@@ -4846,6 +4847,24 @@
                                 class="text-xs px-2.5 py-1 rounded bg-sky-700/80 text-white">+ Add Digital tier</button>
                         </div>
                         <div id="pricingDigitalList" class="space-y-2"></div>
+                    </div>
+
+
+                    <div id="pricingSec-career" class="pricing-sec hidden space-y-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <h3 class="text-sm font-semibold text-orange-400 uppercase tracking-wide"><i
+                                    class="fa-solid fa-building-columns mr-1"></i> Career Hub — CAC &amp; compliance
+                                prices</h3>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="pricingLoadCareerHub()"
+                                    class="text-xs px-2.5 py-1 rounded bg-slate-700 text-white">Reload</button>
+                                <button type="button" onclick="pricingSaveCareerHub()"
+                                    class="text-xs px-2.5 py-1 rounded bg-orange-600 text-white">Save all</button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-400">Edits update ServicePricing (and the public homepage Career
+                            Hub cards). Local = NGN; offshore USD is derived from FX rate above.</p>
+                        <div id="pricingCareerList" class="space-y-2"></div>
                     </div>
 
                     <div id="pricingSec-addons" class="pricing-sec hidden space-y-3">
@@ -4990,8 +5009,7 @@
                         </div>
                         <p class="text-[11px] text-slate-500">Tick services to include on this tier, then set quantity.
                             <strong class="text-slate-400">-1</strong> = unlimited. Unticked services are not on the
-                            tier. Add-on-only items stay available under Assign to client.
-                        </p>
+                            tier. Add-on-only items stay available under Assign to client.</p>
                         <div id="pe_servicesGrid"
                             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-80 overflow-y-auto custom-scrollbar">
                         </div>
@@ -18546,10 +18564,65 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         /* ===== Pricing, Tiers & Add-ons (merged hub) ===== */
         window.PRICING_STATE = { catalog: [], tiers: [], addons: [], editingId: null, fx: 1300 };
 
+
+        async function pricingLoadCareerHub() {
+            var box = document.getElementById("pricingCareerList");
+            if (!box) return;
+            box.innerHTML = '<p class="text-xs text-slate-500">Loading Career Hub services…</p>';
+            try {
+                var res = await api("agent", "agent-admin-list-career-pricing", {});
+                if (!res || !res.success) {
+                    box.innerHTML = '<p class="text-xs text-red-400">' + ((res && res.message) || "Failed to load") + '</p>';
+                    return;
+                }
+                var list = res.services || [];
+                if (!list.length) {
+                    box.innerHTML = '<p class="text-xs text-slate-500">No Career Hub services found.</p>';
+                    return;
+                }
+                box.innerHTML = list.map(function (s) {
+                    return '<div class="p-3 rounded-lg bg-slate-900 border border-slate-700 space-y-2" data-career-id="' + String(s.id).replace(/"/g, "") + '">' +
+                        '<div class="text-xs text-slate-500 font-mono">' + String(s.id) + '</div>' +
+                        '<label class="text-[10px] text-slate-400">Label<input class="career-label block w-full mt-1 px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white text-sm" value="' + String(s.label || "").replace(/"/g, "&quot;") + '"/></label>' +
+                        '<label class="text-[10px] text-slate-400">Price NGN (local)<input type="number" min="0" class="career-price block w-40 mt-1 px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white text-sm" value="' + (Number(s.priceNgn) || 0) + '"/></label>' +
+                        '<label class="text-[10px] text-slate-400">Unit<input class="career-unit block w-32 mt-1 px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white text-sm" value="' + String(s.unit || "job").replace(/"/g, "&quot;") + '"/></label>' +
+                        '</div>';
+                }).join("");
+            } catch (e) {
+                box.innerHTML = '<p class="text-xs text-red-400">' + (e.message || e) + '</p>';
+            }
+        }
+        async function pricingSaveCareerHub() {
+            var box = document.getElementById("pricingCareerList");
+            if (!box) return;
+            var cards = box.querySelectorAll("[data-career-id]");
+            var services = [];
+            cards.forEach(function (card) {
+                services.push({
+                    id: card.getAttribute("data-career-id"),
+                    label: (card.querySelector(".career-label") || {}).value || "",
+                    priceNgn: Number((card.querySelector(".career-price") || {}).value || 0),
+                    unit: (card.querySelector(".career-unit") || {}).value || "job",
+                    category: "Career Hub",
+                    active: true
+                });
+            });
+            try {
+                var res = await api("agent", "agent-admin-save-career-pricing", { services: services });
+                alert((res && res.message) || (res && res.success ? "Saved" : "Save failed"));
+                if (res && res.success) pricingLoadCareerHub();
+            } catch (e) {
+                alert(e.message || String(e));
+            }
+        }
+
         function pricingShowSection(which) {
             document.querySelectorAll('.pricing-sec').forEach(function (el) { el.classList.add('hidden'); });
             var el = document.getElementById('pricingSec-' + which);
             if (el) el.classList.remove('hidden');
+            if (String(which) === 'career') {
+                try { pricingLoadCareerHub(); } catch (e) { }
+            }
             // Keep tier editor available when on ops/digital
             if (which !== 'ops' && which !== 'digital') {
                 var ed = document.getElementById('pricingEditor');
@@ -19044,6 +19117,14 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             if (typeof showToast === 'function') showToast((res && res.message) || 'Reset', res && res.success === false ? 'error' : 'success');
         }
     </script>
+
+
+
+
+    <!-- Comments moderation — Social Publishing tools (not in sidebar) -->
+
+
+
 
     <script>
         (function () {
