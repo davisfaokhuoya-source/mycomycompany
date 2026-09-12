@@ -452,16 +452,18 @@
             }
         }
     </style>
-    <script>window.toggleDocGenGuide = window.toggleDocGenGuide || function () { var p = document.getElementById("docGenGuide"); if (!p) return; p.classList.toggle("hidden"); };</script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
+        async defer></script>
+    <script>function googleTranslateElementInit() { try { new google.translate.TranslateElement({ pageLanguage: 'en', autoDisplay: false }, 'google_translate_element'); } catch (e) { } }</script>
+    <div id="google_translate_element" style="display:none"></div>
 </head>
 
 <body class="bg-slate-950 text-slate-200 min-h-screen">
-
-    <!-- Vic language switcher (client portal UI) -->
+    <!-- Vic language switcher (public pages) -->
     <div id="vicSiteLangWrap"
         style="position:fixed;top:12px;right:12px;z-index:10050;display:flex;align-items:center;gap:6px;background:rgba(15,23,42,0.92);border:1px solid rgba(204,85,0,0.45);border-radius:999px;padding:4px 10px 4px 12px;box-shadow:0 4px 16px rgba(0,0,0,0.25);font-family:system-ui,sans-serif;">
         <span style="color:#94a3b8;font-size:11px;font-weight:600;">Lang</span>
-        <select id="clientUiLang" aria-label="Interface language"
+        <select id="vicSiteLangSelect" aria-label="Site language"
             style="background:#0f172a;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;outline:none;max-width:140px;padding:2px 4px;border-radius:6px;">
             <option value="en">English</option>
             <option value="zh-CN">中文</option>
@@ -494,7 +496,7 @@
     </style>
     <script>
         (function () {
-            var KEY = "vic_client_lang";
+            var KEY = "vic_site_lang";
             function rootDomain() {
                 var h = location.hostname;
                 if (!h || h === "localhost") return h;
@@ -503,7 +505,8 @@
                 return h;
             }
             function clearGoogTrans() {
-                ["", location.hostname, rootDomain()].forEach(function (d) {
+                var domains = ["", location.hostname, rootDomain()];
+                domains.forEach(function (d) {
                     var base = "googtrans=;path=/;max-age=0";
                     if (d) base += ";domain=" + d;
                     document.cookie = base;
@@ -534,11 +537,6 @@
                 var m = document.cookie.match(/(?:^|; )googtrans=\/[^\/]+\/([^;]+)/);
                 return m ? decodeURIComponent(m[1]) : "en";
             }
-            window.getVicDocLang = function () {
-                var el = document.getElementById("clientUiLang");
-                if (el && el.value) return el.value;
-                return readLang();
-            };
             window.googleTranslateElementInit = function () {
                 try {
                     new google.translate.TranslateElement({
@@ -560,43 +558,14 @@
                 }, 900);
             };
             function boot() {
-                var sel = document.getElementById("clientUiLang");
+                var sel = document.getElementById("vicSiteLangSelect");
                 if (!sel) return;
                 var cur = readLang();
                 try { sel.value = cur; } catch (e) { }
                 sel.addEventListener("change", function () {
-                    var code = sel.value || "en";
-                    setGoogTrans(code);
-                    // Persist to backend when logged in
-                    try {
-                        var cid = window.CLIENT_ID || (window.session && window.session.clientId);
-                        var tok = window.CLIENT_TOKEN || (window.session && window.session.token);
-                        var call = window.executeSecureBridgeCall || window.api;
-                        if (cid && tok && typeof call === "function") {
-                            Promise.resolve(call("agent", "clientPortalSetUiLanguage", {
-                                clientId: cid, token: tok, language: code, outputLanguage: code
-                            })).catch(function () { });
-                        }
-                    } catch (e4) { }
+                    setGoogTrans(sel.value || "en");
                     location.reload();
                 });
-                // Attach outputLanguage on document generate
-                var _fetch = window.fetch;
-                if (_fetch && !window._vicLangFetchPatched) {
-                    window._vicLangFetchPatched = true;
-                    window.fetch = function (url, opts) {
-                        try {
-                            if (opts && opts.body && typeof opts.body === "string" &&
-                                opts.body.indexOf("clientPortalGenerateDocument") >= 0) {
-                                var o = JSON.parse(opts.body);
-                                o.outputLanguage = window.getVicDocLang();
-                                o.language = o.outputLanguage;
-                                opts = Object.assign({}, opts, { body: JSON.stringify(o) });
-                            }
-                        } catch (e5) { }
-                        return _fetch.call(this, url, opts);
-                    };
-                }
             }
             if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
             else boot();
@@ -606,8 +575,33 @@
 
 
 
-
-
+    </div>
+    <script>
+        (function () {
+            var sel = document.getElementById("vicSiteLangSelect");
+            if (!sel) return;
+            function readGoogTrans() {
+                var m = document.cookie.match(/googtrans=\/[^\/]+\/([^;]+)/);
+                return m ? decodeURIComponent(m[1]) : (localStorage.getItem("vic_site_lang") || "en");
+            }
+            function setGoogTrans(code) {
+                localStorage.setItem("vic_site_lang", code);
+                if (!code || code === "en") {
+                    document.cookie = "googtrans=;path=/;max-age=0";
+                    document.cookie = "googtrans=;path=/;domain=" + location.hostname + ";max-age=0";
+                    return;
+                }
+                var v = "/en/" + code;
+                document.cookie = "googtrans=" + v + ";path=/";
+                document.cookie = "googtrans=" + v + ";path=/;domain=" + location.hostname;
+            }
+            try { sel.value = readGoogTrans(); } catch (_) { }
+            sel.addEventListener("change", function () {
+                setGoogTrans(sel.value);
+                location.reload();
+            });
+        })();
+    </script>
     <!-- =====================================================================
          LOGIN VIEW
     ====================================================================== -->
@@ -1680,7 +1674,8 @@
                         <p class="text-[10px] text-slate-500 leading-relaxed">Account count is limited by your <strong
                                 class="text-slate-400">Digital tier</strong>. Default TikTok is standard (publish).
                             <strong class="text-slate-400">Business TikTok</strong> enables AI comment replies. To
-                            remove a connection, request disconnect — admin completes it.</p>
+                            remove a connection, request disconnect — admin completes it.
+                        </p>
                         <div class="flex flex-wrap gap-2 items-center text-[10px] text-slate-500">
                             <span>TikTok type is chosen when you connect (Publish vs Business). No default
                                 selection.</span>
@@ -2121,13 +2116,7 @@
         function isSessionExpiredMessage(msg, code) {
             const m = String(msg || '');
             const c = String(code || '');
-            // 4900 / Security Handshake = action not on allow-list (NOT a dead session)
-            if (c === '4900' || /handshake denied|not permitted|action not permitted|whitelist/i.test(m)) {
-                return false;
-            }
-            if (c === '4101') return true;
-            return /SESSION_EXPIRED|session expired|invalid client id|access code expired|please sign in|login required/i.test(m) ||
-                (/unauthorized/i.test(m) && !/handshake/i.test(m));
+            return c === '4101' || /SESSION_EXPIRED|session expired|invalid client id|access code|unauthorized|token|sign.?in|login|auth/i.test(m);
         }
         function forceLogoutOnAuthError(msg, code) {
             if (!isSessionExpiredMessage(msg, code)) return false;
@@ -4343,698 +4332,69 @@
         })();
     </script>
 
-
-
-
-
-
-
-
     <script>
-        /* ── Client dashboard: catalog + missing handlers (production) ── */
+        /* Safety stubs — restore full implementations from last good deploy if generate/social still thin */
         (function () {
-            function toast(msg, isErr) {
+            function stub(name, impl) {
+                if (typeof window[name] !== 'function') window[name] = impl;
+            }
+            stub('loadDocumentCatalog', async function () {
+                var root = document.getElementById('documentCatalog') || document.getElementById('generateCatalog') || document.querySelector('#view-generate .catalog');
+                if (root) root.innerHTML = root.innerHTML || '<p class="text-xs text-slate-500">Document catalog loading is temporarily using a safe stub. Re-upload your last full client-dashboard if cards do not appear.</p>';
                 try {
-                    if (typeof showToast === "function") return showToast(msg, isErr ? "error" : "ok");
-                } catch (_) { }
-                try {
-                    var st = document.getElementById("generateStatus");
-                    if (st) {
-                        st.innerHTML = '<p class="text-xs ' + (isErr ? 'text-red-400' : 'text-emerald-400') + '">' +
-                            String(msg || "").replace(/</g, "&lt;") + "</p>";
-                    }
-                } catch (_) { }
-                if (isErr) console.error("[client-dashboard]", msg);
-                else console.log("[client-dashboard]", msg);
-            }
-            function gw(system, action, extra) {
-                if (typeof callGateway === "function") return callGateway(system, action, extra || {});
-                if (typeof executeSecureBridgeCall === "function") return executeSecureBridgeCall(system, action, extra || {});
-                return Promise.reject(new Error("Gateway not available"));
-            }
-            function sid() {
-                try {
-                    return window.CLIENT_ID || (window.session && window.session.clientId) ||
-                        localStorage.getItem("clientId") || sessionStorage.getItem("clientId") || "";
-                } catch (_) { return ""; }
-            }
-            function tok() {
-                try {
-                    return window.CLIENT_TOKEN || (window.session && window.session.token) ||
-                        localStorage.getItem("clientToken") || sessionStorage.getItem("clientToken") || "";
-                } catch (_) { return ""; }
-            }
-            function esc(s) {
-                return String(s == null ? "" : s)
-                    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;");
-            }
-
-            /* ---------- Document catalog tree ---------- */
-            window._genCatalogRaw = null;
-            window._genTree = { industries: [] }; // [{id,name,categories:[{id,name,docs:[{id,name,weight,locked,reason,...}]}]}]
-            window._genNav = { industryId: null, categoryId: null };
-
-            function normalizeCatalog(res) {
-                var list = [];
-                if (!res) return list;
-                if (Array.isArray(res)) list = res;
-                else if (Array.isArray(res.documents)) list = res.documents;
-                else if (Array.isArray(res.types)) list = res.types;
-                else if (Array.isArray(res.catalog)) list = res.catalog;
-                else if (Array.isArray(res.items)) list = res.items;
-                else if (res.data) {
-                    if (Array.isArray(res.data)) list = res.data;
-                    else if (Array.isArray(res.data.documents)) list = res.data.documents;
-                    else if (Array.isArray(res.data.types)) list = res.data.types;
-                    else if (Array.isArray(res.data.catalog)) list = res.data.catalog;
-                }
-                return list;
-            }
-
-            function buildTree(list) {
-                var byInd = {};
-                list.forEach(function (d, idx) {
-                    var ind = d.industry || d.industryName || d.sector || d.group || "General";
-                    var cat = d.category || d.categoryName || d.folder || d.typeGroup || "Documents";
-                    var id = d.id || d.docType || d.type || d.key || d.slug || ("doc-" + idx);
-                    var name = d.name || d.title || d.label || d.docType || id;
-                    var weight = Number(d.weight || d.units || d.cost || 1) || 1;
-                    var locked = !!(d.locked || d.disabled || d.unavailable);
-                    var reason = d.reason || d.lockReason || d.message || (locked ? "Not available on your plan" : "");
-                    if (!byInd[ind]) byInd[ind] = { id: ind, name: ind, categories: {} };
-                    if (!byInd[ind].categories[cat]) byInd[ind].categories[cat] = { id: cat, name: cat, docs: [] };
-                    byInd[ind].categories[cat].docs.push({
-                        id: String(id),
-                        name: String(name),
-                        weight: weight,
-                        locked: locked,
-                        reason: reason,
-                        sampleUrl: d.sampleUrl || d.previewUrl || d.sample || "",
-                        fields: d.fields || d.schema || null,
-                        raw: d
-                    });
-                });
-                var industries = Object.keys(byInd).sort().map(function (k) {
-                    var ind = byInd[k];
-                    ind.categories = Object.keys(ind.categories).sort().map(function (ck) { return ind.categories[ck]; });
-                    return ind;
-                });
-                // If API returned nested industries already
-                if (!list.length && resNested(window._genCatalogRaw)) {
-                    return resNested(window._genCatalogRaw);
-                }
-                return industries;
-            }
-
-            function resNested(res) {
-                var inds = (res && (res.industries || (res.data && res.data.industries))) || null;
-                if (!Array.isArray(inds) || !inds.length) return null;
-                return inds.map(function (ind) {
-                    var cats = ind.categories || ind.groups || [];
-                    return {
-                        id: ind.id || ind.name,
-                        name: ind.name || ind.id,
-                        categories: (cats || []).map(function (c) {
-                            var docs = c.documents || c.docs || c.types || [];
-                            return {
-                                id: c.id || c.name,
-                                name: c.name || c.id,
-                                docs: (docs || []).map(function (d, idx) {
-                                    return {
-                                        id: String(d.id || d.docType || d.type || idx),
-                                        name: d.name || d.title || d.docType || "Document",
-                                        weight: Number(d.weight || d.units || 1) || 1,
-                                        locked: !!(d.locked || d.disabled),
-                                        reason: d.reason || "",
-                                        sampleUrl: d.sampleUrl || "",
-                                        fields: d.fields || null,
-                                        raw: d
-                                    };
-                                })
-                            };
-                        })
-                    };
-                });
-            }
-
-            function setNavPath(text) {
-                var el = document.getElementById("genNavPath");
-                if (el) el.textContent = text || "Choose a category to see documents for your industry.";
-            }
-
-            function showLevel(level) {
-                var ind = document.getElementById("genIndustryGrid");
-                var cat = document.getElementById("genCategoryGrid");
-                var docs = document.getElementById("generateCardsContainer");
-                var back = document.getElementById("genNavBack");
-                if (ind) ind.classList.toggle("hidden", level !== 1);
-                if (cat) cat.classList.toggle("hidden", level !== 2);
-                if (docs) docs.classList.toggle("hidden", level !== 3);
-                if (back) back.classList.toggle("hidden", level === 1);
-            }
-
-            window.renderGenIndustries = function () {
-                var grid = document.getElementById("genIndustryGrid");
-                if (!grid) return;
-                var tree = window._genTree.industries || [];
-                if (!tree.length) {
-                    grid.innerHTML = '<p class="text-slate-500 text-xs col-span-3">No document types available yet. Contact support if this persists.</p>';
-                    showLevel(1);
-                    return;
-                }
-                grid.innerHTML = tree.map(function (ind) {
-                    var n = 0;
-                    (ind.categories || []).forEach(function (c) { n += (c.docs || []).length; });
-                    return (
-                        '<button type="button" class="text-left p-4 rounded-xl border border-slate-700 bg-slate-900/80 hover:border-emerald-600 transition" ' +
-                        'onclick="genOpenIndustry(\'' + esc(ind.id).replace(/'/g, "\\'") + '\')">' +
-                        '<div class="text-sm font-semibold text-white">' + esc(ind.name) + '</div>' +
-                        '<div class="text-[10px] text-slate-500 mt-1">' + n + ' document type' + (n === 1 ? "" : "s") + '</div>' +
-                        '</button>'
-                    );
-                }).join("");
-                showLevel(1);
-                setNavPath("Choose an industry");
-            };
-
-            window.genOpenIndustry = function (industryId) {
-                window._genNav.industryId = industryId;
-                window._genNav.categoryId = null;
-                var ind = (window._genTree.industries || []).find(function (x) { return String(x.id) === String(industryId); });
-                var grid = document.getElementById("genCategoryGrid");
-                if (!grid || !ind) return;
-                grid.innerHTML = (ind.categories || []).map(function (c) {
-                    return (
-                        '<button type="button" class="text-left p-4 rounded-xl border border-slate-700 bg-slate-900/80 hover:border-emerald-600 transition" ' +
-                        'onclick="genOpenCategory(\'' + esc(c.id).replace(/'/g, "\\'") + '\')">' +
-                        '<div class="text-sm font-semibold text-white">' + esc(c.name) + '</div>' +
-                        '<div class="text-[10px] text-slate-500 mt-1">' + (c.docs || []).length + ' types</div>' +
-                        '</button>'
-                    );
-                }).join("") || '<p class="text-slate-500 text-xs">No categories</p>';
-                showLevel(2);
-                setNavPath(ind.name + " → categories");
-            };
-
-            window.genOpenCategory = function (categoryId) {
-                window._genNav.categoryId = categoryId;
-                var ind = (window._genTree.industries || []).find(function (x) { return String(x.id) === String(window._genNav.industryId); });
-                var cat = ind && (ind.categories || []).find(function (c) { return String(c.id) === String(categoryId); });
-                var grid = document.getElementById("generateCardsContainer");
-                if (!grid || !cat) return;
-                window._genCurrentDocs = cat.docs || [];
-                window.renderGenDocCards(window._genCurrentDocs);
-                showLevel(3);
-                setNavPath((ind ? ind.name + " → " : "") + cat.name);
-            };
-
-            window.renderGenDocCards = function (docs) {
-                var grid = document.getElementById("generateCardsContainer");
-                var none = document.getElementById("genCardNoMatch");
-                if (!grid) return;
-                var q = ((document.getElementById("genCardSearch") || {}).value || "").trim().toLowerCase();
-                var filtered = (docs || []).filter(function (d) {
-                    if (!q) return true;
-                    return (d.name + " " + d.id).toLowerCase().indexOf(q) >= 0;
-                });
-                if (none) none.classList.toggle("hidden", filtered.length > 0);
-                if (!filtered.length) {
-                    grid.innerHTML = '<p class="text-slate-600 text-xs col-span-3">No document types match.</p>';
-                    return;
-                }
-                grid.innerHTML = filtered.map(function (d) {
-                    var locked = d.locked;
-                    return (
-                        '<div class="p-4 rounded-xl border ' + (locked ? "border-slate-800 opacity-60" : "border-slate-700 hover:border-emerald-600") +
-                        ' bg-slate-900/80 flex flex-col gap-2">' +
-                        '<div class="flex items-start justify-between gap-2">' +
-                        '<div class="text-sm font-semibold text-white">' + esc(d.name) + '</div>' +
-                        '<span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">×' + esc(d.weight) + '</span>' +
-                        '</div>' +
-                        (locked
-                            ? '<p class="text-[11px] text-amber-400/90">' + esc(d.reason || "Unavailable") + "</p>"
-                            : '<p class="text-[11px] text-slate-500">Weight ' + esc(d.weight) + " unit" + (d.weight === 1 ? "" : "s") + "</p>") +
-                        '<div class="mt-auto flex flex-wrap gap-2">' +
-                        (d.sampleUrl
-                            ? '<a href="' + esc(d.sampleUrl) + '" target="_blank" rel="noopener" class="text-[11px] px-2.5 py-1 rounded bg-slate-800 text-slate-200 hover:bg-slate-700">Preview sample</a>'
-                            : '<button type="button" class="text-[11px] px-2.5 py-1 rounded bg-slate-800 text-slate-400" onclick="genPreviewSample(\'' + esc(d.id).replace(/'/g, "\\'") + '\')">Preview sample</button>') +
-                        (locked
-                            ? '<button type="button" class="text-[11px] px-2.5 py-1 rounded bg-slate-800 text-slate-500 cursor-not-allowed" disabled>Locked</button>'
-                            : '<button type="button" class="text-[11px] px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white" onclick="genStartDocument(\'' + esc(d.id).replace(/'/g, "\\'") + '\')">Generate</button>') +
-                        "</div></div>"
-                    );
-                }).join("");
-            };
-
-            window.applyGenerateCardFilter = function () {
-                // If searching globally across tree
-                var q = ((document.getElementById("genCardSearch") || {}).value || "").trim().toLowerCase();
-                if (!q) {
-                    if (window._genNav.categoryId) {
-                        window.renderGenDocCards(window._genCurrentDocs || []);
-                    }
-                    return;
-                }
-                var all = [];
-                (window._genTree.industries || []).forEach(function (ind) {
-                    (ind.categories || []).forEach(function (c) {
-                        (c.docs || []).forEach(function (d) {
-                            if ((d.name + " " + d.id + " " + ind.name + " " + c.name).toLowerCase().indexOf(q) >= 0) all.push(d);
-                        });
-                    });
-                });
-                var docsGrid = document.getElementById("generateCardsContainer");
-                if (docsGrid) {
-                    showLevel(3);
-                    window.renderGenDocCards(all);
-                    setNavPath("Search results");
-                    var back = document.getElementById("genNavBack");
-                    if (back) back.classList.remove("hidden");
-                }
-            };
-
-            window.genBrowseBack = function () {
-                if (window._genNav.categoryId) {
-                    window._genNav.categoryId = null;
-                    window.genOpenIndustry(window._genNav.industryId);
-                    return;
-                }
-                if (window._genNav.industryId) {
-                    window._genNav.industryId = null;
-                    window.renderGenIndustries();
-                    return;
-                }
-                window.renderGenIndustries();
-            };
-
-            window.renderDocumentCatalog = function (res) {
-                window._genCatalogRaw = res;
-                var nested = resNested(res);
-                var list = normalizeCatalog(res);
-                if (nested && nested.length) {
-                    window._genTree.industries = nested;
-                } else {
-                    window._genTree.industries = buildTree(list);
-                }
-                window._genNav = { industryId: null, categoryId: null };
-                window.renderGenIndustries();
-                var st = document.getElementById("generateStatus");
-                if (st) st.innerHTML = "";
-            };
-
-            window.loadDocumentCatalog = async function loadDocumentCatalog() {
-                var grid = document.getElementById("genIndustryGrid");
-                if (grid) grid.innerHTML = '<p class="text-slate-500 text-xs col-span-3">Loading document types…</p>';
-                showLevel(1);
-
-                function isDenied(res) {
-                    if (!res) return false;
-                    var msg = String(res.message || res.error || "");
-                    var code = String(res.errorCode || res.code || "");
-                    return /4900|handshake denied|not permitted|action not permitted/i.test(msg + " " + code);
-                }
-
-                async function tryCatalog() {
-                    // Same auth path as loadDocuments: callGateway adds SESSION_TOKEN + CLIENT_ID
-                    var attempts = [
-                        ["clientportal", "clientPortalListCatalog", {}],
-                        ["clientportal", "clientPortalListDocumentTypes", {}],
-                        ["clientportal", "clientPortalGetCatalog", {}],
-                        ["clientportal", "clientPortalDocumentCatalog", {}],
-                        ["agent", "clientPortalListCatalog", {}],
-                        ["agent", "agent-list-catalog-documents", {}],
-                        ["agent", "agent-list-document-types", {}]
-                    ];
-                    var last = null;
-                    for (var i = 0; i < attempts.length; i++) {
-                        var sys = attempts[i][0], act = attempts[i][1], extra = attempts[i][2];
-                        try {
-                            var res = await callGateway(sys, act, extra);
-                            last = res;
-                            if (!res) continue;
-                            // Accept any payload that looks like a catalog even if success flag missing
-                            var hasList = false;
-                            try {
-                                hasList = !!(normalizeCatalog(res).length || resNested(res));
-                            } catch (_) { }
-                            if (res.success === false && isDenied(res) && !hasList) {
-                                console.warn("[catalog] denied", act, res.message);
-                                continue;
-                            }
-                            if (hasList || res.success !== false) {
-                                return res;
-                            }
-                        } catch (e) {
-                            console.warn("[catalog] try", act, e);
-                            last = { success: false, message: e.message || String(e) };
+                    if (typeof callGateway === 'function') {
+                        var res = await callGateway('clientportal', 'clientPortalListCatalog', {});
+                        if (res && res.success && typeof window.renderDocumentCatalog === 'function') {
+                            window.renderDocumentCatalog(res);
                         }
                     }
-                    // Last resort: dashboard / overview may embed allowed document types
-                    try {
-                        var dash = await callGateway("clientportal", "clientPortalDashboard", {});
-                        if (dash && dash.success !== false) {
-                            var embedded =
-                                dash.documentTypes || dash.catalog || dash.types ||
-                                (dash.data && (dash.data.documentTypes || dash.data.catalog || dash.data.types)) ||
-                                (dash.overview && (dash.overview.documentTypes || dash.overview.catalog));
-                            if (embedded) {
-                                return { success: true, documents: Array.isArray(embedded) ? embedded : (embedded.documents || embedded.types || []), industries: embedded.industries || null, data: embedded };
-                            }
-                        }
-                    } catch (_) { }
-                    try {
-                        var ov = await callGateway("clientportal", "clientPortalOverviewBundle", {});
-                        if (ov && ov.success !== false) {
-                            var emb2 = ov.documentTypes || ov.catalog || (ov.data && (ov.data.documentTypes || ov.data.catalog));
-                            if (emb2) {
-                                return { success: true, documents: Array.isArray(emb2) ? emb2 : (emb2.documents || []), data: emb2 };
-                            }
-                        }
-                    } catch (_) { }
-                    return last || { success: false, message: "Security Handshake Denied - code 4900" };
-                }
-
-                try {
-                    var res = await tryCatalog();
-                    var list = [];
-                    var nested = null;
-                    try { list = normalizeCatalog(res); } catch (_) { }
-                    try { nested = resNested(res); } catch (_) { }
-                    if (res && (list.length || (nested && nested.length))) {
-                        window.renderDocumentCatalog(res);
-                        return;
-                    }
-                    if (res && res.success === false && isDenied(res)) {
-                        if (grid) {
-                            grid.innerHTML =
-                                '<div class="col-span-3 space-y-2">' +
-                                '<p class="text-amber-400 text-xs">Document catalog action is blocked on the server (code 4900).</p>' +
-                                '<p class="text-slate-500 text-[11px] leading-relaxed">Your login works, but <code class="text-slate-400">clientPortalListCatalog</code> is not on the client-portal allow-list in the Gateway. ' +
-                                'Ask admin to whitelist <strong class="text-slate-300">clientPortalListCatalog</strong> (and/or <strong class="text-slate-300">clientPortalListDocumentTypes</strong>) under client-session actions, same as <code class="text-slate-400">clientPortalListDocuments</code>.</p>' +
-                                '<button type="button" onclick="loadDocumentCatalog()" class="text-[11px] px-3 py-1.5 rounded bg-slate-800 text-slate-200 hover:bg-slate-700">Retry</button>' +
-                                '</div>';
-                        }
-                        toast("Catalog blocked (4900) — whitelist clientPortalListCatalog on gateway", true);
-                        return;
-                    }
-                    if (grid) {
-                        grid.innerHTML = '<p class="text-slate-500 text-xs col-span-3">No document types returned. If your plan includes documents, contact support.</p>';
-                    }
-                    window.renderDocumentCatalog(res || {});
-                } catch (e) {
-                    if (grid) {
-                        grid.innerHTML = '<p class="text-red-400 text-xs col-span-3">Could not load document types: ' +
-                            esc(e.message || e) + '</p>';
-                    }
-                    toast(e.message || "Catalog load failed", true);
-                }
-            };
-
-            window.loadAutoSendPreference = async function loadAutoSendPreference() {
-                try {
-                    var res = await gw("clientportal", "clientPortalGetAutoSendPreference", { clientId: sid(), token: tok() });
-                    var el = document.getElementById("autoSendToggle");
-                    var enabled = res && (res.enabled != null ? res.enabled : (res.data && res.data.enabled));
-                    if (el && enabled != null) el.checked = !!enabled;
                 } catch (_) { }
-            };
-
-            window.setAutoSendPreference = async function setAutoSendPreference(checked) {
+            });
+            stub('loadAutoSendPreference', async function () {
                 try {
-                    var res = await gw("clientportal", "clientPortalSetAutoSendPreference", {
-                        clientId: sid(), token: tok(), enabled: !!checked
-                    });
-                    if (res && res.success === false) throw new Error(res.message || "Save failed");
-                    toast(checked ? "Auto-send on" : "Auto-send off");
-                } catch (e) {
-                    toast(e.message || "Could not save preference", true);
-                }
-            };
-
-            window.genPreviewSample = async function genPreviewSample(docTypeId) {
-                try {
-                    var res = await gw("clientportal", "clientPortalGetDocumentSample", {
-                        clientId: sid(), token: tok(), docType: docTypeId, documentType: docTypeId
-                    });
-                    var url = res && (res.url || res.sampleUrl || res.link || (res.data && (res.data.url || res.data.sampleUrl)));
-                    if (url) window.open(url, "_blank");
-                    else toast((res && res.message) || "No sample stored yet", true);
-                } catch (e) {
-                    toast(e.message || "Sample unavailable", true);
-                }
-            };
-
-            window.genStartDocument = function genStartDocument(docTypeId) {
-                // Find doc meta
-                var meta = null;
-                (window._genTree.industries || []).forEach(function (ind) {
-                    (ind.categories || []).forEach(function (c) {
-                        (c.docs || []).forEach(function (d) {
-                            if (String(d.id) === String(docTypeId)) meta = d;
-                        });
-                    });
-                });
-                var name = meta ? meta.name : docTypeId;
-                var existing = document.getElementById("genDocOverlay");
-                if (existing) existing.remove();
-                var wrap = document.createElement("div");
-                wrap.id = "genDocOverlay";
-                wrap.style.cssText = "position:fixed;inset:0;z-index:10040;background:rgba(2,6,23,0.75);display:flex;align-items:center;justify-content:center;padding:16px;";
-                wrap.innerHTML =
-                    '<div style="width:min(560px,100%);max-height:90vh;overflow:auto;background:#0f172a;border:1px solid #334155;border-radius:16px;padding:20px;">' +
-                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
-                    '<h3 style="color:#fff;font-size:16px;font-weight:600;margin:0;">Generate: ' + esc(name) + "</h3>" +
-                    '<button type="button" onclick="document.getElementById(\'genDocOverlay\').remove()" style="color:#94a3b8;background:none;border:none;font-size:18px;cursor:pointer;">×</button></div>' +
-                    '<p style="color:#94a3b8;font-size:12px;margin-bottom:10px;">Describe what you need. This counts against your plan units (weight ' +
-                    esc(meta ? meta.weight : 1) + ").</p>" +
-                    '<label style="display:block;color:#cbd5e1;font-size:11px;margin-bottom:4px;">Instructions / content</label>' +
-                    '<textarea id="genDocInstructions" rows="6" style="width:100%;background:#020617;border:1px solid #334155;border-radius:8px;color:#fff;padding:10px;font-size:13px;" placeholder="Recipient, purpose, key facts, tone…"></textarea>' +
-                    '<label style="display:block;color:#cbd5e1;font-size:11px;margin:12px 0 4px;">Output language</label>' +
-                    '<select id="genDocLang" style="width:100%;background:#020617;border:1px solid #334155;border-radius:8px;color:#fff;padding:8px;font-size:13px;">' +
-                    '<option value="en">English</option><option value="zh-CN">中文</option><option value="fr">Français</option>' +
-                    '<option value="es">Español</option><option value="ar">العربية</option><option value="pt">Português</option>' +
-                    '<option value="ha">Hausa</option><option value="yo">Yorùbá</option><option value="ig">Igbo</option></select>' +
-                    '<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">' +
-                    '<button type="button" onclick="document.getElementById(\'genDocOverlay\').remove()" style="padding:8px 14px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:none;cursor:pointer;font-size:12px;">Cancel</button>' +
-                    '<button type="button" id="genDocSendBtn" style="padding:8px 14px;border-radius:8px;background:#059669;color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:600;">Send</button>' +
-                    "</div></div>";
-                document.body.appendChild(wrap);
-                try {
-                    var langSel = document.getElementById("genDocLang");
-                    if (langSel && typeof getVicDocLang === "function") langSel.value = getVicDocLang() || "en";
-                } catch (_) { }
-                document.getElementById("genDocSendBtn").onclick = async function () {
-                    var instructions = (document.getElementById("genDocInstructions") || {}).value || "";
-                    var lang = (document.getElementById("genDocLang") || {}).value || "en";
-                    var btn = document.getElementById("genDocSendBtn");
-                    if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
-                    try {
-                        var payload = {
-                            clientId: sid(),
-                            token: tok(),
-                            docType: docTypeId,
-                            documentType: docTypeId,
-                            type: docTypeId,
-                            instructions: instructions,
-                            notes: instructions,
-                            outputLanguage: lang,
-                            language: lang,
-                            fields: { notes: instructions, outputLanguage: lang }
-                        };
-                        var res = await gw("clientportal", "clientPortalGenerateDocument", payload);
-                        if (res && res.success === false) throw new Error(res.message || "Generation failed");
-                        toast("Document job started. Check My Documents / My Work.");
-                        wrap.remove();
-                        if (typeof loadDocuments === "function") try { loadDocuments(); } catch (_) { }
-                    } catch (e) {
-                        toast(e.message || "Generation failed", true);
-                        if (btn) { btn.disabled = false; btn.textContent = "Send"; }
+                    if (typeof callGateway === 'function') {
+                        var res = await callGateway('clientportal', 'clientPortalGetAutoSendPreference', {});
+                        var el = document.getElementById('autoSendToggle');
+                        if (el && res && res.enabled != null) el.checked = !!res.enabled;
                     }
-                };
-            };
-
-            /* ---------- Other handlers ---------- */
-            window.toggleDocGenGuide = function () {
-                var panel = document.getElementById("docGenGuide");
-                var chev = document.getElementById("docGenGuideChevron");
-                if (!panel) return;
-                panel.classList.toggle("hidden");
-                if (chev) {
-                    chev.classList.toggle("fa-chevron-down");
-                    chev.classList.toggle("fa-chevron-up");
-                }
-            };
-
-            window.toggleSocialPerformancePanel = function () {
-                var p = document.getElementById("socialPerformancePanel") || document.getElementById("socialPerfPanel");
-                if (p) p.classList.toggle("hidden");
-            };
-
-            window.loadClientServiceFlags = async function () {
+                } catch (_) { }
+            });
+            stub('loadSocialCalendar', async function () {
                 try {
-                    var res = await gw("clientportal", "clientPortalGetServiceFlags", { clientId: sid(), token: tok() });
-                    window._clientServiceFlags = res;
-                    toast("Service flags refreshed");
-                } catch (e) { toast(e.message || "Flags failed", true); }
-            };
-
-            window.downloadDocument = async function (docId) {
-                try {
-                    var res = await gw("clientportal", "clientPortalGetDocumentLink", { clientId: sid(), token: tok(), docId: docId });
-                    var url = res && (res.url || res.link || (res.data && res.data.url));
-                    if (!url) throw new Error((res && res.message) || "No link");
-                    window.open(url, "_blank");
-                } catch (e) { toast(e.message || "Download failed", true); }
-            };
-
-            window.deleteClientDocument = async function (docId, recordId, btn) {
-                if (!confirm("Delete this document?")) return;
-                try {
-                    if (btn) btn.disabled = true;
-                    var res = await gw("clientportal", "clientPortalDeleteDocument", {
-                        clientId: sid(), token: tok(), docId: docId, recordId: recordId || docId
-                    });
-                    if (res && res.success === false) throw new Error(res.message || "Failed");
-                    toast("Deleted");
-                    if (typeof loadDocuments === "function") loadDocuments();
-                } catch (e) { toast(e.message || "Delete failed", true); }
-                finally { if (btn) btn.disabled = false; }
-            };
-
-            window.sendChatMessage = async function () {
-                var input = document.getElementById("chatInput");
-                var text = input ? String(input.value || "").trim() : "";
-                if (!text) return;
-                try {
-                    var res = await gw("clientportal", "clientPortalSendChat", { clientId: sid(), token: tok(), message: text });
-                    if (res && res.success === false) throw new Error(res.message || "Failed");
-                    if (input) input.value = "";
-                    if (typeof loadChat === "function") loadChat();
-                } catch (e) { toast(e.message || "Chat failed", true); }
-            };
-
-            window.approveSocialBatch = async function () {
-                try {
-                    var batchId = window._activeSocialBatchId || "";
-                    var res = await gw("clientportal", "clientPortalApproveSocialBatch", { clientId: sid(), token: tok(), batchId: batchId });
-                    if (res && res.success === false) throw new Error(res.message || "Failed");
-                    toast("Batch approved");
-                    if (typeof loadSocialCalendar === "function") loadSocialCalendar();
-                } catch (e) { toast(e.message || "Approve failed", true); }
-            };
-
-            window.loadSocialCalendar = async function () {
-                try {
-                    await gw("clientportal", "clientPortalListSocialCalendar", { clientId: sid(), token: tok() });
-                } catch (e) { console.warn(e); }
-            };
-
-            window.ensureSocialDateDefaults = function () {
-                var from = document.getElementById("clientSocialStart") || document.getElementById("socialDateFrom");
-                var to = document.getElementById("clientSocialEnd") || document.getElementById("socialDateTo");
+                    if (typeof callGateway === 'function') await callGateway('clientportal', 'clientPortalListSocialCalendar', {});
+                } catch (_) { }
+            });
+            stub('ensureSocialDateDefaults', function () {
+                var from = document.getElementById('socialDateFrom');
+                var to = document.getElementById('socialDateTo');
                 var now = new Date();
                 if (from && !from.value) from.value = now.toISOString().slice(0, 10);
                 if (to && !to.value) {
                     var end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
                     to.value = end.toISOString().slice(0, 10);
                 }
-            };
-
-            window.clientGenerateSocialCalendar = async function () {
+            });
+            stub('loadIntegrationsPanel', async function () {
                 try {
-                    var startEl = document.getElementById("clientSocialStart");
-                    var endEl = document.getElementById("clientSocialEnd");
-                    var res = await gw("clientportal", "clientPortalGenerateSocialCalendar", {
-                        clientId: sid(), token: tok(),
-                        startDate: startEl ? startEl.value : "",
-                        endDate: endEl ? endEl.value : ""
-                    });
-                    if (res && res.success === false) throw new Error(res.message || "Failed");
-                    toast("Calendar job started");
-                } catch (e) { toast(e.message || "Generate failed", true); }
-            };
-
-            window.clientConnectWhatsApp = async function () {
-                try {
-                    var res = await gw("clientportal", "clientPortalStartWhatsAppConnect", { clientId: sid(), token: tok() });
-                    var url = res && (res.authUrl || res.url);
-                    if (url) location.href = url;
-                    else throw new Error((res && res.message) || "No auth URL");
-                } catch (e) { toast(e.message || "Connect failed", true); }
-            };
-
-            window.clientAddTeamWhatsApp = async function () {
-                var phone = prompt("Staff WhatsApp (e.g. 23480…):");
-                if (!phone) return;
-                try {
-                    var res = await gw("clientportal", "clientPortalAddTeamWhatsApp", { clientId: sid(), token: tok(), phone: phone });
-                    if (res && res.success === false) throw new Error(res.message || "Failed");
-                    toast("Added");
-                } catch (e) { toast(e.message || "Failed", true); }
-            };
-
-            window.clientBuyWhatsAppPack = function () {
-                if (typeof goBillingUpgrade === "function") goBillingUpgrade();
-                else toast("Open Billing & Renewal to buy packs");
-            };
-
-            window.clientSubmitTicket = async function () {
-                var subj = (document.getElementById("ticketSubject") || {}).value || "";
-                var body = (document.getElementById("ticketBody") || {}).value || "";
-                if (!String(subj).trim() || !String(body).trim()) return toast("Subject and message required", true);
-                try {
-                    var res = await gw("clientportal", "clientPortalSubmitTicket", {
-                        clientId: sid(), token: tok(), subject: subj, message: body
-                    });
-                    if (res && res.success === false) throw new Error(res.message || "Failed");
-                    toast("Ticket submitted");
-                } catch (e) { toast(e.message || "Failed", true); }
-            };
-
-            window.markAllClientNotifsRead = async function () {
-                try {
-                    await gw("clientportal", "clientPortalMarkAllNotificationsRead", { clientId: sid(), token: tok() });
-                    toast("Marked read");
-                } catch (e) { toast(e.message || "Failed", true); }
-            };
-
-            window.clearAppointmentFilters = function () {
-                ["apptFilterFrom", "apptFilterTo", "appointmentFilterFrom", "appointmentFilterTo"].forEach(function (id) {
-                    var el = document.getElementById(id);
-                    if (el) el.value = "";
-                });
-                if (typeof loadAppointments === "function") loadAppointments();
-            };
-
-            window.loadWhatsAppActivityHeaderStats = async function () {
-                try {
-                    await gw("clientportal", "clientPortalGetWhatsAppStats", { clientId: sid(), token: tok() });
+                    if (typeof loadClientServiceFlags === 'function') await loadClientServiceFlags();
                 } catch (_) { }
-            };
-
-            window.loadSocialPerformance = async function () {
                 try {
-                    await gw("clientportal", "clientPortalGetSocialPerformance", { clientId: sid(), token: tok() });
+                    if (typeof clientLoadCommentActivityPosts === 'function') await clientLoadCommentActivityPosts();
                 } catch (_) { }
-            };
-
-            window.loadIntegrationsPanel = async function () {
-                try { if (typeof loadClientServiceFlags === "function") await loadClientServiceFlags(); } catch (_) { }
-            };
-
-            window.loadChat = async function () {
-                try { await gw("clientportal", "clientPortalGetChat", { clientId: sid(), token: tok() }); } catch (_) { }
-            };
-
-            window.startChatPolling = function () {
+            });
+            stub('loadChat', async function () {
+                try {
+                    if (typeof callGateway === 'function') await callGateway('clientportal', 'clientPortalGetChat', {});
+                } catch (_) { }
+            });
+            stub('startChatPolling', function () {
                 try {
                     if (window.CHAT_TIMER) clearInterval(window.CHAT_TIMER);
                     window.CHAT_TIMER = setInterval(function () {
-                        try { if (typeof loadChat === "function") loadChat(); } catch (_) { }
+                        try { if (typeof loadChat === 'function') loadChat(); } catch (_) { }
                     }, 8000);
                 } catch (_) { }
-            };
+            });
         })();
     </script>
 
