@@ -452,6 +452,7 @@
             }
         }
     </style>
+    <script>window.toggleDocGenGuide = window.toggleDocGenGuide || function () { var p = document.getElementById("docGenGuide"); if (!p) return; p.classList.toggle("hidden"); };</script>
 </head>
 
 <body class="bg-slate-950 text-slate-200 min-h-screen">
@@ -4402,6 +4403,281 @@
         })();
     </script>
 
+
+
+    <script>
+        /* ── Client dashboard safety polyfills (missing handlers) ── */
+        (function () {
+            function toast(msg, isErr) {
+                try {
+                    if (typeof showToast === "function") return showToast(msg, isErr ? "error" : "info");
+                } catch (_) { }
+                try {
+                    var el = document.getElementById("clientToast") || document.getElementById("toast");
+                    if (el) {
+                        el.textContent = String(msg || "");
+                        el.classList.remove("hidden");
+                        el.style.display = "block";
+                        setTimeout(function () { el.classList.add("hidden"); el.style.display = "none"; }, 4500);
+                        return;
+                    }
+                } catch (_) { }
+                if (isErr) console.error(msg);
+                else console.log(msg);
+            }
+            function gw(system, action, extra) {
+                if (typeof callGateway === "function") return callGateway(system, action, extra || {});
+                if (typeof executeSecureBridgeCall === "function") return executeSecureBridgeCall(system, action, extra || {});
+                if (typeof api === "function") return api(system, action, extra || {});
+                return Promise.reject(new Error("No gateway client"));
+            }
+            function sid() {
+                try {
+                    return window.CLIENT_ID || (window.session && window.session.clientId) ||
+                        localStorage.getItem("clientId") || sessionStorage.getItem("clientId") || "";
+                } catch (_) { return ""; }
+            }
+            function tok() {
+                try {
+                    return window.CLIENT_TOKEN || (window.session && window.session.token) ||
+                        localStorage.getItem("clientToken") || sessionStorage.getItem("clientToken") || "";
+                } catch (_) { return ""; }
+            }
+
+            window.toggleDocGenGuide = function toggleDocGenGuide() {
+                var panel = document.getElementById("docGenGuide");
+                var chev = document.getElementById("docGenGuideChevron");
+                if (!panel) return;
+                var open = panel.classList.contains("hidden");
+                if (open) {
+                    panel.classList.remove("hidden");
+                    if (chev) { chev.classList.remove("fa-chevron-down"); chev.classList.add("fa-chevron-up"); }
+                } else {
+                    panel.classList.add("hidden");
+                    if (chev) { chev.classList.remove("fa-chevron-up"); chev.classList.add("fa-chevron-down"); }
+                }
+            };
+
+            window.genBrowseBack = function genBrowseBack() {
+                try {
+                    if (typeof genBrowseGoBack === "function") return genBrowseGoBack();
+                    if (typeof renderGenCategories === "function") return renderGenCategories();
+                    var back = document.getElementById("genNavBack");
+                    var title = document.getElementById("genNavTitle");
+                    var cats = document.getElementById("genCategoryGrid") || document.getElementById("genCategories");
+                    var docs = document.getElementById("genDocGrid") || document.getElementById("genDocuments");
+                    if (docs) docs.classList.add("hidden");
+                    if (cats) cats.classList.remove("hidden");
+                    if (back) back.classList.add("hidden");
+                    if (title) title.textContent = "Choose a category";
+                } catch (e) { console.warn("genBrowseBack", e); }
+            };
+
+            window.toggleSocialPerformancePanel = function toggleSocialPerformancePanel() {
+                var p = document.getElementById("socialPerformancePanel") ||
+                    document.getElementById("socialPerfPanel") ||
+                    document.getElementById("social-performance-panel");
+                if (!p) return toast("Performance panel not available", true);
+                p.classList.toggle("hidden");
+            };
+
+            window.loadClientServiceFlags = async function loadClientServiceFlags() {
+                try {
+                    var res = await gw("agent", "clientPortalGetServiceFlags", { clientId: sid(), token: tok() });
+                    if (res && res.success === false) throw new Error(res.message || "Failed");
+                    window._clientServiceFlags = (res && (res.flags || res.data || res)) || {};
+                    toast("Service flags refreshed");
+                    return window._clientServiceFlags;
+                } catch (e) {
+                    toast(e.message || "Could not load service flags", true);
+                }
+            };
+
+            window.downloadDocument = async function downloadDocument(docId) {
+                if (!docId) return toast("Missing document id", true);
+                try {
+                    var res = await gw("agent", "clientPortalGetDocumentLink", { clientId: sid(), token: tok(), docId: docId });
+                    var url = res && (res.url || res.link || (res.data && (res.data.url || res.data.link)));
+                    if (!url) throw new Error((res && res.message) || "No download link");
+                    window.open(url, "_blank");
+                } catch (e) {
+                    toast(e.message || "Download failed", true);
+                }
+            };
+
+            window.deleteClientDocument = async function deleteClientDocument(docId, recordId, btn) {
+                if (!confirm("Delete this document from your list?")) return;
+                try {
+                    if (btn) btn.disabled = true;
+                    var res = await gw("agent", "clientPortalDeleteDocument", {
+                        clientId: sid(), token: tok(), docId: docId, recordId: recordId || docId
+                    });
+                    if (res && res.success === false) throw new Error(res.message || "Delete failed");
+                    toast("Document deleted");
+                    if (typeof loadDocuments === "function") loadDocuments();
+                } catch (e) {
+                    toast(e.message || "Delete failed", true);
+                } finally {
+                    if (btn) btn.disabled = false;
+                }
+            };
+
+            window.sendChatMessage = async function sendChatMessage() {
+                var input = document.getElementById("chatInput") || document.getElementById("clientChatInput");
+                var text = input ? String(input.value || "").trim() : "";
+                if (!text) return;
+                try {
+                    var res = await gw("agent", "clientPortalSendChat", {
+                        clientId: sid(), token: tok(), message: text, text: text
+                    });
+                    if (res && res.success === false) throw new Error(res.message || "Send failed");
+                    if (input) input.value = "";
+                    if (typeof loadChatMessages === "function") loadChatMessages();
+                    else if (typeof refreshChat === "function") refreshChat();
+                } catch (e) {
+                    toast(e.message || "Chat send failed", true);
+                }
+            };
+
+            window.approveSocialBatch = async function approveSocialBatch() {
+                try {
+                    var batchId = window._activeSocialBatchId ||
+                        (document.getElementById("socialBatchSelect") || {}).value || "";
+                    var res = await gw("agent", "clientPortalApproveSocialBatch", {
+                        clientId: sid(), token: tok(), batchId: batchId
+                    });
+                    if (res && res.success === false) throw new Error(res.message || "Approve failed");
+                    toast("Batch approved — posts will go live");
+                    if (typeof loadSocialCalendar === "function") loadSocialCalendar();
+                } catch (e) {
+                    toast(e.message || "Approve failed", true);
+                }
+            };
+
+            window.loadSocialCalendar = async function loadSocialCalendar() {
+                try {
+                    var res = await gw("agent", "clientPortalGetSocialCalendar", { clientId: sid(), token: tok() });
+                    if (res && res.success === false) throw new Error(res.message || "Load failed");
+                    window._socialCalendar = res;
+                    if (typeof renderSocialCalendar === "function") renderSocialCalendar(res);
+                } catch (e) {
+                    toast(e.message || "Could not load social calendar", true);
+                }
+            };
+
+            window.loadSocialPerformance = async function loadSocialPerformance() {
+                try {
+                    var res = await gw("agent", "clientPortalGetSocialPerformance", { clientId: sid(), token: tok() });
+                    if (res && res.success === false) throw new Error(res.message || "Load failed");
+                    if (typeof renderSocialPerformance === "function") renderSocialPerformance(res);
+                } catch (e) {
+                    toast(e.message || "Could not load performance", true);
+                }
+            };
+
+            window.clientGenerateSocialCalendar = async function clientGenerateSocialCalendar() {
+                try {
+                    var startEl = document.getElementById("socialCalStart") || document.getElementById("calStartDate");
+                    var endEl = document.getElementById("socialCalEnd") || document.getElementById("calEndDate");
+                    var res = await gw("agent", "clientPortalGenerateSocialCalendar", {
+                        clientId: sid(), token: tok(),
+                        startDate: startEl ? startEl.value : "",
+                        endDate: endEl ? endEl.value : ""
+                    });
+                    if (res && res.success === false) throw new Error(res.message || "Generate failed");
+                    toast("Calendar job started");
+                    if (typeof loadSocialCalendar === "function") loadSocialCalendar();
+                } catch (e) {
+                    toast(e.message || "Generate failed", true);
+                }
+            };
+
+            window.clientConnectWhatsApp = async function clientConnectWhatsApp() {
+                try {
+                    var res = await gw("agent", "clientPortalStartWhatsAppConnect", { clientId: sid(), token: tok() });
+                    var url = res && (res.authUrl || res.url);
+                    if (url) window.location.href = url;
+                    else throw new Error((res && res.message) || "No auth URL");
+                } catch (e) {
+                    toast(e.message || "WhatsApp connect failed", true);
+                }
+            };
+
+            window.clientAddTeamWhatsApp = async function clientAddTeamWhatsApp() {
+                var phone = prompt("Staff WhatsApp number (with country code, e.g. 23480…):");
+                if (!phone) return;
+                try {
+                    var res = await gw("agent", "clientPortalAddTeamWhatsApp", {
+                        clientId: sid(), token: tok(), phone: phone, number: phone
+                    });
+                    if (res && res.success === false) throw new Error(res.message || "Failed");
+                    toast("Team WhatsApp added");
+                    if (typeof loadWhatsAppActivity === "function") loadWhatsAppActivity();
+                } catch (e) {
+                    toast(e.message || "Add failed", true);
+                }
+            };
+
+            window.clientBuyWhatsAppPack = function clientBuyWhatsAppPack() {
+                try {
+                    if (typeof goBillingUpgrade === "function") return goBillingUpgrade();
+                    var link = document.querySelector('[data-view="billing"]');
+                    if (link) link.click();
+                    else toast("Open Billing to purchase WhatsApp packs");
+                } catch (e) {
+                    toast("Open Billing & Renewal to buy packs", true);
+                }
+            };
+
+            window.clientSubmitTicket = async function clientSubmitTicket() {
+                var subj = (document.getElementById("ticketSubject") || {}).value || "";
+                var body = (document.getElementById("ticketBody") || {}).value || "";
+                var kind = (document.getElementById("ticketType") || {}).value || "support";
+                if (!subj.trim() || !body.trim()) return toast("Subject and message required", true);
+                try {
+                    var res = await gw("agent", "clientPortalSubmitTicket", {
+                        clientId: sid(), token: tok(), subject: subj, message: body, body: body, type: kind
+                    });
+                    if (res && res.success === false) throw new Error(res.message || "Submit failed");
+                    toast("Ticket submitted");
+                } catch (e) {
+                    toast(e.message || "Ticket failed", true);
+                }
+            };
+
+            window.markAllClientNotifsRead = async function markAllClientNotifsRead() {
+                try {
+                    await gw("agent", "clientPortalMarkAllNotificationsRead", { clientId: sid(), token: tok() });
+                    if (typeof loadClientNotifications === "function") loadClientNotifications();
+                    toast("Notifications marked read");
+                } catch (e) {
+                    toast(e.message || "Failed", true);
+                }
+            };
+
+            window.clearAppointmentFilters = function clearAppointmentFilters() {
+                ["apptFilterFrom", "apptFilterTo", "apptFilterStatus", "appointmentFilterFrom", "appointmentFilterTo"].forEach(function (id) {
+                    var el = document.getElementById(id);
+                    if (el) el.value = "";
+                });
+                if (typeof loadAppointments === "function") loadAppointments();
+            };
+
+            window.loadWhatsAppActivityHeaderStats = async function loadWhatsAppActivityHeaderStats() {
+                try {
+                    var res = await gw("agent", "clientPortalGetWhatsAppStats", { clientId: sid(), token: tok() });
+                    if (typeof renderWhatsAppHeaderStats === "function") renderWhatsAppHeaderStats(res);
+                } catch (e) {
+                    console.warn("wa stats", e);
+                }
+            };
+
+            // Silence repeated ReferenceError if guide is clicked before this script loads
+            if (typeof window.toggleDocGenGuide !== "function") {
+                window.toggleDocGenGuide = function () { };
+            }
+        })();
+    </script>
 
 </body>
 
