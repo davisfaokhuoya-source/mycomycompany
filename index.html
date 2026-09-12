@@ -2476,28 +2476,6 @@
             </div>
         </div>
     </section>
-    <!-- CareeHub Prices -->
-    <section id="careerPricing" class="py-5" style="background:#F7F5F2;">
-        <div class="container" style="max-width:960px;margin:0 auto;padding:0 1rem;">
-            <h2 class="mb-2" style="font-size:1.35rem;font-weight:700;color:#1A1A1A;">Career Hub — CAC &amp; compliance
-                services</h2>
-            <p class="text-muted mb-3" style="font-size:0.9rem;color:#6E6E6E;">
-                Company registration and regulatory compliance support. Prices shown as Local (NGN) starting rates;
-                final quote depends on entity type and scope. Separate from client Ops/Digital plans.
-            </p>
-            <div id="careerPricingGrid" class="row g-3">
-                <p class="text-muted">Loading Career Hub services…</p>
-            </div>
-            <div class="d-flex justify-content-center align-items-center gap-2 mt-3" id="careerCarouselNav"
-                style="display:none;">
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="careerCarouselPrev"
-                    aria-label="Previous">‹</button>
-                <span class="text-muted small" id="careerCarouselStatus"></span>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="careerCarouselNext"
-                    aria-label="Next">›</button>
-            </div>
-        </div>
-    </section>
 
     <!-- ============================================================
      HOW WE WORK
@@ -2775,6 +2753,27 @@
      FOOTER (your existing footer.js handles rendering)
 ============================================================ -->
 
+    <section id="careerPricing" class="py-5" style="background:#F7F5F2;">
+        <div class="container" style="max-width:960px;margin:0 auto;padding:0 1rem;">
+            <h2 class="mb-2" style="font-size:1.35rem;font-weight:700;color:#1A1A1A;">Career Hub — CAC &amp; compliance
+                services</h2>
+            <p class="text-muted mb-3" style="font-size:0.9rem;color:#6E6E6E;">
+                Company registration and regulatory compliance support. Prices shown as Local (NGN) starting rates;
+                final quote depends on entity type and scope. Separate from client Ops/Digital plans.
+            </p>
+            <div id="careerPricingGrid" class="row g-3">
+                <p class="text-muted">Loading Career Hub services…</p>
+            </div>
+            <div class="d-flex justify-content-center align-items-center gap-2 mt-3" id="careerCarouselNav"
+                style="display:none;">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="careerCarouselPrev"
+                    aria-label="Previous">‹</button>
+                <span class="text-muted small" id="careerCarouselStatus"></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="careerCarouselNext"
+                    aria-label="Next">›</button>
+            </div>
+        </div>
+    </section>
     <script>
         (function () {
             var API = "https://app.thevictorias.com.ng/";
@@ -2794,11 +2793,15 @@
             }
             function isCareerKey(k, row) {
                 row = row || {};
-                k = String(k || "");
-                if (/comment_reply|spam_comment|extra_social|extra_calendar|extra_whatsapp|human_hour|addon/i.test(k)) return false;
-                if (row.suite === "addon" || row.category === "Add-on") return false;
-                if (row.category === "Career Hub" || row.suite === "career") return true;
-                return /^(cac_|scuml|tin_|pencom|bpp_|itf_|nsitf|trademark|career_)/i.test(k);
+                k = String(k || row.id || "").trim();
+                if (!k) return false;
+                // Explicit Career Hub only — never entire pricing map
+                if (/comment_reply|spam_comment|extra_social|extra_calendar|extra_whatsapp|human_hour|addon|starter_ops|growth_ops|enterprise|digital_/i.test(k)) return false;
+                if (row.suite === "addon" || row.category === "Add-on" || row.category === "Tier") return false;
+                var cat = String(row.category || "").toLowerCase();
+                if (cat.indexOf("career") >= 0) return true;
+                if (row.suite === "career") return true;
+                return /^(cac_|scuml_|scuml|tin_|pencom|bpp_|itf_|nsitf|trademark|career_)/i.test(k);
             }
 
             var _careerAllCards = [];
@@ -2833,45 +2836,57 @@
                 var grid = document.getElementById("careerPricingGrid");
                 if (!grid) return;
                 var list = (data && data.careerServices) || [];
-                // Strict filter — never show Ops/Digital add-ons here
+                if (!Array.isArray(list)) list = [];
                 list = list.filter(function (s) {
-                    return isCareerKey(s.id, s);
+                    return s && isCareerKey(s.id || s.ItemKey, s);
                 });
-                if (!list.length && data && data.pricing) {
+                // Fallback: only known career keys from pricing map (never all keys)
+                if (!list.length && data && data.pricing && typeof data.pricing === "object") {
                     Object.keys(data.pricing).forEach(function (k) {
                         var row = data.pricing[k] || {};
                         if (!isCareerKey(k, row)) return;
                         list.push({
                             id: k,
                             label: row.label || k,
-                            blurb: row.blurb || "",
-                            totalNgn: row.totalNgn,
-                            totalUsd: row.totalUsd,
-                            unit: row.unit || "job"
+                            blurb: row.blurb || row.notes || "",
+                            totalNgn: row.totalNgn || row.priceNgn || row.priceLocalNgn,
+                            totalUsd: row.totalUsd || row.priceUsd || row.priceOffshoreUsd,
+                            unit: row.unit || "job",
+                            category: row.category || "Career Hub"
                         });
                     });
                 }
+                // Safety cap — Career Hub should be dozens max, not thousands
+                if (list.length > 80) {
+                    list = list.filter(function (s) { return /^(cac_|scuml|tin_|pencom|bpp_|itf_|nsitf|trademark)/i.test(String(s.id || "")); }).slice(0, 40);
+                }
                 if (!list.length) {
-                    grid.innerHTML = '<p class="text-muted" style="font-size:0.9rem;">Services will load shortly. For CAC registration and compliance, use the Interest form or contact us.</p>';
+                    _careerAllCards = [];
+                    grid.innerHTML = '<p class="text-muted">Career Hub services will appear here once published from admin pricing.</p>';
+                    var nav = document.getElementById("careerCarouselNav");
+                    if (nav) nav.style.display = "none";
                     return;
                 }
                 _careerAllCards = list.map(function (s) {
                     return card(
                         s.label || s.id,
                         s.blurb || "",
-                        s.totalNgn || s.priceLocalNgn,
-                        s.totalUsd || s.priceOffshoreUsd,
+                        s.totalNgn || s.priceLocalNgn || s.priceNgn,
+                        s.totalUsd || s.priceOffshoreUsd || s.priceUsd,
                         s.unit || "job"
                     );
-                }).join("");
-                _careerPage = 0; renderCareerPage();
+                });
+                _careerPage = 0;
+                renderCareerPage();
             }
+
             fetch(API, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ system: "agent", action: "agent-get-all-service-pricing" })
+                body: JSON.stringify({ system: "agent", action: "agent-get-career-public-pricing" })
             }).then(function (r) { return r.json(); }).then(function (data) {
                 var list = (data && data.careerServices) || [];
+                if (!Array.isArray(list)) list = [];
                 list = list.filter(function (s) { return isCareerKey(s.id, s); });
                 if (list.length) {
                     data.careerServices = list;
@@ -2881,9 +2896,9 @@
                 return fetch(API, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ system: "agent", action: "agent-get-career-public-pricing" })
+                    body: JSON.stringify({ system: "agent", action: "agent-get-all-service-pricing" })
                 }).then(function (r) { return r.json(); }).then(function (d2) {
-                    paint(d2 || data);
+                    paint(d2 || data || {});
                 });
             }).catch(function () {
                 var grid = document.getElementById("careerPricingGrid");
@@ -4213,6 +4228,9 @@
             });
         })();
     </script>
+
+
+
 
 </body>
 
