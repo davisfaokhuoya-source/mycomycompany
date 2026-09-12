@@ -2492,10 +2492,10 @@
             <div class="d-flex justify-content-center align-items-center gap-2 mt-3" id="careerCarouselNav"
                 style="display:none;">
                 <button type="button" class="btn btn-sm btn-outline-secondary" id="careerCarouselPrev"
-                    aria-label="Previous">‹</button>
+                    aria-label="Previous" style="cursor:pointer;min-width:40px;">‹</button>
                 <span class="text-muted small" id="careerCarouselStatus"></span>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="careerCarouselNext"
-                    aria-label="Next">›</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="careerCarouselNext" aria-label="Next"
+                    style="cursor:pointer;min-width:40px;">›</button>
             </div>
         </div>
     </section>
@@ -2779,26 +2779,56 @@
     <script>
         (function () {
             var API = "https://app.thevictorias.com.ng/";
+            var _careerAllCards = [];
+            var _careerPage = 0;
+            var CAREER_PAGE_SIZE = 3;
+            var _careerFadeTimer = null;
+
+            var FALLBACK_LABELS = {
+                cac_business_name: "Business Name Registration (Sole / Partnership)",
+                cac_ltd_company: "Limited Liability Company (LLC) Incorporation",
+                cac_ngo_trustees: "Incorporated Trustees (NGO / Non-profit)",
+                cac_annual_returns: "CAC Annual Returns Filing",
+                cac_bn_to_ltd: "Business Name → Limited Company Conversion",
+                cac_certified_copies: "CAC Certified True Copies",
+                cac_record_update: "CAC Record / Particulars Update",
+                scuml_registration: "SCUML Registration",
+                pencom_compliance: "PENCOM Compliance Certificate",
+                bpp_database: "BPP National Database Registration",
+                itf_compliance: "ITF Compliance",
+                nsitf_registration: "NSITF Registration",
+                trademark_registration: "Trademark Registration"
+            };
+
             function money(n, cur) {
                 n = Number(n) || 0;
                 if (cur === "USD") return "$" + n.toLocaleString(undefined, { maximumFractionDigits: 0 });
                 return "₦" + n.toLocaleString(undefined, { maximumFractionDigits: 0 });
             }
+
             function card(title, blurb, ngn, usd, unit) {
                 var priceLine = ngn
-                    ? ('Local from ' + money(ngn, "NGN") + (usd ? (' · Offshore from ' + money(usd, "USD")) : '') + (unit ? ' <span style="color:#6E6E6E;font-weight:500;font-size:0.75rem;">/ ' + unit + '</span>' : ''))
-                    : (usd ? ('Offshore from ' + money(usd, "USD")) : 'Request quote');
-                return '<div class="col-md-6 col-lg-4"><div class="p-3 h-100" style="background:#fff;border:1px solid #E8E4DF;border-radius:12px;">' +
-                    '<strong style="color:#1A1A1A;font-size:0.95rem;">' + title + '</strong>' +
-                    (blurb ? '<p style="font-size:0.78rem;color:#6E6E6E;margin:8px 0 10px;line-height:1.45;">' + blurb + '</p>' : '') +
-                    '<div style="margin-top:auto;color:#CC5500;font-weight:600;font-size:0.9rem;">' + priceLine + '</div></div></div>';
+                    ? ("Local from " + money(ngn, "NGN") + (usd ? (" · Offshore from " + money(usd, "USD")) : "") + (unit ? ' <span style="color:#6E6E6E;font-weight:500;font-size:0.75rem;">/ ' + unit + "</span>" : ""))
+                    : (usd ? ("Offshore from " + money(usd, "USD")) : "Request quote");
+                return (
+                    '<div class="col-md-6 col-lg-4 career-hub-card">' +
+                    '<div class="p-3 h-100" style="background:#fff;border:1px solid #E8E4DF;border-radius:12px;">' +
+                    '<strong style="color:#1A1A1A;font-size:0.95rem;">' + title + "</strong>" +
+                    (blurb
+                        ? '<p style="font-size:0.78rem;color:#6E6E6E;margin:8px 0 10px;line-height:1.45;">' + blurb + "</p>"
+                        : "") +
+                    '<div style="margin-top:auto;color:#CC5500;font-weight:600;font-size:0.9rem;">' +
+                    priceLine +
+                    "</div></div></div>"
+                );
             }
+
             function isCareerKey(k, row) {
                 row = row || {};
                 k = String(k || row.id || "").trim();
                 if (!k) return false;
-                // Explicit Career Hub only — never entire pricing map
-                if (/comment_reply|spam_comment|extra_social|extra_calendar|extra_whatsapp|human_hour|addon|starter_ops|growth_ops|enterprise|digital_/i.test(k)) return false;
+                if (/comment_reply|spam_comment|extra_social|extra_calendar|extra_whatsapp|human_hour|addon|starter_ops|growth_ops|enterprise|digital_/i.test(k))
+                    return false;
                 if (row.suite === "addon" || row.category === "Add-on" || row.category === "Tier") return false;
                 var cat = String(row.category || "").toLowerCase();
                 if (cat.indexOf("career") >= 0) return true;
@@ -2806,32 +2836,68 @@
                 return /^(cac_|scuml_|scuml|tin_|pencom|bpp_|itf_|nsitf|trademark|career_)/i.test(k);
             }
 
-            var _careerAllCards = [];
-            var _careerPage = 0;
-            var CAREER_PAGE_SIZE = 3;
-            function renderCareerPage() {
+            function prettyLabel(s) {
+                var id = String((s && (s.id || s.ItemKey)) || "");
+                var lab = String((s && s.label) || "").trim();
+                if (lab && lab !== id && !/^cac_|^scuml|^pencom|^bpp_|^itf_|^nsitf|^trademark/i.test(lab)) return lab;
+                if (FALLBACK_LABELS[id]) return FALLBACK_LABELS[id];
+                if (lab) return lab;
+                return id.replace(/_/g, " ");
+            }
+
+            function renderCareerPage(animate) {
                 var grid = document.getElementById("careerPricingGrid");
                 var nav = document.getElementById("careerCarouselNav");
                 var status = document.getElementById("careerCarouselStatus");
+                var prev = document.getElementById("careerCarouselPrev");
+                var next = document.getElementById("careerCarouselNext");
                 if (!grid) return;
+
                 var total = _careerAllCards.length;
-                var pages = Math.max(1, Math.ceil(total / CAREER_PAGE_SIZE));
+                var pages = Math.max(1, Math.ceil(total / CAREER_PAGE_SIZE) || 1);
                 if (_careerPage >= pages) _careerPage = 0;
                 if (_careerPage < 0) _careerPage = pages - 1;
+
                 var start = _careerPage * CAREER_PAGE_SIZE;
                 var slice = _careerAllCards.slice(start, start + CAREER_PAGE_SIZE);
-                grid.style.opacity = "0";
-                grid.style.transition = "opacity 0.35s ease";
-                setTimeout(function () {
-                    grid.innerHTML = slice.join("") || '<p class="text-muted">No Career Hub services listed.</p>';
+                var html = slice.join("") || '<p class="text-muted">No Career Hub services listed.</p>';
+
+                function show() {
+                    grid.innerHTML = html;
                     grid.style.opacity = "1";
-                }, 180);
+                    grid.style.transform = "translateY(0)";
+                }
+
+                if (animate === false) {
+                    grid.style.transition = "none";
+                    show();
+                } else {
+                    grid.style.transition = "opacity 0.35s ease, transform 0.35s ease";
+                    grid.style.opacity = "0";
+                    grid.style.transform = "translateY(8px)";
+                    if (_careerFadeTimer) clearTimeout(_careerFadeTimer);
+                    _careerFadeTimer = setTimeout(show, 200);
+                }
+
                 if (nav) {
                     nav.style.display = total > CAREER_PAGE_SIZE ? "flex" : "none";
                 }
                 if (status) {
-                    status.textContent = total ? ("Showing " + (start + 1) + "–" + Math.min(start + CAREER_PAGE_SIZE, total) + " of " + total) : "";
+                    status.textContent = total
+                        ? "Showing " + (start + 1) + "–" + Math.min(start + CAREER_PAGE_SIZE, total) + " of " + total
+                        : "";
                 }
+                if (prev) prev.disabled = total <= CAREER_PAGE_SIZE;
+                if (next) next.disabled = total <= CAREER_PAGE_SIZE;
+            }
+
+            function careerPrev() {
+                _careerPage -= 1;
+                renderCareerPage(true);
+            }
+            function careerNext() {
+                _careerPage += 1;
+                renderCareerPage(true);
             }
 
             function paint(data) {
@@ -2842,7 +2908,6 @@
                 list = list.filter(function (s) {
                     return s && isCareerKey(s.id || s.ItemKey, s);
                 });
-                // Fallback: only known career keys from pricing map (never all keys)
                 if (!list.length && data && data.pricing && typeof data.pricing === "object") {
                     Object.keys(data.pricing).forEach(function (k) {
                         var row = data.pricing[k] || {};
@@ -2858,20 +2923,24 @@
                         });
                     });
                 }
-                // Safety cap — Career Hub should be dozens max, not thousands
                 if (list.length > 80) {
-                    list = list.filter(function (s) { return /^(cac_|scuml|tin_|pencom|bpp_|itf_|nsitf|trademark)/i.test(String(s.id || "")); }).slice(0, 40);
+                    list = list
+                        .filter(function (s) {
+                            return /^(cac_|scuml|tin_|pencom|bpp_|itf_|nsitf|trademark)/i.test(String(s.id || ""));
+                        })
+                        .slice(0, 40);
                 }
                 if (!list.length) {
                     _careerAllCards = [];
-                    grid.innerHTML = '<p class="text-muted">Career Hub services will appear here once published from admin pricing.</p>';
+                    grid.innerHTML =
+                        '<p class="text-muted">Career Hub services will appear here once published from admin pricing.</p>';
                     var nav = document.getElementById("careerCarouselNav");
                     if (nav) nav.style.display = "none";
                     return;
                 }
                 _careerAllCards = list.map(function (s) {
                     return card(
-                        s.label || s.id,
+                        prettyLabel(s),
                         s.blurb || "",
                         s.totalNgn || s.priceLocalNgn || s.priceNgn,
                         s.totalUsd || s.priceOffshoreUsd || s.priceUsd,
@@ -2879,33 +2948,75 @@
                     );
                 });
                 _careerPage = 0;
-                renderCareerPage();
+                renderCareerPage(false);
+            }
+
+            function wireCareerNav() {
+                var prev = document.getElementById("careerCarouselPrev");
+                var next = document.getElementById("careerCarouselNext");
+                if (prev) {
+                    prev.type = "button";
+                    prev.onclick = function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        careerPrev();
+                    };
+                }
+                if (next) {
+                    next.type = "button";
+                    next.onclick = function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        careerNext();
+                    };
+                }
+            }
+
+            // Wire immediately + on DOM ready (covers late parse)
+            wireCareerNav();
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", wireCareerNav);
             }
 
             fetch(API, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ system: "agent", action: "agent-get-career-public-pricing" })
-            }).then(function (r) { return r.json(); }).then(function (data) {
-                var list = (data && data.careerServices) || [];
-                if (!Array.isArray(list)) list = [];
-                list = list.filter(function (s) { return isCareerKey(s.id, s); });
-                if (list.length) {
-                    data.careerServices = list;
-                    paint(data);
-                    return;
-                }
-                return fetch(API, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ system: "agent", action: "agent-get-all-service-pricing" })
-                }).then(function (r) { return r.json(); }).then(function (d2) {
-                    paint(d2 || data || {});
+            })
+                .then(function (r) {
+                    return r.json();
+                })
+                .then(function (data) {
+                    var list = (data && data.careerServices) || [];
+                    if (!Array.isArray(list)) list = [];
+                    list = list.filter(function (s) {
+                        return isCareerKey(s.id, s);
+                    });
+                    if (list.length) {
+                        data.careerServices = list;
+                        paint(data);
+                        wireCareerNav();
+                        return;
+                    }
+                    return fetch(API, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ system: "agent", action: "agent-get-all-service-pricing" })
+                    })
+                        .then(function (r) {
+                            return r.json();
+                        })
+                        .then(function (d2) {
+                            paint(d2 || data || {});
+                            wireCareerNav();
+                        });
+                })
+                .catch(function () {
+                    var grid = document.getElementById("careerPricingGrid");
+                    if (grid)
+                        grid.innerHTML =
+                            '<p class="text-muted">Unable to load services. Contact us for CAC and compliance packages.</p>';
                 });
-            }).catch(function () {
-                var grid = document.getElementById("careerPricingGrid");
-                if (grid) grid.innerHTML = '<p class="text-muted">Unable to load services. Contact us for CAC and compliance packages.</p>';
-            });
         })();
     </script>
 
