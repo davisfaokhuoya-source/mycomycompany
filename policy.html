@@ -3,10 +3,10 @@
 
 <head>
     <meta charset="utf-8">
-    <title>The Victorias Ltd</title>
+    <title>Policies | The Victorias Ltd</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta name="description" content="Company policies, terms and conditions for The Victorias Ltd.">
     <meta content="" name="keywords">
-    <meta content="" name="description">
 
     <!-- Google Web Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,8 +40,118 @@
 
 <body>
 
+    <!-- Vic language switcher (public pages) -->
+    <div id="vicSiteLangWrap"
+        style="position:fixed;top:12px;right:12px;z-index:10050;display:flex;align-items:center;gap:6px;background:rgba(15,23,42,0.92);border:1px solid rgba(204,85,0,0.45);border-radius:999px;padding:4px 10px 4px 12px;box-shadow:0 4px 16px rgba(0,0,0,0.25);font-family:system-ui,sans-serif;">
+        <span style="color:#94a3b8;font-size:11px;font-weight:600;">Lang</span>
+        <select id="vicSiteLangSelect" aria-label="Site language"
+            style="background:#0f172a;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;outline:none;max-width:140px;padding:2px 4px;border-radius:6px;">
+            <option value="en">English</option>
+            <option value="zh-CN">中文</option>
+            <option value="fr">Français</option>
+            <option value="es">Español</option>
+            <option value="ar">العربية</option>
+            <option value="pt">Português</option>
+            <option value="ha">Hausa</option>
+            <option value="yo">Yorùbá</option>
+            <option value="ig">Igbo</option>
+            <option value="hi">हिन्दी</option>
+        </select>
     </div>
-    <!-- Spinner End -->
+    <div id="google_translate_element" style="display:none!important;height:0;overflow:hidden;"></div>
+    <style>
+        .goog-te-banner-frame,
+        .goog-te-balloon-frame,
+        #goog-gt-tt,
+        .goog-te-spinner-pos {
+            display: none !important;
+        }
+
+        body {
+            top: 0 !important;
+        }
+
+        .skiptranslate {
+            display: none !important;
+        }
+    </style>
+    <script>
+        (function () {
+            var KEY = "vic_site_lang";
+            function rootDomain() {
+                var h = location.hostname;
+                if (!h || h === "localhost") return h;
+                var p = h.split(".");
+                if (p.length >= 2) return "." + p.slice(-2).join(".");
+                return h;
+            }
+            function clearGoogTrans() {
+                ["", location.hostname, rootDomain()].forEach(function (d) {
+                    var base = "googtrans=;path=/;max-age=0";
+                    if (d) base += ";domain=" + d;
+                    document.cookie = base;
+                });
+            }
+            function setGoogTrans(code) {
+                try { localStorage.setItem(KEY, code || "en"); } catch (e) { }
+                clearGoogTrans();
+                if (!code || code === "en") {
+                    try {
+                        if (location.hash && location.hash.indexOf("googtrans") >= 0) {
+                            history.replaceState(null, "", location.pathname + location.search);
+                        }
+                    } catch (e2) { }
+                    return;
+                }
+                var v = "/en/" + code;
+                document.cookie = "googtrans=" + v + ";path=/";
+                var rd = rootDomain();
+                if (rd) document.cookie = "googtrans=" + v + ";path=/;domain=" + rd;
+                try { location.hash = "googtrans(en|" + code + ")"; } catch (e3) { }
+            }
+            function readLang() {
+                try {
+                    var s = localStorage.getItem(KEY);
+                    if (s) return s;
+                } catch (e) { }
+                var m = document.cookie.match(/(?:^|; )googtrans=\/[^\/]+\/([^;]+)/);
+                return m ? decodeURIComponent(m[1]) : "en";
+            }
+            window.googleTranslateElementInit = function () {
+                try {
+                    new google.translate.TranslateElement({
+                        pageLanguage: "en",
+                        includedLanguages: "en,zh-CN,fr,es,ar,pt,ha,yo,ig,hi",
+                        autoDisplay: false
+                    }, "google_translate_element");
+                } catch (e) { }
+                setTimeout(function () {
+                    var code = readLang();
+                    if (!code || code === "en") return;
+                    var combo = document.querySelector(".goog-te-combo");
+                    if (combo) {
+                        combo.value = code;
+                        var evt = document.createEvent("HTMLEvents");
+                        evt.initEvent("change", true, true);
+                        combo.dispatchEvent(evt);
+                    }
+                }, 900);
+            };
+            function boot() {
+                var sel = document.getElementById("vicSiteLangSelect");
+                if (!sel) return;
+                var cur = readLang();
+                try { sel.value = cur; } catch (e) { }
+                sel.addEventListener("change", function () {
+                    setGoogTrans(sel.value || "en");
+                    location.reload();
+                });
+            }
+            if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+            else boot();
+        })();
+    </script>
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
     <!-- Topbar Start -->
 
@@ -50,9 +160,8 @@
     <!-- Navbar & Hero Start -->
     <div class="container-fluid position-relative p-0">
         <nav class="navbar navbar-expand-lg navbar-light px-4 px-lg-5 py-3 py-lg-0">
-            <a href="" class="navbar-brand p-0">
-                <h1 class="text-primary"><i class="fas fa-search-dollar me-3"></i>Stocker</h1>
-                <!-- <img src="img/logo.png" alt="Logo"> -->
+            <a href="index.html" class="navbar-brand p-0">
+                <h1 class="text-primary"><i class="fas fa-search-dollar me-3"></i>The Victorias</h1>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
                 <span class="fa fa-bars"></span>
@@ -77,11 +186,11 @@
 
 
     <!-- FAQs Start -->
-    <div class="container-fluid faq-section pb-5" id="readfaq">
+    <div class="container-fluid faq-section pb-5">
         <div class="container pb-5 overflow-hidden">
             <div class="row g-5 align-items-center">
-                <div class="container-fluid faq-section pb-5" id="readfaq">
-                    <!-- Policy Content -->
+                <div class="container-fluid faq-section pb-5">
+                    <!-- Policy Content (filled by js/policies.js) -->
                     <div id="policy-container-target">
                         <!-- Content will be inserted here by JavaScript -->
                     </div>
