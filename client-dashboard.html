@@ -455,6 +455,19 @@
 </head>
 
 <body class="bg-slate-950 text-slate-200 min-h-screen">
+    <div style="position:fixed;top:10px;right:10px;z-index:99999;"><select id="clientUiLang"
+            title="Interface & document language"
+            style="margin-left:8px;padding:4px 8px;border-radius:6px;border:1px solid #ccc;font-size:12px;">
+            <option value="en">English</option>
+            <option value="zh-CN">中文</option>
+            <option value="fr">Français</option>
+            <option value="es">Español</option>
+            <option value="ar">العربية</option>
+            <option value="pt">Português</option>
+            <option value="ha">Hausa</option>
+            <option value="yo">Yorùbá</option>
+        </select></div>
+
 
     <!-- =====================================================================
          LOGIN VIEW
@@ -1528,8 +1541,7 @@
                         <p class="text-[10px] text-slate-500 leading-relaxed">Account count is limited by your <strong
                                 class="text-slate-400">Digital tier</strong>. Default TikTok is standard (publish).
                             <strong class="text-slate-400">Business TikTok</strong> enables AI comment replies. To
-                            remove a connection, request disconnect — admin completes it.
-                        </p>
+                            remove a connection, request disconnect — admin completes it.</p>
                         <div class="flex flex-wrap gap-2 items-center text-[10px] text-slate-500">
                             <span>TikTok type is chosen when you connect (Publish vs Business). No default
                                 selection.</span>
@@ -2275,6 +2287,7 @@
             const main = document.getElementById('mainView');
             if (main) main.classList.add('sidebar-open');
         }
+
 
         function showView(name, btn) {
             try { closeMobileSidebar(); } catch (_) { }
@@ -4247,6 +4260,69 @@
                         try { if (typeof loadChat === 'function') loadChat(); } catch (_) { }
                     }, 8000);
                 } catch (_) { }
+            });
+        })();
+    </script>
+
+
+    <script>
+        (function () {
+            function getVicDocLang() {
+                var el = document.getElementById("clientUiLang") || document.getElementById("docOutputLanguage");
+                if (el && el.value) return el.value;
+                try { return localStorage.getItem("vic_client_lang") || "en"; } catch (e) { return "en"; }
+            }
+            window.getVicDocLang = getVicDocLang;
+            function applyClientLangChrome() {
+                var code = getVicDocLang();
+                try { localStorage.setItem("vic_client_lang", code); } catch (e) { }
+                document.documentElement.setAttribute("lang", code.split("-")[0] || "en");
+                // Optional: Google Translate cookie for full-page translate (same as public site)
+                if (code && code !== "en") {
+                    var v = "/en/" + code;
+                    document.cookie = "googtrans=" + v + ";path=/";
+                } else {
+                    document.cookie = "googtrans=;path=/;max-age=0";
+                }
+            }
+            document.addEventListener("DOMContentLoaded", function () {
+                var sel = document.getElementById("clientUiLang");
+                if (sel) {
+                    try { sel.value = localStorage.getItem("vic_client_lang") || "en"; } catch (e) { }
+                    sel.addEventListener("change", function () {
+                        applyClientLangChrome();
+                        if (typeof api === "function" || typeof executeSecureBridgeCall === "function") {
+                            var call = window.executeSecureBridgeCall || window.api;
+                            try {
+                                var cid = window.CLIENT_ID || (window.session && session.clientId);
+                                var tok = window.CLIENT_TOKEN || (window.session && session.token);
+                                if (cid && tok && call) {
+                                    Promise.resolve(call("agent", "clientPortalSetUiLanguage", {
+                                        clientId: cid, token: tok, language: sel.value, outputLanguage: sel.value
+                                    })).catch(function () { });
+                                }
+                            } catch (e2) { }
+                        }
+                        // Soft reload translate
+                        if (sel.value !== "en") location.reload();
+                    });
+                }
+                // Patch document generate payloads to include outputLanguage
+                var _fetch = window.fetch;
+                if (_fetch && !window._vicLangFetchPatched) {
+                    window._vicLangFetchPatched = true;
+                    window.fetch = function (url, opts) {
+                        try {
+                            if (opts && opts.body && typeof opts.body === "string" && opts.body.indexOf("clientPortalGenerateDocument") >= 0) {
+                                var o = JSON.parse(opts.body);
+                                o.outputLanguage = getVicDocLang();
+                                o.language = o.outputLanguage;
+                                opts = Object.assign({}, opts, { body: JSON.stringify(o) });
+                            }
+                        } catch (e3) { }
+                        return _fetch.call(this, url, opts);
+                    };
+                }
             });
         })();
     </script>

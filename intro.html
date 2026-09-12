@@ -456,9 +456,61 @@
             color: #fff;
         }
     </style>
+
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
+        async defer></script>
+    <script>function googleTranslateElementInit() { try { new google.translate.TranslateElement({ pageLanguage: 'en', autoDisplay: false }, 'google_translate_element'); } catch (e) { } }</script>
+    <div id="google_translate_element" style="display:none"></div>
+
 </head>
 
 <body>
+
+    <!-- Vic site language (public pages; not admin) -->
+    <div id="vicSiteLangWrap"
+        style="position:fixed;top:12px;right:12px;z-index:10050;display:flex;align-items:center;gap:6px;background:rgba(15,23,42,0.92);border:1px solid rgba(204,85,0,0.35);border-radius:999px;padding:4px 10px 4px 12px;box-shadow:0 4px 16px rgba(0,0,0,0.25);">
+        <span style="color:#94a3b8;font-size:11px;font-weight:600;">Lang</span>
+        <select id="vicSiteLangSelect" aria-label="Site language"
+            style="background:transparent;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;outline:none;max-width:130px;">
+            <option value="en">English</option>
+            <option value="zh-CN">中文</option>
+            <option value="fr">Français</option>
+            <option value="es">Español</option>
+            <option value="ar">العربية</option>
+            <option value="pt">Português</option>
+            <option value="ha">Hausa</option>
+            <option value="yo">Yorùbá</option>
+            <option value="ig">Igbo</option>
+            <option value="hi">हिन्दी</option>
+        </select>
+    </div>
+    <script>
+        (function () {
+            var sel = document.getElementById("vicSiteLangSelect");
+            if (!sel) return;
+            function readGoogTrans() {
+                var m = document.cookie.match(/googtrans=\/[^\/]+\/([^;]+)/);
+                return m ? decodeURIComponent(m[1]) : (localStorage.getItem("vic_site_lang") || "en");
+            }
+            function setGoogTrans(code) {
+                localStorage.setItem("vic_site_lang", code);
+                if (!code || code === "en") {
+                    document.cookie = "googtrans=;path=/;max-age=0";
+                    document.cookie = "googtrans=;path=/;domain=" + location.hostname + ";max-age=0";
+                    return;
+                }
+                var v = "/en/" + code;
+                document.cookie = "googtrans=" + v + ";path=/";
+                document.cookie = "googtrans=" + v + ";path=/;domain=" + location.hostname;
+            }
+            try { sel.value = readGoogTrans(); } catch (_) { }
+            sel.addEventListener("change", function () {
+                setGoogTrans(sel.value);
+                location.reload();
+            });
+        })();
+    </script>
+
 
     <!-- ==========================================================
          NAVBAR
@@ -688,7 +740,8 @@
                     <h6><i class="fas fa-chart-simple"></i> Quotas, Pricing &amp; Discount Codes</h6>
                     <p>Quotas (documents, emails, proposals, social posts, etc.) match your Ops and Digital tiers. Open
                         <strong>Billing</strong> for the only full price list, upgrades, and add-ons. Discount codes may
-                        still apply when your account team issues them.</p>
+                        still apply when your account team issues them.
+                    </p>
                 </div>
                 <div class="tile">
                     <h6><i class="fas fa-list-check"></i> My Work</h6>
