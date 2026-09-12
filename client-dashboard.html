@@ -1680,8 +1680,7 @@
                         <p class="text-[10px] text-slate-500 leading-relaxed">Account count is limited by your <strong
                                 class="text-slate-400">Digital tier</strong>. Default TikTok is standard (publish).
                             <strong class="text-slate-400">Business TikTok</strong> enables AI comment replies. To
-                            remove a connection, request disconnect — admin completes it.
-                        </p>
+                            remove a connection, request disconnect — admin completes it.</p>
                         <div class="flex flex-wrap gap-2 items-center text-[10px] text-slate-500">
                             <span>TikTok type is chosen when you connect (Publish vs Business). No default
                                 selection.</span>
@@ -2122,7 +2121,13 @@
         function isSessionExpiredMessage(msg, code) {
             const m = String(msg || '');
             const c = String(code || '');
-            return c === '4101' || /SESSION_EXPIRED|session expired|invalid client id|access code|unauthorized|token|sign.?in|login|auth/i.test(m);
+            // 4900 / Security Handshake = action not on allow-list (NOT a dead session)
+            if (c === '4900' || /handshake denied|not permitted|action not permitted|whitelist/i.test(m)) {
+                return false;
+            }
+            if (c === '4101') return true;
+            return /SESSION_EXPIRED|session expired|invalid client id|access code expired|please sign in|login required/i.test(m) ||
+                (/unauthorized/i.test(m) && !/handshake/i.test(m));
         }
         function forceLogoutOnAuthError(msg, code) {
             if (!isSessionExpiredMessage(msg, code)) return false;
@@ -4642,31 +4647,105 @@
                 var grid = document.getElementById("genIndustryGrid");
                 if (grid) grid.innerHTML = '<p class="text-slate-500 text-xs col-span-3">Loading document types…</p>';
                 showLevel(1);
-                try {
-                    var res = await gw("clientportal", "clientPortalListCatalog", {
-                        clientId: sid(),
-                        token: tok()
-                    });
-                    // Some gateways return success:false with message on empty
-                    if (res && res.success === false && !normalizeCatalog(res).length && !resNested(res)) {
-                        // fallback action names
+
+                function isDenied(res) {
+                    if (!res) return false;
+                    var msg = String(res.message || res.error || "");
+                    var code = String(res.errorCode || res.code || "");
+                    return /4900|handshake denied|not permitted|action not permitted/i.test(msg + " " + code);
+                }
+
+                async function tryCatalog() {
+                    // Same auth path as loadDocuments: callGateway adds SESSION_TOKEN + CLIENT_ID
+                    var attempts = [
+                        ["clientportal", "clientPortalListCatalog", {}],
+                        ["clientportal", "clientPortalListDocumentTypes", {}],
+                        ["clientportal", "clientPortalGetCatalog", {}],
+                        ["clientportal", "clientPortalDocumentCatalog", {}],
+                        ["agent", "clientPortalListCatalog", {}],
+                        ["agent", "agent-list-catalog-documents", {}],
+                        ["agent", "agent-list-document-types", {}]
+                    ];
+                    var last = null;
+                    for (var i = 0; i < attempts.length; i++) {
+                        var sys = attempts[i][0], act = attempts[i][1], extra = attempts[i][2];
                         try {
-                            res = await gw("agent", "clientPortalListCatalog", { clientId: sid(), token: tok() });
-                        } catch (_) { }
+                            var res = await callGateway(sys, act, extra);
+                            last = res;
+                            if (!res) continue;
+                            // Accept any payload that looks like a catalog even if success flag missing
+                            var hasList = false;
+                            try {
+                                hasList = !!(normalizeCatalog(res).length || resNested(res));
+                            } catch (_) { }
+                            if (res.success === false && isDenied(res) && !hasList) {
+                                console.warn("[catalog] denied", act, res.message);
+                                continue;
+                            }
+                            if (hasList || res.success !== false) {
+                                return res;
+                            }
+                        } catch (e) {
+                            console.warn("[catalog] try", act, e);
+                            last = { success: false, message: e.message || String(e) };
+                        }
                     }
-                    if (res && res.success === false && !normalizeCatalog(res).length) {
-                        throw new Error(res.message || "Catalog unavailable");
+                    // Last resort: dashboard / overview may embed allowed document types
+                    try {
+                        var dash = await callGateway("clientportal", "clientPortalDashboard", {});
+                        if (dash && dash.success !== false) {
+                            var embedded =
+                                dash.documentTypes || dash.catalog || dash.types ||
+                                (dash.data && (dash.data.documentTypes || dash.data.catalog || dash.data.types)) ||
+                                (dash.overview && (dash.overview.documentTypes || dash.overview.catalog));
+                            if (embedded) {
+                                return { success: true, documents: Array.isArray(embedded) ? embedded : (embedded.documents || embedded.types || []), industries: embedded.industries || null, data: embedded };
+                            }
+                        }
+                    } catch (_) { }
+                    try {
+                        var ov = await callGateway("clientportal", "clientPortalOverviewBundle", {});
+                        if (ov && ov.success !== false) {
+                            var emb2 = ov.documentTypes || ov.catalog || (ov.data && (ov.data.documentTypes || ov.data.catalog));
+                            if (emb2) {
+                                return { success: true, documents: Array.isArray(emb2) ? emb2 : (emb2.documents || []), data: emb2 };
+                            }
+                        }
+                    } catch (_) { }
+                    return last || { success: false, message: "Security Handshake Denied - code 4900" };
+                }
+
+                try {
+                    var res = await tryCatalog();
+                    var list = [];
+                    var nested = null;
+                    try { list = normalizeCatalog(res); } catch (_) { }
+                    try { nested = resNested(res); } catch (_) { }
+                    if (res && (list.length || (nested && nested.length))) {
+                        window.renderDocumentCatalog(res);
+                        return;
+                    }
+                    if (res && res.success === false && isDenied(res)) {
+                        if (grid) {
+                            grid.innerHTML =
+                                '<div class="col-span-3 space-y-2">' +
+                                '<p class="text-amber-400 text-xs">Document catalog action is blocked on the server (code 4900).</p>' +
+                                '<p class="text-slate-500 text-[11px] leading-relaxed">Your login works, but <code class="text-slate-400">clientPortalListCatalog</code> is not on the client-portal allow-list in the Gateway. ' +
+                                'Ask admin to whitelist <strong class="text-slate-300">clientPortalListCatalog</strong> (and/or <strong class="text-slate-300">clientPortalListDocumentTypes</strong>) under client-session actions, same as <code class="text-slate-400">clientPortalListDocuments</code>.</p>' +
+                                '<button type="button" onclick="loadDocumentCatalog()" class="text-[11px] px-3 py-1.5 rounded bg-slate-800 text-slate-200 hover:bg-slate-700">Retry</button>' +
+                                '</div>';
+                        }
+                        toast("Catalog blocked (4900) — whitelist clientPortalListCatalog on gateway", true);
+                        return;
+                    }
+                    if (grid) {
+                        grid.innerHTML = '<p class="text-slate-500 text-xs col-span-3">No document types returned. If your plan includes documents, contact support.</p>';
                     }
                     window.renderDocumentCatalog(res || {});
-                    var n = 0;
-                    (window._genTree.industries || []).forEach(function (ind) {
-                        (ind.categories || []).forEach(function (c) { n += (c.docs || []).length; });
-                    });
-                    if (!n) toast("Catalog loaded but no document types returned. Check plan/catalog on admin.", true);
                 } catch (e) {
                     if (grid) {
                         grid.innerHTML = '<p class="text-red-400 text-xs col-span-3">Could not load document types: ' +
-                            esc(e.message || e) + ". Try Sign out / Sign in, or contact support.</p>";
+                            esc(e.message || e) + '</p>';
                     }
                     toast(e.message || "Catalog load failed", true);
                 }
