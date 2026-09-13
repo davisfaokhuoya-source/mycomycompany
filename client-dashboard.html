@@ -1564,8 +1564,46 @@
                     </div>
 
                     <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                        <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
-                                class="fa-solid fa-envelope text-slate-500"></i> Mailboxes</h3>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
+                                    class="fa-solid fa-envelope text-slate-500"></i> Mailboxes</h3>
+                            <button type="button" id="btnConnectMailbox" onclick="clientConnectMailbox()"
+                                class="text-[10px] px-2.5 py-1 bg-sky-800 hover:bg-sky-700 rounded text-white">
+                                Connect email
+                            </button>
+                        </div>
+                        <p id="mailboxSelfServiceHint" class="text-[11px] text-slate-500">Self-service: connect <strong
+                                class="text-slate-300">one new email per calendar month</strong> while your plan is
+                            active. Locked if subscription expired. Extra mailboxes: contact admin or buy quota.</p>
+                        <div id="mailboxConnectForm" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
+                            <div>
+                                <label class="text-[10px] text-slate-500">Email address</label>
+                                <input id="mailboxConnectEmail" type="email" placeholder="you@company.com"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500">Label</label>
+                                <input id="mailboxConnectLabel" type="text" placeholder="Main inbox"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500">Provider</label>
+                                <select id="mailboxConnectProvider"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white">
+                                    <option value="gmail">Gmail / Google</option>
+                                    <option value="microsoft">Microsoft 365 / Outlook</option>
+                                    <option value="custom">Other IMAP</option>
+                                </select>
+                            </div>
+                            <div class="sm:col-span-3 flex gap-2">
+                                <button type="button" onclick="clientSubmitMailboxConnect()"
+                                    class="text-[10px] px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white">Start
+                                    connect</button>
+                                <button type="button"
+                                    onclick="document.getElementById('mailboxConnectForm').classList.add('hidden')"
+                                    class="text-[10px] px-3 py-1.5 bg-slate-800 rounded text-slate-300">Cancel</button>
+                            </div>
+                        </div>
                         <div id="integrationsMailboxList" class="space-y-2 text-xs"></div>
                     </div>
 
@@ -1595,7 +1633,7 @@
                             <div class="flex flex-wrap items-end gap-2">
                                 <div>
                                     <label class="text-[10px] text-slate-500">Staff WhatsApp (digits)</label>
-                                    <input id="waTeamPhone" type="text" placeholder="2348012345678"
+                                    <input id="waTeamPhone" type="text" id="teamWaPhone" placeholder="2348012345678"
                                         class="block w-36 bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white" />
                                 </div>
                                 <div>
@@ -2470,7 +2508,7 @@
                 });
             }
             if (name === 'overview') loadOverview();
-            if (name === 'integrations' /*auto-comments*/) loadIntegrationsPanel();
+            if (name === 'integrations') { try { loadIntegrationsPanel(); } catch (_) { } try { if (typeof clientLoadCommentActivityPosts === 'function') clientLoadCommentActivityPosts(); } catch (_) { } }
             if (name === 'donate') prefillDonationForm();
             if (name === 'billing') {
                 const err = document.getElementById('renewError');
@@ -4336,6 +4374,7 @@
             window.showView = function (name, el) {
                 var r = _sv.apply(this, arguments);
                 if (name === 'integrations') {
+                    try { if (typeof loadIntegrationsPanel === 'function') loadIntegrationsPanel(); } catch (_) { }
                     try { if (typeof clientLoadCommentActivityPosts === 'function') clientLoadCommentActivityPosts(); } catch (_) { }
                 }
                 return r;
@@ -4658,11 +4697,11 @@
                 async function tryCatalog() {
                     // Same auth path as loadDocuments: callGateway adds SESSION_TOKEN + CLIENT_ID
                     var attempts = [
-                        ["clientportal", "clientPortalListCatalog", {}],
-                        ["clientportal", "clientPortalListDocumentTypes", {}],
-                        ["clientportal", "clientPortalGetCatalog", {}],
                         ["clientportal", "clientPortalDocumentCatalog", {}],
-                        ["agent", "clientPortalListCatalog", {}],
+                        ["clientportal", "clientPortalDocumentCatalog", {}],
+                        ["clientportal", "clientPortalDocumentCatalog", {}],
+                        ["clientportal", "clientPortalDocumentCatalog", {}],
+                        ["agent", "clientPortalDocumentCatalog", {}],
                         ["agent", "agent-list-catalog-documents", {}],
                         ["agent", "agent-list-document-types", {}]
                     ];
@@ -4730,12 +4769,12 @@
                             grid.innerHTML =
                                 '<div class="col-span-3 space-y-2">' +
                                 '<p class="text-amber-400 text-xs">Document catalog action is blocked on the server (code 4900).</p>' +
-                                '<p class="text-slate-500 text-[11px] leading-relaxed">Your login works, but <code class="text-slate-400">clientPortalListCatalog</code> is not on the client-portal allow-list in the Gateway. ' +
-                                'Ask admin to whitelist <strong class="text-slate-300">clientPortalListCatalog</strong> (and/or <strong class="text-slate-300">clientPortalListDocumentTypes</strong>) under client-session actions, same as <code class="text-slate-400">clientPortalListDocuments</code>.</p>' +
+                                '<p class="text-slate-500 text-[11px] leading-relaxed">Your login works, but <code class="text-slate-400">clientPortalDocumentCatalog</code> is not on the client-portal allow-list in the Gateway. ' +
+                                'Ask admin to whitelist <strong class="text-slate-300">clientPortalDocumentCatalog</strong> (and/or <strong class="text-slate-300">clientPortalListDocumentTypes</strong>) under client-session actions, same as <code class="text-slate-400">clientPortalListDocuments</code>.</p>' +
                                 '<button type="button" onclick="loadDocumentCatalog()" class="text-[11px] px-3 py-1.5 rounded bg-slate-800 text-slate-200 hover:bg-slate-700">Retry</button>' +
                                 '</div>';
                         }
-                        toast("Catalog blocked (4900) — whitelist clientPortalListCatalog on gateway", true);
+                        toast("Catalog blocked (4900) — whitelist clientPortalDocumentCatalog on gateway", true);
                         return;
                     }
                     if (grid) {
@@ -4881,7 +4920,7 @@
 
             window.downloadDocument = async function (docId) {
                 try {
-                    var res = await gw("clientportal", "clientPortalGetDocumentLink", { clientId: sid(), token: tok(), docId: docId });
+                    var res = await gw("clientportal", "clientPortalDownloadDocument", { clientId: sid(), token: tok(), docId: docId });
                     var url = res && (res.url || res.link || (res.data && res.data.url));
                     if (!url) throw new Error((res && res.message) || "No link");
                     window.open(url, "_blank");
@@ -4907,7 +4946,7 @@
                 var text = input ? String(input.value || "").trim() : "";
                 if (!text) return;
                 try {
-                    var res = await gw("clientportal", "clientPortalSendChat", { clientId: sid(), token: tok(), message: text });
+                    var res = await gw("clientportal", "clientPortalChatSend", { clientId: sid(), token: tok(), message: text });
                     if (res && res.success === false) throw new Error(res.message || "Failed");
                     if (input) input.value = "";
                     if (typeof loadChat === "function") loadChat();
@@ -4926,7 +4965,7 @@
 
             window.loadSocialCalendar = async function () {
                 try {
-                    await gw("clientportal", "clientPortalListSocialCalendar", { clientId: sid(), token: tok() });
+                    await gw("clientportal", "clientPortalGetSocialCalendar", { clientId: sid(), token: tok() });
                 } catch (e) { console.warn(e); }
             };
 
@@ -4957,7 +4996,7 @@
 
             window.clientConnectWhatsApp = async function () {
                 try {
-                    var res = await gw("clientportal", "clientPortalStartWhatsAppConnect", { clientId: sid(), token: tok() });
+                    var res = await gw("clientportal", "clientPortalGenerateWhatsAppSignupLink", { clientId: sid(), token: tok() });
                     var url = res && (res.authUrl || res.url);
                     if (url) location.href = url;
                     else throw new Error((res && res.message) || "No auth URL");
@@ -4968,7 +5007,7 @@
                 var phone = prompt("Staff WhatsApp (e.g. 23480…):");
                 if (!phone) return;
                 try {
-                    var res = await gw("clientportal", "clientPortalAddTeamWhatsApp", { clientId: sid(), token: tok(), phone: phone });
+                    var res = await gw("clientportal", "clientPortalAddWhatsAppTeamLink", { clientId: sid(), token: tok(), phone: phone });
                     if (res && res.success === false) throw new Error(res.message || "Failed");
                     toast("Added");
                 } catch (e) { toast(e.message || "Failed", true); }
@@ -4984,7 +5023,7 @@
                 var body = (document.getElementById("ticketBody") || {}).value || "";
                 if (!String(subj).trim() || !String(body).trim()) return toast("Subject and message required", true);
                 try {
-                    var res = await gw("clientportal", "clientPortalSubmitTicket", {
+                    var res = await gw("clientportal", "clientPortalSubmitSupportTicket", {
                         clientId: sid(), token: tok(), subject: subj, message: body
                     });
                     if (res && res.success === false) throw new Error(res.message || "Failed");
@@ -5024,7 +5063,7 @@
             };
 
             window.loadChat = async function () {
-                try { await gw("clientportal", "clientPortalGetChat", { clientId: sid(), token: tok() }); } catch (_) { }
+                try { await gw("clientportal", "clientPortalChatPoll", { clientId: sid(), token: tok() }); } catch (_) { }
             };
 
             window.startChatPolling = function () {
@@ -5035,6 +5074,183 @@
                     }, 8000);
                 } catch (_) { }
             };
+
+            /* ---- Integrations / Mailbox self-service (1 new email / calendar month) ---- */
+            window._mailboxEligibility = null;
+
+            window.clientConnectMailbox = async function () {
+                try {
+                    var elig = await callGateway("clientportal", "clientPortalGetIntegrationEligibility", {});
+                    window._mailboxEligibility = elig;
+                    var mb = (elig && (elig.mailbox || elig.mailboxes || (elig.data && elig.data.mailbox))) || {};
+                    var can = mb.canConnect !== false && mb.eligible !== false;
+                    var reason = mb.reason || elig.message || "";
+                    // Plan expired / locked
+                    if (elig && elig.success === false) {
+                        toast(elig.message || "Integrations locked — renew billing", true);
+                        return;
+                    }
+                    if (mb.locked || mb.canConnect === false) {
+                        toast(reason || "Email connect locked on your plan or after expiry. Open Billing to renew.", true);
+                        try { if (typeof goBillingUpgrade === "function") { /* soft hint */ } } catch (_) { }
+                        return;
+                    }
+                    // Once per calendar month (client-side guard; server should enforce too)
+                    var key = "vic_mailbox_self_connect_" + (sid() || "x");
+                    var last = "";
+                    try { last = localStorage.getItem(key) || ""; } catch (_) { }
+                    if (last) {
+                        var d = new Date(last);
+                        var now = new Date();
+                        if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) {
+                            toast("Self-service email connect is limited to once per calendar month. Contact admin for extra mailboxes.", true);
+                            return;
+                        }
+                    }
+                    var form = document.getElementById("mailboxConnectForm");
+                    if (form) form.classList.remove("hidden");
+                } catch (e) {
+                    toast(e.message || "Could not check eligibility", true);
+                }
+            };
+
+            window.clientSubmitMailboxConnect = async function () {
+                var email = ((document.getElementById("mailboxConnectEmail") || {}).value || "").trim();
+                var label = ((document.getElementById("mailboxConnectLabel") || {}).value || "").trim() || "Main";
+                var provider = ((document.getElementById("mailboxConnectProvider") || {}).value || "gmail");
+                if (!email || email.indexOf("@") < 0) return toast("Enter a valid email", true);
+                try {
+                    // Preferred client action (if gateway/AgentLib expose it)
+                    var res = await callGateway("clientportal", "clientPortalReconnectIntegration", {
+                        category: "mailbox",
+                        emailAddress: email,
+                        label: label,
+                        provider: provider
+                    });
+                    // If unknown, try agent-add-mailbox
+                    if (res && res.success === false && /unknown|4501|not permitted|4900/i.test(String(res.message || ""))) {
+                        res = await callGateway("agent", "agent-add-mailbox", {
+                            clientId: sid(), token: tok(), label: label, emailAddress: email, provider: provider, isExtra: false
+                        });
+                    }
+                    if (res && res.success === false) throw new Error(res.message || "Connect failed");
+                    try {
+                        localStorage.setItem("vic_mailbox_self_connect_" + (sid() || "x"), new Date().toISOString());
+                    } catch (_) { }
+                    var url = res && (res.authUrl || res.url || res.oauthUrl);
+                    toast("Mailbox registered. Complete OAuth if a window opens.");
+                    if (url) window.open(url, "_blank");
+                    var form = document.getElementById("mailboxConnectForm");
+                    if (form) form.classList.add("hidden");
+                    if (typeof loadIntegrationsPanel === "function") loadIntegrationsPanel();
+                } catch (e) {
+                    toast(e.message || "Mailbox connect failed", true);
+                }
+            };
+
+            window.loadIntegrationsPanel = async function loadIntegrationsPanel() {
+                var list = document.getElementById("integrationsMailboxList");
+                if (list) list.innerHTML = '<p class="text-slate-500">Loading…</p>';
+                try {
+                    var res = await callGateway("clientportal", "clientPortalListMailboxes", {});
+                    var boxes = (res && (res.mailboxes || res.data || [])) || [];
+                    if (!Array.isArray(boxes)) boxes = [];
+                    if (list) {
+                        if (!boxes.length) {
+                            list.innerHTML = '<p class="text-slate-600">No mailboxes connected yet. Use Connect email (1× per month on an active plan).</p>';
+                        } else {
+                            list.innerHTML = boxes.map(function (m) {
+                                var email = m.email || m.EmailAddress || m.address || "";
+                                var label = m.label || m.Label || email;
+                                var status = m.status || m.Status || "";
+                                var id = m.mailboxId || m.MailboxID || m.id || "";
+                                return '<div class="flex flex-wrap items-center justify-between gap-2 bg-slate-900 rounded px-3 py-2">' +
+                                    '<div><span class="text-slate-200 font-medium">' + esc(label) + '</span>' +
+                                    '<span class="text-slate-500 ml-2">' + esc(email) + '</span>' +
+                                    '<span class="text-[10px] text-slate-500 ml-2">' + esc(status) + '</span></div>' +
+                                    '<div class="flex gap-1">' +
+                                    '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-300" onclick="clientReconnectMailbox(\'' + esc(id) + '\',\'' + esc(email) + '\')">Reconnect</button>' +
+                                    '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientRequestMailboxDisconnect(\'' + esc(id) + '\')">Request remove</button>' +
+                                    '</div></div>';
+                            }).join("");
+                        }
+                    }
+                } catch (e) {
+                    if (list) list.innerHTML = '<p class="text-red-400">' + esc(e.message || "Load failed") + '</p>';
+                }
+                // WhatsApp numbers
+                try {
+                    var wa = await callGateway("clientportal", "clientPortalListWhatsAppNumbers", {});
+                    // optional: paint if there is a list element
+                    window._waNumbers = wa;
+                } catch (_) { }
+            };
+
+            window.clientReconnectMailbox = async function (mailboxId, email) {
+                try {
+                    var res = await callGateway("clientportal", "clientPortalReconnectIntegration", {
+                        category: "mailbox", mailboxId: mailboxId, emailAddress: email
+                    });
+                    if (res && res.success === false) throw new Error(res.message || "Failed");
+                    var url = res && (res.authUrl || res.url);
+                    if (url) window.open(url, "_blank");
+                    toast("Reconnect started");
+                } catch (e) { toast(e.message || "Reconnect failed", true); }
+            };
+
+            window.clientRequestMailboxDisconnect = async function (mailboxId) {
+                try {
+                    var res = await callGateway("clientportal", "clientPortalRequestDisconnect", {
+                        category: "mailbox", mailboxId: mailboxId, type: "mailbox"
+                    });
+                    if (res && res.success === false) throw new Error(res.message || "Failed");
+                    toast("Disconnect requested — admin will complete removal");
+                } catch (e) { toast(e.message || "Request failed", true); }
+            };
+
+            // WhatsApp: correct signup link + team link + pack
+            window.clientConnectWhatsApp = async function () {
+                try {
+                    var res = await callGateway("clientportal", "clientPortalGenerateWhatsAppSignupLink", {});
+                    if (res && res.success === false) throw new Error(res.message || "Failed");
+                    var url = res.authUrl || res.url || res.signupUrl || res.link;
+                    if (url) location.href = url;
+                    else toast(res.message || "Signup link created — check WhatsApp / Meta flow", false);
+                } catch (e) { toast(e.message || "WhatsApp connect failed", true); }
+            };
+
+            window.clientAddTeamWhatsApp = async function () {
+                var phoneEl = document.getElementById("teamWaPhone") || document.querySelector('input[placeholder*="234"]');
+                var labelEl = document.getElementById("teamWaLabel");
+                var deptEl = document.getElementById("teamWaDept");
+                var phone = phoneEl ? phoneEl.value : prompt("Staff WhatsApp (e.g. 23480…):");
+                if (!phone) return;
+                try {
+                    var res = await callGateway("clientportal", "clientPortalAddWhatsAppTeamLink", {
+                        phone: phone, number: phone,
+                        label: labelEl ? labelEl.value : "",
+                        department: deptEl ? deptEl.value : ""
+                    });
+                    if (res && res.success === false) throw new Error(res.message || "Failed");
+                    toast("Team WhatsApp link added");
+                    if (typeof loadIntegrationsPanel === "function") loadIntegrationsPanel();
+                } catch (e) { toast(e.message || "Add failed", true); }
+            };
+
+            window.clientBuyWhatsAppPack = async function () {
+                try {
+                    var res = await callGateway("clientportal", "clientPortalBuyWhatsAppMessagePack", { pack: 50 });
+                    if (res && res.success === false) throw new Error(res.message || "Failed");
+                    var url = res.paymentUrl || res.checkoutUrl || res.url;
+                    if (url) location.href = url;
+                    else toast(res.message || "Pack purchase started");
+                } catch (e) {
+                    if (typeof goBillingUpgrade === "function") goBillingUpgrade();
+                    else toast(e.message || "Open Billing to buy packs", true);
+                }
+            };
+
+
         })();
     </script>
 
