@@ -5155,17 +5155,17 @@
                 var provider = ((document.getElementById("mailboxConnectProvider") || {}).value || "gmail");
                 if (!email || email.indexOf("@") < 0) return toast("Enter a valid email", true);
                 try {
-                    // Preferred client action (if gateway/AgentLib expose it)
-                    var res = await callGateway("clientportal", "clientPortalReconnectIntegration", {
-                        category: "mailbox",
+                    // NEW connect (not reconnect) — must not send mailboxId
+                    var res = await callGateway("clientportal", "clientPortalConnectMailbox", {
                         emailAddress: email,
                         label: label,
-                        provider: provider
+                        mailboxLabel: label,
+                        provider: provider,
+                        emailProvider: provider
                     });
-                    // If unknown, try agent-add-mailbox
-                    if (res && res.success === false && /unknown|4501|not permitted|4900/i.test(String(res.message || ""))) {
-                        res = await callGateway("agent", "agent-add-mailbox", {
-                            clientId: sid(), token: tok(), label: label, emailAddress: email, provider: provider, isExtra: false
+                    if (res && res.success === false && /unknown|4501|not permitted|4900|not found/i.test(String(res.message || ""))) {
+                        res = await callGateway("clientportal", "clientPortalStartMailboxConnect", {
+                            emailAddress: email, label: label, provider: provider
                         });
                     }
                     if (res && res.success === false) throw new Error(res.message || "Connect failed");
@@ -5173,13 +5173,17 @@
                         localStorage.setItem("vic_mailbox_self_connect_" + (sid() || "x"), new Date().toISOString());
                     } catch (_) { }
                     var url = res && (res.authUrl || res.url || res.oauthUrl);
-                    toast("Mailbox registered. Complete OAuth if a window opens.");
-                    if (url) window.open(url, "_blank");
+                    if (url) {
+                        toast(res.message || "Complete sign-in in the popup to finish connecting.");
+                        window.open(url, "_blank");
+                    } else {
+                        toast(res.message || "Mailbox registered. If no popup appeared, ask admin to finish OAuth for this provider.");
+                    }
                     var form = document.getElementById("mailboxConnectForm");
                     if (form) form.classList.add("hidden");
                     if (typeof loadIntegrationsPanel === "function") loadIntegrationsPanel();
                 } catch (e) {
-                    toast(e.message || "Mailbox connect failed", true);
+                    toast((e && e.message) || "Connect failed", true);
                 }
             };
 
