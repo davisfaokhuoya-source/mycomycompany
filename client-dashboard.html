@@ -452,7 +452,326 @@
             }
         }
     </style>
-    <script>window.toggleDocGenGuide = window.toggleDocGenGuide || function () { var p = document.getElementById("docGenGuide"); if (!p) return; p.classList.toggle("hidden"); };</script>
+    <script>
+        // ==========================================
+        // BATCH 3: DOCUMENT GENERATION SCRIPT LOGIC
+        // ==========================================
+
+        // 1. Toggle Document Generation Guide Accordion
+        function toggleDocGenGuide() {
+            const guide = document.getElementById('docGenGuide');
+            const chevron = document.getElementById('docGenGuideChevron');
+            if (!guide) return;
+
+            const isHidden = guide.classList.contains('hidden');
+            if (isHidden) {
+                guide.classList.remove('hidden');
+                if (chevron) chevron.classList.replace('fa-chevron-down', 'fa-chevron-up');
+            } else {
+                guide.classList.add('hidden');
+                if (chevron) chevron.classList.replace('fa-chevron-up', 'fa-chevron-down');
+            }
+        }
+
+        // 2. Navigation State for Card Hierarchies (Industry -> Category -> Cards)
+        let currentGenLevel = 'industry'; // 'industry', 'category', 'cards'
+        let currentGenIndustry = null;
+        let currentGenCategory = null;
+        let allGenCardsData = [];
+
+        // 3. Auto-send Preference Handler
+        async function setAutoSendPreference(enabled) {
+            try {
+                if (typeof callGateway === 'function') {
+                    await callGateway('updateAutoSendPreference', { enabled: enabled });
+                }
+            } catch (err) {
+                console.error("Failed to update auto-send preference:", err);
+            }
+        }
+
+        // Key used to store user's language choice in browser storage
+        const STORAGE_KEY_LANG = 'selected_doc_language';
+
+        // Returns saved language, defaulting to English ('en')
+        function getSelectedLanguage() {
+            return localStorage.getItem(STORAGE_KEY_LANG) || 'en';
+        }
+
+        // Saves language choice when dropdown changes
+        function setDocLanguagePreference(langCode) {
+            localStorage.setItem(STORAGE_KEY_LANG, langCode);
+            if (typeof callGateway === 'function') {
+                callGateway('updateLanguagePreference', { language: langCode }).catch(err => {
+                    console.error("Failed to update language on server:", err);
+                });
+            }
+        }
+
+        // Syncs dropdown selection on page refresh
+        function initLanguageSelector() {
+            const langSelect = document.getElementById('docLanguageSelect');
+            if (langSelect) {
+                langSelect.value = getSelectedLanguage();
+            }
+        }
+
+        // 4. Load & Render Document Cards Hierarchy
+        async function loadGenerateCards() {
+            const industryGrid = document.getElementById('genIndustryGrid');
+            const categoryGrid = document.getElementById('genCategoryGrid');
+            const cardsContainer = document.getElementById('generateCardsContainer');
+
+            if (!cardsContainer) return;
+
+            try {
+                // Fetch document definitions from gateway or local source
+                let cards = [];
+                if (typeof callGateway === 'function') {
+                    cards = await callGateway('getGenerateCards', {});
+                } else if (window.docCardsData) {
+                    cards = window.docCardsData;
+                }
+
+                allGenCardsData = cards || [];
+                renderGenIndustryGrid();
+            } catch (err) {
+                console.error("Error loading document cards:", err);
+                cardsContainer.innerHTML = `<p class="text-red-400 text-xs col-span-3">Failed to load documents: ${err.message}</p>`;
+            }
+        }
+
+        // 5. Hierarchy Navigation Renderers
+        function renderGenIndustryGrid() {
+            currentGenLevel = 'industry';
+            currentGenIndustry = null;
+            currentGenCategory = null;
+
+            updateGenNavUI("Choose an industry category to view document templates.");
+
+            const industryGrid = document.getElementById('genIndustryGrid');
+            const categoryGrid = document.getElementById('genCategoryGrid');
+            const cardsContainer = document.getElementById('generateCardsContainer');
+
+            if (categoryGrid) categoryGrid.classList.add('hidden');
+            if (cardsContainer) cardsContainer.classList.add('hidden');
+            if (!industryGrid) return;
+
+            industryGrid.classList.remove('hidden');
+
+            // Extract unique industries
+            const industries = [...new Set(allGenCardsData.map(c => c.industry || 'General'))];
+
+            industryGrid.innerHTML = industries.map(ind => `
+        <button type="button" onclick="selectGenIndustry('${ind}')" class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 hover:border-emerald-500/50 transition-all text-left group">
+            <i class="fa-solid fa-folder text-emerald-400 text-lg mb-2 group-hover:scale-110 transition-transform"></i>
+            <h4 class="text-xs font-semibold text-white">${ind}</h4>
+            <p class="text-[10px] text-slate-400 mt-1">${allGenCardsData.filter(c => (c.industry || 'General') === ind).length} templates</p>
+        </button>
+    `).join('');
+        }
+
+        function selectGenIndustry(ind) {
+            currentGenLevel = 'category';
+            currentGenIndustry = ind;
+
+            updateGenNavUI(`Industry: <strong>${ind}</strong> — Pick a document sub-category.`);
+
+            const industryGrid = document.getElementById('genIndustryGrid');
+            const categoryGrid = document.getElementById('genCategoryGrid');
+
+            if (industryGrid) industryGrid.classList.add('hidden');
+            if (!categoryGrid) return;
+
+            categoryGrid.classList.remove('hidden');
+
+            const filtered = allGenCardsData.filter(c => (c.industry || 'General') === ind);
+            const categories = [...new Set(filtered.map(c => c.category || 'Standard'))];
+
+            categoryGrid.innerHTML = categories.map(cat => `
+        <button type="button" onclick="selectGenCategory('${cat}')" class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 hover:border-emerald-500/50 transition-all text-left group">
+            <i class="fa-solid fa-folder-open text-sky-400 text-lg mb-2 group-hover:scale-110 transition-transform"></i>
+            <h4 class="text-xs font-semibold text-white">${cat}</h4>
+            <p class="text-[10px] text-slate-400 mt-1">${filtered.filter(c => (c.category || 'Standard') === cat).length} types</p>
+        </button>
+    `).join('');
+        }
+
+        function selectGenCategory(cat) {
+            currentGenLevel = 'cards';
+            currentGenCategory = cat;
+
+            updateGenNavUI(`Industry: <strong>${currentGenIndustry}</strong> &gt; <strong>${cat}</strong>`);
+
+            const categoryGrid = document.getElementById('genCategoryGrid');
+            const cardsContainer = document.getElementById('generateCardsContainer');
+
+            if (categoryGrid) categoryGrid.classList.add('hidden');
+            if (!cardsContainer) return;
+
+            cardsContainer.classList.remove('hidden');
+
+            const filtered = allGenCardsData.filter(c =>
+                (c.industry || 'General') === currentGenIndustry &&
+                (c.category || 'Standard') === cat
+            );
+
+            renderCardsList(filtered, cardsContainer);
+        }
+
+        function renderCardsList(cards, container) {
+            if (!cards || cards.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 text-xs col-span-3">No templates available in this category.</p>`;
+                return;
+            }
+
+            container.innerHTML = cards.map(card => {
+                const disabled = card.disabled ? 'opacity-50 pointer-events-none grayscale' : '';
+                const weightColor = card.weight === 1 ? 'text-emerald-400' : card.weight === 2 ? 'text-sky-400' : card.weight === 3 ? 'text-slate-300' : card.weight === 4 ? 'text-amber-400' : 'text-red-400';
+
+                return `
+            <div id="doc-card-${card.id}" class="p-4 rounded-xl border border-slate-800 bg-slate-900/80 hover:border-slate-700 transition-all flex flex-col justify-between ${disabled}">
+                <div>
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <h4 class="text-xs font-semibold text-white">${card.title}</h4>
+                        <span class="text-[10px] font-bold ${weightColor} bg-slate-800 px-2 py-0.5 rounded border border-slate-700">W${card.weight || 1}</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 leading-relaxed mb-3">${card.description || ''}</p>
+                </div>
+                <div>
+                    ${card.disabledReason ? `<p class="text-[10px] text-red-400/80 mb-2">${card.disabledReason}</p>` : ''}
+                    <button type="button" onclick="submitDocGeneration('${card.id}')" class="w-full text-xs py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-medium text-white transition-colors flex items-center justify-center gap-2">
+                        <span>Generate</span>
+                        <i class="fa-solid fa-paper-plane text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+            }).join('');
+        }
+
+        // 6. Navigation Helpers & Search Filters
+        function updateGenNavUI(pathHtml) {
+            const navPath = document.getElementById('genNavPath');
+            const backBtn = document.getElementById('genNavBack');
+
+            if (navPath) navPath.innerHTML = pathHtml;
+            if (backBtn) {
+                if (currentGenLevel === 'industry') {
+                    backBtn.classList.add('hidden');
+                } else {
+                    backBtn.classList.remove('hidden');
+                }
+            }
+        }
+
+        function genBrowseBack() {
+            if (currentGenLevel === 'cards') {
+                selectGenIndustry(currentGenIndustry);
+            } else if (currentGenLevel === 'category') {
+                renderGenIndustryGrid();
+            }
+        }
+
+        function applyGenerateCardFilter() {
+            const searchVal = document.getElementById('genCardSearch')?.value.toLowerCase().trim() || '';
+            const noMatch = document.getElementById('genCardNoMatch');
+            const industryGrid = document.getElementById('genIndustryGrid');
+            const categoryGrid = document.getElementById('genCategoryGrid');
+            const cardsContainer = document.getElementById('generateCardsContainer');
+            const backBtn = document.getElementById('genNavBack');
+
+            if (!searchVal) {
+                if (noMatch) noMatch.classList.add('hidden');
+                // Reset view back to current state
+                if (currentGenLevel === 'industry') renderGenIndustryGrid();
+                else if (currentGenLevel === 'category') selectGenIndustry(currentGenIndustry);
+                else if (currentGenLevel === 'cards') selectGenCategory(currentGenCategory);
+                return;
+            }
+
+            // Search mode override: Hide folders, show direct card matches
+            if (industryGrid) industryGrid.classList.add('hidden');
+            if (categoryGrid) categoryGrid.classList.add('hidden');
+            if (backBtn) backBtn.classList.remove('hidden');
+            if (cardsContainer) cardsContainer.classList.remove('hidden');
+
+            updateGenNavUI(`Search results for: <strong>"${searchVal}"</strong>`);
+
+            const matches = allGenCardsData.filter(c =>
+                (c.title && c.title.toLowerCase().includes(searchVal)) ||
+                (c.description && c.description.toLowerCase().includes(searchVal)) ||
+                (c.category && c.category.toLowerCase().includes(searchVal)) ||
+                (c.industry && c.industry.toLowerCase().includes(searchVal))
+            );
+
+            if (matches.length === 0) {
+                cardsContainer.classList.add('hidden');
+                if (noMatch) noMatch.classList.remove('hidden');
+            } else {
+                if (noMatch) noMatch.classList.add('hidden');
+                renderCardsList(matches, cardsContainer);
+            }
+        }
+
+        // 7. Generation Trigger & AI State Animation Handler
+        async function submitDocGeneration(cardId) {
+            const cardEl = document.getElementById(`doc-card-${cardId}`);
+            const statusEl = document.getElementById('generateStatus');
+
+            // Toggle active visual feedback state
+            if (cardEl) cardEl.classList.add('ai-working');
+            if (statusEl) {
+                statusEl.innerHTML = `
+            <div class="p-3 rounded-lg border border-emerald-500/30 bg-emerald-950/40 text-emerald-300 text-xs flex items-center">
+                <span class="ai-spinner"></span> Generating document, please wait...
+            </div>
+        `;
+            }
+
+            try {
+                let response = null;
+                if (typeof callGateway === 'function') {
+                    // NEW VERSION:
+                    const currentLanguage = getSelectedLanguage();
+
+                    response = await callGateway('generateDocument', {
+                        cardId: cardId,
+                        language: currentLanguage
+                    });
+                }
+
+                if (statusEl) {
+                    statusEl.innerHTML = `
+                <div class="p-3 rounded-lg border border-emerald-500/50 bg-emerald-900/50 text-emerald-200 text-xs">
+                    <i class="fa-solid fa-circle-check mr-1 text-emerald-400"></i> Document created successfully! Check <strong>My Documents</strong>.
+                </div>
+            `;
+                }
+            } catch (err) {
+                console.error("Document generation failed:", err);
+                if (statusEl) {
+                    statusEl.innerHTML = `
+                <div class="p-3 rounded-lg border border-red-500/50 bg-red-950/50 text-red-300 text-xs">
+                    <i class="fa-solid fa-triangle-exclamation mr-1 text-red-400"></i> Error generating document: ${err.message}
+                </div>
+            `;
+                }
+            } finally {
+                if (cardEl) cardEl.classList.remove('ai-working');
+            }
+        }
+
+        // Initializer: load templates when page initializes
+        document.addEventListener('DOMContentLoaded', () => {
+            document.addEventListener('DOMContentLoaded', () => {
+                initLanguageSelector(); // Restores saved language to the dropdown menu
+                loadGenerateCards();
+            });
+            loadGenerateCards();
+        });
+
+        window.toggleDocGenGuide = window.toggleDocGenGuide || function () { var p = document.getElementById("docGenGuide"); if (!p) return; p.classList.toggle("hidden"); };</script>
     <script>
         (function () {
             try {
@@ -752,7 +1071,6 @@
                 </div>
                 <div class="flex items-center gap-4 shrink-0">
                     <div class="relative">
-
                         <label
                             class="flex items-center gap-1.5 rounded-full border border-slate-600/80 bg-slate-900 px-2.5 py-1 mr-2 shrink-0"
                             title="Interface language">
@@ -1124,37 +1442,32 @@
                 </section>
 
                 <!-- GENERATE -->
+                <!-- GENERATE -->
                 <section id="view-generate"
                     class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
-                    <p class="text-xs text-slate-400 max-w-5xl w-full">Generate a document on demand from your own data.
-                        Each
-                        one counts against your plan's monthly allotment (shown on the Overview tab). Click an
-                        available card to add instructions, then hit Send. Cards you've used up for this period, or
-                        that aren't part of your plan, are shown greyed out with the reason underneath.</p>
+                    <p class="text-xs text-slate-400 max-w-2xl">Generate a document on demand from your own data. Each
+                        one counts against your plan's monthly allotment (shown on the Overview tab). Click an available
+                        card to add instructions, then hit Send. Cards you've used up for this period, or that aren't
+                        part of your plan, are shown greyed out with the reason underneath.</p>
 
-                    <!-- Auto-send preference: controls lightweight/reference documents (receipts, payment
-                         confirmations, etc.) only — these are the ones that email straight out to a recipient.
-                         Bigger documents (reports, plans, proposals) never need your approval either way, they
-                         just don't have a "recipient" to send to in the same sense. -->
+                    <!-- Auto-send preference -->
                     <div
-                        class="max-w-5xl w-full rounded-lg border border-slate-700 bg-slate-800/60 p-4 flex items-start justify-between gap-4">
+                        class="max-w-3xl rounded-lg border border-slate-700 bg-slate-800/60 p-4 flex items-start justify-between gap-4">
                         <div>
                             <div class="text-sm font-semibold text-white">Auto-send receipts & confirmations</div>
                             <p class="text-xs text-slate-400 mt-1 max-w-xl"><strong class="text-slate-300">On:</strong>
                                 email the recipient as soon as the document is generated.
-                                <strong class="text-slate-300">Off:</strong> generate only and hold in
-                                <span class="text-slate-300">My Documents</span> as "Pending Your Approval" until
-                                you click Approve &amp; Send.
+                                <strong class="text-slate-300">Off:</strong> generate only and hold in <span
+                                    class="text-slate-300">My Documents</span> as "Pending Your Approval" until you
+                                click Approve &amp; Send.
                             </p>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
                             <input type="checkbox" id="autoSendToggle" class="sr-only peer"
                                 onchange="setAutoSendPreference(this.checked)">
-                            <div class="w-11 h-6 bg-slate-600 peer-focus:outline-none rounded-full peer
-                                peer-checked:bg-emerald-600 transition-colors
-                                after:content-[''] after:absolute after:top-[2px] after:left-[2px]
-                                after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all
-                                peer-checked:after:translate-x-5"></div>
+                            <div
+                                class="w-11 h-6 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:bg-emerald-600 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5">
+                            </div>
                         </label>
                     </div>
 
@@ -1222,7 +1535,7 @@
                         </div>
                     </div>
 
-                    <!-- Browse: Industry (Universal / Schools / NGO…) → Category (Financial / Legal…) → document cards -->
+                    <!-- Browse container -->
                     <div class="max-w-5xl space-y-3">
                         <div class="flex flex-wrap items-center gap-2">
                             <button type="button" id="genNavBack" onclick="genBrowseBack()"
@@ -1237,6 +1550,18 @@
                                 <input id="genCardSearch" type="text" placeholder="Search all documents…"
                                     oninput="applyGenerateCardFilter()"
                                     class="w-full sm:w-64 bg-slate-900 border border-slate-800 rounded pl-7 pr-2 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                            </div>
+                            <!-- Language Selector Dropdown -->
+                            <div class="flex items-center gap-2">
+                                <label for="docLanguageSelect"
+                                    class="text-xs text-slate-400 font-medium">Language:</label>
+                                <select id="docLanguageSelect" onchange="setDocLanguagePreference(this.value)"
+                                    class="bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
+                                    <option value="en">English</option>
+                                    <option value="es">Spanish</option>
+                                    <option value="fr">French</option>
+                                    <option value="de">German</option>
+                                </select>
                             </div>
                         </div>
                         <!-- Level 1: industries -->
