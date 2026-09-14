@@ -4773,6 +4773,7 @@
                         reason: reason,
                         sampleUrl: d.sampleUrl || d.previewUrl || d.sample || "",
                         fields: d.fields || d.schema || null,
+                        companions: d.companions || (d.raw && d.raw.companions) || [],
                         raw: d
                     });
                 });
@@ -5163,6 +5164,10 @@
                     '<option value="en">English</option><option value="zh-CN">中文</option><option value="fr">Français</option>' +
                     '<option value="es">Español</option><option value="ar">العربية</option><option value="pt">Português</option>' +
                     '<option value="ha">Hausa</option><option value="yo">Yorùbá</option><option value="ig">Igbo</option></select>' +
+                    '<div id="genCompanionsWrap" style="display:none;margin-top:14px;padding:12px;border-radius:10px;border:1px solid #334155;background:#020617;">' +
+                    '<div style="color:#e2e8f0;font-size:12px;font-weight:600;margin-bottom:6px;">Complementary documents</div>' +
+                    '<p style="color:#94a3b8;font-size:11px;margin:0 0 8px;">Optional — each counts against your plan separately. Shared brief and language.</p>' +
+                    '<div id="genCompanionsList"></div></div>' +
                     '<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">' +
                     '<button type="button" onclick="document.getElementById(\'genDocOverlay\').remove()" style="padding:8px 14px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:none;cursor:pointer;font-size:12px;">Cancel</button>' +
                     '<button type="button" id="genDocSendBtn" style="padding:8px 14px;border-radius:8px;background:#059669;color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:600;">Send</button>' +
@@ -5171,6 +5176,27 @@
                 try {
                     var langSel = document.getElementById("genDocLang");
                     if (langSel && typeof getVicDocLang === "function") langSel.value = getVicDocLang() || "en";
+                } catch (_) { }
+                // Complementary documents checkboxes
+                try {
+                    var comps = (meta && (meta.companions || meta.companionDocs || (meta.raw && meta.raw.companions))) || [];
+                    var wrap = document.getElementById("genCompanionsWrap");
+                    var list = document.getElementById("genCompanionsList");
+                    if (wrap && list && comps.length) {
+                        wrap.style.display = "block";
+                        list.innerHTML = comps.map(function (c) {
+                            var id = c.id || c;
+                            var label = c.label || String(id).replace(/_/g, " ");
+                            var blurb = c.blurb || "";
+                            var w = c.weight != null ? c.weight : "";
+                            return '<label style="display:flex;align-items:flex-start;gap:8px;margin:6px 0;cursor:pointer;color:#cbd5e1;font-size:12px;">' +
+                                '<input type="checkbox" class="genCompanionCb" value="' + String(id).replace(/"/g, "") + '" style="margin-top:3px;">' +
+                                '<span><strong style="color:#f1f5f9;">' + (typeof esc === "function" ? esc(label) : label) + '</strong>' +
+                                (w ? ' <span style="color:#64748b;">(weight ' + w + ')</span>' : '') +
+                                (blurb ? '<br><span style="color:#94a3b8;font-size:11px;">' + (typeof esc === "function" ? esc(blurb) : blurb) + '</span>' : '') +
+                                '</span></label>';
+                        }).join("");
+                    }
                 } catch (_) { }
                 document.getElementById("genDocSendBtn").onclick = async function () {
                     var instructions = (document.getElementById("genDocInstructions") || {}).value || "";
@@ -5219,6 +5245,12 @@
                     }
                     if (btn) { btn.disabled = true; btn.textContent = "Starting…"; }
                     try {
+                        var companionIds = [];
+                        try {
+                            document.querySelectorAll(".genCompanionCb:checked").forEach(function (cb) {
+                                if (cb.value) companionIds.push(cb.value);
+                            });
+                        } catch (_) { }
                         var payload = {
                             clientId: sid(),
                             token: tok(),
@@ -5230,6 +5262,8 @@
                             outputLanguage: lang,
                             language: lang,
                             fields: { notes: instructions, instructions: instructions, outputLanguage: lang },
+                            companions: companionIds,
+                            companionDocIds: companionIds,
                             fromClientPortal: true
                         };
                         var res = await gw("clientportal", "clientPortalGenerateDocument", payload);
