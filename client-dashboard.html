@@ -1606,7 +1606,7 @@
                                 </select>
                             </div>
                             <div class="sm:col-span-3 flex gap-2">
-                                <button type="button" onclick="clientSubmitMailboxConnect()"
+                                <button type="button" onclick="clientSubmitMailboxConnect(event)"
                                     class="text-[10px] px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white">Start
                                     connect</button>
                                 <button type="button"
@@ -2193,6 +2193,75 @@
             try { logoutClient(); } catch (_) { }
             return true;
         }
+
+        /** Disable button + show loading label; restore on finish */
+        window.setButtonLoading = function (btn, loading, loadingLabel) {
+            if (!btn) return;
+            try {
+                if (loading) {
+                    if (btn.dataset.loading === '1') return;
+                    btn.dataset.loading = '1';
+                    btn.dataset.prevHtml = btn.innerHTML;
+                    btn.dataset.prevDisabled = btn.disabled ? '1' : '0';
+                    btn.disabled = true;
+                    btn.setAttribute('aria-busy', 'true');
+                    btn.classList.add('opacity-70', 'cursor-wait', 'pointer-events-none');
+                    var label = loadingLabel || 'Loading…';
+                    btn.innerHTML = '<span class="inline-flex items-center gap-1.5"><svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><span>' + label + '</span></span>';
+                } else {
+                    btn.dataset.loading = '0';
+                    btn.disabled = btn.dataset.prevDisabled === '1';
+                    btn.removeAttribute('aria-busy');
+                    btn.classList.remove('opacity-70', 'cursor-wait', 'pointer-events-none');
+                    if (btn.dataset.prevHtml != null) btn.innerHTML = btn.dataset.prevHtml;
+                    delete btn.dataset.prevHtml;
+                    delete btn.dataset.prevDisabled;
+                }
+            } catch (e) { try { btn.disabled = !!loading; } catch (_) { } }
+        };
+        window.withButtonLoading = async function (btn, fn, loadingLabel) {
+            setButtonLoading(btn, true, loadingLabel || 'Loading…');
+            try {
+                return await fn();
+            } finally {
+                setButtonLoading(btn, false);
+            }
+        };
+
+        // Global: show Loading… on action buttons while their handler runs (client dashboard)
+        (function bindActionButtonLoading() {
+            if (window.__vicBtnLoadBound) return;
+            window.__vicBtnLoadBound = true;
+            document.addEventListener("click", function (ev) {
+                var t = ev.target;
+                if (!t || !t.closest) return;
+                var btn = t.closest("button, a.btn, [role='button']");
+                if (!btn || btn.disabled || btn.dataset.loading === "1") return;
+                // Only primary action controls — not nav / lang / pure UI toggles
+                var oc = (btn.getAttribute("onclick") || "") + " " + (btn.id || "") + " " + (btn.className || "");
+                var looksAction = /clientSubmit|clientConnect|clientStart|clientSave|clientGenerate|clientApprove|clientReject|clientPortal|saveSignatory|loadDocument|Start connect|Connect email|Add team|Buy |Upgrade|Renew|Submit|Save signatory|sendMessage|requestUpgrade/i.test(oc);
+                var looksNav = /showView|nav-|sidebar|Lang|toggle|close|Cancel|hidden|genBrowseBack|signOut|logout/i.test(oc) || /cancel/i.test(btn.textContent || "");
+                if (!looksAction || looksNav) return;
+                // Skip if handler already calls setButtonLoading
+                if (/setButtonLoading|withButtonLoading/.test(btn.getAttribute("onclick") || "")) return;
+                // Defer: mark busy briefly; clear when network settles via fetch patch
+                setButtonLoading(btn, true, (btn.textContent || "Loading").trim().length < 24 ? (btn.textContent.trim() + "…") : "Loading…");
+                btn.__vicLoadUntil = Date.now() + 120000;
+                var clear = function () {
+                    if (btn && btn.dataset.loading === "1") setButtonLoading(btn, false);
+                };
+                // Clear on next gateway completion or timeout
+                var iv = setInterval(function () {
+                    if (!btn.__vicLoadUntil || Date.now() > btn.__vicLoadUntil) {
+                        clearInterval(iv);
+                        clear();
+                    }
+                }, 500);
+                btn.__vicClearLoad = function () { clearInterval(iv); clear(); };
+            }, true);
+        })();
+
+
         async function callGateway(system, action, extra = {}, options = {}) {
             if (!GW_URL) {
                 const coded = clientFriendlyError('Missing Gateway URL.');
@@ -2217,6 +2286,12 @@
                     signal: controller.signal
                 });
                 clearTimeout(t);
+                try {
+                    document.querySelectorAll('[data-loading="1"]').forEach(function (b) {
+                        if (typeof b.__vicClearLoad === 'function') b.__vicClearLoad();
+                        else if (typeof setButtonLoading === 'function') setButtonLoading(b, false);
+                    });
+                } catch (_) { }
                 const text = await res.text();
                 const jsonStart = text.indexOf('{');
                 const jsonEnd = text.lastIndexOf('}');
@@ -5149,11 +5224,13 @@
                 }
             };
 
-            window.clientSubmitMailboxConnect = async function () {
+            window.clientSubmitMailboxConnect = async function (ev) {
                 var email = ((document.getElementById("mailboxConnectEmail") || {}).value || "").trim();
                 var label = ((document.getElementById("mailboxConnectLabel") || {}).value || "").trim() || "Main";
                 var provider = ((document.getElementById("mailboxConnectProvider") || {}).value || "gmail");
                 if (!email || email.indexOf("@") < 0) return toast("Enter a valid email", true);
+                var btn = (ev && ev.currentTarget) || (ev && ev.target && ev.target.closest && ev.target.closest("button")) || document.querySelector('button[onclick*="clientSubmitMailboxConnect"]');
+                setButtonLoading(btn, true, "Connecting…");
                 try {
                     // NEW connect (not reconnect) — must not send mailboxId
                     var res = await callGateway("clientportal", "clientPortalConnectMailbox", {
@@ -5184,6 +5261,8 @@
                     if (typeof loadIntegrationsPanel === "function") loadIntegrationsPanel();
                 } catch (e) {
                     toast((e && e.message) || "Connect failed", true);
+                } finally {
+                    setButtonLoading(btn, false);
                 }
             };
 
