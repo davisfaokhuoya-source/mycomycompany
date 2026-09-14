@@ -1758,8 +1758,7 @@
                         <p class="text-[10px] text-slate-500 leading-relaxed">Account count is limited by your <strong
                                 class="text-slate-400">Digital tier</strong>. Default TikTok is standard (publish).
                             <strong class="text-slate-400">Business TikTok</strong> enables AI comment replies. To
-                            remove a connection, request disconnect — admin completes it.
-                        </p>
+                            remove a connection, request disconnect — admin completes it.</p>
                         <div class="flex flex-wrap gap-2 items-center text-[10px] text-slate-500">
                             <span>TikTok type is chosen when you connect (Publish vs Business). No default
                                 selection.</span>
@@ -5177,7 +5176,6 @@
 
             window.genStartDocument = function genStartDocument(docTypeId) {
                 try {
-                    // Find doc meta
                     var meta = null;
                     (window._genTree.industries || []).forEach(function (ind) {
                         (ind.categories || []).forEach(function (c) {
@@ -5186,21 +5184,69 @@
                             });
                         });
                     });
+                    var fieldDefs = [];
+                    try {
+                        fieldDefs = (meta && (meta.fields || (meta.raw && meta.raw.fields))) || [];
+                        if (typeof fieldDefs === "string") fieldDefs = JSON.parse(fieldDefs);
+                    } catch (_) { fieldDefs = []; }
+                    if (!Array.isArray(fieldDefs)) fieldDefs = [];
+
                     var name = meta ? meta.name : docTypeId;
+                    var weight = meta ? meta.weight : 1;
                     var existing = document.getElementById("genDocOverlay");
                     if (existing) existing.remove();
+
+                    function fieldInputHtml(fd, idx) {
+                        var key = fd.key || fd.id || fd.name || ("field_" + idx);
+                        var label = fd.label || fd.title || key;
+                        var req = fd.required ? ' <span style="color:#f87171;">*</span>' : "";
+                        var ph = fd.placeholder || "";
+                        var typ = String(fd.type || "text").toLowerCase();
+                        var id = "genField_" + String(key).replace(/[^a-zA-Z0-9_]/g, "_");
+                        var common = ' id="' + id + '" data-field-key="' + String(key).replace(/"/g, "&quot;") + '" style="width:100%;background:#020617;border:1px solid #334155;border-radius:8px;color:#fff;padding:8px 10px;font-size:13px;"';
+                        var input;
+                        if (typ === "textarea" || typ === "longtext" || typ === "notes") {
+                            input = '<textarea' + common + ' rows="4" placeholder="' + String(ph).replace(/"/g, "&quot;") + '"></textarea>';
+                        } else if (typ === "number" || typ === "currency") {
+                            input = '<input type="number" step="any"' + common + ' placeholder="' + String(ph).replace(/"/g, "&quot;") + '">';
+                        } else if (typ === "date") {
+                            input = '<input type="date"' + common + ">";
+                        } else if (typ === "email") {
+                            input = '<input type="email"' + common + ' placeholder="' + String(ph).replace(/"/g, "&quot;") + '">';
+                        } else if (typ === "select" && Array.isArray(fd.options)) {
+                            input = '<select' + common + ">" + fd.options.map(function (o) {
+                                var v = typeof o === "object" ? (o.value || o.id || o.label) : o;
+                                var l = typeof o === "object" ? (o.label || o.value || v) : o;
+                                return '<option value="' + String(v).replace(/"/g, "&quot;") + '">' + esc(l) + "</option>";
+                            }).join("") + "</select>";
+                        } else {
+                            input = '<input type="text"' + common + ' placeholder="' + String(ph).replace(/"/g, "&quot;") + '">';
+                        }
+                        return '<div style="margin-bottom:10px;">' +
+                            '<label style="display:block;color:#cbd5e1;font-size:11px;margin-bottom:4px;" for="' + id + '">' + esc(label) + req + "</label>" +
+                            input + "</div>";
+                    }
+
+                    var fieldsHtml = "";
+                    if (fieldDefs.length) {
+                        fieldsHtml = fieldDefs.map(function (fd, idx) { return fieldInputHtml(fd, idx); }).join("");
+                    } else {
+                        fieldsHtml =
+                            '<label style="display:block;color:#cbd5e1;font-size:11px;margin-bottom:4px;">Instructions / content</label>' +
+                            '<textarea id="genDocInstructions" rows="5" style="width:100%;background:#020617;border:1px solid #334155;border-radius:8px;color:#fff;padding:10px;font-size:13px;" placeholder="Recipient, purpose, key facts, tone…"></textarea>';
+                    }
+
                     var wrap = document.createElement("div");
                     wrap.id = "genDocOverlay";
                     wrap.style.cssText = "position:fixed;inset:0;z-index:10040;background:rgba(2,6,23,0.75);display:flex;align-items:center;justify-content:center;padding:16px;";
                     wrap.innerHTML =
-                        '<div style="width:min(560px,100%);max-height:90vh;overflow:auto;background:#0f172a;border:1px solid #334155;border-radius:16px;padding:20px;">' +
+                        '<div style="width:min(640px,100%);max-height:92vh;overflow:auto;background:#0f172a;border:1px solid #334155;border-radius:16px;padding:20px;">' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
                         '<h3 style="color:#fff;font-size:16px;font-weight:600;margin:0;">Generate: ' + esc(name) + "</h3>" +
-                        '<button type="button" onclick="document.getElementById(\'genDocOverlay\').remove()" style="color:#94a3b8;background:none;border:none;font-size:18px;cursor:pointer;">×</button></div>' +
-                        '<p style="color:#94a3b8;font-size:12px;margin-bottom:10px;">Describe what you need. This counts against your plan units (weight ' +
-                        esc(meta ? meta.weight : 1) + ").</p>" +
-                        '<label style="display:block;color:#cbd5e1;font-size:11px;margin-bottom:4px;">Instructions / content</label>' +
-                        '<textarea id="genDocInstructions" rows="6" style="width:100%;background:#020617;border:1px solid #334155;border-radius:8px;color:#fff;padding:10px;font-size:13px;" placeholder="Recipient, purpose, key facts, tone…"></textarea>' +
+                        '<button type="button" id="genDocCloseX" style="color:#94a3b8;background:none;border:none;font-size:18px;cursor:pointer;">×</button></div>' +
+                        '<p style="color:#94a3b8;font-size:12px;margin-bottom:12px;">Fill the fields for this document. Counts as weight ' +
+                        esc(weight) + " on your plan.</p>" +
+                        '<div id="genDocFields">' + fieldsHtml + "</div>" +
                         '<label style="display:block;color:#cbd5e1;font-size:11px;margin:12px 0 4px;">Output language</label>' +
                         '<select id="genDocLang" style="width:100%;background:#020617;border:1px solid #334155;border-radius:8px;color:#fff;padding:8px;font-size:13px;">' +
                         '<option value="en">English</option><option value="zh-CN">中文</option><option value="fr">Français</option>' +
@@ -5208,58 +5254,88 @@
                         '<option value="ha">Hausa</option><option value="yo">Yorùbá</option><option value="ig">Igbo</option></select>' +
                         '<div id="genCompanionsWrap" style="display:none;margin-top:14px;padding:12px;border-radius:10px;border:1px solid #334155;background:#020617;">' +
                         '<div style="color:#e2e8f0;font-size:12px;font-weight:600;margin-bottom:6px;">Complementary documents</div>' +
-                        '<p style="color:#94a3b8;font-size:11px;margin:0 0 8px;">Optional — each counts against your plan separately. Shared brief and language.</p>' +
+                        '<p style="color:#94a3b8;font-size:11px;margin:0 0 8px;">Optional — each counts against your plan separately.</p>' +
                         '<div id="genCompanionsList"></div></div>' +
                         '<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">' +
-                        '<button type="button" onclick="document.getElementById(\'genDocOverlay\').remove()" style="padding:8px 14px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:none;cursor:pointer;font-size:12px;">Cancel</button>' +
+                        '<button type="button" id="genDocCancelBtn" style="padding:8px 14px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:none;cursor:pointer;font-size:12px;">Cancel</button>' +
                         '<button type="button" id="genDocSendBtn" style="padding:8px 14px;border-radius:8px;background:#059669;color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:600;">Send</button>' +
-                        "</div></div>";
+                        "</div>" +
+                        '<div id="genDocProgress" style="display:none;margin-top:14px;"></div></div>';
+
                     document.body.appendChild(wrap);
+                    document.getElementById("genDocCloseX").onclick = function () { wrap.remove(); };
+                    document.getElementById("genDocCancelBtn").onclick = function () { wrap.remove(); };
+
                     try {
                         var langSel = document.getElementById("genDocLang");
                         if (langSel && typeof getVicDocLang === "function") langSel.value = getVicDocLang() || "en";
                     } catch (_) { }
-                    // Complementary documents checkboxes
+
                     try {
                         var comps = (meta && (meta.companions || meta.companionDocs || (meta.raw && meta.raw.companions))) || [];
-                        var wrap = document.getElementById("genCompanionsWrap");
-                        var list = document.getElementById("genCompanionsList");
-                        if (wrap && list && comps.length) {
-                            wrap.style.display = "block";
-                            list.innerHTML = comps.map(function (c) {
+                        var wrapC = document.getElementById("genCompanionsWrap");
+                        var listC = document.getElementById("genCompanionsList");
+                        if (wrapC && listC && comps.length) {
+                            wrapC.style.display = "block";
+                            listC.innerHTML = comps.map(function (c) {
                                 var id = c.id || c;
                                 var label = c.label || String(id).replace(/_/g, " ");
                                 var blurb = c.blurb || "";
                                 var w = c.weight != null ? c.weight : "";
                                 return '<label style="display:flex;align-items:flex-start;gap:8px;margin:6px 0;cursor:pointer;color:#cbd5e1;font-size:12px;">' +
                                     '<input type="checkbox" class="genCompanionCb" value="' + String(id).replace(/"/g, "") + '" style="margin-top:3px;">' +
-                                    '<span><strong style="color:#f1f5f9;">' + (typeof esc === "function" ? esc(label) : label) + '</strong>' +
-                                    (w ? ' <span style="color:#64748b;">(weight ' + w + ')</span>' : '') +
-                                    (blurb ? '<br><span style="color:#94a3b8;font-size:11px;">' + (typeof esc === "function" ? esc(blurb) : blurb) + '</span>' : '') +
-                                    '</span></label>';
+                                    '<span><strong style="color:#f1f5f9;">' + esc(label) + "</strong>" +
+                                    (w ? ' <span style="color:#64748b;">(weight ' + w + ")</span>" : "") +
+                                    (blurb ? '<br><span style="color:#94a3b8;font-size:11px;">' + esc(blurb) + "</span>" : "") +
+                                    "</span></label>";
                             }).join("");
                         }
                     } catch (_) { }
+
                     document.getElementById("genDocSendBtn").onclick = async function () {
-                        var instructions = (document.getElementById("genDocInstructions") || {}).value || "";
-                        var lang = (document.getElementById("genDocLang") || {}).value || "en";
                         var btn = document.getElementById("genDocSendBtn");
-                        var progressHost = document.getElementById("genDocProgress");
-                        if (!progressHost) {
-                            progressHost = document.createElement("div");
-                            progressHost.id = "genDocProgress";
-                            progressHost.style.cssText = "display:none;margin-top:14px;padding:12px;border-radius:12px;border:1px solid #334155;background:#020617;";
-                            var box = wrap.querySelector("div");
-                            if (box) box.appendChild(progressHost);
+                        var lang = (document.getElementById("genDocLang") || {}).value || "en";
+                        var fields = {};
+                        var missing = [];
+                        fieldDefs.forEach(function (fd, idx) {
+                            var key = fd.key || fd.id || fd.name || ("field_" + idx);
+                            var el = document.getElementById("genField_" + String(key).replace(/[^a-zA-Z0-9_]/g, "_"));
+                            var val = el ? String(el.value || "").trim() : "";
+                            if (fd.required && !val) missing.push(fd.label || key);
+                            if (val !== "") fields[key] = val;
+                        });
+                        var instructionsEl = document.getElementById("genDocInstructions");
+                        var instructions = instructionsEl ? String(instructionsEl.value || "").trim() : "";
+                        if (instructions) {
+                            fields.instructions = instructions;
+                            fields.notes = fields.notes || instructions;
+                            if (!fields.prompt) fields.prompt = instructions;
                         }
+                        if (missing.length) {
+                            toast("Required: " + missing.join(", "), true);
+                            return;
+                        }
+                        if (!fieldDefs.length && !instructions) {
+                            toast("Enter at least a short description or fill the fields.", true);
+                            return;
+                        }
+
+                        var companionIds = [];
+                        try {
+                            document.querySelectorAll(".genCompanionCb:checked").forEach(function (cb) {
+                                if (cb.value) companionIds.push(cb.value);
+                            });
+                        } catch (_) { }
+
+                        fields.outputLanguage = lang;
+                        fields.language = lang;
+                        if (btn) { btn.disabled = true; btn.textContent = "Starting…"; }
+
+                        var progressHost = document.getElementById("genDocProgress");
                         function showProgress(state, detail) {
+                            if (!progressHost) return;
                             progressHost.style.display = "block";
-                            var colors = {
-                                queued: "#38bdf8",
-                                running: "#fbbf24",
-                                done: "#34d399",
-                                error: "#f87171"
-                            };
+                            var colors = { queued: "#38bdf8", running: "#fbbf24", done: "#34d399", error: "#f87171" };
                             var c = colors[state] || "#94a3b8";
                             var label =
                                 state === "queued" ? "Queued — starting shortly…" :
@@ -5267,51 +5343,38 @@
                                         state === "done" ? "Document ready" :
                                             state === "error" ? "Generation failed" : state;
                             progressHost.innerHTML =
-                                '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
-                                '<div class="gen-spin" style="width:18px;height:18px;border:2px solid #334155;border-top-color:' + c + ';border-radius:50%;' +
-                                (state === "done" || state === "error" ? "display:none;" : "animation:genSpin 0.8s linear infinite;") + '"></div>' +
-                                '<div style="color:' + c + ';font-size:13px;font-weight:600;">' + label + '</div></div>' +
+                                '<div style="padding:12px;border-radius:12px;border:1px solid #334155;background:#020617;">' +
+                                '<div style="color:' + c + ';font-size:13px;font-weight:600;margin-bottom:6px;">' + label + "</div>" +
                                 '<div style="height:6px;background:#1e293b;border-radius:999px;overflow:hidden;margin-bottom:8px;">' +
-                                '<div id="genDocBar" style="height:100%;width:' + (state === "queued" ? "12%" : state === "running" ? "55%" : "100%") +
-                                ";background:" + c + ';transition:width 0.5s ease;"></div></div>' +
-                                '<div id="genDocDetail" style="color:#94a3b8;font-size:11px;line-height:1.4;">' + (detail || "") + "</div>" +
-                                (state === "done" && detail && detail.indexOf("http") >= 0
-                                    ? '<a href="' + detail.replace(/"/g, "") + '" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;color:#34d399;font-size:12px;font-weight:600;">Open document →</a>'
-                                    : "");
+                                '<div style="height:100%;width:' + (state === "queued" ? "15%" : state === "running" ? "55%" : "100%") +
+                                ";background:" + c + ';"></div></div>' +
+                                '<div style="color:#94a3b8;font-size:11px;">' + (detail || "") + "</div></div>";
                         }
-                        if (!document.getElementById("genSpinStyle")) {
-                            var st = document.createElement("style");
-                            st.id = "genSpinStyle";
-                            st.textContent = "@keyframes genSpin{to{transform:rotate(360deg)}}";
-                            document.head.appendChild(st);
-                        }
-                        if (btn) { btn.disabled = true; btn.textContent = "Starting…"; }
+
                         try {
-                            var companionIds = [];
-                            try {
-                                document.querySelectorAll(".genCompanionCb:checked").forEach(function (cb) {
-                                    if (cb.value) companionIds.push(cb.value);
-                                });
-                            } catch (_) { }
                             var payload = {
                                 clientId: sid(),
                                 token: tok(),
                                 docType: docTypeId,
                                 documentType: docTypeId,
                                 type: docTypeId,
-                                instructions: instructions,
-                                notes: instructions,
+                                fields: fields,
+                                instructions: instructions || fields.prompt || fields.notes || "",
+                                notes: fields.notes || instructions || "",
                                 outputLanguage: lang,
                                 language: lang,
-                                fields: { notes: instructions, instructions: instructions, outputLanguage: lang },
                                 companions: companionIds,
                                 companionDocIds: companionIds,
                                 fromClientPortal: true
                             };
+                            Object.keys(fields).forEach(function (k) {
+                                if (payload[k] === undefined) payload[k] = fields[k];
+                            });
+
                             var res = await gw("clientportal", "clientPortalGenerateDocument", payload);
                             if (res && res.success === false) {
                                 if (typeof isSystemCoolingResponse === "function" && isSystemCoolingResponse(res)) {
-                                    showProgress("running", res.message || "System cooling off — a job may already be running. Check My Work.");
+                                    showProgress("running", res.message || "System busy — check My Work.");
                                     toast(res.message || "System cooling off", false);
                                     if (btn) { btn.disabled = false; btn.textContent = "Send"; }
                                     return;
@@ -5319,11 +5382,11 @@
                                 throw new Error((res && (res.message || res.error)) || "Generation failed");
                             }
                             var jobId = res.jobId || res.id || (res.data && res.data.jobId) || "";
-                            showProgress(res.queued || jobId ? "queued" : "running", jobId ? ("Job " + jobId) : (res.message || "Working…"));
+                            var extra = (res.companionsQueued ? (" + " + res.companionsQueued + " complementary") : "");
+                            showProgress(res.queued || jobId ? "queued" : "running", (jobId ? ("Job " + jobId) : (res.message || "")) + extra);
                             toast(res.message || "Document generation started");
                             if (typeof loadMyWork === "function") try { loadMyWork(); } catch (_) { }
 
-                            // Poll job status for live progress (former generating style)
                             if (jobId) {
                                 var tries = 0;
                                 var timer = setInterval(async function () {
@@ -5335,34 +5398,27 @@
                                         var st = String((stRes && (stRes.status || (stRes.job && stRes.job.status) || stRes.state)) || "").toLowerCase();
                                         var msg = (stRes && (stRes.message || stRes.detail || (stRes.job && stRes.job.message))) || "";
                                         var url = stRes && (stRes.url || stRes.docUrl || stRes.previewUrl || (stRes.result && (stRes.result.docUrl || stRes.result.url)));
-                                        var pct = stRes && (stRes.progress || stRes.percent);
-                                        if (pct != null) {
-                                            var bar = document.getElementById("genDocBar");
-                                            if (bar) bar.style.width = Math.min(100, Number(pct) || 55) + "%";
-                                        }
                                         if (st === "queued") showProgress("queued", msg || ("Job " + jobId));
                                         else if (st === "running" || st === "processing") showProgress("running", msg || "Building your document…");
                                         else if (st === "done" || st === "completed" || st === "success") {
                                             clearInterval(timer);
                                             showProgress("done", url || msg || "Finished — see My Documents");
-                                            if (btn) { btn.textContent = "Done"; }
+                                            if (btn) btn.textContent = "Done";
                                             if (typeof loadDocuments === "function") try { loadDocuments(); } catch (_) { }
-                                            if (typeof loadMyWork === "function") try { loadMyWork(); } catch (_) { }
                                         } else if (st === "error" || st === "failed" || st === "terminated") {
                                             clearInterval(timer);
-                                            showProgress("error", msg || (stRes && stRes.message) || "Generation failed");
+                                            showProgress("error", msg || "Generation failed");
                                             if (btn) { btn.disabled = false; btn.textContent = "Retry"; }
                                         } else if (tries > 90) {
                                             clearInterval(timer);
-                                            showProgress("running", "Still working — track this job under My Work. You can close this panel.");
+                                            showProgress("running", "Still working — track under My Work.");
                                             if (btn) { btn.disabled = false; btn.textContent = "Close"; btn.onclick = function () { wrap.remove(); }; }
                                         }
                                     } catch (_poll) {
-                                        if (tries > 5) showProgress("running", "Job running in background — open My Work for status.");
+                                        if (tries > 5) showProgress("running", "Running in background — open My Work.");
                                     }
                                 }, 4000);
                             } else {
-                                // Sync completion without job id
                                 showProgress("done", (res && (res.url || res.docUrl || res.message)) || "Completed");
                                 if (typeof loadDocuments === "function") try { loadDocuments(); } catch (_) { }
                             }
