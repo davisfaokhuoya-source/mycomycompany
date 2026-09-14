@@ -1758,7 +1758,8 @@
                         <p class="text-[10px] text-slate-500 leading-relaxed">Account count is limited by your <strong
                                 class="text-slate-400">Digital tier</strong>. Default TikTok is standard (publish).
                             <strong class="text-slate-400">Business TikTok</strong> enables AI comment replies. To
-                            remove a connection, request disconnect — admin completes it.</p>
+                            remove a connection, request disconnect — admin completes it.
+                        </p>
                         <div class="flex flex-wrap gap-2 items-center text-[10px] text-slate-500">
                             <span>TikTok type is chosen when you connect (Publish vs Business). No default
                                 selection.</span>
@@ -4761,7 +4762,7 @@
                     var id = d.id || d.docType || d.type || d.key || d.slug || ("doc-" + idx);
                     var name = d.name || d.title || d.label || d.docType || id;
                     var weight = Number(d.weight || d.units || d.cost || 1) || 1;
-                    var locked = !!(d.locked || d.disabled || d.unavailable);
+                    var locked = !!(d.locked || d.disabled || d.unavailable || d.available === false);
                     var reason = d.reason || d.lockReason || d.message || (locked ? "Not available on your plan" : "");
                     if (!byInd[ind]) byInd[ind] = { id: ind, name: ind, categories: {} };
                     if (!byInd[ind].categories[cat]) byInd[ind].categories[cat] = { id: cat, name: cat, docs: [] };
@@ -4906,27 +4907,67 @@
                     return;
                 }
                 grid.innerHTML = filtered.map(function (d) {
-                    var locked = d.locked;
+                    var locked = !!(d.locked || d.available === false);
+                    var idAttr = String(d.id || "").replace(/"/g, "&quot;");
                     return (
-                        '<div class="p-4 rounded-xl border ' + (locked ? "border-slate-800 opacity-60" : "border-slate-700 hover:border-emerald-600") +
-                        ' bg-slate-900/80 flex flex-col gap-2">' +
+                        '<div class="gen-doc-card p-4 rounded-xl border ' + (locked ? "border-slate-800 opacity-60" : "border-slate-700 hover:border-emerald-600 cursor-pointer") +
+                        ' bg-slate-900/80 flex flex-col gap-2" data-doc-id="' + idAttr + '" data-locked="' + (locked ? "1" : "0") + '">' +
                         '<div class="flex items-start justify-between gap-2">' +
                         '<div class="text-sm font-semibold text-white">' + esc(d.name) + '</div>' +
                         '<span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">×' + esc(d.weight) + '</span>' +
                         '</div>' +
                         (locked
                             ? '<p class="text-[11px] text-amber-400/90">' + esc(d.reason || "Unavailable") + "</p>"
-                            : '<p class="text-[11px] text-slate-500">Weight ' + esc(d.weight) + " unit" + (d.weight === 1 ? "" : "s") + "</p>") +
+                            : '<p class="text-[11px] text-slate-500">Weight ' + esc(d.weight) + " unit" + (Number(d.weight) === 1 ? "" : "s") + "</p>") +
                         '<div class="mt-auto flex flex-wrap gap-2">' +
-                        (d.sampleUrl
-                            ? '<a href="' + esc(d.sampleUrl) + '" target="_blank" rel="noopener" class="text-[11px] px-2.5 py-1 rounded bg-slate-800 text-slate-200 hover:bg-slate-700">Preview sample</a>'
-                            : '<button type="button" class="text-[11px] px-2.5 py-1 rounded bg-slate-800 text-slate-400" onclick="genPreviewSample(\'' + esc(d.id).replace(/'/g, "\\'") + '\')">Preview sample</button>') +
+                        '<button type="button" class="gen-preview-btn text-[11px] px-2.5 py-1 rounded bg-slate-800 text-slate-200 hover:bg-slate-700" data-doc-id="' + idAttr + '">Preview sample</button>' +
                         (locked
                             ? '<button type="button" class="text-[11px] px-2.5 py-1 rounded bg-slate-800 text-slate-500 cursor-not-allowed" disabled>Locked</button>'
-                            : '<button type="button" class="text-[11px] px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white" onclick="genStartDocument(\'' + esc(d.id).replace(/'/g, "\\'") + '\')">Generate</button>') +
+                            : '<button type="button" class="gen-start-btn text-[11px] px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white" data-doc-id="' + idAttr + '">Generate</button>') +
                         "</div></div>"
                     );
                 }).join("");
+
+                // Event delegation (avoids broken inline onclick / CSP issues)
+                if (!grid._genClickBound) {
+                    grid._genClickBound = true;
+                    grid.addEventListener("click", function (ev) {
+                        var t = ev.target;
+                        if (!t) return;
+                        var previewBtn = t.closest ? t.closest(".gen-preview-btn") : null;
+                        var startBtn = t.closest ? t.closest(".gen-start-btn") : null;
+                        var card = t.closest ? t.closest(".gen-doc-card") : null;
+                        if (previewBtn) {
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                            var pid = previewBtn.getAttribute("data-doc-id");
+                            if (pid && typeof window.genPreviewSample === "function") {
+                                try { window.genPreviewSample(pid); } catch (e1) { try { toast(e1.message || "Preview failed", true); } catch (_) { } }
+                            }
+                            return;
+                        }
+                        if (startBtn) {
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                            var sid = startBtn.getAttribute("data-doc-id");
+                            if (sid && typeof window.genStartDocument === "function") {
+                                try { window.genStartDocument(sid); } catch (e2) { try { toast(e2.message || "Could not open form", true); } catch (_) { console.error(e2); } }
+                            } else {
+                                try { toast("Generate is not available — refresh the page.", true); } catch (_) { }
+                            }
+                            return;
+                        }
+                        // Click on card body opens generate (if not locked)
+                        if (card && card.getAttribute("data-locked") !== "1") {
+                            // ignore if clicking a link
+                            if (t.closest && t.closest("a")) return;
+                            var cid = card.getAttribute("data-doc-id");
+                            if (cid && typeof window.genStartDocument === "function") {
+                                try { window.genStartDocument(cid); } catch (e3) { try { toast(e3.message || "Could not open form", true); } catch (_) { console.error(e3); } }
+                            }
+                        }
+                    });
+                }
             };
 
             window.applyGenerateCardFilter = function () {
@@ -5135,201 +5176,206 @@
             };
 
             window.genStartDocument = function genStartDocument(docTypeId) {
-                // Find doc meta
-                var meta = null;
-                (window._genTree.industries || []).forEach(function (ind) {
-                    (ind.categories || []).forEach(function (c) {
-                        (c.docs || []).forEach(function (d) {
-                            if (String(d.id) === String(docTypeId)) meta = d;
+                try {
+                    // Find doc meta
+                    var meta = null;
+                    (window._genTree.industries || []).forEach(function (ind) {
+                        (ind.categories || []).forEach(function (c) {
+                            (c.docs || []).forEach(function (d) {
+                                if (String(d.id) === String(docTypeId)) meta = d;
+                            });
                         });
                     });
-                });
-                var name = meta ? meta.name : docTypeId;
-                var existing = document.getElementById("genDocOverlay");
-                if (existing) existing.remove();
-                var wrap = document.createElement("div");
-                wrap.id = "genDocOverlay";
-                wrap.style.cssText = "position:fixed;inset:0;z-index:10040;background:rgba(2,6,23,0.75);display:flex;align-items:center;justify-content:center;padding:16px;";
-                wrap.innerHTML =
-                    '<div style="width:min(560px,100%);max-height:90vh;overflow:auto;background:#0f172a;border:1px solid #334155;border-radius:16px;padding:20px;">' +
-                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
-                    '<h3 style="color:#fff;font-size:16px;font-weight:600;margin:0;">Generate: ' + esc(name) + "</h3>" +
-                    '<button type="button" onclick="document.getElementById(\'genDocOverlay\').remove()" style="color:#94a3b8;background:none;border:none;font-size:18px;cursor:pointer;">×</button></div>' +
-                    '<p style="color:#94a3b8;font-size:12px;margin-bottom:10px;">Describe what you need. This counts against your plan units (weight ' +
-                    esc(meta ? meta.weight : 1) + ").</p>" +
-                    '<label style="display:block;color:#cbd5e1;font-size:11px;margin-bottom:4px;">Instructions / content</label>' +
-                    '<textarea id="genDocInstructions" rows="6" style="width:100%;background:#020617;border:1px solid #334155;border-radius:8px;color:#fff;padding:10px;font-size:13px;" placeholder="Recipient, purpose, key facts, tone…"></textarea>' +
-                    '<label style="display:block;color:#cbd5e1;font-size:11px;margin:12px 0 4px;">Output language</label>' +
-                    '<select id="genDocLang" style="width:100%;background:#020617;border:1px solid #334155;border-radius:8px;color:#fff;padding:8px;font-size:13px;">' +
-                    '<option value="en">English</option><option value="zh-CN">中文</option><option value="fr">Français</option>' +
-                    '<option value="es">Español</option><option value="ar">العربية</option><option value="pt">Português</option>' +
-                    '<option value="ha">Hausa</option><option value="yo">Yorùbá</option><option value="ig">Igbo</option></select>' +
-                    '<div id="genCompanionsWrap" style="display:none;margin-top:14px;padding:12px;border-radius:10px;border:1px solid #334155;background:#020617;">' +
-                    '<div style="color:#e2e8f0;font-size:12px;font-weight:600;margin-bottom:6px;">Complementary documents</div>' +
-                    '<p style="color:#94a3b8;font-size:11px;margin:0 0 8px;">Optional — each counts against your plan separately. Shared brief and language.</p>' +
-                    '<div id="genCompanionsList"></div></div>' +
-                    '<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">' +
-                    '<button type="button" onclick="document.getElementById(\'genDocOverlay\').remove()" style="padding:8px 14px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:none;cursor:pointer;font-size:12px;">Cancel</button>' +
-                    '<button type="button" id="genDocSendBtn" style="padding:8px 14px;border-radius:8px;background:#059669;color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:600;">Send</button>' +
-                    "</div></div>";
-                document.body.appendChild(wrap);
-                try {
-                    var langSel = document.getElementById("genDocLang");
-                    if (langSel && typeof getVicDocLang === "function") langSel.value = getVicDocLang() || "en";
-                } catch (_) { }
-                // Complementary documents checkboxes
-                try {
-                    var comps = (meta && (meta.companions || meta.companionDocs || (meta.raw && meta.raw.companions))) || [];
-                    var wrap = document.getElementById("genCompanionsWrap");
-                    var list = document.getElementById("genCompanionsList");
-                    if (wrap && list && comps.length) {
-                        wrap.style.display = "block";
-                        list.innerHTML = comps.map(function (c) {
-                            var id = c.id || c;
-                            var label = c.label || String(id).replace(/_/g, " ");
-                            var blurb = c.blurb || "";
-                            var w = c.weight != null ? c.weight : "";
-                            return '<label style="display:flex;align-items:flex-start;gap:8px;margin:6px 0;cursor:pointer;color:#cbd5e1;font-size:12px;">' +
-                                '<input type="checkbox" class="genCompanionCb" value="' + String(id).replace(/"/g, "") + '" style="margin-top:3px;">' +
-                                '<span><strong style="color:#f1f5f9;">' + (typeof esc === "function" ? esc(label) : label) + '</strong>' +
-                                (w ? ' <span style="color:#64748b;">(weight ' + w + ')</span>' : '') +
-                                (blurb ? '<br><span style="color:#94a3b8;font-size:11px;">' + (typeof esc === "function" ? esc(blurb) : blurb) + '</span>' : '') +
-                                '</span></label>';
-                        }).join("");
-                    }
-                } catch (_) { }
-                document.getElementById("genDocSendBtn").onclick = async function () {
-                    var instructions = (document.getElementById("genDocInstructions") || {}).value || "";
-                    var lang = (document.getElementById("genDocLang") || {}).value || "en";
-                    var btn = document.getElementById("genDocSendBtn");
-                    var progressHost = document.getElementById("genDocProgress");
-                    if (!progressHost) {
-                        progressHost = document.createElement("div");
-                        progressHost.id = "genDocProgress";
-                        progressHost.style.cssText = "display:none;margin-top:14px;padding:12px;border-radius:12px;border:1px solid #334155;background:#020617;";
-                        var box = wrap.querySelector("div");
-                        if (box) box.appendChild(progressHost);
-                    }
-                    function showProgress(state, detail) {
-                        progressHost.style.display = "block";
-                        var colors = {
-                            queued: "#38bdf8",
-                            running: "#fbbf24",
-                            done: "#34d399",
-                            error: "#f87171"
-                        };
-                        var c = colors[state] || "#94a3b8";
-                        var label =
-                            state === "queued" ? "Queued — starting shortly…" :
-                                state === "running" ? "Generating your document…" :
-                                    state === "done" ? "Document ready" :
-                                        state === "error" ? "Generation failed" : state;
-                        progressHost.innerHTML =
-                            '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
-                            '<div class="gen-spin" style="width:18px;height:18px;border:2px solid #334155;border-top-color:' + c + ';border-radius:50%;' +
-                            (state === "done" || state === "error" ? "display:none;" : "animation:genSpin 0.8s linear infinite;") + '"></div>' +
-                            '<div style="color:' + c + ';font-size:13px;font-weight:600;">' + label + '</div></div>' +
-                            '<div style="height:6px;background:#1e293b;border-radius:999px;overflow:hidden;margin-bottom:8px;">' +
-                            '<div id="genDocBar" style="height:100%;width:' + (state === "queued" ? "12%" : state === "running" ? "55%" : "100%") +
-                            ";background:" + c + ';transition:width 0.5s ease;"></div></div>' +
-                            '<div id="genDocDetail" style="color:#94a3b8;font-size:11px;line-height:1.4;">' + (detail || "") + "</div>" +
-                            (state === "done" && detail && detail.indexOf("http") >= 0
-                                ? '<a href="' + detail.replace(/"/g, "") + '" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;color:#34d399;font-size:12px;font-weight:600;">Open document →</a>'
-                                : "");
-                    }
-                    if (!document.getElementById("genSpinStyle")) {
-                        var st = document.createElement("style");
-                        st.id = "genSpinStyle";
-                        st.textContent = "@keyframes genSpin{to{transform:rotate(360deg)}}";
-                        document.head.appendChild(st);
-                    }
-                    if (btn) { btn.disabled = true; btn.textContent = "Starting…"; }
+                    var name = meta ? meta.name : docTypeId;
+                    var existing = document.getElementById("genDocOverlay");
+                    if (existing) existing.remove();
+                    var wrap = document.createElement("div");
+                    wrap.id = "genDocOverlay";
+                    wrap.style.cssText = "position:fixed;inset:0;z-index:10040;background:rgba(2,6,23,0.75);display:flex;align-items:center;justify-content:center;padding:16px;";
+                    wrap.innerHTML =
+                        '<div style="width:min(560px,100%);max-height:90vh;overflow:auto;background:#0f172a;border:1px solid #334155;border-radius:16px;padding:20px;">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+                        '<h3 style="color:#fff;font-size:16px;font-weight:600;margin:0;">Generate: ' + esc(name) + "</h3>" +
+                        '<button type="button" onclick="document.getElementById(\'genDocOverlay\').remove()" style="color:#94a3b8;background:none;border:none;font-size:18px;cursor:pointer;">×</button></div>' +
+                        '<p style="color:#94a3b8;font-size:12px;margin-bottom:10px;">Describe what you need. This counts against your plan units (weight ' +
+                        esc(meta ? meta.weight : 1) + ").</p>" +
+                        '<label style="display:block;color:#cbd5e1;font-size:11px;margin-bottom:4px;">Instructions / content</label>' +
+                        '<textarea id="genDocInstructions" rows="6" style="width:100%;background:#020617;border:1px solid #334155;border-radius:8px;color:#fff;padding:10px;font-size:13px;" placeholder="Recipient, purpose, key facts, tone…"></textarea>' +
+                        '<label style="display:block;color:#cbd5e1;font-size:11px;margin:12px 0 4px;">Output language</label>' +
+                        '<select id="genDocLang" style="width:100%;background:#020617;border:1px solid #334155;border-radius:8px;color:#fff;padding:8px;font-size:13px;">' +
+                        '<option value="en">English</option><option value="zh-CN">中文</option><option value="fr">Français</option>' +
+                        '<option value="es">Español</option><option value="ar">العربية</option><option value="pt">Português</option>' +
+                        '<option value="ha">Hausa</option><option value="yo">Yorùbá</option><option value="ig">Igbo</option></select>' +
+                        '<div id="genCompanionsWrap" style="display:none;margin-top:14px;padding:12px;border-radius:10px;border:1px solid #334155;background:#020617;">' +
+                        '<div style="color:#e2e8f0;font-size:12px;font-weight:600;margin-bottom:6px;">Complementary documents</div>' +
+                        '<p style="color:#94a3b8;font-size:11px;margin:0 0 8px;">Optional — each counts against your plan separately. Shared brief and language.</p>' +
+                        '<div id="genCompanionsList"></div></div>' +
+                        '<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">' +
+                        '<button type="button" onclick="document.getElementById(\'genDocOverlay\').remove()" style="padding:8px 14px;border-radius:8px;background:#1e293b;color:#e2e8f0;border:none;cursor:pointer;font-size:12px;">Cancel</button>' +
+                        '<button type="button" id="genDocSendBtn" style="padding:8px 14px;border-radius:8px;background:#059669;color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:600;">Send</button>' +
+                        "</div></div>";
+                    document.body.appendChild(wrap);
                     try {
-                        var companionIds = [];
+                        var langSel = document.getElementById("genDocLang");
+                        if (langSel && typeof getVicDocLang === "function") langSel.value = getVicDocLang() || "en";
+                    } catch (_) { }
+                    // Complementary documents checkboxes
+                    try {
+                        var comps = (meta && (meta.companions || meta.companionDocs || (meta.raw && meta.raw.companions))) || [];
+                        var wrap = document.getElementById("genCompanionsWrap");
+                        var list = document.getElementById("genCompanionsList");
+                        if (wrap && list && comps.length) {
+                            wrap.style.display = "block";
+                            list.innerHTML = comps.map(function (c) {
+                                var id = c.id || c;
+                                var label = c.label || String(id).replace(/_/g, " ");
+                                var blurb = c.blurb || "";
+                                var w = c.weight != null ? c.weight : "";
+                                return '<label style="display:flex;align-items:flex-start;gap:8px;margin:6px 0;cursor:pointer;color:#cbd5e1;font-size:12px;">' +
+                                    '<input type="checkbox" class="genCompanionCb" value="' + String(id).replace(/"/g, "") + '" style="margin-top:3px;">' +
+                                    '<span><strong style="color:#f1f5f9;">' + (typeof esc === "function" ? esc(label) : label) + '</strong>' +
+                                    (w ? ' <span style="color:#64748b;">(weight ' + w + ')</span>' : '') +
+                                    (blurb ? '<br><span style="color:#94a3b8;font-size:11px;">' + (typeof esc === "function" ? esc(blurb) : blurb) + '</span>' : '') +
+                                    '</span></label>';
+                            }).join("");
+                        }
+                    } catch (_) { }
+                    document.getElementById("genDocSendBtn").onclick = async function () {
+                        var instructions = (document.getElementById("genDocInstructions") || {}).value || "";
+                        var lang = (document.getElementById("genDocLang") || {}).value || "en";
+                        var btn = document.getElementById("genDocSendBtn");
+                        var progressHost = document.getElementById("genDocProgress");
+                        if (!progressHost) {
+                            progressHost = document.createElement("div");
+                            progressHost.id = "genDocProgress";
+                            progressHost.style.cssText = "display:none;margin-top:14px;padding:12px;border-radius:12px;border:1px solid #334155;background:#020617;";
+                            var box = wrap.querySelector("div");
+                            if (box) box.appendChild(progressHost);
+                        }
+                        function showProgress(state, detail) {
+                            progressHost.style.display = "block";
+                            var colors = {
+                                queued: "#38bdf8",
+                                running: "#fbbf24",
+                                done: "#34d399",
+                                error: "#f87171"
+                            };
+                            var c = colors[state] || "#94a3b8";
+                            var label =
+                                state === "queued" ? "Queued — starting shortly…" :
+                                    state === "running" ? "Generating your document…" :
+                                        state === "done" ? "Document ready" :
+                                            state === "error" ? "Generation failed" : state;
+                            progressHost.innerHTML =
+                                '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
+                                '<div class="gen-spin" style="width:18px;height:18px;border:2px solid #334155;border-top-color:' + c + ';border-radius:50%;' +
+                                (state === "done" || state === "error" ? "display:none;" : "animation:genSpin 0.8s linear infinite;") + '"></div>' +
+                                '<div style="color:' + c + ';font-size:13px;font-weight:600;">' + label + '</div></div>' +
+                                '<div style="height:6px;background:#1e293b;border-radius:999px;overflow:hidden;margin-bottom:8px;">' +
+                                '<div id="genDocBar" style="height:100%;width:' + (state === "queued" ? "12%" : state === "running" ? "55%" : "100%") +
+                                ";background:" + c + ';transition:width 0.5s ease;"></div></div>' +
+                                '<div id="genDocDetail" style="color:#94a3b8;font-size:11px;line-height:1.4;">' + (detail || "") + "</div>" +
+                                (state === "done" && detail && detail.indexOf("http") >= 0
+                                    ? '<a href="' + detail.replace(/"/g, "") + '" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;color:#34d399;font-size:12px;font-weight:600;">Open document →</a>'
+                                    : "");
+                        }
+                        if (!document.getElementById("genSpinStyle")) {
+                            var st = document.createElement("style");
+                            st.id = "genSpinStyle";
+                            st.textContent = "@keyframes genSpin{to{transform:rotate(360deg)}}";
+                            document.head.appendChild(st);
+                        }
+                        if (btn) { btn.disabled = true; btn.textContent = "Starting…"; }
                         try {
-                            document.querySelectorAll(".genCompanionCb:checked").forEach(function (cb) {
-                                if (cb.value) companionIds.push(cb.value);
-                            });
-                        } catch (_) { }
-                        var payload = {
-                            clientId: sid(),
-                            token: tok(),
-                            docType: docTypeId,
-                            documentType: docTypeId,
-                            type: docTypeId,
-                            instructions: instructions,
-                            notes: instructions,
-                            outputLanguage: lang,
-                            language: lang,
-                            fields: { notes: instructions, instructions: instructions, outputLanguage: lang },
-                            companions: companionIds,
-                            companionDocIds: companionIds,
-                            fromClientPortal: true
-                        };
-                        var res = await gw("clientportal", "clientPortalGenerateDocument", payload);
-                        if (res && res.success === false) {
-                            if (typeof isSystemCoolingResponse === "function" && isSystemCoolingResponse(res)) {
-                                showProgress("running", res.message || "System cooling off — a job may already be running. Check My Work.");
-                                toast(res.message || "System cooling off", false);
-                                if (btn) { btn.disabled = false; btn.textContent = "Send"; }
-                                return;
-                            }
-                            throw new Error((res && (res.message || res.error)) || "Generation failed");
-                        }
-                        var jobId = res.jobId || res.id || (res.data && res.data.jobId) || "";
-                        showProgress(res.queued || jobId ? "queued" : "running", jobId ? ("Job " + jobId) : (res.message || "Working…"));
-                        toast(res.message || "Document generation started");
-                        if (typeof loadMyWork === "function") try { loadMyWork(); } catch (_) { }
-
-                        // Poll job status for live progress (former generating style)
-                        if (jobId) {
-                            var tries = 0;
-                            var timer = setInterval(async function () {
-                                tries++;
-                                try {
-                                    var stRes = await gw("clientportal", "clientPortalCheckJobStatus", {
-                                        clientId: sid(), token: tok(), jobId: jobId
-                                    });
-                                    var st = String((stRes && (stRes.status || (stRes.job && stRes.job.status) || stRes.state)) || "").toLowerCase();
-                                    var msg = (stRes && (stRes.message || stRes.detail || (stRes.job && stRes.job.message))) || "";
-                                    var url = stRes && (stRes.url || stRes.docUrl || stRes.previewUrl || (stRes.result && (stRes.result.docUrl || stRes.result.url)));
-                                    var pct = stRes && (stRes.progress || stRes.percent);
-                                    if (pct != null) {
-                                        var bar = document.getElementById("genDocBar");
-                                        if (bar) bar.style.width = Math.min(100, Number(pct) || 55) + "%";
-                                    }
-                                    if (st === "queued") showProgress("queued", msg || ("Job " + jobId));
-                                    else if (st === "running" || st === "processing") showProgress("running", msg || "Building your document…");
-                                    else if (st === "done" || st === "completed" || st === "success") {
-                                        clearInterval(timer);
-                                        showProgress("done", url || msg || "Finished — see My Documents");
-                                        if (btn) { btn.textContent = "Done"; }
-                                        if (typeof loadDocuments === "function") try { loadDocuments(); } catch (_) { }
-                                        if (typeof loadMyWork === "function") try { loadMyWork(); } catch (_) { }
-                                    } else if (st === "error" || st === "failed" || st === "terminated") {
-                                        clearInterval(timer);
-                                        showProgress("error", msg || (stRes && stRes.message) || "Generation failed");
-                                        if (btn) { btn.disabled = false; btn.textContent = "Retry"; }
-                                    } else if (tries > 90) {
-                                        clearInterval(timer);
-                                        showProgress("running", "Still working — track this job under My Work. You can close this panel.");
-                                        if (btn) { btn.disabled = false; btn.textContent = "Close"; btn.onclick = function () { wrap.remove(); }; }
-                                    }
-                                } catch (_poll) {
-                                    if (tries > 5) showProgress("running", "Job running in background — open My Work for status.");
+                            var companionIds = [];
+                            try {
+                                document.querySelectorAll(".genCompanionCb:checked").forEach(function (cb) {
+                                    if (cb.value) companionIds.push(cb.value);
+                                });
+                            } catch (_) { }
+                            var payload = {
+                                clientId: sid(),
+                                token: tok(),
+                                docType: docTypeId,
+                                documentType: docTypeId,
+                                type: docTypeId,
+                                instructions: instructions,
+                                notes: instructions,
+                                outputLanguage: lang,
+                                language: lang,
+                                fields: { notes: instructions, instructions: instructions, outputLanguage: lang },
+                                companions: companionIds,
+                                companionDocIds: companionIds,
+                                fromClientPortal: true
+                            };
+                            var res = await gw("clientportal", "clientPortalGenerateDocument", payload);
+                            if (res && res.success === false) {
+                                if (typeof isSystemCoolingResponse === "function" && isSystemCoolingResponse(res)) {
+                                    showProgress("running", res.message || "System cooling off — a job may already be running. Check My Work.");
+                                    toast(res.message || "System cooling off", false);
+                                    if (btn) { btn.disabled = false; btn.textContent = "Send"; }
+                                    return;
                                 }
-                            }, 4000);
-                        } else {
-                            // Sync completion without job id
-                            showProgress("done", (res && (res.url || res.docUrl || res.message)) || "Completed");
-                            if (typeof loadDocuments === "function") try { loadDocuments(); } catch (_) { }
+                                throw new Error((res && (res.message || res.error)) || "Generation failed");
+                            }
+                            var jobId = res.jobId || res.id || (res.data && res.data.jobId) || "";
+                            showProgress(res.queued || jobId ? "queued" : "running", jobId ? ("Job " + jobId) : (res.message || "Working…"));
+                            toast(res.message || "Document generation started");
+                            if (typeof loadMyWork === "function") try { loadMyWork(); } catch (_) { }
+
+                            // Poll job status for live progress (former generating style)
+                            if (jobId) {
+                                var tries = 0;
+                                var timer = setInterval(async function () {
+                                    tries++;
+                                    try {
+                                        var stRes = await gw("clientportal", "clientPortalCheckJobStatus", {
+                                            clientId: sid(), token: tok(), jobId: jobId
+                                        });
+                                        var st = String((stRes && (stRes.status || (stRes.job && stRes.job.status) || stRes.state)) || "").toLowerCase();
+                                        var msg = (stRes && (stRes.message || stRes.detail || (stRes.job && stRes.job.message))) || "";
+                                        var url = stRes && (stRes.url || stRes.docUrl || stRes.previewUrl || (stRes.result && (stRes.result.docUrl || stRes.result.url)));
+                                        var pct = stRes && (stRes.progress || stRes.percent);
+                                        if (pct != null) {
+                                            var bar = document.getElementById("genDocBar");
+                                            if (bar) bar.style.width = Math.min(100, Number(pct) || 55) + "%";
+                                        }
+                                        if (st === "queued") showProgress("queued", msg || ("Job " + jobId));
+                                        else if (st === "running" || st === "processing") showProgress("running", msg || "Building your document…");
+                                        else if (st === "done" || st === "completed" || st === "success") {
+                                            clearInterval(timer);
+                                            showProgress("done", url || msg || "Finished — see My Documents");
+                                            if (btn) { btn.textContent = "Done"; }
+                                            if (typeof loadDocuments === "function") try { loadDocuments(); } catch (_) { }
+                                            if (typeof loadMyWork === "function") try { loadMyWork(); } catch (_) { }
+                                        } else if (st === "error" || st === "failed" || st === "terminated") {
+                                            clearInterval(timer);
+                                            showProgress("error", msg || (stRes && stRes.message) || "Generation failed");
+                                            if (btn) { btn.disabled = false; btn.textContent = "Retry"; }
+                                        } else if (tries > 90) {
+                                            clearInterval(timer);
+                                            showProgress("running", "Still working — track this job under My Work. You can close this panel.");
+                                            if (btn) { btn.disabled = false; btn.textContent = "Close"; btn.onclick = function () { wrap.remove(); }; }
+                                        }
+                                    } catch (_poll) {
+                                        if (tries > 5) showProgress("running", "Job running in background — open My Work for status.");
+                                    }
+                                }, 4000);
+                            } else {
+                                // Sync completion without job id
+                                showProgress("done", (res && (res.url || res.docUrl || res.message)) || "Completed");
+                                if (typeof loadDocuments === "function") try { loadDocuments(); } catch (_) { }
+                            }
+                        } catch (e) {
+                            showProgress("error", e.message || "Generation failed");
+                            toast(e.message || "Generation failed", true);
+                            if (btn) { btn.disabled = false; btn.textContent = "Send"; }
                         }
-                    } catch (e) {
-                        showProgress("error", e.message || "Generation failed");
-                        toast(e.message || "Generation failed", true);
-                        if (btn) { btn.disabled = false; btn.textContent = "Send"; }
-                    }
-                };
+                    };
+                } catch (errGen) {
+                    console.error("genStartDocument", errGen);
+                    try { toast((errGen && errGen.message) || "Could not open generate form. Refresh and try again.", true); } catch (_) { }
+                }
             };
 
             /* ---------- Other handlers ---------- */
