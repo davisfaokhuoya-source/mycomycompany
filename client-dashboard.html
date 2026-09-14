@@ -5240,7 +5240,7 @@
                                 if (btn) { btn.disabled = false; btn.textContent = "Send"; }
                                 return;
                             }
-                            throw new Error(res.message || "Generation failed");
+                            throw new Error((res && (res.message || res.error)) || "Generation failed");
                         }
                         var jobId = res.jobId || res.id || (res.data && res.data.jobId) || "";
                         showProgress(res.queued || jobId ? "queued" : "running", jobId ? ("Job " + jobId) : (res.message || "Working…"));
@@ -5274,7 +5274,7 @@
                                         if (typeof loadMyWork === "function") try { loadMyWork(); } catch (_) { }
                                     } else if (st === "error" || st === "failed" || st === "terminated") {
                                         clearInterval(timer);
-                                        showProgress("error", msg || "Generation failed");
+                                        showProgress("error", msg || (stRes && stRes.message) || "Generation failed");
                                         if (btn) { btn.disabled = false; btn.textContent = "Retry"; }
                                     } else if (tries > 90) {
                                         clearInterval(timer);
