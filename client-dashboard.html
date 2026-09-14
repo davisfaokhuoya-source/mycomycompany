@@ -469,7 +469,7 @@
 
     <!-- Vic language switcher (client portal UI) -->
     <div id="vicSiteLangWrap"
-        style="position:fixed;top:12px;right:12px;z-index:10050;display:flex;align-items:center;gap:6px;background:rgba(15,23,42,0.92);border:1px solid rgba(204,85,0,0.45);border-radius:999px;padding:4px 10px 4px 12px;box-shadow:0 4px 16px rgba(0,0,0,0.25);font-family:system-ui,sans-serif;">
+        style="display:none;position:fixed;top:12px;right:72px;z-index:10040;display:flex;align-items:center;gap:6px;background:rgba(15,23,42,0.92);border:1px solid rgba(204,85,0,0.45);border-radius:999px;padding:4px 10px 4px 12px;box-shadow:0 4px 16px rgba(0,0,0,0.25);font-family:system-ui,sans-serif;">
         <span style="color:#94a3b8;font-size:11px;font-weight:600;">Lang</span>
         <select id="clientUiLang" aria-label="Interface language"
             style="background:#0f172a;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;outline:none;max-width:140px;padding:2px 4px;border-radius:6px;">
@@ -742,6 +742,13 @@
                 </div>
                 <div class="flex items-center gap-4 shrink-0">
                     <div class="relative">
+
+                        <div id="vicSiteLangWrapHeader"
+                            class="flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900/80 px-2 py-0.5 mr-1">
+                            <span class="text-[10px] text-slate-500 font-semibold">Lang</span>
+                            <select id="clientUiLangHeader" aria-label="Interface language"
+                                class="bg-transparent border-0 text-xs text-white font-semibold outline-none max-w-[110px] cursor-pointer"></select>
+                        </div>
                         <button onclick="toggleClientNotifPanel(event)"
                             class="relative h-8 w-8 flex items-center justify-center rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
                             <i class="fa-solid fa-bell text-sm"></i>
@@ -1728,7 +1735,8 @@
                         <p class="text-[10px] text-slate-500 leading-relaxed">Account count is limited by your <strong
                                 class="text-slate-400">Digital tier</strong>. Default TikTok is standard (publish).
                             <strong class="text-slate-400">Business TikTok</strong> enables AI comment replies. To
-                            remove a connection, request disconnect — admin completes it.</p>
+                            remove a connection, request disconnect — admin completes it.
+                        </p>
                         <div class="flex flex-wrap gap-2 items-center text-[10px] text-slate-500">
                             <span>TikTok type is chosen when you connect (Publish vs Business). No default
                                 selection.</span>
@@ -2594,35 +2602,54 @@
         var MYWORK_TIMER = null;
         async function loadMyWork() {
             var list = document.getElementById('myWorkList');
-            if (list) list.innerHTML = '<p class="text-slate-500 text-sm">Loading…</p>';
+            if (list && !list.dataset.soft) list.innerHTML = '<p class="text-slate-500 text-sm">Loading…</p>';
             try {
+                var cid = (typeof sid === 'function' ? sid() : null) || CLIENT_ID || (typeof localStorage !== 'undefined' ? localStorage.getItem('CLIENT_ID') : '');
+                var tk = (typeof tok === 'function' ? tok() : null) || SESSION_TOKEN || (typeof localStorage !== 'undefined' ? localStorage.getItem('SESSION_TOKEN') : '');
+                if (!cid || !tk) {
+                    if (list) list.innerHTML = '<p class="text-amber-400 text-sm">Session missing — sign in again.</p>';
+                    return;
+                }
                 var res = await callGateway('clientportal', 'clientPortalListActiveJobs', {
-                    clientId: CLIENT_ID, token: SESSION_TOKEN
+                    clientId: cid, token: tk
                 });
                 if (!res || res.success === false) {
-                    throw new Error((res && res.message) || 'Could not load jobs');
+                    throw new Error((typeof formatApiError === 'function' ? formatApiError(res, 'Could not load jobs') : ((res && res.message) || 'Could not load jobs')));
                 }
                 var jobs = res.jobs || res.data || res.items || [];
                 if (!jobs.length) {
-                    if (list) list.innerHTML = '<p class="text-slate-500 text-sm">No active work right now. Generate a document and progress will show here.</p>';
+                    if (list) list.innerHTML = '<p class="text-slate-500 text-sm">No active or recent work. Failed jobs stay here for 24 hours so you can retry or delete.</p>';
                     return;
                 }
                 if (list) {
+                    list.dataset.soft = '1';
                     list.innerHTML = jobs.map(function (j) {
                         var st = String(j.status || j.Status || 'queued').toLowerCase();
-                        var color = st.indexOf('fail') >= 0 || st === 'error' ? 'text-red-400'
-                            : (st === 'done' || st === 'completed' || st === 'success' ? 'text-emerald-400'
-                                : (st === 'running' || st === 'processing' ? 'text-amber-400' : 'text-slate-300'));
+                        var isFail = st.indexOf('fail') >= 0 || st === 'error' || st === 'timeout';
+                        var isDone = st === 'done' || st === 'completed' || st === 'success';
+                        var color = isFail ? 'text-red-400' : (isDone ? 'text-emerald-400' : (st === 'running' || st === 'processing' ? 'text-amber-400' : 'text-slate-300'));
                         var title = j.title || j.docType || j.action || j.jobId || 'Job';
                         var msg = j.message || j.detail || j.error || '';
                         var id = j.jobId || j.id || '';
-                        return '<div class="rounded-lg border border-slate-700 bg-slate-900/60 p-3">'
-                            + '<div class="flex justify-between gap-2">'
-                            + '<span class="font-medium text-slate-100 text-sm">' + String(title).replace(/</g, '&lt;') + '</span>'
-                            + '<span class="text-xs font-semibold ' + color + '">' + String(st).replace(/</g, '&lt;') + '</span>'
+                        var esc = function (s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); };
+                        var actions = '';
+                        if (j.canTerminate) {
+                            actions += '<button type="button" class="text-xs px-2 py-1 rounded border border-slate-600 hover:bg-slate-800" onclick="clientTerminateJob(\'' + esc(id) + '\', this)">Stop</button>';
+                        }
+                        if (j.canRetry || isFail) {
+                            actions += '<button type="button" class="text-xs px-2 py-1 rounded bg-amber-600/80 hover:bg-amber-500 text-white" onclick="clientRetryJob(\'' + esc(id) + '\', this)">Retry</button>';
+                        }
+                        if (j.canDelete || isFail || isDone) {
+                            actions += '<button type="button" class="text-xs px-2 py-1 rounded border border-red-800 text-red-300 hover:bg-red-950/50" onclick="clientDeleteJob(\'' + esc(id) + '\', this)">Delete</button>';
+                        }
+                        return '<div class="rounded-lg border border-slate-700 bg-slate-900/60 p-3 space-y-2">'
+                            + '<div class="flex justify-between gap-2 items-start">'
+                            + '<span class="font-medium text-slate-100 text-sm">' + esc(title) + '</span>'
+                            + '<span class="text-xs font-semibold ' + color + '">' + esc(st) + '</span>'
                             + '</div>'
-                            + (id ? '<div class="text-[11px] text-slate-500 mt-1">' + String(id).replace(/</g, '&lt;') + '</div>' : '')
-                            + (msg ? '<div class="text-xs text-slate-400 mt-1">' + String(msg).replace(/</g, '&lt;') + '</div>' : '')
+                            + (id ? '<div class="text-[11px] text-slate-500 font-mono">' + esc(id) + '</div>' : '')
+                            + (msg ? '<div class="text-xs text-slate-400">' + esc(msg) + '</div>' : '')
+                            + (actions ? '<div class="flex flex-wrap gap-2 pt-1">' + actions + '</div>' : '')
                             + '</div>';
                     }).join('');
                 }
@@ -2630,19 +2657,74 @@
                 if (list) list.innerHTML = '<p class="text-red-400 text-sm">' + (e.message || 'Load failed') + '</p>';
             }
         }
+        async function clientRetryJob(jobId, btn) {
+            if (!jobId) return;
+            if (typeof setButtonLoading === 'function') setButtonLoading(btn, true, 'Retrying…');
+            try {
+                var res = await callGateway('clientportal', 'clientPortalRetryJob', {
+                    clientId: (typeof sid === 'function' ? sid() : CLIENT_ID),
+                    token: (typeof tok === 'function' ? tok() : SESSION_TOKEN),
+                    jobId: jobId
+                });
+                if (!res || res.success === false) throw new Error((res && res.message) || 'Retry failed');
+                if (typeof toast === 'function') toast(res.message || 'Retry queued');
+                await loadMyWork();
+            } catch (e) {
+                if (typeof toast === 'function') toast(e.message || 'Retry failed', true);
+            } finally {
+                if (typeof setButtonLoading === 'function') setButtonLoading(btn, false);
+            }
+        }
+        async function clientDeleteJob(jobId, btn) {
+            if (!jobId) return;
+            if (!confirm('Remove this job from My Work?')) return;
+            if (typeof setButtonLoading === 'function') setButtonLoading(btn, true, 'Deleting…');
+            try {
+                var res = await callGateway('clientportal', 'clientPortalDeleteJob', {
+                    clientId: (typeof sid === 'function' ? sid() : CLIENT_ID),
+                    token: (typeof tok === 'function' ? tok() : SESSION_TOKEN),
+                    jobId: jobId
+                });
+                if (!res || res.success === false) throw new Error((res && res.message) || 'Delete failed');
+                if (typeof toast === 'function') toast(res.message || 'Removed');
+                await loadMyWork();
+            } catch (e) {
+                if (typeof toast === 'function') toast(e.message || 'Delete failed', true);
+            } finally {
+                if (typeof setButtonLoading === 'function') setButtonLoading(btn, false);
+            }
+        }
+        async function clientTerminateJob(jobId, btn) {
+            if (!jobId) return;
+            if (typeof setButtonLoading === 'function') setButtonLoading(btn, true, 'Stopping…');
+            try {
+                var res = await callGateway('clientportal', 'clientPortalTerminateJob', {
+                    clientId: (typeof sid === 'function' ? sid() : CLIENT_ID),
+                    token: (typeof tok === 'function' ? tok() : SESSION_TOKEN),
+                    jobId: jobId
+                });
+                if (!res || res.success === false) throw new Error((res && res.message) || 'Stop failed');
+                if (typeof toast === 'function') toast(res.message || 'Stopped');
+                await loadMyWork();
+            } catch (e) {
+                if (typeof toast === 'function') toast(e.message || 'Stop failed', true);
+            } finally {
+                if (typeof setButtonLoading === 'function') setButtonLoading(btn, false);
+            }
+        }
         function startMyWorkPolling() {
             try { if (MYWORK_TIMER) clearInterval(MYWORK_TIMER); } catch (_) { }
+            // Slow refresh — only while My Work is visible (was too aggressive before)
             MYWORK_TIMER = setInterval(function () {
                 var view = document.getElementById('view-mywork');
                 if (!view || !view.classList.contains('active')) return;
                 try { loadMyWork(); } catch (_) { }
-            }, 8000);
+            }, 20000);
         }
         function stopMyWorkPolling() {
             try { if (MYWORK_TIMER) clearInterval(MYWORK_TIMER); } catch (_) { }
             MYWORK_TIMER = null;
         }
-
 
         function showView(name, btn) {
             try { closeMobileSidebar(); } catch (_) { }
@@ -5443,6 +5525,30 @@
             };
 
 
+        })();
+    </script>
+
+
+    <script>
+        (function syncClientLangSelects() {
+            function copyOptions() {
+                var src = document.getElementById('clientUiLang');
+                var dst = document.getElementById('clientUiLangHeader');
+                if (!src || !dst) return;
+                if (!dst.options.length) {
+                    dst.innerHTML = src.innerHTML;
+                }
+                dst.value = src.value;
+                dst.onchange = function () {
+                    src.value = dst.value;
+                    if (typeof src.onchange === 'function') src.onchange();
+                    else src.dispatchEvent(new Event('change'));
+                };
+                src.addEventListener('change', function () { dst.value = src.value; });
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', copyOptions);
+            else copyOptions();
+            setTimeout(copyOptions, 500);
         })();
     </script>
 
