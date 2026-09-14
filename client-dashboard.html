@@ -2544,14 +2544,13 @@
 
         function enterDashboard() {
             document.getElementById('loginView').classList.add('hidden');
-            document.getElementById('mainView').classList.remove('hidden'); try { startClientNotifPolling(); } catch (_n) { }
+            document.getElementById('mainView').classList.remove('hidden');
             document.getElementById('gwUrl').value = GW_URL;
-            // Primary dashboard only first — channel stats / presence / notifs
-            // load in staggered batches so the main thread is not hit with 4–5
-            // concurrent gateway round-trips on every login.
-            loadOverview();
-            setTimeout(function () { try { startPresencePing(); } catch (_) { } }, 800);
-            setTimeout(function () { try { startClientNotifPolling(); } catch (_) { } }, 1600);
+            // Only load the default section (Overview). Other tabs load on demand in showView —
+            // avoids parallel app.thevictorias.com.ng calls (Support/Integrations/etc.) while idle.
+            try { loadOverview(); } catch (_) { }
+            // Lightweight notif badge only (long interval); presence starts when Live Chat opens
+            setTimeout(function () { try { startClientNotifPolling(); } catch (_) { } }, 2500);
         }
 
         // Restore a saved session on page load
@@ -2585,6 +2584,63 @@
         function openMobileSidebar() {
             const main = document.getElementById('mainView');
             if (main) main.classList.add('sidebar-open');
+        }
+
+
+
+        // =====================================================================
+        // MY WORK — active / recent jobs (load only when tab is open)
+        // =====================================================================
+        var MYWORK_TIMER = null;
+        async function loadMyWork() {
+            var list = document.getElementById('myWorkList');
+            if (list) list.innerHTML = '<p class="text-slate-500 text-sm">Loading…</p>';
+            try {
+                var res = await callGateway('clientportal', 'clientPortalListActiveJobs', {
+                    clientId: CLIENT_ID, token: SESSION_TOKEN
+                });
+                if (!res || res.success === false) {
+                    throw new Error((res && res.message) || 'Could not load jobs');
+                }
+                var jobs = res.jobs || res.data || res.items || [];
+                if (!jobs.length) {
+                    if (list) list.innerHTML = '<p class="text-slate-500 text-sm">No active work right now. Generate a document and progress will show here.</p>';
+                    return;
+                }
+                if (list) {
+                    list.innerHTML = jobs.map(function (j) {
+                        var st = String(j.status || j.Status || 'queued').toLowerCase();
+                        var color = st.indexOf('fail') >= 0 || st === 'error' ? 'text-red-400'
+                            : (st === 'done' || st === 'completed' || st === 'success' ? 'text-emerald-400'
+                                : (st === 'running' || st === 'processing' ? 'text-amber-400' : 'text-slate-300'));
+                        var title = j.title || j.docType || j.action || j.jobId || 'Job';
+                        var msg = j.message || j.detail || j.error || '';
+                        var id = j.jobId || j.id || '';
+                        return '<div class="rounded-lg border border-slate-700 bg-slate-900/60 p-3">'
+                            + '<div class="flex justify-between gap-2">'
+                            + '<span class="font-medium text-slate-100 text-sm">' + String(title).replace(/</g, '&lt;') + '</span>'
+                            + '<span class="text-xs font-semibold ' + color + '">' + String(st).replace(/</g, '&lt;') + '</span>'
+                            + '</div>'
+                            + (id ? '<div class="text-[11px] text-slate-500 mt-1">' + String(id).replace(/</g, '&lt;') + '</div>' : '')
+                            + (msg ? '<div class="text-xs text-slate-400 mt-1">' + String(msg).replace(/</g, '&lt;') + '</div>' : '')
+                            + '</div>';
+                    }).join('');
+                }
+            } catch (e) {
+                if (list) list.innerHTML = '<p class="text-red-400 text-sm">' + (e.message || 'Load failed') + '</p>';
+            }
+        }
+        function startMyWorkPolling() {
+            try { if (MYWORK_TIMER) clearInterval(MYWORK_TIMER); } catch (_) { }
+            MYWORK_TIMER = setInterval(function () {
+                var view = document.getElementById('view-mywork');
+                if (!view || !view.classList.contains('active')) return;
+                try { loadMyWork(); } catch (_) { }
+            }, 8000);
+        }
+        function stopMyWorkPolling() {
+            try { if (MYWORK_TIMER) clearInterval(MYWORK_TIMER); } catch (_) { }
+            MYWORK_TIMER = null;
         }
 
 
@@ -2634,6 +2690,7 @@
                 try { loadBillingPanel(); } catch (_) { }
             }
             if (name === 'chat') {
+                try { if (typeof startPresencePing === 'function') startPresencePing(); } catch (_pp) { }
                 loadChat();
                 startChatPolling();
                 try { if (typeof MYWORK_TIMER !== 'undefined' && MYWORK_TIMER) clearInterval(MYWORK_TIMER); } catch (_e) { }
@@ -4931,16 +4988,23 @@
                 }
             };
 
-            window.genPreviewSample = async function genPreviewSample(docTypeId) {
+            window.genPreviewSample = async function genPreviewSample(docTypeId, ev) {
+                var btn = (ev && ev.target && ev.target.closest && ev.target.closest("button")) || null;
+                if (typeof setButtonLoading === "function") setButtonLoading(btn, true, "Loading…");
                 try {
                     var res = await gw("clientportal", "clientPortalGetDocumentSample", {
-                        clientId: sid(), token: tok(), docType: docTypeId, documentType: docTypeId
+                        clientId: sid(), token: tok(), docType: docTypeId, documentType: docTypeId, docId: docTypeId
                     });
-                    var url = res && (res.url || res.sampleUrl || res.link || (res.data && (res.data.url || res.data.sampleUrl)));
+                    if (res && res.success === false) {
+                        throw new Error((typeof formatApiError === "function" ? formatApiError(res, "Sample unavailable") : (res.message || "Sample unavailable")));
+                    }
+                    var url = res && (res.url || res.sampleUrl || res.link || res.previewUrl || (res.data && (res.data.url || res.data.sampleUrl)));
                     if (url) window.open(url, "_blank");
-                    else toast((res && res.message) || "No sample stored yet", true);
+                    else toast((res && res.message) || "No sample stored yet — admin can generate default samples in Document Studio", true);
                 } catch (e) {
                     toast(e.message || "Sample unavailable", true);
+                } finally {
+                    if (typeof setButtonLoading === "function") setButtonLoading(btn, false);
                 }
             };
 
