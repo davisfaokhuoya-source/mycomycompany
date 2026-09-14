@@ -5009,8 +5009,7 @@
                         </div>
                         <p class="text-[11px] text-slate-500">Tick services to include on this tier, then set quantity.
                             <strong class="text-slate-400">-1</strong> = unlimited. Unticked services are not on the
-                            tier. Add-on-only items stay available under Assign to client.
-                        </p>
+                            tier. Add-on-only items stay available under Assign to client.</p>
                         <div id="pe_servicesGrid"
                             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-80 overflow-y-auto custom-scrollbar">
                         </div>
@@ -6446,6 +6445,24 @@
             <div id="genDocTemplateNotice"
                 class="hidden text-[10px] text-emerald-400 bg-emerald-950/30 border border-emerald-900/50 rounded p-2">
             </div>
+            <div class="flex flex-col gap-1 px-0">
+                <label class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">Document output
+                    language</label>
+                <select id="genDocOutputLanguage"
+                    class="bg-slate-950 border border-slate-700 text-slate-100 text-sm rounded-lg px-3 py-2">
+                    <option value="en">English</option>
+                    <option value="zh">中文 Chinese</option>
+                    <option value="fr">Français</option>
+                    <option value="es">Español</option>
+                    <option value="ar">العربية Arabic</option>
+                    <option value="pt">Português</option>
+                    <option value="ha">Hausa</option>
+                    <option value="yo">Yorùbá</option>
+                    <option value="ig">Igbo</option>
+                </select>
+                <p class="text-[10px] text-slate-500">AI prose and labels follow this language. Names, numbers, and
+                    tokens stay unchanged.</p>
+            </div>
             <form id="generateDocumentForm" onsubmit="submitGenerateDocument(event)"
                 class="space-y-3 overflow-auto custom-scrollbar flex-1 pr-1">
                 <div id="genDocFields" class="space-y-3"></div>
@@ -7781,6 +7798,9 @@
                     adminKey: SESSION_MASTER_TOKEN,
                     ...analyticalPayload
                 };
+                // Never let empty analyticalPayload.token wipe the admin session
+                if (!payload.token && SESSION_MASTER_TOKEN) payload.token = SESSION_MASTER_TOKEN;
+                if (!payload.adminKey && SESSION_MASTER_TOKEN) payload.adminKey = SESSION_MASTER_TOKEN;
 
                 console.log(`[API] → ${systemTarget} | ${actionTarget}`, payload);
 
@@ -14531,7 +14551,7 @@ ${a.Status === 'Pending Review' ? `
             const btn = event.target.querySelector('button[type="submit"]');
             if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
             try {
-                let res = await executeSecureBridgeCall('agent', 'agent-catalog-document', { clientId, docId: spec.id, fields });
+                let res = await executeSecureBridgeCall('agent', 'agent-catalog-document', { clientId, docId: spec.id, fields: (function () { var L = (document.getElementById('genDocOutputLanguage') || {}).value || 'en'; fields = fields || {}; fields.outputLanguage = L; fields.language = L; return fields; })() });
                 if (res && res.queued) {
                     showToast('Generating — this can take a bit for longer documents. You\'ll get an email when it\'s ready; you can also check Active Tasks.', 'info');
                     closeGenerateDocumentModal();
@@ -16335,7 +16355,7 @@ ${a.Status === 'Pending Review' ? `
             }
 
             try {
-                const soc = await executeSecureBridgeCall('agent', 'agent-list-social-connections', { clientId });
+                const soc = await executeSecureBridgeCall('publish', 'agent-list-social-connections', { clientId });
                 if (socEl) {
                     const rows = (soc && soc.connections) || [];
                     if (!rows.length) socEl.innerHTML = '<span class="text-slate-500">No social connections.</span>';

@@ -453,6 +453,16 @@
         }
     </style>
     <script>window.toggleDocGenGuide = window.toggleDocGenGuide || function () { var p = document.getElementById("docGenGuide"); if (!p) return; p.classList.toggle("hidden"); };</script>
+    <script>
+        (function () {
+            try {
+                var id = localStorage.getItem('VIC_CLIENT_ID');
+                var tok = localStorage.getItem('VIC_CLIENT_TOKEN');
+                if (id) window.CLIENT_ID = id;
+                if (tok) { window.CLIENT_TOKEN = tok; window.SESSION_TOKEN = tok; }
+            } catch (e) { }
+        })();
+    </script>
 </head>
 
 <body class="bg-slate-950 text-slate-200 min-h-screen">
@@ -1718,7 +1728,8 @@
                         <p class="text-[10px] text-slate-500 leading-relaxed">Account count is limited by your <strong
                                 class="text-slate-400">Digital tier</strong>. Default TikTok is standard (publish).
                             <strong class="text-slate-400">Business TikTok</strong> enables AI comment replies. To
-                            remove a connection, request disconnect — admin completes it.</p>
+                            remove a connection, request disconnect — admin completes it.
+                        </p>
                         <div class="flex flex-wrap gap-2 items-center text-[10px] text-slate-500">
                             <span>TikTok type is chosen when you connect (Publish vs Business). No default
                                 selection.</span>
@@ -2086,8 +2097,9 @@
             const coded = m.match(/\berror code\s*(\d{4})\b/);
             if (coded) return coded[1];
 
-            // Auth / session
-            if (/invalid client id|access code|unauthorized|token|session|sign.?in|login|auth/i.test(m)) return '4101';
+            // Auth / session — real expiry only (NOT "token required" from a bad request payload)
+            if (/session expired|invalid client id or access code|access code (expired|invalid)|please sign in again|login required|unauthorised session|unauthorized session/i.test(m)) return '4101';
+            if (/invalid client id|invalid access code/.test(m) && !/token required/.test(m)) return '4101';
             if (/missing gateway|gateway url/i.test(m)) return '4102';
 
             // Network / timeout / infra
@@ -2159,13 +2171,21 @@
         function isSessionExpiredMessage(msg, code) {
             const m = String(msg || '');
             const c = String(code || '');
-            // 4900 / Security Handshake = action not on allow-list (NOT a dead session)
+            // Allow-list / missing fields are NOT session death
             if (c === '4900' || /handshake denied|not permitted|action not permitted|whitelist/i.test(m)) {
                 return false;
             }
-            if (c === '4101') return true;
-            return /SESSION_EXPIRED|session expired|invalid client id|access code expired|please sign in|login required/i.test(m) ||
-                (/unauthorized/i.test(m) && !/handshake/i.test(m));
+            if (/clientid and token required|token required|clientid required/i.test(m)) {
+                return false; // bad request shape — do not force logout
+            }
+            // Only force logout on clear session death
+            if (/SESSION_EXPIRED|session expired|access code expired|please sign in again|login required/i.test(m)) {
+                return true;
+            }
+            if (c === '4101' && /session expired|sign in again|invalid access code|invalid client id/i.test(m)) {
+                return true;
+            }
+            return false;
         }
         function forceLogoutOnAuthError(msg, code) {
             if (!isSessionExpiredMessage(msg, code)) return false;
@@ -2181,6 +2201,11 @@
             }
             try {
                 const body = { system, action, token: SESSION_TOKEN, clientId: CLIENT_ID, ...extra };
+                // Never allow empty extra.token/clientId to wipe a live session
+                if (!body.token && SESSION_TOKEN) body.token = SESSION_TOKEN;
+                if (!body.clientId && CLIENT_ID) body.clientId = CLIENT_ID;
+                if (extra && (extra.token === '' || extra.token == null)) body.token = SESSION_TOKEN;
+                if (extra && (extra.clientId === '' || extra.clientId == null)) body.clientId = CLIENT_ID;
                 const controller = new AbortController();
                 const waitMs = Math.min(Number(options.timeoutMs) || 55000, 120000);
                 const t = setTimeout(() => controller.abort(), waitMs);
@@ -2321,6 +2346,12 @@
 
                 if (res && res.success && res.token) {
                     SESSION_TOKEN = res.token;
+                    CLIENT_ID = res.clientId || CLIENT_ID || document.getElementById('loginClientId')?.value?.trim() || CLIENT_ID;
+                    try {
+                        window.CLIENT_ID = CLIENT_ID;
+                        window.CLIENT_TOKEN = SESSION_TOKEN;
+                        window.SESSION_TOKEN = SESSION_TOKEN;
+                    } catch (_) { }
                     localStorage.setItem('VIC_CLIENT_GW_URL', GW_URL);
                     localStorage.setItem('VIC_CLIENT_ID', CLIENT_ID);
                     localStorage.setItem('VIC_CLIENT_TOKEN', SESSION_TOKEN);
@@ -4413,14 +4444,18 @@
             }
             function sid() {
                 try {
-                    return window.CLIENT_ID || (window.session && window.session.clientId) ||
-                        localStorage.getItem("clientId") || sessionStorage.getItem("clientId") || "";
+                    return window.CLIENT_ID ||
+                        localStorage.getItem("VIC_CLIENT_ID") ||
+                        localStorage.getItem("clientId") ||
+                        sessionStorage.getItem("clientId") || "";
                 } catch (_) { return ""; }
             }
             function tok() {
                 try {
-                    return window.CLIENT_TOKEN || (window.session && window.session.token) ||
-                        localStorage.getItem("clientToken") || sessionStorage.getItem("clientToken") || "";
+                    return window.CLIENT_TOKEN || window.SESSION_TOKEN ||
+                        localStorage.getItem("VIC_CLIENT_TOKEN") ||
+                        localStorage.getItem("clientToken") ||
+                        sessionStorage.getItem("clientToken") || "";
                 } catch (_) { return ""; }
             }
             function esc(s) {
