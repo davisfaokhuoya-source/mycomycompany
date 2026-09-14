@@ -5172,7 +5172,48 @@
                     var instructions = (document.getElementById("genDocInstructions") || {}).value || "";
                     var lang = (document.getElementById("genDocLang") || {}).value || "en";
                     var btn = document.getElementById("genDocSendBtn");
-                    if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
+                    var progressHost = document.getElementById("genDocProgress");
+                    if (!progressHost) {
+                        progressHost = document.createElement("div");
+                        progressHost.id = "genDocProgress";
+                        progressHost.style.cssText = "display:none;margin-top:14px;padding:12px;border-radius:12px;border:1px solid #334155;background:#020617;";
+                        var box = wrap.querySelector("div");
+                        if (box) box.appendChild(progressHost);
+                    }
+                    function showProgress(state, detail) {
+                        progressHost.style.display = "block";
+                        var colors = {
+                            queued: "#38bdf8",
+                            running: "#fbbf24",
+                            done: "#34d399",
+                            error: "#f87171"
+                        };
+                        var c = colors[state] || "#94a3b8";
+                        var label =
+                            state === "queued" ? "Queued — starting shortly…" :
+                                state === "running" ? "Generating your document…" :
+                                    state === "done" ? "Document ready" :
+                                        state === "error" ? "Generation failed" : state;
+                        progressHost.innerHTML =
+                            '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
+                            '<div class="gen-spin" style="width:18px;height:18px;border:2px solid #334155;border-top-color:' + c + ';border-radius:50%;' +
+                            (state === "done" || state === "error" ? "display:none;" : "animation:genSpin 0.8s linear infinite;") + '"></div>' +
+                            '<div style="color:' + c + ';font-size:13px;font-weight:600;">' + label + '</div></div>' +
+                            '<div style="height:6px;background:#1e293b;border-radius:999px;overflow:hidden;margin-bottom:8px;">' +
+                            '<div id="genDocBar" style="height:100%;width:' + (state === "queued" ? "12%" : state === "running" ? "55%" : "100%") +
+                            ";background:" + c + ';transition:width 0.5s ease;"></div></div>' +
+                            '<div id="genDocDetail" style="color:#94a3b8;font-size:11px;line-height:1.4;">' + (detail || "") + "</div>" +
+                            (state === "done" && detail && detail.indexOf("http") >= 0
+                                ? '<a href="' + detail.replace(/"/g, "") + '" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;color:#34d399;font-size:12px;font-weight:600;">Open document →</a>'
+                                : "");
+                    }
+                    if (!document.getElementById("genSpinStyle")) {
+                        var st = document.createElement("style");
+                        st.id = "genSpinStyle";
+                        st.textContent = "@keyframes genSpin{to{transform:rotate(360deg)}}";
+                        document.head.appendChild(st);
+                    }
+                    if (btn) { btn.disabled = true; btn.textContent = "Starting…"; }
                     try {
                         var payload = {
                             clientId: sid(),
@@ -5184,14 +5225,69 @@
                             notes: instructions,
                             outputLanguage: lang,
                             language: lang,
-                            fields: { notes: instructions, outputLanguage: lang }
+                            fields: { notes: instructions, instructions: instructions, outputLanguage: lang },
+                            fromClientPortal: true
                         };
                         var res = await gw("clientportal", "clientPortalGenerateDocument", payload);
-                        if (res && res.success === false) throw new Error(res.message || "Generation failed");
-                        toast("Document job started. Check My Documents / My Work.");
-                        wrap.remove();
-                        if (typeof loadDocuments === "function") try { loadDocuments(); } catch (_) { }
+                        if (res && res.success === false) {
+                            if (typeof isSystemCoolingResponse === "function" && isSystemCoolingResponse(res)) {
+                                showProgress("running", res.message || "System cooling off — a job may already be running. Check My Work.");
+                                toast(res.message || "System cooling off", false);
+                                if (btn) { btn.disabled = false; btn.textContent = "Send"; }
+                                return;
+                            }
+                            throw new Error(res.message || "Generation failed");
+                        }
+                        var jobId = res.jobId || res.id || (res.data && res.data.jobId) || "";
+                        showProgress(res.queued || jobId ? "queued" : "running", jobId ? ("Job " + jobId) : (res.message || "Working…"));
+                        toast(res.message || "Document generation started");
+                        if (typeof loadMyWork === "function") try { loadMyWork(); } catch (_) { }
+
+                        // Poll job status for live progress (former generating style)
+                        if (jobId) {
+                            var tries = 0;
+                            var timer = setInterval(async function () {
+                                tries++;
+                                try {
+                                    var stRes = await gw("clientportal", "clientPortalCheckJobStatus", {
+                                        clientId: sid(), token: tok(), jobId: jobId
+                                    });
+                                    var st = String((stRes && (stRes.status || (stRes.job && stRes.job.status) || stRes.state)) || "").toLowerCase();
+                                    var msg = (stRes && (stRes.message || stRes.detail || (stRes.job && stRes.job.message))) || "";
+                                    var url = stRes && (stRes.url || stRes.docUrl || stRes.previewUrl || (stRes.result && (stRes.result.docUrl || stRes.result.url)));
+                                    var pct = stRes && (stRes.progress || stRes.percent);
+                                    if (pct != null) {
+                                        var bar = document.getElementById("genDocBar");
+                                        if (bar) bar.style.width = Math.min(100, Number(pct) || 55) + "%";
+                                    }
+                                    if (st === "queued") showProgress("queued", msg || ("Job " + jobId));
+                                    else if (st === "running" || st === "processing") showProgress("running", msg || "Building your document…");
+                                    else if (st === "done" || st === "completed" || st === "success") {
+                                        clearInterval(timer);
+                                        showProgress("done", url || msg || "Finished — see My Documents");
+                                        if (btn) { btn.textContent = "Done"; }
+                                        if (typeof loadDocuments === "function") try { loadDocuments(); } catch (_) { }
+                                        if (typeof loadMyWork === "function") try { loadMyWork(); } catch (_) { }
+                                    } else if (st === "error" || st === "failed" || st === "terminated") {
+                                        clearInterval(timer);
+                                        showProgress("error", msg || "Generation failed");
+                                        if (btn) { btn.disabled = false; btn.textContent = "Retry"; }
+                                    } else if (tries > 90) {
+                                        clearInterval(timer);
+                                        showProgress("running", "Still working — track this job under My Work. You can close this panel.");
+                                        if (btn) { btn.disabled = false; btn.textContent = "Close"; btn.onclick = function () { wrap.remove(); }; }
+                                    }
+                                } catch (_poll) {
+                                    if (tries > 5) showProgress("running", "Job running in background — open My Work for status.");
+                                }
+                            }, 4000);
+                        } else {
+                            // Sync completion without job id
+                            showProgress("done", (res && (res.url || res.docUrl || res.message)) || "Completed");
+                            if (typeof loadDocuments === "function") try { loadDocuments(); } catch (_) { }
+                        }
                     } catch (e) {
+                        showProgress("error", e.message || "Generation failed");
                         toast(e.message || "Generation failed", true);
                         if (btn) { btn.disabled = false; btn.textContent = "Send"; }
                     }
@@ -5566,7 +5662,6 @@
 
         })();
     </script>
-
 
     <script>
         (function initClientUiLangInHeader() {
