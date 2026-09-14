@@ -419,6 +419,164 @@
 
 <body class="bg-slate-950 text-slate-200 min-h-screen">
 
+    <!-- Vic language switcher (client portal UI) -->
+    <div id="vicSiteLangWrap" style="display:none !important;">
+        <span style="color:#94a3b8;font-size:11px;font-weight:600;">Lang</span>
+        <select id="clientUiLang" aria-label="Interface language"
+            style="background:#0f172a;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;outline:none;max-width:140px;padding:2px 4px;border-radius:6px;">
+            <option value="en">English</option>
+            <option value="zh-CN">中文</option>
+            <option value="fr">Français</option>
+            <option value="es">Español</option>
+            <option value="ar">العربية</option>
+            <option value="pt">Português</option>
+            <option value="ha">Hausa</option>
+            <option value="yo">Yorùbá</option>
+            <option value="ig">Igbo</option>
+            <option value="hi">हिन्दी</option>
+        </select>
+    </div>
+    <div id="google_translate_element" style="display:none!important;height:0;overflow:hidden;"></div>
+    <style>
+        .goog-te-banner-frame,
+        .goog-te-balloon-frame,
+        #goog-gt-tt,
+        .goog-te-spinner-pos {
+            display: none !important;
+        }
+
+        body {
+            top: 0 !important;
+        }
+
+        .skiptranslate,
+        .goog-te-gadget,
+        .goog-te-combo,
+        #google_translate_element,
+        .VIpgJd-ZVi9od-ORHb-OEYmQc,
+        .VIpgJd-ZVi9od-aZ2wEe-wOHMyf {
+            display: none !important;
+            height: 0 !important;
+            overflow: hidden !important;
+        }
+
+        body {
+            top: 0 !important;
+        }
+    </style>
+    <script>
+        (function () {
+            var KEY = "vic_client_lang";
+            function rootDomain() {
+                var h = location.hostname;
+                if (!h || h === "localhost") return h;
+                var p = h.split(".");
+                if (p.length >= 2) return "." + p.slice(-2).join(".");
+                return h;
+            }
+            function clearGoogTrans() {
+                ["", location.hostname, rootDomain()].forEach(function (d) {
+                    var base = "googtrans=;path=/;max-age=0";
+                    if (d) base += ";domain=" + d;
+                    document.cookie = base;
+                });
+            }
+            function setGoogTrans(code) {
+                try { localStorage.setItem(KEY, code || "en"); } catch (e) { }
+                clearGoogTrans();
+                if (!code || code === "en") {
+                    try {
+                        if (location.hash && location.hash.indexOf("googtrans") >= 0) {
+                            history.replaceState(null, "", location.pathname + location.search);
+                        }
+                    } catch (e2) { }
+                    return;
+                }
+                var v = "/en/" + code;
+                document.cookie = "googtrans=" + v + ";path=/";
+                var rd = rootDomain();
+                if (rd) document.cookie = "googtrans=" + v + ";path=/;domain=" + rd;
+                try { location.hash = "googtrans(en|" + code + ")"; } catch (e3) { }
+            }
+            function readLang() {
+                try {
+                    var s = localStorage.getItem(KEY);
+                    if (s) return s;
+                } catch (e) { }
+                var m = document.cookie.match(/(?:^|; )googtrans=\/[^\/]+\/([^;]+)/);
+                return m ? decodeURIComponent(m[1]) : "en";
+            }
+            window.getVicDocLang = function () {
+                var el = document.getElementById("clientUiLang");
+                if (el && el.value) return el.value;
+                return readLang();
+            };
+            window.googleTranslateElementInit = function () {
+                try {
+                    new google.translate.TranslateElement({
+                        pageLanguage: "en",
+                        includedLanguages: "en,zh-CN,fr,es,ar,pt,ha,yo,ig,hi",
+                        autoDisplay: false
+                    }, "google_translate_element");
+                } catch (e) { }
+                setTimeout(function () {
+                    var code = readLang();
+                    if (!code || code === "en") return;
+                    var combo = document.querySelector(".goog-te-combo");
+                    if (combo) {
+                        combo.value = code;
+                        var evt = document.createEvent("HTMLEvents");
+                        evt.initEvent("change", true, true);
+                        combo.dispatchEvent(evt);
+                    }
+                }, 900);
+            };
+            function boot() {
+                var sel = document.getElementById("clientUiLang");
+                if (!sel) return;
+                var cur = readLang();
+                try { sel.value = cur; } catch (e) { }
+                sel.addEventListener("change", function () {
+                    var code = sel.value || "en";
+                    setGoogTrans(code);
+                    // Persist to backend when logged in
+                    try {
+                        var cid = window.CLIENT_ID || (window.session && window.session.clientId);
+                        var tok = window.CLIENT_TOKEN || (window.session && window.session.token);
+                        var call = window.executeSecureBridgeCall || window.api;
+                        if (cid && tok && typeof call === "function") {
+                            Promise.resolve(call("agent", "clientPortalSetUiLanguage", {
+                                clientId: cid, token: tok, language: code, outputLanguage: code
+                            })).catch(function () { });
+                        }
+                    } catch (e4) { }
+                    location.reload();
+                });
+                // Attach outputLanguage on document generate
+                var _fetch = window.fetch;
+                if (_fetch && !window._vicLangFetchPatched) {
+                    window._vicLangFetchPatched = true;
+                    window.fetch = function (url, opts) {
+                        try {
+                            if (opts && opts.body && typeof opts.body === "string" &&
+                                opts.body.indexOf("clientPortalGenerateDocument") >= 0) {
+                                var o = JSON.parse(opts.body);
+                                o.outputLanguage = window.getVicDocLang();
+                                o.language = o.outputLanguage;
+                                opts = Object.assign({}, opts, { body: JSON.stringify(o) });
+                            }
+                        } catch (e5) { }
+                        return _fetch.call(this, url, opts);
+                    };
+                }
+            }
+            if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+            else boot();
+        })();
+    </script>
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+
     <!-- =====================================================================
          LOGIN VIEW
     ====================================================================== -->
@@ -543,6 +701,26 @@
                 </div>
                 <div class="flex items-center gap-4 shrink-0">
                     <div class="relative">
+
+                        <label
+                            class="flex items-center gap-1.5 rounded-full border border-slate-600/80 bg-slate-900 px-2.5 py-1 mr-2 shrink-0"
+                            title="Interface language">
+                            <span class="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">Lang</span>
+                            <select id="clientUiLangInHeader"
+                                class="bg-transparent border-0 text-xs text-slate-100 font-semibold outline-none cursor-pointer max-w-[120px]"
+                                onchange="(function(v){ try { localStorage.setItem('vic_site_lang', v); } catch(e){} var s=document.getElementById('clientUiLang'); if(s){ s.value=v; s.dispatchEvent(new Event('change')); } else if(typeof setSiteLang==='function'){ setSiteLang(v); } else { document.cookie='googtrans=/en/'+v; location.reload(); } })(this.value)">
+                                <option value="en">English</option>
+                                <option value="fr">Français</option>
+                                <option value="es">Español</option>
+                                <option value="pt">Português</option>
+                                <option value="ar">العربية</option>
+                                <option value="zh-CN">中文</option>
+                                <option value="hi">हिन्दी</option>
+                                <option value="yo">Yorùbá</option>
+                                <option value="ig">Igbo</option>
+                                <option value="ha">Hausa</option>
+                            </select>
+                        </label>
                         <button onclick="toggleClientNotifPanel(event)"
                             class="relative h-8 w-8 flex items-center justify-center rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
                             <i class="fa-solid fa-bell text-sm"></i>
