@@ -468,8 +468,7 @@
 <body class="bg-slate-950 text-slate-200 min-h-screen">
 
     <!-- Vic language switcher (client portal UI) -->
-    <div id="vicSiteLangWrap"
-        style="display:none;position:fixed;top:12px;right:72px;z-index:10040;display:flex;align-items:center;gap:6px;background:rgba(15,23,42,0.92);border:1px solid rgba(204,85,0,0.45);border-radius:999px;padding:4px 10px 4px 12px;box-shadow:0 4px 16px rgba(0,0,0,0.25);font-family:system-ui,sans-serif;">
+    <div id="vicSiteLangWrap" style="display:none !important;">
         <span style="color:#94a3b8;font-size:11px;font-weight:600;">Lang</span>
         <select id="clientUiLang" aria-label="Interface language"
             style="background:#0f172a;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;outline:none;max-width:140px;padding:2px 4px;border-radius:6px;">
@@ -498,8 +497,19 @@
             top: 0 !important;
         }
 
-        .skiptranslate {
+        .skiptranslate,
+        .goog-te-gadget,
+        .goog-te-combo,
+        #google_translate_element,
+        .VIpgJd-ZVi9od-ORHb-OEYmQc,
+        .VIpgJd-ZVi9od-aZ2wEe-wOHMyf {
             display: none !important;
+            height: 0 !important;
+            overflow: hidden !important;
+        }
+
+        body {
+            top: 0 !important;
         }
     </style>
     <script>
@@ -743,12 +753,25 @@
                 <div class="flex items-center gap-4 shrink-0">
                     <div class="relative">
 
-                        <div id="vicSiteLangWrapHeader"
-                            class="flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900/80 px-2 py-0.5 mr-1">
-                            <span class="text-[10px] text-slate-500 font-semibold">Lang</span>
-                            <select id="clientUiLangHeader" aria-label="Interface language"
-                                class="bg-transparent border-0 text-xs text-white font-semibold outline-none max-w-[110px] cursor-pointer"></select>
-                        </div>
+                        <label
+                            class="flex items-center gap-1.5 rounded-full border border-slate-600/80 bg-slate-900 px-2.5 py-1 mr-2 shrink-0"
+                            title="Interface language">
+                            <span class="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">Lang</span>
+                            <select id="clientUiLangInHeader"
+                                class="bg-transparent border-0 text-xs text-slate-100 font-semibold outline-none cursor-pointer max-w-[120px]"
+                                onchange="(function(v){ try { localStorage.setItem('vic_site_lang', v); } catch(e){} var s=document.getElementById('clientUiLang'); if(s){ s.value=v; s.dispatchEvent(new Event('change')); } else if(typeof setSiteLang==='function'){ setSiteLang(v); } else { document.cookie='googtrans=/en/'+v; location.reload(); } })(this.value)">
+                                <option value="en">English</option>
+                                <option value="fr">Français</option>
+                                <option value="es">Español</option>
+                                <option value="pt">Português</option>
+                                <option value="ar">العربية</option>
+                                <option value="zh-CN">中文</option>
+                                <option value="hi">हिन्दी</option>
+                                <option value="yo">Yorùbá</option>
+                                <option value="ig">Igbo</option>
+                                <option value="ha">Hausa</option>
+                            </select>
+                        </label>
                         <button onclick="toggleClientNotifPanel(event)"
                             class="relative h-8 w-8 flex items-center justify-center rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
                             <i class="fa-solid fa-bell text-sm"></i>
@@ -2202,9 +2225,32 @@
         }
 
         /** Disable button + show loading label; restore on finish */
-        window.formatApiError = function (res, fallback) {
+        window.
+
+
+
+        /** Soft system-busy / cooling messages — not shown as hard failures */
+        function isSystemCoolingResponse(res, errMsg) {
+            if (res && (res.cooldown || res.systemCooling || res.jobInProgress || res.timedOut)) return true;
+            var m = String((res && res.message) || errMsg || '').toLowerCase();
+            return /cooling off|system is busy|system busy|cooldown|timed out after|gateway timed out|504|job is already running|please wait/.test(m);
+        }
+        function formatCoolingMessage(res, fallback) {
+            if (res && res.message) return res.message;
+            return fallback || 'System cooling off — please wait a moment and try again. Check My Work if a job is already running.';
+        }
+
+        formatApiError = function (res, fallback) {
+            if (typeof isSystemCoolingResponse === "function" && isSystemCoolingResponse(res)) {
+                return (typeof formatCoolingMessage === "function")
+                    ? formatCoolingMessage(res, fallback)
+                    : ((res && res.message) || fallback || "System cooling off — please wait and try again.");
+            }
             if (!res) return (fallback || "Request failed") + " · code 5000";
             var msg = res.message || res.error || fallback || "Request failed";
+            if (typeof isSystemCoolingResponse === "function" && isSystemCoolingResponse(null, msg)) {
+                return msg;
+            }
             var code = res.errorCode || res.code || "";
             if (!code && typeof msg === "string") {
                 var m = msg.match(/\bcode\s*([0-9]{4})\b/i);
@@ -2278,7 +2324,6 @@
                 btn.__vicClearLoad = function () { clearInterval(iv); clear(); };
             }, true);
         })();
-
 
         async function callGateway(system, action, extra = {}, options = {}) {
             if (!GW_URL) {
@@ -5530,25 +5575,39 @@
 
 
     <script>
-        (function syncClientLangSelects() {
-            function copyOptions() {
-                var src = document.getElementById('clientUiLang');
-                var dst = document.getElementById('clientUiLangHeader');
-                if (!src || !dst) return;
-                if (!dst.options.length) {
-                    dst.innerHTML = src.innerHTML;
-                }
-                dst.value = src.value;
-                dst.onchange = function () {
-                    src.value = dst.value;
-                    if (typeof src.onchange === 'function') src.onchange();
-                    else src.dispatchEvent(new Event('change'));
-                };
-                src.addEventListener('change', function () { dst.value = src.value; });
+        (function initClientUiLangInHeader() {
+            function run() {
+                var h = document.getElementById('clientUiLangInHeader');
+                if (!h) return;
+                var cur = 'en';
+                try { cur = localStorage.getItem('vic_site_lang') || 'en'; } catch (e) { }
+                h.value = cur;
             }
-            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', copyOptions);
-            else copyOptions();
-            setTimeout(copyOptions, 500);
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+            else run();
+        })();
+    </script>
+
+    <script>
+        (function () {
+            var tries = 0;
+            function wrapToast() {
+                if (typeof window.toast !== 'function') {
+                    if (tries++ < 40) setTimeout(wrapToast, 250);
+                    return;
+                }
+                if (window.__vicToastWrapped) return;
+                window.__vicToastWrapped = true;
+                var orig = window.toast;
+                window.toast = function (msg, isError) {
+                    var m = String(msg || '');
+                    if (isError && /cooling off|system is busy|system busy|cooldown|timed out after|job is already running|please wait about/i.test(m)) {
+                        return orig(m, false); // info style, not error
+                    }
+                    return orig.apply(this, arguments);
+                };
+            }
+            wrapToast();
         })();
     </script>
 
