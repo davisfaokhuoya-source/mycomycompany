@@ -2515,7 +2515,11 @@
                 var items = res.notifications || res.items || [];
                 var unread = Number(res.unreadCount);
                 if (isNaN(unread)) {
-                    unread = items.filter(function (n) { return n && (n.read === false || n.unread === true); }).length;
+                    unread = items.filter(function (n) {
+                        if (!n) return false;
+                        if (n.read === true || n.Read === true || n.Read === 'TRUE') return false;
+                        return true;
+                    }).length;
                 }
                 var badge = document.getElementById('clientNotifBadge');
                 if (badge) {
@@ -2545,9 +2549,9 @@
                 return;
             }
             panel.innerHTML = items.map(function (n) {
-                var title = (n.title || n.subject || n.type || 'Notice');
-                var body = (n.body || n.message || n.text || '');
-                var when = (n.createdAt || n.timestamp || '');
+                var title = (n.title || n.Title || n.subject || n.type || n.Type || 'Notice');
+                var body = (n.body || n.message || n.Message || n.text || '');
+                var when = (n.createdAt || n.CreatedAt || n.timestamp || '');
                 return '<div class="px-3 py-2 border-b border-slate-800 hover:bg-slate-800/50">' +
                     '<div class="text-xs font-semibold text-white">' + (typeof escapeHtml === 'function' ? escapeHtml(String(title)) : String(title)) + '</div>' +
                     (body ? '<div class="text-[11px] text-slate-400 mt-0.5">' + (typeof escapeHtml === 'function' ? escapeHtml(String(body).slice(0, 160)) : String(body).slice(0, 160)) + '</div>' : '') +
@@ -5662,6 +5666,7 @@
 
         })();
     </script>
+
 
     <script>
         (function initClientUiLangInHeader() {
