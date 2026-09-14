@@ -580,13 +580,16 @@
                                     class="ring-fill" transform="rotate(-90 32 32)"></circle>
                             </svg>
                             <div>
-                                <p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide">Hours Used</p>
+                                <p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide">Hours Used <span
+                                        class="text-slate-600">(this month)</span></p>
                                 <p id="statHours" class="text-lg font-bold text-white mt-1">0 / 0</p>
+                                <p id="statHoursLife" class="text-[10px] text-slate-500 mt-0.5">Lifetime: 0</p>
                             </div>
                         </div>
                         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
                             <p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide">Emails Sent</p>
                             <p id="statEmails" class="text-2xl font-bold text-white mt-2">0 / 0</p>
+                            <p id="statEmailsLife" class="text-[10px] text-slate-500 mt-0.5">Lifetime: 0</p>
                             <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-3">
                                 <div id="barEmails" class="h-1.5 bg-emerald-500 rounded-full" style="width:0%"></div>
                             </div>
@@ -595,6 +598,7 @@
                             <p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide">Proposals Drafted
                             </p>
                             <p id="statProposals" class="text-2xl font-bold text-white mt-2">0 / 0</p>
+                            <p id="statProposalsLife" class="text-[10px] text-slate-500 mt-0.5">Lifetime: 0</p>
                             <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-3">
                                 <div id="barProposals" class="h-1.5 bg-emerald-500 rounded-full" style="width:0%"></div>
                             </div>
@@ -603,6 +607,7 @@
                             <p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide">Documents
                                 (Team-Generated)</p>
                             <p id="statDocuments" class="text-2xl font-bold text-white mt-2">0 / 0</p>
+                            <p id="statDocumentsLife" class="text-[10px] text-slate-500 mt-0.5">Lifetime: 0</p>
                             <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-3">
                                 <div id="barDocuments" class="h-1.5 bg-emerald-500 rounded-full" style="width:0%"></div>
                             </div>
@@ -926,7 +931,8 @@
                                         decks · <strong>4 units</strong> · up to <strong>2</strong> per batch · <em>1
                                             proposal ≈ 4 receipts</em></li>
                                     <li><span class="text-red-400 font-medium">Weight 5</span> — Legal / compliance ·
-                                        <strong>5 units</strong> · <strong>1</strong> per batch</li>
+                                        <strong>5 units</strong> · <strong>1</strong> per batch
+                                    </li>
                                 </ul>
                             </div>
                             <div>
@@ -1173,6 +1179,57 @@
                     <p class="text-xs text-slate-400 max-w-2xl">Everything currently connected to your account.
                         Revoking a connection here stops it immediately — the agent will no longer read from or send
                         through it until you reconnect it with our team.</p>
+
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
+                                class="fa-solid fa-signature text-emerald-500"></i> Official signatory</h3>
+                        <p class="text-[11px] text-slate-500 leading-relaxed">Used on letters, proposals, and formal
+                            documents — one signature only (name, position, and optional image). Law-firm / bank
+                            standard.</p>
+                        <div
+                            class="rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2 text-[10px] text-slate-400 leading-relaxed space-y-1">
+                            <p class="font-semibold text-slate-300 uppercase tracking-wide text-[9px]">Signature image
+                                rules</p>
+                            <ul class="list-disc pl-4 space-y-0.5">
+                                <li>Optional — you can save <strong class="text-slate-300">name and title only</strong>.
+                                </li>
+                                <li>Formats: <strong class="text-slate-300">PNG or JPG</strong> (transparent PNG works
+                                    best).</li>
+                                <li>Prefer a <strong class="text-slate-300">cropped signature only</strong>, not a full
+                                    phone photo.</li>
+                                <li>Keep the file small (about <strong class="text-slate-300">under 1.5 MB</strong>).
+                                    Large WhatsApp photos are auto-compressed; very large files may still fail.</li>
+                                <li>One official signatory per account. Replacing the image updates future letters and
+                                    proposals.</li>
+                            </ul>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] text-slate-500 mb-0.5">Full name</label>
+                                <input id="clientSigName" type="text" placeholder="e.g. Ada Okoye"
+                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white" />
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-500 mb-0.5">Position / title</label>
+                                <input id="clientSigPosition" type="text" placeholder="e.g. Managing Director"
+                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white" />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-0.5">Signature image (PNG/JPG,
+                                optional)</label>
+                            <input id="clientSigFile" type="file" accept="image/png,image/jpeg,image/webp"
+                                class="w-full text-[11px] text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-slate-800 file:text-slate-200" />
+                            <p id="clientSigStatus" class="text-[10px] text-slate-600 mt-1">No signatory saved yet.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="saveClientSignatory()"
+                                class="text-[10px] px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white font-medium">Save
+                                signatory</button>
+                            <button type="button" onclick="loadClientSignatory()"
+                                class="text-[10px] px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Refresh</button>
+                        </div>
+                    </div>
 
                     <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
                         <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
@@ -1672,7 +1729,19 @@
             }
         }
 
-        async function callGateway(system, action, extra = {}) {
+
+        function isSessionExpiredMessage(msg, code) {
+            const m = String(msg || '');
+            const c = String(code || '');
+            return c === '4101' || /SESSION_EXPIRED|session expired|invalid client id|access code|unauthorized|token|sign.?in|login|auth/i.test(m);
+        }
+        function forceLogoutOnAuthError(msg, code) {
+            if (!isSessionExpiredMessage(msg, code)) return false;
+            try { showLoginError(clientFriendlyError(msg || 'Session expired. Please sign in again.')); } catch (_) { }
+            try { logoutClient(); } catch (_) { }
+            return true;
+        }
+        async function callGateway(system, action, extra = {}, options = {}) {
             if (!GW_URL) {
                 const coded = clientFriendlyError('Missing Gateway URL.');
                 if (typeof showLoginError === 'function') showLoginError(coded);
@@ -1681,7 +1750,8 @@
             try {
                 const body = { system, action, token: SESSION_TOKEN, clientId: CLIENT_ID, ...extra };
                 const controller = new AbortController();
-                const t = setTimeout(() => controller.abort(), 55000); // fail soft before 90s wall
+                const waitMs = Math.min(Number(options.timeoutMs) || 55000, 120000);
+                const t = setTimeout(() => controller.abort(), waitMs);
                 const res = await fetch(GW_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -1698,8 +1768,20 @@
                     const raw = json.message || json.error || 'request failed';
                     try { console.error('[gateway]', action, raw); } catch (_) { }
                     const code = clientErrorCode(raw);
+                    // Session / auth: force logout — client must not stay on a coded error screen
+                    if (typeof forceLogoutOnAuthError === 'function' && forceLogoutOnAuthError(raw, code)) {
+                        return {
+                            success: false,
+                            message: 'Error occurred — error code 4101',
+                            errorCode: '4101',
+                            _rawMessage: raw,
+                            sessionExpired: true
+                        };
+                    }
+                    // Signatory / settings: keep readable text on the form (still attach code)
+                    const keepRaw = /Signatory|signatory|Preference|MailboxPrivacy|ServiceFlags/i.test(action);
                     json = Object.assign({}, json, {
-                        message: 'Error occurred — error code ' + code,
+                        message: keepRaw ? raw : ('Error occurred — error code ' + code),
                         errorCode: code,
                         _rawMessage: raw
                     });
@@ -1997,6 +2079,14 @@
             renderQuotaStat('statEmails', 'barEmails', u.emailsUsed || 0, lim.emails ?? '—', qOpts);
             renderQuotaStat('statProposals', 'barProposals', u.proposalsUsed || 0, lim.proposals ?? '—', qOpts);
             renderQuotaStat('statDocuments', 'barDocuments', u.documentsUsed || 0, lim.documents ?? '—', qOpts);
+
+            // Lifetime totals (from usage.lifetime when present)
+            const life = u.lifetime || {};
+            const setLife = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = 'Lifetime: ' + (Number(v) || 0); };
+            setLife('statHoursLife', life.hoursUsed != null ? life.hoursUsed : u.hoursUsed);
+            setLife('statEmailsLife', life.emailsUsed != null ? life.emailsUsed : u.emailsUsed);
+            setLife('statProposalsLife', life.proposalsUsed != null ? life.proposalsUsed : u.proposalsUsed);
+            setLife('statDocumentsLife', life.documentsUsed != null ? life.documentsUsed : u.documentsUsed);
             const hoursUsed = parseFloat(u.hoursUsed) || 0;
             const hoursLimit = lim.hours;
             const hoursUnlimited = hoursLimit === 999 || hoursLimit === 999999 || hoursLimit === undefined || hoursLimit === null || Number(hoursLimit) >= 999;
@@ -2319,6 +2409,11 @@
                         <button onclick="openSendDocumentModal('${escapeHtml(d.docId)}','${escapeHtml((d.title || d.type || '').replace(/'/g, "\\'"))}')"
                            class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-200">
                            <i class="fa-solid fa-share"></i> Send
+                       </button>
+                        <button onclick="deleteClientDocument('${escapeHtml(d.docId || '')}','${escapeHtml(d.recordId || d.queueId || d.docId || '')}', this)"
+                           class="text-xs px-2 py-1 bg-red-950 hover:bg-red-900 border border-red-900/40 rounded text-red-300"
+                           title="Delete document">
+                           <i class="fa-solid fa-trash"></i>
                        </button>
                        </div>`;
                 return `
@@ -2755,6 +2850,32 @@
             }
         }
 
+
+        async function clientRefreshEmailTokenHealth() {
+            const el = document.getElementById('clientEmailTokenHealth');
+            if (el) el.textContent = 'Checking mailbox tokens…';
+            try {
+                const res = await callGateway('clientportal', 'clientPortalEmailTokenHealth', { live: true });
+                if (!el) return;
+                if (!res || !res.success) {
+                    el.innerHTML = '<span class="text-red-400">' + ((res && res.message) || 'Could not check email health') + '</span>';
+                    return;
+                }
+                const s = res.summary || {};
+                let html = '<p class="text-xs ' + (s.unhealthy ? 'text-amber-400' : 'text-emerald-400') + '">' + (s.message || '') + '</p>';
+                html += '<ul class="mt-1 space-y-1 text-[11px] text-slate-400">';
+                (res.mailboxes || []).forEach(function (m) {
+                    html += '<li>' + (m.healthy ? '✓' : '✗') + ' ' + (m.emailAddress || m.mailboxId) +
+                        ' — ' + (m.message || m.code || '') + '</li>';
+                });
+                html += '</ul>';
+                if (!(res.mailboxes || []).length) html = '<p class="text-xs text-slate-500">No mailbox connected.</p>';
+                el.innerHTML = html;
+            } catch (e) {
+                if (el) el.innerHTML = '<span class="text-red-400">' + e + '</span>';
+            }
+        }
+
         async function previewRenewalDiscount() {
             const previewEl = document.getElementById('renewDiscountPreview');
             const code = (document.getElementById('renewDiscountCode')?.value || '').trim();
@@ -2917,7 +3038,163 @@
         // INTEGRATIONS — mailbox / social media / CRM connections the client
         // can see and revoke themselves.
         // =====================================================================
+
+        async function loadClientSignatory() {
+            const status = document.getElementById('clientSigStatus');
+            try {
+                const res = await callGateway('clientportal', 'clientPortalGetSignatory', {});
+                if (!res || !res.success) {
+                    if (status) status.textContent = (res && res.message) || 'Could not load signatory.';
+                    return;
+                }
+                const s = res.signatory || {};
+                const nameEl = document.getElementById('clientSigName');
+                const posEl = document.getElementById('clientSigPosition');
+                if (nameEl) nameEl.value = s.name || s.SignatoryName || '';
+                if (posEl) posEl.value = s.position || s.SignatoryPosition || '';
+                if (status) {
+                    const has = (s.name || s.SignatoryName || s.fileId || s.SignatureFileId);
+                    status.textContent = has
+                        ? ('Saved: ' + (s.name || s.SignatoryName || '—') + (s.position || s.SignatoryPosition ? ' · ' + (s.position || s.SignatoryPosition) : '') + (s.fileId || s.SignatureFileId ? ' · image on file' : ''))
+                        : 'No signatory saved yet.';
+                    status.className = has ? 'text-[10px] text-emerald-500/90 mt-1' : 'text-[10px] text-slate-600 mt-1';
+                }
+            } catch (e) {
+                if (status) status.textContent = 'Load error.';
+            }
+        }
+
+
+        /** Shrink signature image so Apps Script does not time out (4201). Max edge 900px, JPEG ~0.72. */
+        function compressSignatureImage(file) {
+            return new Promise(function (resolve, reject) {
+                if (!file || !String(file.type || "").startsWith("image/")) {
+                    reject(new Error("Not an image file"));
+                    return;
+                }
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = function () {
+                    try {
+                        const maxEdge = 900;
+                        let w = img.naturalWidth || img.width;
+                        let h = img.naturalHeight || img.height;
+                        if (w > maxEdge || h > maxEdge) {
+                            if (w >= h) {
+                                h = Math.round(h * (maxEdge / w));
+                                w = maxEdge;
+                            } else {
+                                w = Math.round(w * (maxEdge / h));
+                                h = maxEdge;
+                            }
+                        }
+                        const canvas = document.createElement("canvas");
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext("2d");
+                        ctx.fillStyle = "#ffffff";
+                        ctx.fillRect(0, 0, w, h);
+                        ctx.drawImage(img, 0, 0, w, h);
+                        URL.revokeObjectURL(url);
+                        const dataUrl = canvas.toDataURL("image/jpeg", 0.72);
+                        resolve({
+                            base64Data: dataUrl,
+                            fileName: String(file.name || "signature").replace(/\.[^.]+$/, "") + ".jpg",
+                            mimeType: "image/jpeg"
+                        });
+                    } catch (e) {
+                        URL.revokeObjectURL(url);
+                        reject(e);
+                    }
+                };
+                img.onerror = function () {
+                    URL.revokeObjectURL(url);
+                    reject(new Error("Could not read image"));
+                };
+                img.src = url;
+            });
+        }
+
+
+        async function saveClientSignatory() {
+            const status = document.getElementById('clientSigStatus');
+            const name = (document.getElementById('clientSigName')?.value || '').trim();
+            const position = (document.getElementById('clientSigPosition')?.value || '').trim();
+            const fileInput = document.getElementById('clientSigFile');
+            if (!name && !(fileInput && fileInput.files && fileInput.files[0])) {
+                if (typeof notifyUser === 'function') notifyUser('Enter a name or choose a signature image.', 'error');
+                return;
+            }
+            if (status) {
+                status.className = 'text-[10px] text-slate-400 mt-1';
+                status.textContent = 'Saving…';
+            }
+            try {
+                // Step 1: always save name + position (no image) — must succeed without Drive
+                let res = await callGateway('clientportal', 'clientPortalSetSignatory', {
+                    name: name,
+                    position: position,
+                    skipImage: true
+                });
+                if (!res || !res.success) {
+                    const raw = (res && (res._rawMessage || res.message)) || 'Could not save signatory.';
+                    if (status) {
+                        status.className = 'text-[10px] text-red-400 mt-1';
+                        status.textContent = raw;
+                    }
+                    if (typeof notifyUser === 'function') notifyUser(raw, 'error');
+                    return;
+                }
+                // Step 2: optional image
+                if (fileInput && fileInput.files && fileInput.files[0]) {
+                    const file = fileInput.files[0];
+                    if (status) status.textContent = 'Compressing signature image…';
+                    let compressed;
+                    try {
+                        compressed = await compressSignatureImage(file);
+                    } catch (ce) {
+                        if (status) {
+                            status.className = 'text-[10px] text-amber-400 mt-1';
+                            status.textContent = 'Name saved. Could not process image — try a smaller PNG/JPG.';
+                        }
+                        if (typeof notifyUser === 'function') notifyUser('Name saved. Image not processed.', 'success');
+                        loadClientSignatory();
+                        return;
+                    }
+                    if (status) status.textContent = 'Uploading signature image…';
+                    res = await callGateway('clientportal', 'clientPortalSetSignatory', {
+                        name: name,
+                        position: position,
+                        fileName: compressed.fileName,
+                        mimeType: compressed.mimeType,
+                        base64Data: compressed.base64Data
+                    }, { timeoutMs: 90000 });
+                    if (!res || !res.success) {
+                        const raw = (res && (res._rawMessage || res.message)) || 'Image upload failed.';
+                        if (status) {
+                            status.className = 'text-[10px] text-amber-400 mt-1';
+                            status.textContent = 'Name saved. Image failed: ' + raw;
+                        }
+                        if (typeof notifyUser === 'function') notifyUser('Name saved. Image failed — try a smaller PNG.', 'error');
+                        loadClientSignatory();
+                        return;
+                    }
+                    if (fileInput) fileInput.value = '';
+                }
+                if (typeof notifyUser === 'function') notifyUser((res && res._rawMessage) || res.message || 'Signatory saved.', 'success');
+                loadClientSignatory();
+            } catch (e) {
+                const msg = (e && e.message) ? e.message : String(e);
+                if (status) {
+                    status.className = 'text-[10px] text-red-400 mt-1';
+                    status.textContent = msg;
+                }
+                if (typeof notifyUser === 'function') notifyUser(msg, 'error');
+            }
+        }
+
         async function loadIntegrationsPanel() {
+            try { loadClientSignatory(); } catch (_) { }
             try { loadClientServiceFlags(); } catch (_) { }
             const mbxEl = document.getElementById('integrationsMailboxList');
             const waEl = document.getElementById('integrationsWhatsAppList');
@@ -3955,6 +4232,16 @@
                     '\')" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Cancel</button>' +
                     '<button id="genPreviewBtn-' + item.docType + '" onclick="previewDocumentLayout(\'' + item.docType +
                     '\')" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-sky-300"><i class="fa-solid fa-eye"></i> Preview layout</button>' +
+                    '<div class="brand-opts mt-3 p-2 rounded border border-slate-700 bg-slate-900/50 space-y-1.5" id="brandOpts-' + item.docType + '">' +
+                    '<p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide mb-1">Branding for this document</p>' +
+                    '<label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">' +
+                    '<input type="checkbox" id="useLetterhead-' + item.docType + '" class="rounded border-slate-600" />' +
+                    '<span>Use company letterhead <span class="text-slate-500">(when available)</span></span></label>' +
+                    '<label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">' +
+                    '<input type="checkbox" id="useLogo-' + item.docType + '" class="rounded border-slate-600" checked />' +
+                    '<span>Use company logo <span class="text-slate-500">(when letterhead is not used)</span></span></label>' +
+                    '<p class="text-[9px] text-slate-500">Only applied if the asset is on file. Logo is used automatically when letterhead is off or unavailable.</p>' +
+                    '</div>' +
                     '<button id="genSendBtn-' + item.docType + '" onclick="submitGenerateDocument(\'' + item.docType +
                     '\')" class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-white"><i class="fa-solid fa-paper-plane"></i> Send</button>' +
                     "</div></div></div>"
@@ -4061,7 +4348,17 @@
             try {
                 const res = await callGateway('clientportal', 'clientPortalPreviewDocumentLayout', { docType: docType });
                 if (!res || !res.success) {
-                    notifyUser((res && res.message) || 'Could not build layout preview.', 'error');
+                    notifyUser((res && res.message) || 'Could not open sample preview.', 'error');
+                    return;
+                }
+                if (res.hasSample === false || res.mode === 'no_sample' || (!res.previewUrl && !res.previewFileId && !res.mock)) {
+                    notifyUser('No sample yet for this document type. Your admin can generate or save a sample after training.', 'info');
+                    return;
+                }
+                // Prefer stored Drive sample — same open pattern as My Documents
+                if (res.previewUrl) {
+                    window.open(res.previewUrl, '_blank', 'noopener');
+                    notifyUser(res.message || 'Opening sample…', 'success');
                     return;
                 }
                 openDocPreviewOverlay(res);
@@ -4085,11 +4382,11 @@
             titleEl.textContent = res.label || res.docId || 'Document preview';
             const mode = res.mode || '';
             const modeLabel =
-                mode === 'trained_design' || mode === 'trained_design_cached' ? 'Trained sample document'
-                    : mode === 'default_sample' || mode === 'default_cached' ? 'Default sample document'
+                mode === 'trained_design' || mode === 'trained_design_cached' ? 'Your trained design sample'
+                    : mode === 'default_sample' || mode === 'default_cached' ? 'Default catalog sample (not your custom training)'
                         : mode === 'blank_template' ? 'Your blank template'
-                            : mode === 'trained_structure_only' ? 'Training on file (sample DOCX pending)'
-                                : mode === 'structure' ? 'Field outline'
+                            : mode === 'trained_structure_only' ? 'Training on file — sample DOCX not ready yet'
+                                : mode === 'structure' ? 'Field outline only'
                                     : 'Preview';
             metaEl.textContent = (res.message || modeLabel) +
                 (res.linkSharing === 'anyone_with_link_view' ? ' · Anyone with the link can view.' : '');
@@ -4715,6 +5012,14 @@
                 if (val) payload[f.key] = val;
             }
 
+            // Branding opt-in (only meaningful when assets exist server-side)
+            try {
+                const lhEl = document.getElementById('useLetterhead-' + docType);
+                const lgEl = document.getElementById('useLogo-' + docType);
+                if (lhEl) payload.useLetterhead = !!lhEl.checked;
+                if (lgEl) payload.useLogo = !!lgEl.checked;
+            } catch (_br) { }
+
             // Multi-client: primary form = client #1; overlays = full field bags for #2+
             (function () {
                 var extras = (typeof CLIENT_GEN_EXTRA_FORMS !== "undefined" && CLIENT_GEN_EXTRA_FORMS[docType])
@@ -5201,7 +5506,7 @@
         }
 
         let MYWORK_TIMER = null;
-        function startMyWorkPolling() { clearInterval(MYWORK_TIMER); MYWORK_TIMER = setInterval(loadMyWork, 30000); }
+        function startMyWorkPolling() { clearInterval(MYWORK_TIMER); loadMyWork(); MYWORK_TIMER = setInterval(loadMyWork, 8000); }
 
         async function terminateJob(jobId, btnEl) {
             if (!confirm("Stop this job? This can't be undone, and it still counts against your document quota.")) return;
@@ -5213,6 +5518,25 @@
                 loadMyWork();
             } else {
                 alert(res.message || 'Could not terminate this job.');
+            }
+        }
+
+
+        async function deleteClientDocument(docId, recordId, btnEl) {
+            if (!confirm('Delete this document from your account? The file will be moved to trash.')) return;
+            setBtnBusy(btnEl, true, { busyLabel: '…' });
+            const res = await callGateway('clientportal', 'clientPortalDeleteDocument', {
+                docId: docId || undefined,
+                recordId: recordId || undefined,
+                documentId: docId || undefined,
+                fileId: docId || undefined
+            });
+            setBtnBusy(btnEl, false);
+            if (res && res.success) {
+                notifyUser('Document deleted.', 'success');
+                loadDocuments();
+            } else {
+                notifyUser((res && res.message) || 'Could not delete document.', 'error');
             }
         }
 
@@ -5231,10 +5555,10 @@
             </div>
             <div class="flex items-center gap-2">
                 ${j.status === 'queued' || j.status === 'running'
-                    ? `<span class="inline-flex items-center gap-1.5 text-amber-400 text-xs"><span class="ai-spinner"></span>${j.status === 'running' ? 'Working…' : 'Queued…'}</span>`
-                    : j.status === 'done'
-                        ? `<span class="text-emerald-400 text-xs"><i class="fa-solid fa-circle-check"></i> Done${j.docUrl ? ` — <a href="${escapeHtml(j.docUrl)}" target="_blank" class="text-blue-400 underline">Open</a>` : ''}</span>`
-                        : `<span class="text-red-400 text-xs"><i class="fa-solid fa-circle-xmark"></i> ${escapeHtml(j.status === 'Terminated' ? 'Terminated' : 'Failed')}</span>`}
+                    ? `<span class="inline-flex items-center gap-1.5 text-amber-400 text-xs"><span class="ai-spinner"></span>${j.status === 'running' ? 'Working…' : 'Queued…'}${j.progress && j.progress.percent != null ? ` ${j.progress.percent}%` : ''}${j.progress && j.progress.message ? ` — ${escapeHtml(String(j.progress.message).slice(0, 40))}` : ''}</span>`
+                    : (j.status === 'done' || j.status === 'Done')
+                        ? `<span class="text-emerald-400 text-xs"><i class="fa-solid fa-circle-check"></i> Done${(j.docUrl || (j.result && j.result.docUrl)) ? ` — <a href="${escapeHtml(j.docUrl || j.result.docUrl)}" target="_blank" class="text-blue-400 underline">Open</a>` : ''}</span>`
+                        : `<span class="text-red-400 text-xs"><i class="fa-solid fa-circle-xmark"></i> ${escapeHtml(j.status === 'Terminated' || j.status === 'error' ? (j.status === 'error' ? 'Failed' : 'Terminated') : (j.status || 'Failed'))}</span>`}
                 ${j.canTerminate && (j.status === 'queued' || j.status === 'running')
                     ? `<button onclick="terminateJob('${escapeHtml(j.jobId)}', this)"
                         class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Terminate</button>`
