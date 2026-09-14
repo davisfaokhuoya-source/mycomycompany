@@ -1728,8 +1728,7 @@
                         <p class="text-[10px] text-slate-500 leading-relaxed">Account count is limited by your <strong
                                 class="text-slate-400">Digital tier</strong>. Default TikTok is standard (publish).
                             <strong class="text-slate-400">Business TikTok</strong> enables AI comment replies. To
-                            remove a connection, request disconnect — admin completes it.
-                        </p>
+                            remove a connection, request disconnect — admin completes it.</p>
                         <div class="flex flex-wrap gap-2 items-center text-[10px] text-slate-500">
                             <span>TikTok type is chosen when you connect (Publish vs Business). No default
                                 selection.</span>
@@ -2195,6 +2194,17 @@
         }
 
         /** Disable button + show loading label; restore on finish */
+        window.formatApiError = function (res, fallback) {
+            if (!res) return (fallback || "Request failed") + " · code 5000";
+            var msg = res.message || res.error || fallback || "Request failed";
+            var code = res.errorCode || res.code || "";
+            if (!code && typeof msg === "string") {
+                var m = msg.match(/\bcode\s*([0-9]{4})\b/i);
+                if (m) code = m[1];
+            }
+            if (code && !new RegExp("code\\s*" + code, "i").test(String(msg))) return String(msg) + " · code " + code;
+            return String(msg);
+        };
         window.setButtonLoading = function (btn, loading, loadingLabel) {
             if (!btn) return;
             try {

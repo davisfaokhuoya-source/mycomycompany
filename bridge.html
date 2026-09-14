@@ -7773,6 +7773,71 @@
             if (ACTIVE_AUTO_REFRESH) { clearInterval(ACTIVE_AUTO_REFRESH); ACTIVE_AUTO_REFRESH = null; }
         }
 
+
+        window.setButtonLoading = function (btn, loading, loadingLabel) {
+            if (!btn) return;
+            try {
+                if (loading) {
+                    if (btn.dataset.loading === '1') {
+                        // refresh label only
+                        if (loadingLabel) {
+                            var spin = '<span class="inline-flex items-center gap-1.5"><svg class="animate-spin h-3.5 w-3.5 inline" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><span>' + loadingLabel + '</span></span>';
+                            btn.innerHTML = spin;
+                        }
+                        return;
+                    }
+                    btn.dataset.loading = '1';
+                    btn.dataset.prevHtml = btn.innerHTML;
+                    btn.dataset.prevDisabled = btn.disabled ? '1' : '0';
+                    btn.disabled = true;
+                    btn.setAttribute('aria-busy', 'true');
+                    btn.classList.add('opacity-70', 'cursor-wait');
+                    var lab = loadingLabel || 'Loading…';
+                    btn.innerHTML = '<span class="inline-flex items-center gap-1.5"><svg class="animate-spin h-3.5 w-3.5 inline" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><span>' + lab + '</span></span>';
+                } else {
+                    btn.dataset.loading = '0';
+                    btn.disabled = btn.dataset.prevDisabled === '1';
+                    btn.removeAttribute('aria-busy');
+                    btn.classList.remove('opacity-70', 'cursor-wait');
+                    if (btn.dataset.prevHtml != null) btn.innerHTML = btn.dataset.prevHtml;
+                    delete btn.dataset.prevHtml;
+                    delete btn.dataset.prevDisabled;
+                }
+            } catch (e) { }
+        };
+        window.formatApiError = function (res, fallback) {
+            if (!res) return (fallback || 'Request failed') + ' · code 5000';
+            var msg = res.message || res.error || fallback || 'Request failed';
+            var code = res.errorCode || res.code || '';
+            if (!code && typeof msg === 'string') {
+                var m = msg.match(/\bcode\s*([0-9]{4})\b/i) || msg.match(/\b(4[0-9]{3})\b/);
+                if (m) code = m[1];
+            }
+            if (code && !new RegExp('code\\s*' + code, 'i').test(String(msg))) {
+                return String(msg) + ' · code ' + code;
+            }
+            return String(msg);
+        };
+
+
+        (function bindAdminActionButtonLoading() {
+            if (window.__vicAdminBtnLoadBound) return;
+            window.__vicAdminBtnLoadBound = true;
+            document.addEventListener('click', function (ev) {
+                var t = ev.target;
+                if (!t || !t.closest) return;
+                var btn = t.closest('button');
+                if (!btn || btn.disabled || btn.dataset.loading === '1') return;
+                var oc = (btn.getAttribute('onclick') || '') + ' ' + (btn.textContent || '');
+                if (/Cancel|Close|hidden|Disconnect Session|Choose\.\.\./i.test(oc)) return;
+                if (!/Approve|Decline|Propose|Schedule|Generate|Save|Submit|Send|Scan|Connect|Refresh|Load|Delete|Confirm|Repair|Test Doc|Create|Update|Assign|Sync/i.test(oc)) return;
+                if (typeof setButtonLoading === 'function') {
+                    setButtonLoading(btn, true, 'Loading…');
+                    btn.__vicLoadUntil = Date.now() + 120000;
+                }
+            }, true);
+        })();
+
         async function executeSecureBridgeCall(systemTarget, actionTarget, analyticalPayload = {}, opts = {}) {
             const url = (typeof WEBAPP_URL === "string" && WEBAPP_URL) || localStorage.getItem("VIC_WEBAPP_URL") || "https://app.thevictorias.com.ng";
             if (!url) {
@@ -7816,6 +7881,11 @@
                 const result = JSON.parse(jsonStart !== -1 ? text.substring(jsonStart) : text || "{}");
 
                 if (useGlobalLoader) toggleSystemLoader(false);
+                try {
+                    document.querySelectorAll('[data-loading="1"]').forEach(function (b) {
+                        if (typeof setButtonLoading === 'function') setButtonLoading(b, false);
+                    });
+                } catch (_) { }
                 return result;
 
             } catch (error) {
@@ -16089,9 +16159,22 @@ ${a.Status === 'Pending Review' ? `
             }).join('');
         }
         async function approveAppointmentRequest(mailboxId, requestId) {
-            const res = await executeSecureBridgeCall('agent', 'agent-approve-appointment-request', { mailboxId, requestId, adminName: CURRENT_ADMIN_IDENTITY });
-            showToast(res.success ? 'Appointment confirmed.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
-            if (res.success) { loadAppointmentRequestsUI(); loadAgentSchedulingUI(); }
+            const res = await executeSecureBridgeCall('agent', 'agent-approve-appointment-request', {
+                mailboxId, requestId, adminName: CURRENT_ADMIN_IDENTITY
+            });
+            if (res && res.success) {
+                showToast('Appointment confirmed.', 'success');
+                loadAppointmentRequestsUI();
+                loadAgentSchedulingUI();
+                return;
+            }
+            // No datetime on the email request — open Propose Time (error code 4301)
+            if (res && (res.needsProposeTime || res.errorCode === '4301' || /No requested date\/time|Propose New Time/i.test(String(res.message || '')))) {
+                showToast(formatApiError(res, 'Pick a time to propose'), 'error');
+                try { openProposeAppointmentTimeModal(requestId); } catch (_) { }
+                return;
+            }
+            showToast(formatApiError(res, 'Failed to approve appointment'), 'error');
         }
         function openProposeAppointmentTimeModal(requestId) {
             document.getElementById('apReqIdPropose').value = requestId;
@@ -16108,7 +16191,7 @@ ${a.Status === 'Pending Review' ? `
                 adminName: CURRENT_ADMIN_IDENTITY
             };
             executeSecureBridgeCall('agent', 'agent-propose-appointment-time', payload).then(res => {
-                showToast(res.success ? 'Proposed time sent to sender.' : (res.message || 'Failed.'), res.success ? 'success' : 'error');
+                showToast(res.success ? 'Proposed time sent to sender.' : formatApiError(res, 'Failed'), res.success ? 'success' : 'error');
                 if (res.success) { document.getElementById('modalProposeAppointmentTime').classList.add('hidden'); loadAppointmentRequestsUI(); }
             });
         }
