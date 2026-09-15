@@ -18857,6 +18857,32 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                         var fxEl = document.getElementById('pricingFxRate');
                         if (fxEl) fxEl.value = window.PRICING_STATE.fx;
                     }
+                    // Fallback tiers from get-all-service-pricing when list-service-tiers / billing-catalog failed
+                    if (!(window.PRICING_STATE.tiers || []).length) {
+                        var fallbackTiers = [];
+                        if (Array.isArray(priceRes.serviceTiers) && priceRes.serviceTiers.length) {
+                            fallbackTiers = priceRes.serviceTiers;
+                        } else {
+                            Object.keys(p).forEach(function (key) {
+                                var row = p[key];
+                                if (!row) return;
+                                if (row.suite === 'ops' || row.suite === 'digital' || /_ops$|^digital_|^ops_|^starter_|^growth_|^enterprise_/.test(key)) {
+                                    fallbackTiers.push({
+                                        id: key,
+                                        suite: row.suite || (/digital/i.test(key) ? 'digital' : 'ops'),
+                                        name: row.label || key,
+                                        tagline: '',
+                                        priceUsd: Number(row.totalUsd) || 0,
+                                        priceNgn: Number(row.totalNgn || row.baseNgn) || 0,
+                                        services: row.services || {},
+                                        features: row.features || [],
+                                        active: true
+                                    });
+                                }
+                            });
+                        }
+                        if (fallbackTiers.length) window.PRICING_STATE.tiers = fallbackTiers;
+                    }
                     if (Array.isArray(priceRes.addons) && priceRes.addons.length && !(window.PRICING_STATE.addons || []).length) {
                         window.PRICING_STATE.addons = priceRes.addons.map(function (a) {
                             return {
@@ -18914,11 +18940,92 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         }
 
 
+
+        function pricingCloseEditor() {
+            var ed = document.getElementById('pricingEditor');
+            if (ed) ed.classList.add('hidden');
+            window.PRICING_STATE = window.PRICING_STATE || {};
+            window.PRICING_STATE.editingId = null;
+        }
+
+        function pricingNewTier(suite) {
+            suite = suite || 'ops';
+            window.PRICING_STATE = window.PRICING_STATE || {};
+            window.PRICING_STATE.editingId = null;
+            var ed = document.getElementById('pricingEditor');
+            if (ed) ed.classList.remove('hidden');
+            var title = document.getElementById('pricingEditorTitle');
+            if (title) title.textContent = suite === 'digital' ? 'New Digital tier' : 'New Ops tier';
+            var idEl = document.getElementById('pe_id');
+            if (idEl) { idEl.value = ''; idEl.readOnly = false; }
+            var suiteEl = document.getElementById('pe_suite');
+            if (suiteEl) suiteEl.value = suite;
+            ['pe_name', 'pe_tagline', 'pe_priceUsd', 'pe_priceNgn', 'pe_features'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            try { ed && ed.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_) { }
+        }
+
+        function pricingEditTier(tierId) {
+            window.PRICING_STATE = window.PRICING_STATE || {};
+            var tiers = window.PRICING_STATE.tiers || [];
+            var t = tiers.find(function (x) { return String(x.id) === String(tierId); });
+            if (!t) {
+                if (typeof showToast === 'function') showToast('Tier not found: ' + tierId, 'error');
+                return;
+            }
+            window.PRICING_STATE.editingId = t.id;
+            var ed = document.getElementById('pricingEditor');
+            if (ed) ed.classList.remove('hidden');
+            var title = document.getElementById('pricingEditorTitle');
+            if (title) title.textContent = 'Edit tier — ' + (t.name || t.id);
+            var idEl = document.getElementById('pe_id');
+            if (idEl) { idEl.value = t.id || ''; idEl.readOnly = true; }
+            var suiteEl = document.getElementById('pe_suite');
+            if (suiteEl) suiteEl.value = (t.suite || 'ops').toLowerCase() === 'digital' ? 'digital' : 'ops';
+            var set = function (id, v) { var el = document.getElementById(id); if (el) el.value = v != null ? v : ''; };
+            set('pe_name', t.name);
+            set('pe_tagline', t.tagline);
+            set('pe_priceUsd', t.priceUsd != null ? t.priceUsd : t.priceOffshoreUsd);
+            set('pe_priceNgn', t.priceNgn != null ? t.priceNgn : t.priceLocalNgn);
+            set('pe_features', Array.isArray(t.features) ? t.features.join(', ') : (t.features || ''));
+            // Services checkboxes if grid present
+            try {
+                var svc = t.services || {};
+                document.querySelectorAll('#pe_servicesGrid .pe-svc-on').forEach(function (cb) {
+                    var key = cb.getAttribute('data-svc-key');
+                    cb.checked = svc[key] != null && Number(svc[key]) !== 0;
+                    var qty = document.querySelector('#pe_servicesGrid [data-svc-qty="' + key + '"]');
+                    if (qty) qty.value = svc[key] != null ? svc[key] : 1;
+                });
+            } catch (_) { }
+            try { ed && ed.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_) { }
+        }
+
         function pricingRenderLists() {
             var ops = document.getElementById('pricingOpsList');
             var dig = document.getElementById('pricingDigitalList');
-            if (!ops || !dig) return;
-            var tiers = window.PRICING_STATE.tiers || [];
+            var tiers = (window.PRICING_STATE && window.PRICING_STATE.tiers) || [];
+            // Normalize suite + prices so cards always show
+            tiers = tiers.map(function (t) {
+                if (!t || typeof t !== 'object') return null;
+                var suite = String(t.suite || 'ops').toLowerCase();
+                if (suite !== 'digital') suite = 'ops';
+                return {
+                    id: t.id || t.key || '',
+                    suite: suite,
+                    name: t.name || t.label || t.id || 'Tier',
+                    tagline: t.tagline || '',
+                    priceUsd: Number(t.priceUsd != null ? t.priceUsd : t.priceOffshoreUsd) || 0,
+                    priceNgn: Number(t.priceNgn != null ? t.priceNgn : t.priceLocalNgn) || 0,
+                    services: t.services || {},
+                    features: t.features || [],
+                    active: t.active !== false
+                };
+            }).filter(Boolean);
+            window.PRICING_STATE.tiers = tiers;
+
             function card(t) {
                 var svc = t.services || {};
                 var bits = Object.keys(svc).filter(function (k) { return Number(svc[k]) !== 0; }).slice(0, 6).map(function (k) {
@@ -18929,12 +19036,29 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                     '<div class="flex justify-between gap-2"><span class="font-semibold text-white text-sm">' + (t.name || t.id) + '</span>' +
                     '<span class="text-[10px] text-slate-400">' + t.id + '</span></div>' +
                     '<p class="text-[11px] text-slate-400 mt-0.5">' + (t.tagline || '') + '</p>' +
-                    '<p class="text-sm text-emerald-400 mt-1">$' + (t.priceUsd || 0) + ' \u00b7 \u20a6' + Number(t.priceNgn || 0).toLocaleString() + '/mo</p>' +
-                    '<p class="text-[10px] text-slate-500 mt-1">' + bits + '</p></div>';
+                    '<p class="text-sm text-emerald-400 mt-1">$' + Number(t.priceUsd || 0).toLocaleString() + ' \u00b7 \u20a6' + Number(t.priceNgn || 0).toLocaleString() + '/mo</p>' +
+                    '<p class="text-[10px] text-slate-500 mt-1">' + (bits || 'Click to edit services') + '</p></div>';
             }
-            ops.innerHTML = tiers.filter(function (t) { return (t.suite || 'ops') === 'ops'; }).map(card).join('') || '<p class="text-xs text-slate-500">No Ops tiers yet.</p>';
-            dig.innerHTML = tiers.filter(function (t) { return t.suite === 'digital'; }).map(card).join('') || '<p class="text-xs text-slate-500">No Digital tiers yet.</p>';
+
+            var opsTiers = tiers.filter(function (t) { return t.suite === 'ops'; });
+            var digTiers = tiers.filter(function (t) { return t.suite === 'digital'; });
+            // If suite data is missing, show all under Ops so UI is never blank when data exists
+            if (!opsTiers.length && !digTiers.length && tiers.length) {
+                opsTiers = tiers;
+            }
+            if (ops) {
+                ops.innerHTML = opsTiers.map(card).join('') ||
+                    '<p class="text-xs text-slate-500">No Ops tiers yet. Click <strong>Refresh</strong> or <strong>Force reset catalog</strong>.</p>';
+            }
+            if (dig) {
+                dig.innerHTML = digTiers.map(card).join('') ||
+                    '<p class="text-xs text-slate-500">No Digital tiers yet.</p>';
+            }
+            try {
+                console.log('[Pricing] renderLists ops=' + opsTiers.length + ' digital=' + digTiers.length + ' total=' + tiers.length);
+            } catch (_) { }
         }
+
 
         function pricingRenderAddonTable() {
             var body = document.getElementById('pricingAddonTableBody');
@@ -19113,7 +19237,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             pricingCloseEditor();
         }
 
-        async async function pricingSaveMinuteRate() {
+        async function pricingSaveMinuteRate() {
             var rate = Number(document.getElementById('pricingMinuteRate').value);
             var res = await executeSecureBridgeCall('agent', 'agent-set-minute-rate', { rate: rate });
             if (typeof showToast === 'function') showToast((res && res.message) || '₦/min saved', res && res.success === false ? 'error' : 'success');
