@@ -5008,6 +5008,19 @@
                             <label class="text-slate-400">Digital tier<select id="pa_digitalTier"
                                     class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white"></select></label>
                         </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs items-end mt-2">
+                            <label class="text-slate-400">Billing market
+                                <select id="pa_billingRegion"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white">
+                                    <option value="LOCAL">Local (NGN prices)</option>
+                                    <option value="OFFSHORE">Offshore (USD × FX)</option>
+                                </select>
+                            </label>
+                            <p class="text-[10px] text-slate-500 md:col-span-2 self-center">
+                                Offshore = USD list × FX (header). Local = NGN list. Saved with <strong>Save tiers
+                                    only</strong>.
+                            </p>
+                        </div>
                         <div class="border border-slate-800 rounded-lg p-3 bg-slate-950/50">
                             <p class="text-[11px] font-semibold text-emerald-400 mb-2"><i
                                     class="fa-solid fa-lock mr-1"></i> Active on this client (read-only)</p>
@@ -5080,7 +5093,8 @@
                         </div>
                         <p class="text-[11px] text-slate-500">Tick services to include on this tier, then set quantity.
                             <strong class="text-slate-400">-1</strong> = unlimited. Unticked services are not on the
-                            tier. Add-on-only items stay available under Assign to client.</p>
+                            tier. Add-on-only items stay available under Assign to client.
+                        </p>
                         <div id="pe_servicesGrid"
                             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-80 overflow-y-auto custom-scrollbar">
                         </div>
@@ -19320,6 +19334,50 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             if (typeof showToast === 'function') showToast((res && res.message) || '₦/min saved', res && res.success === false ? 'error' : 'success');
         }
 
+        function pricingFillAssignSelects() {
+            window.PRICING_STATE = window.PRICING_STATE || { tiers: [], addons: [] };
+            var tiers = window.PRICING_STATE.tiers || [];
+            var opsSel = document.getElementById('pa_opsTier');
+            var digSel = document.getElementById('pa_digitalTier');
+            function optHtml(list, emptyLabel) {
+                var html = '<option value="">' + (emptyLabel || '— none —') + '</option>';
+                list.forEach(function (t) {
+                    if (!t || !t.id) return;
+                    var label = (t.name || t.label || t.id);
+                    if (t.priceNgn != null && t.priceNgn !== '') {
+                        label += ' · ₦' + Number(t.priceNgn).toLocaleString();
+                    }
+                    html += '<option value="' + String(t.id).replace(/"/g, '') + '">' +
+                        String(label).replace(/</g, '') + '</option>';
+                });
+                return html;
+            }
+            var ops = tiers.filter(function (t) {
+                var s = String(t.suite || '').toLowerCase();
+                var id = String(t.id || '');
+                if (s === 'digital') return false;
+                return s === 'ops' || /^ops_/i.test(id) || /_ops$/i.test(id);
+            });
+            var dig = tiers.filter(function (t) {
+                var s = String(t.suite || '').toLowerCase();
+                var id = String(t.id || '');
+                if (s === 'ops') return false;
+                return s === 'digital' || /^digital_/i.test(id);
+            });
+            if (!ops.length && tiers.length) ops = tiers.slice();
+            if (opsSel) {
+                var prev = opsSel.value;
+                opsSel.innerHTML = optHtml(ops, '— Ops tier —');
+                if (prev) try { opsSel.value = prev; } catch (_) { }
+            }
+            if (digSel) {
+                var prevD = digSel.value;
+                digSel.innerHTML = optHtml(dig, '— Digital tier —');
+                if (prevD) try { digSel.value = prevD; } catch (_) { }
+            }
+            console.log('[Pricing] fillAssignSelects ops=', ops.length, 'digital=', dig.length, 'total=', tiers.length);
+        }
+
         async function pricingLoadClientGrants() {
             var clientId = (document.getElementById('pa_clientId') && document.getElementById('pa_clientId').value || '').trim();
             var box = document.getElementById('pa_activeAddons');
@@ -19329,31 +19387,46 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 return;
             }
             if (box) box.textContent = 'Loading…';
+
             var res = await executeSecureBridgeCall('agent', 'agent-get-client-service-grants', { clientId: clientId });
             if (!res || res.success === false) {
                 if (box) box.textContent = (res && res.message) || 'Could not load grants.';
                 return;
             }
+
+            // 1) Build option lists first
+            if (typeof pricingFillAssignSelects === 'function') pricingFillAssignSelects();
+
+            // 2) Then apply saved values
             if (res.opsTier && document.getElementById('pa_opsTier')) {
                 document.getElementById('pa_opsTier').value = res.opsTier;
             }
             if (res.digitalTier && document.getElementById('pa_digitalTier')) {
                 document.getElementById('pa_digitalTier').value = res.digitalTier;
             }
+            var brEl = document.getElementById('pa_billingRegion');
+            if (brEl) {
+                var br = String(res.billingRegion || res.region || 'LOCAL').toUpperCase();
+                brEl.value = (br === 'OFFSHORE' || br === 'USD') ? 'OFFSHORE' : 'LOCAL';
+            }
+
             var active = res.activeAddons || {};
             var keys = Object.keys(active);
             if (!keys.length) {
                 if (box) box.innerHTML = '<span class="text-slate-500">No active add-ons yet.</span>';
-            } else {
-                if (box) {
-                    box.innerHTML = keys.map(function (k) {
-                        return '<div class="flex justify-between gap-2 border border-slate-800 rounded px-2 py-1.5 mb-1 bg-slate-900/80">' +
-                            '<span class="text-slate-300">' + k + '</span>' +
-                            '<span class="text-emerald-400 font-mono">×' + active[k] + ' <i class="fa-solid fa-lock text-slate-600 text-[9px]"></i></span></div>';
-                    }).join('');
-                }
+            } else if (box) {
+                box.innerHTML = keys.map(function (k) {
+                    return '<div class="flex justify-between gap-2 border border-slate-800 rounded px-2 py-1.5 mb-1 bg-slate-900/80">' +
+                        '<span class="text-slate-300">' + k + '</span>' +
+                        '<span class="text-emerald-400 font-mono">×' + active[k] +
+                        ' <i class="fa-solid fa-lock text-slate-600 text-[9px]"></i></span></div>';
+                }).join('');
             }
-            if (bal) bal.textContent = 'Human minutes balance: ' + (res.humanMinutesBalance != null ? res.humanMinutesBalance : '—');
+            if (bal) {
+                bal.textContent = 'Human minutes balance: ' +
+                    (res.humanMinutesBalance != null ? res.humanMinutesBalance : '—');
+            }
+            window.PRICING_STATE = window.PRICING_STATE || {};
             window.PRICING_STATE.clientActiveAddons = active;
         }
 
@@ -19363,14 +19436,28 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 if (typeof showToast === 'function') showToast('Client ID required', 'error');
                 return;
             }
+            var billingRegion = (document.getElementById('pa_billingRegion') && document.getElementById('pa_billingRegion').value) || 'LOCAL';
+            var opsTier = (document.getElementById('pa_opsTier') && document.getElementById('pa_opsTier').value) || '';
+            var digitalTier = (document.getElementById('pa_digitalTier') && document.getElementById('pa_digitalTier').value) || '';
             var res = await executeSecureBridgeCall('agent', 'agent-assign-client-tier', {
                 clientId: clientId,
-                opsTier: document.getElementById('pa_opsTier').value,
-                digitalTier: document.getElementById('pa_digitalTier').value
+                opsTier: opsTier,
+                digitalTier: digitalTier,
+                billingRegion: billingRegion,
+                region: billingRegion
             });
+            try {
+                await executeSecureBridgeCall('agent', 'agent-set-client-billing-region', {
+                    clientId: clientId,
+                    billingRegion: billingRegion,
+                    region: billingRegion
+                });
+            } catch (_) { }
             var st = document.getElementById('pa_status');
             if (st) st.textContent = (res && res.message) || JSON.stringify(res);
-            if (typeof showToast === 'function') showToast((res && res.message) || 'Tiers saved', res && res.success === false ? 'error' : 'success');
+            if (typeof showToast === 'function') {
+                showToast((res && res.message) || 'Tiers & billing market saved', res && res.success === false ? 'error' : 'success');
+            }
             await pricingLoadClientGrants();
         }
 
