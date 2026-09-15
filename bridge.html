@@ -4796,17 +4796,21 @@
                                 add-on catalog, and client assignment. Homepage reads from here.</p>
                         </div>
                         <div class="flex flex-wrap gap-2 items-end">
-                            <label class="text-[10px] text-slate-400">USD→NGN
-                                <input id="pricingFxRate" type="number" min="100"
+                            <label class="text-[10px] text-slate-400">USD→NGN (FX)
+                                <input id="pricingFxRate" type="number" min="100" step="1"
                                     class="block mt-1 w-28 px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm"
                                     value="1300" />
                             </label>
+                            <button type="button" onclick="pricingSaveFx()"
+                                class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold"
+                                title="Save USD→NGN exchange rate">Save FX</button>
+                            <span id="pricingFxStatus" class="text-[10px] text-slate-500 max-w-[10rem]"></span>
                             <label class="text-[10px] text-slate-400">Admin ₦/min
                                 <input id="pricingMinuteRate" type="number" min="0"
                                     class="block mt-1 w-28 px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm" />
                             </label>
                             <button type="button" onclick="pricingSaveMinuteRate()"
-                                class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs">Save rate</button>
+                                class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs">Save ₦/min</button>
                             <button type="button" onclick="pricingLoadAll()"
                                 class="px-3 py-1.5 rounded-lg bg-slate-700 text-white text-xs">Refresh</button>
                             <button type="button" onclick="pricingForceResetCatalog()"
@@ -4874,8 +4878,8 @@
                             <button type="button" onclick="pricingNewAddon()"
                                 class="text-xs px-2.5 py-1 rounded bg-amber-700/80 text-white">+ New add-on</button>
                         </div>
-                        <p class="text-[11px] text-slate-500">Edit labels and NGN prices. Shown on the public site and
-                            when assigning to clients.</p>
+                        <p class="text-[11px] text-slate-500">Edit labels, prices, and capacity limits granted on
+                            purchase. Shown on the public site and when assigning to clients.</p>
                         <div class="overflow-x-auto border border-slate-700 rounded-xl">
                             <table class="w-full text-xs text-left">
                                 <thead class="bg-slate-900 text-slate-400 uppercase tracking-wide">
@@ -4883,7 +4887,8 @@
                                         <th class="px-3 py-2">Key</th>
                                         <th class="px-3 py-2">Label</th>
                                         <th class="px-3 py-2">Price ₦</th>
-                                        <th class="px-3 py-2">≈ USD</th>
+                                        <th class="px-3 py-2">USD</th>
+                                        <th class="px-3 py-2">Limits</th>
                                         <th class="px-3 py-2">Active</th>
                                         <th class="px-3 py-2"></th>
                                     </tr>
@@ -18873,8 +18878,23 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             var fx = Number(window.PRICING_STATE.fx) || 1300;
             var rows = window.PRICING_STATE.addons || [];
             if (!rows.length) {
-                body.innerHTML = '<tr><td colspan="5" class="px-3 py-6 text-center text-slate-500">No add-ons loaded. Click <strong>Force reset catalog</strong> (or run populate in Apps Script), then <strong>Refresh</strong>.</td></tr>';
+                body.innerHTML = '<tr><td colspan="7" class="px-3 py-6 text-center text-slate-500">No add-ons loaded. Click <strong>Force reset catalog</strong> (or run populate in Apps Script), then <strong>Refresh</strong>.</td></tr>';
                 return;
+            }
+            function limitSummary(a) {
+                var bits = [];
+                if (a.grantsHumanMinutes) bits.push(a.grantsHumanMinutes + ' human min');
+                if (a.grantsDocuments) bits.push('+' + a.grantsDocuments + ' docs');
+                if (a.grantsProposals) bits.push('+' + a.grantsProposals + ' proposals');
+                if (a.grantsMailboxes) bits.push('+' + a.grantsMailboxes + ' mailbox');
+                if (a.grantsSocialPosts) bits.push('+' + a.grantsSocialPosts + ' posts');
+                if (a.grantsCalendars) bits.push('+' + a.grantsCalendars + ' calendar');
+                if (a.grantsWhatsappReplies) bits.push('+' + a.grantsWhatsappReplies + ' WA');
+                if (a.grantsDocTrainingTypes) bits.push(a.grantsDocTrainingTypes + ' train type');
+                if (a.grantsLeads) bits.push('+' + a.grantsLeads + ' leads');
+                if (a.grantsCompliance) bits.push(a.grantsCompliance + ' compliance');
+                if (a.unit) bits.push('(' + a.unit + ')');
+                return bits.length ? bits.join(' · ') : '—';
             }
             body.innerHTML = rows.map(function (a) {
                 var usd = a.priceUsd || (fx ? Math.round((Number(a.priceNgn) || 0) / fx * 100) / 100 : 0);
@@ -18883,20 +18903,40 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                     '<td class="px-3 py-2">' + (a.label || '') + '</td>' +
                     '<td class="px-3 py-2">\u20a6' + Number(a.priceNgn || 0).toLocaleString() + '</td>' +
                     '<td class="px-3 py-2">$' + Number(usd).toLocaleString() + '</td>' +
+                    '<td class="px-3 py-2 text-[10px] text-slate-400 max-w-[14rem]">' + limitSummary(a) + '</td>' +
                     '<td class="px-3 py-2">' + (a.active === false ? '<span class="text-red-400">Off</span>' : '<span class="text-emerald-400">On</span>') + '</td>' +
-                    '<td class="px-3 py-2"><button type="button" class="text-indigo-400 hover:underline" onclick="pricingEditAddon(\'' + a.key.replace(/'/g, '') + '\')">Edit</button></td>' +
+                    '<td class="px-3 py-2"><button type="button" class="text-indigo-400 hover:underline" onclick="pricingEditAddon(\'' + String(a.key).replace(/'/g, '') + '\')">Edit</button></td>' +
                     '</tr>';
-            }).join('') || '<tr><td colspan="6" class="px-3 py-6 text-center text-slate-500">No add-ons in pricing map yet. Click + New add-on.</td></tr>';
+            }).join('') || '<tr><td colspan="7" class="px-3 py-4 text-slate-500">No rows</td></tr>';
         }
+
 
         function pricingEditAddon(key) {
             var a = (window.PRICING_STATE.addons || []).find(function (x) { return x.key === key; }) || { key: key, label: key, priceNgn: 0, active: true };
             document.getElementById('pricingAddonEditor').classList.remove('hidden');
-            document.getElementById('pae_key').value = a.key;
+            document.getElementById('pae_key').value = a.key || '';
             document.getElementById('pae_key').readOnly = !!key;
             document.getElementById('pae_label').value = a.label || '';
             document.getElementById('pae_ngn').value = a.priceNgn || 0;
+            var usdEl = document.getElementById('pae_usd');
+            if (usdEl) usdEl.value = a.priceUsd != null ? a.priceUsd : '';
+            var unitEl = document.getElementById('pae_unit');
+            if (unitEl) unitEl.value = a.unit || 'mo';
             document.getElementById('pae_active').checked = a.active !== false;
+            function setN(id, v) { var el = document.getElementById(id); if (el) el.value = v || ''; }
+            setN('pae_humanMin', a.grantsHumanMinutes);
+            setN('pae_docs', a.grantsDocuments);
+            setN('pae_proposals', a.grantsProposals);
+            setN('pae_mailboxes', a.grantsMailboxes);
+            setN('pae_posts', a.grantsSocialPosts);
+            setN('pae_calendars', a.grantsCalendars);
+            setN('pae_wa', a.grantsWhatsappReplies);
+            setN('pae_training', a.grantsDocTrainingTypes);
+            setN('pae_leads', a.grantsLeads);
+            setN('pae_compliance', a.grantsCompliance);
+            var ao = document.getElementById('pae_addonOnly');
+            if (ao) ao.checked = !!a.addonOnly;
+            try { document.getElementById('pricingAddonEditor').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_) { }
         }
 
         function pricingNewAddon() {
@@ -18905,7 +18945,16 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             document.getElementById('pae_key').readOnly = false;
             document.getElementById('pae_label').value = '';
             document.getElementById('pae_ngn').value = '';
+            var usdEl = document.getElementById('pae_usd');
+            if (usdEl) usdEl.value = '';
+            var unitEl = document.getElementById('pae_unit');
+            if (unitEl) unitEl.value = 'mo';
             document.getElementById('pae_active').checked = true;
+            ['pae_humanMin', 'pae_docs', 'pae_proposals', 'pae_mailboxes', 'pae_posts', 'pae_calendars', 'pae_wa', 'pae_training', 'pae_leads', 'pae_compliance'].forEach(function (id) {
+                var el = document.getElementById(id); if (el) el.value = '';
+            });
+            var ao = document.getElementById('pae_addonOnly');
+            if (ao) ao.checked = false;
         }
 
         async function pricingSaveAddon() {
@@ -18918,148 +18967,45 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 return;
             }
             var fx = Number(window.PRICING_STATE.fx) || 1300;
-            var priceUsd = fx > 0 ? Math.round((priceNgn / fx) * 100) / 100 : 0;
-            var res = await executeSecureBridgeCall('agent', 'agent-set-service-pricing', {
+            var usdRaw = document.getElementById('pae_usd') ? document.getElementById('pae_usd').value : '';
+            var priceUsd = usdRaw !== '' && usdRaw != null
+                ? Number(usdRaw)
+                : (fx > 0 ? Math.round((priceNgn / fx) * 100) / 100 : 0);
+            function num(id) {
+                var el = document.getElementById(id);
+                if (!el || el.value === '' || el.value == null) return 0;
+                return Number(el.value) || 0;
+            }
+            var unit = (document.getElementById('pae_unit') || {}).value || 'mo';
+            var payload = {
                 itemKey: itemKey,
                 label: label || itemKey,
                 priceNgn: priceNgn,
                 priceUsd: priceUsd,
                 priceOffshoreUsd: priceUsd,
-                active: active
-            });
+                priceLocalNgn: priceNgn,
+                active: active,
+                unit: unit,
+                grantsHumanMinutes: num('pae_humanMin'),
+                grantsDocuments: num('pae_docs'),
+                grantsProposals: num('pae_proposals'),
+                grantsMailboxes: num('pae_mailboxes'),
+                grantsSocialPosts: num('pae_posts'),
+                grantsCalendars: num('pae_calendars'),
+                grantsWhatsappReplies: num('pae_wa'),
+                grantsDocTrainingTypes: num('pae_training'),
+                grantsLeads: num('pae_leads'),
+                grantsCompliance: num('pae_compliance'),
+                addonOnly: !!(document.getElementById('pae_addonOnly') && document.getElementById('pae_addonOnly').checked)
+            };
+            var res = await executeSecureBridgeCall('agent', 'agent-set-service-pricing', payload);
             if (typeof showToast === 'function') showToast((res && res.message) || 'Saved', res && res.success === false ? 'error' : 'success');
             if (res && res.success !== false) {
                 document.getElementById('pricingAddonEditor').classList.add('hidden');
-                await pricingLoadAll();
+                if (typeof pricingLoadAll === 'function') pricingLoadAll();
             }
         }
 
-        function pricingFillAssignSelects() {
-            var tiers = window.PRICING_STATE.tiers || [];
-            var ops = document.getElementById('pa_opsTier');
-            var dig = document.getElementById('pa_digitalTier');
-            if (ops) {
-                ops.innerHTML = '<option value="">\u2014 none \u2014</option>' + tiers.filter(function (t) { return (t.suite || 'ops') === 'ops'; }).map(function (t) {
-                    return '<option value="' + t.id + '">' + t.name + '</option>';
-                }).join('');
-            }
-            if (dig) {
-                dig.innerHTML = '<option value="">\u2014 none \u2014</option>' + tiers.filter(function (t) { return t.suite === 'digital'; }).map(function (t) {
-                    return '<option value="' + t.id + '">' + t.name + '</option>';
-                }).join('');
-            }
-        }
-
-        function pricingRenderAssignAddons() {
-            var host = document.getElementById('pa_addonChecks');
-            if (!host) return;
-            var addons = window.PRICING_STATE.addons || [];
-            host.innerHTML = addons.filter(function (a) { return a.active !== false; }).map(function (a) {
-                return '<label class="flex items-start gap-2 border border-slate-700 rounded-lg p-2 bg-slate-950/60 text-[11px] text-slate-300 cursor-pointer hover:border-slate-500">' +
-                    '<input type="checkbox" class="mt-0.5 pa-addon-cb" data-addon-key="' + a.key + '" />' +
-                    '<span class="flex-1"><span class="text-white font-medium">' + (a.label || a.key) + '</span>' +
-                    '<span class="block text-slate-500">\u20a6' + Number(a.priceNgn || 0).toLocaleString() + '</span></span>' +
-                    '<input type="number" min="1" value="1" class="w-14 px-1 py-0.5 rounded bg-slate-900 border border-slate-700 text-white pa-addon-qty" data-addon-key="' + a.key + '" title="Qty" />' +
-                    '</label>';
-            }).join('') || '<p class="text-xs text-slate-500">No active add-ons. Configure them under Add-on catalog.</p>';
-        }
-
-        function pricingNewTier(suite) {
-            window.PRICING_STATE.editingId = null;
-            var ed = document.getElementById('pricingEditor');
-            if (ed) ed.classList.remove('hidden');
-            document.getElementById('pricingEditorTitle').textContent = suite === 'digital' ? 'New Digital tier' : 'New Ops tier';
-            document.getElementById('pe_id').value = '';
-            document.getElementById('pe_id').readOnly = false;
-            document.getElementById('pe_suite').value = suite || 'ops';
-            document.getElementById('pe_name').value = '';
-            document.getElementById('pe_tagline').value = '';
-            document.getElementById('pe_usd').value = '';
-            document.getElementById('pe_ngn').value = '';
-            document.getElementById('pe_features').value = '';
-            pricingRenderServiceInputs({});
-            pricingShowSection(suite === 'digital' ? 'digital' : 'ops');
-        }
-
-        function pricingEditTier(id) {
-            var t = (window.PRICING_STATE.tiers || []).find(function (x) { return x.id === id; });
-            if (!t) return;
-            window.PRICING_STATE.editingId = id;
-            document.getElementById('pricingEditor').classList.remove('hidden');
-            document.getElementById('pricingEditorTitle').textContent = 'Edit: ' + t.name;
-            document.getElementById('pe_id').value = t.id;
-            document.getElementById('pe_id').readOnly = true;
-            document.getElementById('pe_suite').value = t.suite || 'ops';
-            document.getElementById('pe_name').value = t.name || '';
-            document.getElementById('pe_tagline').value = t.tagline || '';
-            document.getElementById('pe_usd').value = t.priceUsd || 0;
-            document.getElementById('pe_ngn').value = t.priceNgn || 0;
-            document.getElementById('pe_features').value = (t.features || []).join(', ');
-            pricingRenderServiceInputs(t.services || {});
-            pricingShowSection((t.suite === 'digital') ? 'digital' : 'ops');
-        }
-
-        function pricingRenderServiceInputs(services) {
-            var cat = window.PRICING_STATE.catalog || [];
-            var suite = (document.getElementById('pe_suite') && document.getElementById('pe_suite').value) || 'ops';
-            var grid = document.getElementById('pe_servicesGrid');
-            if (!grid) return;
-            services = services || {};
-            // Prefer tier-eligible services for this suite; still show others dimmed
-            var ordered = cat.slice().filter(function (s) {
-                if (s.neverBillSeparately) return false;
-                if (s.addonOnly) return false;
-                return true;
-            }).sort(function (a, b) {
-                var aa = a.suite === suite ? 0 : 1;
-                var bb = b.suite === suite ? 0 : 1;
-                return aa - bb || String(a.group || '').localeCompare(String(b.group || '')) || String(a.label).localeCompare(String(b.label));
-            });
-            grid.innerHTML = ordered.map(function (s) {
-                var val = services[s.key] != null ? Number(services[s.key]) : 0;
-                var on = val !== 0 && services[s.key] != null;
-                if (services[s.key] === 0) on = false;
-                if (services[s.key] != null && Number(services[s.key]) !== 0) on = true;
-                var dim = s.suite !== suite ? 'opacity-50' : '';
-                return '<label class="text-[10px] text-slate-400 border border-slate-800 rounded-lg p-2 flex flex-col gap-1 ' + dim + '">' +
-                    '<span class="flex items-center gap-2">' +
-                    '<input type="checkbox" class="pe-svc-on rounded border-slate-600" data-svc-key="' + s.key + '" ' + (on ? 'checked' : '') + ' />' +
-                    '<span class="text-slate-200 font-medium">' + s.label + '</span>' +
-                    '</span>' +
-                    '<span class="text-slate-600">' + (s.group || '') + ' · ' + (s.unit || '') + '</span>' +
-                    '<input type="number" data-svc-qty="' + s.key + '" value="' + (on ? val : 1) + '" min="-1" ' +
-                    'class="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 text-white text-xs" ' + (on ? '' : 'disabled') + ' />' +
-                    '</label>';
-            }).join('') || '<p class="text-xs text-slate-500">No services in catalog. Run Force reset catalog.</p>';
-
-            grid.querySelectorAll('.pe-svc-on').forEach(function (cb) {
-                cb.addEventListener('change', function () {
-                    var key = cb.getAttribute('data-svc-key');
-                    var qty = grid.querySelector('[data-svc-qty="' + key + '"]');
-                    if (qty) {
-                        qty.disabled = !cb.checked;
-                        if (cb.checked && (!qty.value || qty.value === '0')) qty.value = '1';
-                    }
-                });
-            });
-        }
-
-        document.addEventListener('change', function (e) {
-            if (e.target && e.target.id === 'pe_suite') {
-                var services = {};
-                document.querySelectorAll('#pe_servicesGrid .pe-svc-on:checked').forEach(function (cb) {
-                    var key = cb.getAttribute('data-svc-key');
-                    var qty = document.querySelector('#pe_servicesGrid [data-svc-qty="' + key + '"]');
-                    services[key] = qty ? Number(qty.value) || 1 : 1;
-                });
-                pricingRenderServiceInputs(services);
-            }
-        });
-
-        function pricingCloseEditor() {
-            var ed = document.getElementById('pricingEditor');
-            if (ed) ed.classList.add('hidden');
-        }
 
         async function pricingSaveTier() {
             var services = {};
@@ -19103,10 +19049,10 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             pricingCloseEditor();
         }
 
-        async function pricingSaveMinuteRate() {
+        async async function pricingSaveMinuteRate() {
             var rate = Number(document.getElementById('pricingMinuteRate').value);
             var res = await executeSecureBridgeCall('agent', 'agent-set-minute-rate', { rate: rate });
-            if (typeof showToast === 'function') showToast((res && res.message) || 'Rate saved', res && res.success === false ? 'error' : 'success');
+            if (typeof showToast === 'function') showToast((res && res.message) || '₦/min saved', res && res.success === false ? 'error' : 'success');
         }
 
         async function pricingLoadClientGrants() {
@@ -19222,9 +19168,22 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
     <script>
         async function pricingSaveFx() {
             const rate = Number(document.getElementById('pricingFxRate').value);
+            if (!rate || rate < 100) {
+                if (typeof showToast === 'function') showToast('Enter a valid USD→NGN rate (100–10000)', 'error');
+                return;
+            }
             const res = await executeSecureBridgeCall('agent', 'agent-set-fx-rate', { rate: rate });
             const st = document.getElementById('pricingFxStatus');
             if (st) st.textContent = (res && res.message) || '';
+            if (res && res.success !== false) {
+                window.PRICING_STATE = window.PRICING_STATE || {};
+                window.PRICING_STATE.fx = Number(res.fxUsdNgn || rate) || rate;
+                var fxEl = document.getElementById('pricingFxRate');
+                if (fxEl) fxEl.value = String(window.PRICING_STATE.fx);
+                // Re-render ≈USD column with new FX
+                try { if (typeof pricingRenderAddons === 'function') pricingRenderAddons(); } catch (_) { }
+                try { if (typeof pricingRenderTiers === 'function') pricingRenderTiers(); } catch (_) { }
+            }
             if (typeof showToast === 'function') showToast((res && res.message) || 'FX saved', res && res.success === false ? 'error' : 'success');
         }
         async function pricingSeedConstitution() {
