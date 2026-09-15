@@ -4794,6 +4794,7 @@
                             <h2 class="text-xl font-bold text-white">Pricing, Tiers &amp; Add-ons</h2>
                             <p class="text-xs text-slate-400 mt-1 max-w-2xl">One place for Ops tiers, Digital tiers,
                                 add-on catalog, and client assignment. Homepage reads from here.</p>
+                            <p id="pricingLoadStatus" class="text-xs text-slate-400 mt-1"></p>
                         </div>
                         <div class="flex flex-wrap gap-2 items-end">
                             <label class="text-[10px] text-slate-400">USD→NGN (FX)
@@ -7861,9 +7862,15 @@
                 return { success: false, message: "No endpoint URL" };
             }
 
+            // Rehydrate from localStorage if in-memory token was cleared (common after partial reloads)
+            if (!SESSION_MASTER_TOKEN) {
+                try {
+                    SESSION_MASTER_TOKEN = localStorage.getItem('VIC_MASTER_TOKEN') || "";
+                } catch (_) { }
+            }
             if (!SESSION_MASTER_TOKEN) {
                 alert("Session expired. Please login again.");
-                terminateSession();
+                if (typeof terminateSession === 'function') terminateSession();
                 return { success: false, message: "No token" };
             }
 
@@ -18758,15 +18765,38 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         }
 
         async function pricingLoadAll() {
+            // Ensure state object exists
+            window.PRICING_STATE = window.PRICING_STATE || { catalog: [], tiers: [], addons: [], editingId: null, fx: 1300 };
+            // Rehydrate session token (Pricing is agent-only; other hubs can look fine while this var is empty)
+            try {
+                if (!SESSION_MASTER_TOKEN) SESSION_MASTER_TOKEN = localStorage.getItem('VIC_MASTER_TOKEN') || "";
+            } catch (_) { }
+
+            var statusEl = document.getElementById('pricingLoadStatus');
+            function setStatus(msg, isErr) {
+                if (statusEl) {
+                    statusEl.textContent = msg || '';
+                    statusEl.className = isErr ? 'text-xs text-red-400 mt-1' : 'text-xs text-slate-400 mt-1';
+                }
+                try { console.log('[Pricing]', msg); } catch (_) { }
+            }
+            setStatus('Loading pricing catalog…', false);
+
+            var errors = [];
             try {
                 var res = await executeSecureBridgeCall('agent', 'agent-list-service-tiers', {});
+                console.log('[Pricing] agent-list-service-tiers', res);
                 if (res && res.success) {
                     window.PRICING_STATE.catalog = res.catalog || [];
                     window.PRICING_STATE.tiers = res.tiers || [];
                     var rateEl = document.getElementById('pricingMinuteRate');
                     if (rateEl && res.minuteRate != null) rateEl.value = res.minuteRate;
+                } else {
+                    errors.push('list-service-tiers: ' + ((res && res.message) || 'failed'));
                 }
+
                 var billCat = await executeSecureBridgeCall('agent', 'agent-get-billing-catalog', { region: 'NG' });
+                console.log('[Pricing] agent-get-billing-catalog', billCat);
                 if (billCat && billCat.success) {
                     if (billCat.fxUsdNgn) {
                         window.PRICING_STATE.fx = Number(billCat.fxUsdNgn) || 1300;
@@ -18780,7 +18810,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                                 label: a.label || a.id,
                                 priceNgn: Number(a.priceLocalNgn) || 0,
                                 priceUsd: Number(a.priceOffshoreUsd) || 0,
-                                unit: a.unit || "mo",
+                                unit: a.unit || 'mo',
                                 active: a.active !== false,
                                 grantsHumanMinutes: Number(a.grantsHumanMinutes) || 0,
                                 grantsDocuments: Number(a.grantsDocuments) || 0,
@@ -18796,19 +18826,30 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                             };
                         });
                     }
-                    // If tiers empty from list, mirror from catalog
                     if (!(window.PRICING_STATE.tiers || []).length) {
                         var mirrored = [];
                         (billCat.opsTiers || []).forEach(function (t) {
-                            mirrored.push({ id: t.id, suite: 'ops', name: t.name, tagline: t.tagline, priceUsd: t.priceOffshoreUsd, priceNgn: t.priceLocalNgn, services: t.services || {}, features: t.features || [], active: true });
+                            mirrored.push({
+                                id: t.id, suite: 'ops', name: t.name, tagline: t.tagline,
+                                priceUsd: t.priceOffshoreUsd, priceNgn: t.priceLocalNgn,
+                                services: t.services || {}, features: t.features || [], active: true
+                            });
                         });
                         (billCat.digitalTiers || []).forEach(function (t) {
-                            mirrored.push({ id: t.id, suite: 'digital', name: t.name, tagline: t.tagline, priceUsd: t.priceOffshoreUsd, priceNgn: t.priceLocalNgn, services: t.services || {}, features: t.features || [], active: true });
+                            mirrored.push({
+                                id: t.id, suite: 'digital', name: t.name, tagline: t.tagline,
+                                priceUsd: t.priceOffshoreUsd, priceNgn: t.priceLocalNgn,
+                                services: t.services || {}, features: t.features || [], active: true
+                            });
                         });
                         if (mirrored.length) window.PRICING_STATE.tiers = mirrored;
                     }
+                } else {
+                    errors.push('billing-catalog: ' + ((billCat && billCat.message) || 'failed'));
                 }
+
                 var priceRes = await executeSecureBridgeCall('agent', 'agent-get-all-service-pricing', {});
+                console.log('[Pricing] agent-get-all-service-pricing', priceRes);
                 if (priceRes && priceRes.success) {
                     var p = priceRes.pricing || {};
                     if (priceRes.fx && priceRes.fx.USD) {
@@ -18816,7 +18857,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                         var fxEl = document.getElementById('pricingFxRate');
                         if (fxEl) fxEl.value = window.PRICING_STATE.fx;
                     }
-                    // Prefer explicit addons from agent-get-all-service-pricing if present
                     if (Array.isArray(priceRes.addons) && priceRes.addons.length && !(window.PRICING_STATE.addons || []).length) {
                         window.PRICING_STATE.addons = priceRes.addons.map(function (a) {
                             return {
@@ -18828,7 +18868,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                             };
                         });
                     }
-                    // Only scrape pricing-map keys if catalog addons still empty
                     if (!(window.PRICING_STATE.addons || []).length) {
                         var addons = [];
                         Object.keys(p).forEach(function (key) {
@@ -18847,19 +18886,33 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                         });
                         window.PRICING_STATE.addons = addons;
                     }
+                } else {
+                    errors.push('all-service-pricing: ' + ((priceRes && priceRes.message) || 'failed'));
                 }
-                // Final fallback: constitution defaults already applied via billCat above
-                if (!(window.PRICING_STATE.addons || []).length && priceRes && Array.isArray(priceRes.addons)) {
-                    window.PRICING_STATE.addons = priceRes.addons;
-                }
+
                 pricingRenderLists();
                 pricingRenderAddonTable();
-                pricingFillAssignSelects();
-                pricingRenderAssignAddons();
+                if (typeof pricingFillAssignSelects === 'function') pricingFillAssignSelects();
+                if (typeof pricingRenderAssignAddons === 'function') pricingRenderAssignAddons();
+
+                var nT = (window.PRICING_STATE.tiers || []).length;
+                var nA = (window.PRICING_STATE.addons || []).length;
+                if (errors.length) {
+                    setStatus('Loaded with errors (' + nT + ' tiers, ' + nA + ' add-ons). ' + errors.join(' | '), true);
+                    if (typeof showToast === 'function') showToast(errors[0], 'error');
+                } else {
+                    setStatus('Ready — ' + nT + ' tiers, ' + nA + ' add-ons, FX ' + (window.PRICING_STATE.fx || 1300), false);
+                }
             } catch (e) {
+                setStatus(String(e.message || e), true);
                 if (typeof showToast === 'function') showToast(String(e.message || e), 'error');
+                try {
+                    pricingRenderLists();
+                    pricingRenderAddonTable();
+                } catch (_) { }
             }
         }
+
 
         function pricingRenderLists() {
             var ops = document.getElementById('pricingOpsList');
