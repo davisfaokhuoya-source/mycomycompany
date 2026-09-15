@@ -1753,7 +1753,8 @@
                         <p class="text-[10px] text-slate-500 leading-relaxed">Account count is limited by your <strong
                                 class="text-slate-400">Digital tier</strong>. Default TikTok is standard (publish).
                             <strong class="text-slate-400">Business TikTok</strong> enables AI comment replies. To
-                            remove a connection, request disconnect — admin completes it.</p>
+                            remove a connection, request disconnect — admin completes it.
+                        </p>
                         <div class="flex flex-wrap gap-2 items-center text-[10px] text-slate-500">
                             <span>TikTok type is chosen when you connect (Publish vs Business). No default
                                 selection.</span>
@@ -5104,6 +5105,28 @@
                         '\')" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Cancel</button>' +
                         '<button id="genPreviewBtn-' + item.docType + '" onclick="previewDocumentLayout(\'' + item.docType +
                         '\')" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-sky-300"><i class="fa-solid fa-eye"></i> Preview layout</button>' +
+                        (function () {
+                            var comps = item.companions || item.companionDocs || [];
+                            if (!comps || !comps.length) return "";
+                            var h = '<div class="companions-opts mt-3 p-2 rounded border border-slate-700 bg-slate-900/40 space-y-1.5" id="companionsOpts-' + item.docType + '">';
+                            h += '<p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide mb-1">Complementary documents</p>';
+                            h += '<p class="text-[9px] text-slate-500 mb-1">Optional — each counts separately on your plan. Uses the same language and details from this form.</p>';
+                            comps.forEach(function (c) {
+                                var cid = (c && (c.id || c.docType)) || c;
+                                if (!cid) return;
+                                var lab = (c && c.label) || String(cid).replace(/_/g, " ");
+                                var blurb = (c && c.blurb) || "";
+                                var w = (c && c.weight != null) ? c.weight : "";
+                                h += '<label class="flex items-start gap-2 text-xs text-slate-300 cursor-pointer">';
+                                h += '<input type="checkbox" class="genCompanionCb rounded border-slate-600 mt-0.5" data-doc-type="' + String(item.docType).replace(/"/g, "") + '" value="' + String(cid).replace(/"/g, "") + '" />';
+                                h += '<span><span class="text-slate-100 font-medium">' + escapeHtml(lab) + '</span>';
+                                if (w !== "") h += ' <span class="text-slate-500">(weight ' + escapeHtml(String(w)) + ')</span>';
+                                if (blurb) h += '<br/><span class="text-[10px] text-slate-500">' + escapeHtml(blurb) + '</span>';
+                                h += '</span></label>';
+                            });
+                            h += '</div>';
+                            return h;
+                        })() +
                         '<div class="brand-opts mt-3 p-2 rounded border border-slate-700 bg-slate-900/50 space-y-1.5" id="brandOpts-' + item.docType + '">' +
                         '<p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide mb-1">Branding for this document</p>' +
                         '<label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">' +
@@ -5151,6 +5174,8 @@
                     DOC_CATALOG_LIST = Array.isArray(res.catalog) ? res.catalog : [];
                     DOC_CATALOG_LIST.forEach(function (item) {
                         if (item && item.docType) DOC_CATALOG_CACHE[item.docType] = item;
+                        // Keep companion list from backend (DocumentsLib) for complementary docs UI
+                        if (item && !item.companions && item.companionDocs) item.companions = item.companionDocs;
                         // Normalize so older backends without industries still group under Universal
                         if (!item.industries || !item.industries.length) item.industries = ["universal"];
                         if (!item.category) item.category = "other";
@@ -5891,6 +5916,30 @@
                     if (lhEl) payload.useLetterhead = !!lhEl.checked;
                     if (lgEl) payload.useLogo = !!lgEl.checked;
                 } catch (_br) { }
+
+                // Output language (change language feature)
+                try {
+                    var lang = (typeof getVicDocLang === "function")
+                        ? getVicDocLang()
+                        : ((document.getElementById("clientUiLangInHeader") || document.getElementById("clientUiLang") || {}).value || "en");
+                    payload.outputLanguage = lang || "en";
+                    payload.language = payload.outputLanguage;
+                    if (!payload.fields) payload.fields = {};
+                    payload.fields.outputLanguage = payload.outputLanguage;
+                    payload.fields.language = payload.outputLanguage;
+                } catch (_lang) { }
+
+                // Complementary documents selected on this card
+                try {
+                    var companionIds = [];
+                    document.querySelectorAll('.genCompanionCb[data-doc-type="' + String(docType).replace(/"/g, '') + '"]:checked').forEach(function (cb) {
+                        if (cb.value) companionIds.push(cb.value);
+                    });
+                    if (companionIds.length) {
+                        payload.companions = companionIds;
+                        payload.companionDocIds = companionIds;
+                    }
+                } catch (_comp) { }
 
                 // Multi-client: primary form = client #1; overlays = full field bags for #2+
                 (function () {

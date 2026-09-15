@@ -5009,7 +5009,8 @@
                         </div>
                         <p class="text-[11px] text-slate-500">Tick services to include on this tier, then set quantity.
                             <strong class="text-slate-400">-1</strong> = unlimited. Unticked services are not on the
-                            tier. Add-on-only items stay available under Assign to client.</p>
+                            tier. Add-on-only items stay available under Assign to client.
+                        </p>
                         <div id="pe_servicesGrid"
                             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-80 overflow-y-auto custom-scrollbar">
                         </div>
@@ -5867,6 +5868,17 @@
                             <option value="EU">European Union</option>
                             <option value="GLOBAL">Other / Global</option>
                         </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Billing market</label>
+                        <select id="editClientBillingRegion"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"
+                            title="LOCAL uses NGN list prices. OFFSHORE uses USD list × FX rate for NGN charge.">
+                            <option value="NG">Local (NGN prices)</option>
+                            <option value="OFFSHORE">Offshore (USD × FX)</option>
+                        </select>
+                        <p class="text-[10px] text-slate-500 mt-1">Offshore: $ price × exchange rate before Paystack
+                            (NGN).</p>
                     </div>
                 </div>
                 <div>
@@ -17097,6 +17109,11 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             document.getElementById('editClientPhone').value = c.Phone || '';
             document.getElementById('editClientWebsite').value = c.Website || '';
             document.getElementById('editClientCountry').value = c.Country || 'NG';
+            try {
+                var br = c.BillingRegion || c.billingRegion || 'NG';
+                var elBr = document.getElementById('editClientBillingRegion');
+                if (elBr) elBr.value = (String(br).toUpperCase() === 'OFFSHORE' ? 'OFFSHORE' : 'NG');
+            } catch (_br) { }
             document.getElementById('editClientNotes').value = c.Notes || '';
 
             const indSel = document.getElementById('editClientIndustry');
@@ -17117,7 +17134,9 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 website: document.getElementById('editClientWebsite').value.trim(),
                 country: document.getElementById('editClientCountry').value,
                 industry: document.getElementById('editClientIndustry').value,
-                notes: document.getElementById('editClientNotes').value.trim()
+                notes: document.getElementById('editClientNotes').value.trim(),
+                billingRegion: (document.getElementById('editClientBillingRegion') || {}).value || 'NG',
+                region: (document.getElementById('editClientBillingRegion') || {}).value || 'NG'
             };
             const btn = event.target.querySelector('button[type=submit]');
             if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
