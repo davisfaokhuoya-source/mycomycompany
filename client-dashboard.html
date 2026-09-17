@@ -602,16 +602,8 @@
                             if (opts && opts.body && typeof opts.body === "string" &&
                                 opts.body.indexOf("clientPortalGenerateDocument") >= 0) {
                                 var o = JSON.parse(opts.body);
-                                // Respect a language explicitly chosen on the document card itself;
-                                // only fall back to the site-wide language switcher when none was set.
-                                if (!o.outputLanguage && !o.language) {
-                                    o.outputLanguage = window.getVicDocLang();
-                                    o.language = o.outputLanguage;
-                                } else if (!o.outputLanguage) {
-                                    o.outputLanguage = o.language;
-                                } else if (!o.language) {
-                                    o.language = o.outputLanguage;
-                                }
+                                o.outputLanguage = window.getVicDocLang();
+                                o.language = o.outputLanguage;
                                 opts = Object.assign({}, opts, { body: JSON.stringify(o) });
                             }
                         } catch (e5) { }
@@ -644,6 +636,11 @@
                 <h1 class="text-xl font-bold tracking-tight text-white">Client Dashboard</h1>
                 <p class="text-sm text-slate-400 mt-1">Sign in with the Client ID and access code your account manager
                     gave you.</p>
+                <p class="text-xs text-slate-500 mt-2">
+                    <a href="interest-form.html"
+                        class="text-emerald-400/90 hover:text-emerald-300 underline-offset-2 hover:underline">No
+                        account? Express interest</a>
+                </p>
             </div>
             <form id="clientLoginForm" onsubmit="handleClientLogin(event)" class="space-y-4">
                 <div>
@@ -667,6 +664,14 @@
                 </button>
                 <p id="loginError" class="hidden text-xs text-red-400 text-center"></p>
             </form>
+            <div class="mt-6 pt-5 border-t border-slate-800 text-center">
+                <p class="text-sm text-slate-400">Don't have an account yet?</p>
+                <a href="interest-form.html"
+                    class="mt-2 inline-flex items-center justify-center gap-2 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition-colors">
+                    Express interest — join the waitlist
+                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                </a>
+            </div>
         </div>
     </div>
 
@@ -4179,8 +4184,19 @@
         }
 
         async function clientStartSocialConnect(platform, tikTokMode) {
-            const body = { platform: platform };
-            if (platform === 'tiktok' && tikTokMode) body.tikTokMode = tikTokMode;
+            // Business TikTok must resolve to platform key tiktok_business (PublishLib registry).
+            var plat = platform;
+            var mode = tikTokMode;
+            if (plat === 'tiktok_business' || (plat === 'tiktok' && (mode === 'business' || mode === 'biz'))) {
+                plat = 'tiktok_business';
+                mode = 'business';
+            }
+            const body = { platform: plat };
+            if (plat === 'tiktok' || plat === 'tiktok_business') {
+                body.tikTokMode = mode || (plat === 'tiktok_business' ? 'business' : 'consumer');
+                body.mode = body.tikTokMode;
+                body.appKind = body.tikTokMode;
+            }
             const res = await callGateway('clientportal', 'clientPortalStartSocialConnect', body);
             if (!res || !res.success) {
                 if (typeof showToast === 'function') showToast((res && res.message) || 'Could not start connect', 'error');
@@ -5108,13 +5124,33 @@
                         '<div id="genUnitEstimate-' + item.docType + '" class="mt-2 text-[10px] text-slate-400 bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-2">' +
                         clientGenUnitEstimateHtml(item.docType, item) +
                         '</div>' +
-                        clientGenLanguageSelectHtml(item) +
-                        clientGenCompanionsHtml(item) +
                         '<div class="flex flex-wrap gap-2 justify-end pt-2">' +
                         '<button onclick="toggleGenerateCard(\'' + item.docType +
                         '\')" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Cancel</button>' +
                         '<button id="genPreviewBtn-' + item.docType + '" onclick="previewDocumentLayout(\'' + item.docType +
                         '\')" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-sky-300"><i class="fa-solid fa-eye"></i> Preview layout</button>' +
+                        (function () {
+                            var comps = item.companions || item.companionDocs || [];
+                            if (!comps || !comps.length) return "";
+                            var h = '<div class="companions-opts mt-3 p-2 rounded border border-slate-700 bg-slate-900/40 space-y-1.5" id="companionsOpts-' + item.docType + '">';
+                            h += '<p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide mb-1">Complementary documents</p>';
+                            h += '<p class="text-[9px] text-slate-500 mb-1">Optional — each counts separately on your plan. Uses the same language and details from this form.</p>';
+                            comps.forEach(function (c) {
+                                var cid = (c && (c.id || c.docType)) || c;
+                                if (!cid) return;
+                                var lab = (c && c.label) || String(cid).replace(/_/g, " ");
+                                var blurb = (c && c.blurb) || "";
+                                var w = (c && c.weight != null) ? c.weight : "";
+                                h += '<label class="flex items-start gap-2 text-xs text-slate-300 cursor-pointer">';
+                                h += '<input type="checkbox" class="genCompanionCb rounded border-slate-600 mt-0.5" data-doc-type="' + String(item.docType).replace(/"/g, "") + '" value="' + String(cid).replace(/"/g, "") + '" />';
+                                h += '<span><span class="text-slate-100 font-medium">' + escapeHtml(lab) + '</span>';
+                                if (w !== "") h += ' <span class="text-slate-500">(weight ' + escapeHtml(String(w)) + ')</span>';
+                                if (blurb) h += '<br/><span class="text-[10px] text-slate-500">' + escapeHtml(blurb) + '</span>';
+                                h += '</span></label>';
+                            });
+                            h += '</div>';
+                            return h;
+                        })() +
                         '<div class="brand-opts mt-3 p-2 rounded border border-slate-700 bg-slate-900/50 space-y-1.5" id="brandOpts-' + item.docType + '">' +
                         '<p class="text-[10px] font-mono uppercase text-slate-500 tracking-wide mb-1">Branding for this document</p>' +
                         '<label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">' +
@@ -5139,17 +5175,6 @@
                         }
                     });
                 });
-
-                // Default each document's language picker to the current site language
-                list.forEach(function (item) {
-                    try {
-                        var sel = document.getElementById('genLang-' + item.docType);
-                        if (sel && typeof getVicDocLang === 'function') {
-                            var cur = getVicDocLang();
-                            if (cur && cur !== 'en') sel.value = cur;
-                        }
-                    } catch (_) { }
-                });
             }
 
             async function loadDocumentCatalog() {
@@ -5173,6 +5198,8 @@
                     DOC_CATALOG_LIST = Array.isArray(res.catalog) ? res.catalog : [];
                     DOC_CATALOG_LIST.forEach(function (item) {
                         if (item && item.docType) DOC_CATALOG_CACHE[item.docType] = item;
+                        // Keep companion list from backend (DocumentsLib) for complementary docs UI
+                        if (item && !item.companions && item.companionDocs) item.companions = item.companionDocs;
                         // Normalize so older backends without industries still group under Universal
                         if (!item.industries || !item.industries.length) item.industries = ["universal"];
                         if (!item.category) item.category = "other";
@@ -5479,45 +5506,6 @@
                 if (w === 3) return 4;
                 if (w === 4) return 2;
                 return 1;
-            }
-
-            function clientGenLanguageSelectHtml(item) {
-                var opts = [
-                    ["", "Same as site language"], ["en", "English"], ["fr", "Français"],
-                    ["es", "Español"], ["pt", "Português"], ["ar", "العربية"], ["zh-CN", "中文"],
-                    ["hi", "हिन्दी"], ["yo", "Yorùbá"], ["ig", "Igbo"], ["ha", "Hausa"]
-                ];
-                var optionsHtml = opts.map(function (o) {
-                    return '<option value="' + o[0] + '">' + o[1] + '</option>';
-                }).join('');
-                return '<div class="mt-2">' +
-                    '<label class="block text-[10px] text-slate-400 mb-1"><i class="fa-solid fa-language text-slate-500"></i> Output language</label>' +
-                    '<select id="genLang-' + item.docType + '" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white">' +
-                    optionsHtml + '</select>' +
-                    '<p class="text-[9px] text-slate-500 mt-0.5">Leave as-is to use the language picked in the header. Applies to this document only.</p>' +
-                    '</div>';
-            }
-
-            function clientGenCompanionsHtml(item) {
-                var comps = (item && (item.companions || item.companionDocs || (item.raw && item.raw.companions))) || [];
-                if (!comps.length) return '';
-                var rows = comps.map(function (c) {
-                    var id = (c && (c.id || c.docType)) || c;
-                    var label = (c && c.label) || String(id).replace(/_/g, ' ');
-                    var blurb = (c && c.blurb) || '';
-                    var w = (c && c.weight != null) ? c.weight : '';
-                    return '<label class="flex items-start gap-2 text-xs text-slate-300 cursor-pointer py-1">' +
-                        '<input type="checkbox" class="genCompanionCb-' + escapeHtml(item.docType) + ' rounded border-slate-600 mt-0.5" value="' + escapeHtml(String(id)) + '" />' +
-                        '<span><strong class="text-slate-200">' + escapeHtml(label) + '</strong>' +
-                        (w !== '' ? ' <span class="text-slate-500">(weight ' + escapeHtml(String(w)) + ')</span>' : '') +
-                        (blurb ? '<br><span class="text-slate-500 text-[10px]">' + escapeHtml(blurb) + '</span>' : '') +
-                        '</span></label>';
-                }).join('');
-                return '<div class="mt-2 p-2 rounded-lg border border-slate-700 bg-slate-950/60">' +
-                    '<p class="text-[10px] font-semibold text-slate-300 mb-0.5"><i class="fa-solid fa-layer-group text-emerald-500"></i> Complementary documents</p>' +
-                    '<p class="text-[9px] text-slate-500 mb-1">Optional — each one selected counts against your plan separately.</p>' +
-                    rows +
-                    '</div>';
             }
 
             function clientGenWeightBadgeHtml(item) {
@@ -5953,20 +5941,22 @@
                     if (lgEl) payload.useLogo = !!lgEl.checked;
                 } catch (_br) { }
 
-                // Per-document output language (overrides the site-wide language for this send only)
+                // Output language (change language feature)
                 try {
-                    const langEl = document.getElementById('genLang-' + docType);
-                    const langVal = langEl ? String(langEl.value || '').trim() : '';
-                    if (langVal) {
-                        payload.language = langVal;
-                        payload.outputLanguage = langVal;
-                    }
+                    var lang = (typeof getVicDocLang === "function")
+                        ? getVicDocLang()
+                        : ((document.getElementById("clientUiLangInHeader") || document.getElementById("clientUiLang") || {}).value || "en");
+                    payload.outputLanguage = lang || "en";
+                    payload.language = payload.outputLanguage;
+                    if (!payload.fields) payload.fields = {};
+                    payload.fields.outputLanguage = payload.outputLanguage;
+                    payload.fields.language = payload.outputLanguage;
                 } catch (_lang) { }
 
-                // Complementary/companion documents selected alongside this one
+                // Complementary documents selected on this card
                 try {
-                    const companionIds = [];
-                    document.querySelectorAll('.genCompanionCb-' + docType + ':checked').forEach(function (cb) {
+                    var companionIds = [];
+                    document.querySelectorAll('.genCompanionCb[data-doc-type="' + String(docType).replace(/"/g, '') + '"]:checked').forEach(function (cb) {
                         if (cb.value) companionIds.push(cb.value);
                     });
                     if (companionIds.length) {
@@ -6126,8 +6116,6 @@
             window.clientGenMaxBatch = clientGenMaxBatch;
             window.clientGenWeightBadgeHtml = clientGenWeightBadgeHtml;
             window.clientGenWeightHint = clientGenWeightHint;
-            window.clientGenLanguageSelectHtml = clientGenLanguageSelectHtml;
-            window.clientGenCompanionsHtml = clientGenCompanionsHtml;
             window.clientGenCountClientsForDoc = clientGenCountClientsForDoc;
             window.clientGenUnitEstimateHtml = clientGenUnitEstimateHtml;
             window.clientGenRefreshUnitEstimate = clientGenRefreshUnitEstimate;
