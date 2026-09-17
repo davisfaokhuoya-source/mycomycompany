@@ -19536,6 +19536,40 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             try { console.log('[Pricing] fillAssignSelects ops=', ops.length, 'digital=', dig.length, 'total=', tiers.length); } catch (_) { }
         }
 
+        /** Render tickable add-on list for Assign → Append add-ons */
+        function pricingRenderAssignAddons() {
+            var host = document.getElementById('pa_addonChecks');
+            if (!host) return;
+            window.PRICING_STATE = window.PRICING_STATE || { addons: [] };
+            var addons = window.PRICING_STATE.addons || [];
+            var list = addons.filter(function (a) { return a && (a.key || a.id) && a.active !== false; });
+            if (!list.length) list = addons.filter(function (a) { return a && (a.key || a.id); });
+            if (!list.length) {
+                host.innerHTML = '<p class="text-xs text-slate-500 col-span-full">No add-ons in catalog. Open Add-on catalog and click Refresh, or Force reset catalog.</p>';
+                return;
+            }
+            host.innerHTML = list.map(function (a) {
+                var key = String(a.key || a.id || '');
+                var safe = key.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                var label = a.label || key;
+                var ngn = Number(a.priceNgn != null ? a.priceNgn : a.priceLocalNgn) || 0;
+                var usd = Number(a.priceUsd != null ? a.priceUsd : a.priceOffshoreUsd) || 0;
+                var unit = a.unit || 'mo';
+                var only = a.addonOnly ? ' <span class="text-[9px] text-amber-400">addon-only</span>' : '';
+                return (
+                    '<label class="flex items-start gap-2 rounded-lg border border-slate-700 bg-slate-950/60 px-2.5 py-2 hover:border-slate-500 cursor-pointer">' +
+                    '<input type="checkbox" class="pa-addon-cb mt-1 rounded border-slate-600" data-addon-key="' + safe + '" />' +
+                    '<span class="flex-1 min-w-0">' +
+                    '<span class="block text-xs text-white font-medium truncate">' + String(label).replace(/</g, '&lt;') + only + '</span>' +
+                    '<span class="block text-[10px] text-slate-500 font-mono">' + safe +
+                    ' · ₦' + ngn.toLocaleString() + ' / $' + usd.toLocaleString() + ' · ' + unit + '</span>' +
+                    '</span>' +
+                    '<input type="number" min="1" value="1" class="pa-addon-qty w-14 shrink-0 px-1.5 py-1 rounded bg-slate-900 border border-slate-700 text-white text-xs" data-addon-key="' + safe + '" title="Quantity to ADD" onclick="event.stopPropagation()" />' +
+                    '</label>'
+                );
+            }).join('');
+        }
+
         async function pricingLoadClientGrants() {
             var clientId = (document.getElementById('pa_clientId') && document.getElementById('pa_clientId').value || '').trim();
             var box = document.getElementById('pa_activeAddons');
