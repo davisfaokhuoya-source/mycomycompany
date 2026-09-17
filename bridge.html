@@ -5053,8 +5053,7 @@
                             </label>
                             <p class="text-[10px] text-slate-500 md:col-span-2 self-center">Offshore clients are billed
                                 from USD list prices × the FX rate above. Local clients use NGN list prices. Save with
-                                <strong class="text-slate-300">Save tiers only</strong>.
-                            </p>
+                                <strong class="text-slate-300">Save tiers only</strong>.</p>
                         </div>
                         <div class="border border-slate-800 rounded-lg p-3 bg-slate-950/50">
                             <p class="text-[11px] font-semibold text-emerald-400 mb-2"><i
@@ -5070,6 +5069,29 @@
                                 class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-72 overflow-y-auto custom-scrollbar">
                             </div>
                         </div>
+                        <div
+                            class="grid grid-cols-1 sm:grid-cols-2 gap-3 border border-slate-800 rounded-lg p-3 bg-slate-950/40">
+                            <label class="text-[11px] text-slate-400">Expiry date (optional)
+                                <input type="date" id="pa_addonExpires"
+                                    class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white text-sm" />
+                                <span class="block text-[10px] text-slate-500 mt-1">Capacity stops after this date.
+                                    Leave empty = no auto-expiry.</span>
+                            </label>
+                            <label class="text-[11px] text-slate-400 flex flex-col gap-2">
+                                <span>Billing</span>
+                                <label class="inline-flex items-center gap-2 text-slate-200 cursor-pointer">
+                                    <input type="checkbox" id="pa_billImmediately" class="rounded border-slate-600" />
+                                    <span class="text-sm">Bill client immediately</span>
+                                </label>
+                                <span class="text-[10px] text-slate-500">Off = free admin grant (capacity starts now).
+                                    On = Paystack link; client pays; capacity after payment (unless you force
+                                    activate).</span>
+                                <label class="inline-flex items-center gap-2 text-slate-300 cursor-pointer text-[11px]">
+                                    <input type="checkbox" id="pa_activateNow" class="rounded border-slate-600" />
+                                    <span>If billing: also activate capacity now (before pay)</span>
+                                </label>
+                            </label>
+                        </div>
                         <div class="flex flex-wrap gap-2">
                             <button type="button" onclick="pricingAssignClient()"
                                 class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium">Save
@@ -5079,6 +5101,7 @@
                                 selected add-ons</button>
                         </div>
                         <p id="pa_status" class="text-[11px] text-slate-500"></p>
+                        <p id="pa_paymentLink" class="text-[11px] text-emerald-400 hidden break-all"></p>
                     </div>
 
                     <div id="pricingSec-time"
@@ -19086,6 +19109,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 pricingRenderAddonTable();
                 if (typeof pricingFillAssignSelects === 'function') pricingFillAssignSelects();
                 if (typeof pricingRenderAssignAddons === 'function') pricingRenderAssignAddons();
+                if (typeof pricingRenderAssignAddons === 'function') pricingRenderAssignAddons();
 
                 var nT = (window.PRICING_STATE.tiers || []).length;
                 var nA = (window.PRICING_STATE.addons || []).length;
@@ -19491,6 +19515,41 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         }
 
 
+
+        /** Render tickable add-on list for Assign → Append add-ons */
+        function pricingRenderAssignAddons() {
+            var host = document.getElementById('pa_addonChecks');
+            if (!host) return;
+            window.PRICING_STATE = window.PRICING_STATE || { addons: [] };
+            var addons = window.PRICING_STATE.addons || [];
+            // Prefer active catalog items; if empty, show inactive too with a note
+            var list = addons.filter(function (a) { return a && (a.key || a.id) && a.active !== false; });
+            if (!list.length) list = addons.filter(function (a) { return a && (a.key || a.id); });
+            if (!list.length) {
+                host.innerHTML = '<p class="text-xs text-slate-500 col-span-full">No add-ons in catalog. Open <strong class="text-slate-400">Add-on catalog</strong> and Refresh, or Force reset catalog.</p>';
+                return;
+            }
+            host.innerHTML = list.map(function (a) {
+                var key = String(a.key || a.id || '');
+                var safe = key.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                var label = a.label || key;
+                var ngn = Number(a.priceNgn != null ? a.priceNgn : a.priceLocalNgn) || 0;
+                var usd = Number(a.priceUsd != null ? a.priceUsd : a.priceOffshoreUsd) || 0;
+                var unit = a.unit || 'mo';
+                var only = a.addonOnly ? ' <span class="text-[9px] text-amber-400">addon-only</span>' : '';
+                return (
+                    '<label class="flex items-start gap-2 rounded-lg border border-slate-700 bg-slate-950/60 px-2.5 py-2 hover:border-slate-500 cursor-pointer">' +
+                    '<input type="checkbox" class="pa-addon-cb mt-1 rounded border-slate-600" data-addon-key="' + safe + '" />' +
+                    '<span class="flex-1 min-w-0">' +
+                    '<span class="block text-xs text-white font-medium truncate">' + String(label).replace(/</g, '&lt;') + only + '</span>' +
+                    '<span class="block text-[10px] text-slate-500 font-mono">' + safe + ' · ₦' + ngn.toLocaleString() + ' / $' + usd.toLocaleString() + ' · ' + unit + '</span>' +
+                    '</span>' +
+                    '<input type="number" min="1" value="1" class="pa-addon-qty w-14 shrink-0 px-1.5 py-1 rounded bg-slate-900 border border-slate-700 text-white text-xs" data-addon-key="' + safe + '" title="Quantity to ADD" onclick="event.stopPropagation()" />' +
+                    '</label>'
+                );
+            }).join('');
+        }
+
         /** Populate Ops / Digital tier dropdowns on Assign from PRICING_STATE.tiers */
         function pricingFillAssignSelects() {
             window.PRICING_STATE = window.PRICING_STATE || { tiers: [], addons: [] };
@@ -19534,41 +19593,9 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 if (prevD) digSel.value = prevD;
             }
             try { console.log('[Pricing] fillAssignSelects ops=', ops.length, 'digital=', dig.length, 'total=', tiers.length); } catch (_) { }
+            try { if (typeof pricingRenderAssignAddons === 'function') pricingRenderAssignAddons(); } catch (_) { }
         }
 
-        /** Render tickable add-on list for Assign → Append add-ons */
-        function pricingRenderAssignAddons() {
-            var host = document.getElementById('pa_addonChecks');
-            if (!host) return;
-            window.PRICING_STATE = window.PRICING_STATE || { addons: [] };
-            var addons = window.PRICING_STATE.addons || [];
-            var list = addons.filter(function (a) { return a && (a.key || a.id) && a.active !== false; });
-            if (!list.length) list = addons.filter(function (a) { return a && (a.key || a.id); });
-            if (!list.length) {
-                host.innerHTML = '<p class="text-xs text-slate-500 col-span-full">No add-ons in catalog. Open Add-on catalog and click Refresh, or Force reset catalog.</p>';
-                return;
-            }
-            host.innerHTML = list.map(function (a) {
-                var key = String(a.key || a.id || '');
-                var safe = key.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-                var label = a.label || key;
-                var ngn = Number(a.priceNgn != null ? a.priceNgn : a.priceLocalNgn) || 0;
-                var usd = Number(a.priceUsd != null ? a.priceUsd : a.priceOffshoreUsd) || 0;
-                var unit = a.unit || 'mo';
-                var only = a.addonOnly ? ' <span class="text-[9px] text-amber-400">addon-only</span>' : '';
-                return (
-                    '<label class="flex items-start gap-2 rounded-lg border border-slate-700 bg-slate-950/60 px-2.5 py-2 hover:border-slate-500 cursor-pointer">' +
-                    '<input type="checkbox" class="pa-addon-cb mt-1 rounded border-slate-600" data-addon-key="' + safe + '" />' +
-                    '<span class="flex-1 min-w-0">' +
-                    '<span class="block text-xs text-white font-medium truncate">' + String(label).replace(/</g, '&lt;') + only + '</span>' +
-                    '<span class="block text-[10px] text-slate-500 font-mono">' + safe +
-                    ' · ₦' + ngn.toLocaleString() + ' / $' + usd.toLocaleString() + ' · ' + unit + '</span>' +
-                    '</span>' +
-                    '<input type="number" min="1" value="1" class="pa-addon-qty w-14 shrink-0 px-1.5 py-1 rounded bg-slate-900 border border-slate-700 text-white text-xs" data-addon-key="' + safe + '" title="Quantity to ADD" onclick="event.stopPropagation()" />' +
-                    '</label>'
-                );
-            }).join('');
-        }
 
         async function pricingLoadClientGrants() {
             var clientId = (document.getElementById('pa_clientId') && document.getElementById('pa_clientId').value || '').trim();
@@ -19660,28 +19687,44 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 if (typeof showToast === 'function') showToast('Tick at least one add-on and set quantity to add', 'error');
                 return;
             }
+            var expiresEl = document.getElementById('pa_addonExpires');
+            var expiresAt = expiresEl && expiresEl.value ? expiresEl.value : '';
+            var billEl = document.getElementById('pa_billImmediately');
+            var billImmediately = !!(billEl && billEl.checked);
+            var actEl = document.getElementById('pa_activateNow');
+            var activateNow = !!(actEl && actEl.checked);
+            if (billImmediately && !confirm('Bill this client now for the selected add-ons? A Paystack payment link will be created.')) {
+                return;
+            }
+            if (!billImmediately && !confirm('Grant selected add-ons without charging the client?')) {
+                return;
+            }
             var res = await executeSecureBridgeCall('agent', 'agent-append-client-addons', {
                 clientId: clientId,
-                addons: addons
+                addons: addons,
+                expiresAt: expiresAt || null,
+                billImmediately: billImmediately,
+                activateNow: billImmediately ? activateNow : true
             });
-            // Optional: also run purchase effect for legacy quota keys
-            if (res && res.success !== false) {
-                for (var key in addons) {
-                    if (!addons.hasOwnProperty(key)) continue;
-                    try {
-                        await executeSecureBridgeCall('agent', 'agent-purchase-addon', {
-                            clientId: clientId,
-                            addonKey: key,
-                            quantity: addons[key]
-                        });
-                    } catch (_) { }
-                }
-            }
             var st = document.getElementById('pa_status');
             if (st) st.textContent = (res && res.message) || JSON.stringify(res);
-            if (typeof showToast === 'function') showToast((res && res.message) || 'Add-ons appended', res && res.success === false ? 'error' : 'success');
-            // Clear checks after append
-            document.querySelectorAll('.pa-addon-cb:checked').forEach(function (cb) { cb.checked = false; });
+            var linkEl = document.getElementById('pa_paymentLink');
+            if (linkEl) {
+                var url = res && (res.paymentUrl || res.authorizationUrl);
+                if (url) {
+                    linkEl.classList.remove('hidden');
+                    linkEl.innerHTML = 'Payment link: <a class="underline text-emerald-300" href="' + url + '" target="_blank" rel="noopener">' + url + '</a>';
+                } else {
+                    linkEl.classList.add('hidden');
+                    linkEl.innerHTML = '';
+                }
+            }
+            if (typeof showToast === 'function') {
+                showToast((res && res.message) || 'Done', res && res.success === false ? 'error' : 'success');
+            }
+            if (res && res.success !== false) {
+                document.querySelectorAll('.pa-addon-cb:checked').forEach(function (cb) { cb.checked = false; });
+            }
             await pricingLoadClientGrants();
         }
 
