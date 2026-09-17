@@ -19293,6 +19293,56 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             }
         }
 
+        function pricingRenderAddons() { return pricingRenderAddonTable(); }
+        function pricingRenderAddonTable() {
+            var tbody = document.getElementById('pricingAddonTableBody');
+            if (!tbody) return;
+            var addons = (window.PRICING_STATE && window.PRICING_STATE.addons) || [];
+            function limitsSummary(a) {
+                var bits = [];
+                function push(label, v) {
+                    if (v == null || v === '' || Number(v) === 0) return;
+                    bits.push(label + ': ' + (Number(v) < 0 ? '\u221e' : v));
+                }
+                push('human min', a.grantsHumanMinutes);
+                push('docs', a.grantsDocuments);
+                push('proposals', a.grantsProposals);
+                push('mailboxes', a.grantsMailboxes);
+                push('posts', a.grantsSocialPosts);
+                push('calendars', a.grantsCalendars);
+                push('WA', a.grantsWhatsappReplies);
+                push('training', a.grantsDocTrainingTypes);
+                push('leads', a.grantsLeads);
+                push('compliance', a.grantsCompliance);
+                push('video', a.grantsVideoPosts);
+                push('assets', a.grantsSocialAssets);
+                push('CRM', a.grantsCrmConnections);
+                return bits.slice(0, 5).join(' \u00b7 ') || '—';
+            }
+            if (!addons.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="px-3 py-4 text-slate-500">No add-ons in catalog. Click + New add-on.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = addons.map(function (a) {
+                var key = a.key || a.id || '';
+                var safeKey = String(key).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                var label = a.label || key;
+                var ngn = Number(a.priceNgn != null ? a.priceNgn : a.priceLocalNgn) || 0;
+                var usd = Number(a.priceUsd != null ? a.priceUsd : a.priceOffshoreUsd) || 0;
+                var active = a.active !== false;
+                return '<tr class="border-t border-slate-800 hover:bg-slate-900/50">' +
+                    '<td class="px-3 py-2 font-mono text-[11px] text-slate-400">' + key + '</td>' +
+                    '<td class="px-3 py-2 font-semibold text-white">' + label +
+                    (a.addonOnly ? ' <span class="text-[9px] text-amber-400 uppercase">addon-only</span>' : '') + '</td>' +
+                    '<td class="px-3 py-2 tabular-nums">\u20a6' + ngn.toLocaleString() + '</td>' +
+                    '<td class="px-3 py-2 tabular-nums">$' + usd.toLocaleString() + '</td>' +
+                    '<td class="px-3 py-2 text-[10px] text-slate-400 max-w-[14rem]">' + limitsSummary(a) + '</td>' +
+                    '<td class="px-3 py-2">' + (active ? '<span class="text-emerald-400">Yes</span>' : '<span class="text-slate-500">No</span>') + '</td>' +
+                    '<td class="px-3 py-2 text-right"><button type="button" class="text-xs px-2 py-1 rounded bg-slate-700 text-white hover:bg-slate-600" onclick="pricingEditAddon(\'' + safeKey + '\')">Edit</button></td>' +
+                    '</tr>';
+            }).join('');
+        }
+
         function pricingEditAddon(key) {
             var a = (window.PRICING_STATE.addons || []).find(function (x) { return x.key === key; }) || { key: key, label: key, priceNgn: 0, active: true };
             document.getElementById('pricingAddonEditor').classList.remove('hidden');
