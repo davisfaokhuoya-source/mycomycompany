@@ -5057,7 +5057,8 @@
                         </div>
                         <div class="border border-slate-800 rounded-lg p-3 bg-slate-950/50">
                             <p class="text-[11px] font-semibold text-emerald-400 mb-2"><i
-                                    class="fa-solid fa-lock mr-1"></i> Active on this client (read-only)</p>
+                                    class="fa-solid fa-layer-group mr-1"></i> Active on this client — edit expiry or
+                                remove</p>
                             <div id="pa_activeAddons" class="text-xs text-slate-400 min-h-[2rem]">Load a client to see
                                 active add-ons.</div>
                             <p id="pa_humanBal" class="text-[10px] text-slate-500 mt-2"></p>
@@ -19626,20 +19627,53 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 brEl.value = (String(br).toUpperCase() === 'OFFSHORE') ? 'OFFSHORE' : 'LOCAL';
             }
             var active = res.activeAddons || {};
+            var meta = res.addonMeta || {};
             var keys = Object.keys(active);
             if (!keys.length) {
                 if (box) box.innerHTML = '<span class="text-slate-500">No active add-ons yet.</span>';
             } else {
                 if (box) {
                     box.innerHTML = keys.map(function (k) {
-                        return '<div class="flex justify-between gap-2 border border-slate-800 rounded px-2 py-1.5 mb-1 bg-slate-900/80">' +
-                            '<span class="text-slate-300">' + k + '</span>' +
-                            '<span class="text-emerald-400 font-mono">×' + active[k] + ' <i class="fa-solid fa-lock text-slate-600 text-[9px]"></i></span></div>';
+                        var m = meta[k] || {};
+                        var exp = m.expiresAt ? String(m.expiresAt).slice(0, 10) : '';
+                        var safe = String(k).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                        return '<div class="flex flex-wrap items-center gap-2 border border-slate-800 rounded px-2 py-1.5 mb-1 bg-slate-900/80">' +
+                            '<span class="text-slate-300 flex-1 min-w-[7rem]">' + k + ' <span class="text-emerald-400 font-mono">×' + active[k] + '</span></span>' +
+                            '<label class="text-[10px] text-slate-500">Expires<input type="date" class="ml-1 px-1 py-0.5 rounded bg-slate-950 border border-slate-700 text-white text-[11px]" value="' + exp + '" id="pa_exp_' + safe.replace(/[^a-zA-Z0-9_-]/g, '_') + '" data-addon-key="' + safe + '" /></label>' +
+                            '<button type="button" class="text-[10px] px-2 py-1 rounded bg-slate-700 text-white" onclick="pricingUpdateAddonExpiry(\'' + safe + '\')">Save expiry</button>' +
+                            '<button type="button" class="text-[10px] px-2 py-1 rounded bg-red-900/80 text-white" onclick="pricingRemoveClientAddon(\'' + safe + '\')">Remove</button>' +
+                            '</div>';
                     }).join('');
                 }
             }
-            if (bal) bal.textContent = 'Human minutes balance: ' + (res.humanMinutesBalance != null ? res.humanMinutesBalance : '—');
+            if (bal) bal.textContent = 'Human minutes balance: ' + (res.humanMinutesBalance != null ? res.humanMinutesBalance : '—') +
+                (res.tikTokMode ? (' · TikTok mode: ' + res.tikTokMode) : '');
             window.PRICING_STATE.clientActiveAddons = active;
+            window.PRICING_STATE.clientAddonMeta = meta;
+        }
+
+        async function pricingRemoveClientAddon(key) {
+            var clientId = (document.getElementById('pa_clientId') && document.getElementById('pa_clientId').value || '').trim();
+            if (!clientId || !key) return;
+            if (!confirm('Remove add-on "' + key + '" from this client?')) return;
+            var res = await executeSecureBridgeCall('agent', 'agent-remove-client-addon', { clientId: clientId, addonKey: key });
+            if (typeof showToast === 'function') showToast((res && res.message) || 'Removed', res && res.success === false ? 'error' : 'success');
+            await pricingLoadClientGrants();
+        }
+
+        async function pricingUpdateAddonExpiry(key) {
+            var clientId = (document.getElementById('pa_clientId') && document.getElementById('pa_clientId').value || '').trim();
+            if (!clientId || !key) return;
+            var idSafe = String(key).replace(/[^a-zA-Z0-9_-]/g, '_');
+            var el = document.getElementById('pa_exp_' + idSafe);
+            var expiresAt = el && el.value ? el.value : null;
+            var res = await executeSecureBridgeCall('agent', 'agent-update-client-addon-expiry', {
+                clientId: clientId,
+                addonKey: key,
+                expiresAt: expiresAt || null
+            });
+            if (typeof showToast === 'function') showToast((res && res.message) || 'Expiry updated', res && res.success === false ? 'error' : 'success');
+            await pricingLoadClientGrants();
         }
 
         async function pricingAssignClient() {
