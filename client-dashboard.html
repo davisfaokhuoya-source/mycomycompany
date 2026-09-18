@@ -1846,11 +1846,21 @@
                                     load automatically.</p>
                             </div>
                         </div>
-                        <label class="flex items-center gap-1.5 text-[10px] text-slate-300">
-                            <input type="checkbox" id="commentAiToggle" onchange="clientSetCommentReplyFromUi()"
-                                class="rounded border-slate-600 text-emerald-500" />
-                            AI replies on for selected platform/post
-                        </label>
+                        <div class="flex flex-wrap items-end gap-2 pt-1">
+                            <div>
+                                <label class="text-[9px] text-slate-500 block mb-0.5">AI comment replies</label>
+                                <select id="commentAiModeSelect"
+                                    class="bg-slate-900 border border-slate-700 rounded-lg text-[11px] text-white px-2 py-1.5 min-w-[160px]">
+                                    <option value="on">ON — reply automatically</option>
+                                    <option value="off">OFF — no AI replies</option>
+                                </select>
+                            </div>
+                            <button type="button" id="commentAiSaveBtn" onclick="clientSaveCommentAiMode()"
+                                class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-medium">
+                                Save
+                            </button>
+                            <span id="commentAiModeHint" class="text-[10px] text-slate-500"></span>
+                        </div>
                         <div id="commentsListRoot" class="space-y-2 max-h-64 overflow-auto text-xs"></div>
                     </div>
 
@@ -4405,8 +4415,8 @@
                         '</div></div>';
                 }).join('');
                 try {
-                    if (res.replyEnabled != null && document.getElementById('commentAiToggle')) {
-                        document.getElementById('commentAiToggle').checked = !!res.replyEnabled;
+                    if (res.replyEnabled != null && document.getElementById('commentAiModeSelect')) {
+                        document.getElementById('commentAiModeSelect').value = res.replyEnabled ? 'on' : 'off';
                     }
                 } catch (_) { }
                 return res;
@@ -4436,11 +4446,12 @@
         async function clientRefreshCommentAiToggle() {
             try {
                 var res = await callGateway('clientportal', 'clientPortalGetCommentSettings', {});
-                var cb = document.getElementById('commentAiToggle');
-                if (!cb) return res;
+                var sel = document.getElementById('commentAiModeSelect');
+                var hint = document.getElementById('commentAiModeHint');
+                if (!sel) return res;
                 if (!res || res.success === false) {
-                    cb.checked = false;
-                    cb.disabled = !!(res && res.hasAddon === false);
+                    sel.value = 'off';
+                    if (hint) hint.textContent = (res && res.message) || 'Could not load AI reply setting';
                     return res;
                 }
                 var on = !!(res.anyEnabled);
@@ -4449,37 +4460,54 @@
                         res.platforms.facebook || res.platforms.instagram ||
                         res.platforms.threads || res.platforms.linkedin || res.platforms.x);
                 }
-                // Default ON when add-on + business tiktok even if platforms empty
                 if (!on && res.hasAddon && String(res.tikTokMode || '').toLowerCase() === 'business') on = true;
-                cb.checked = on;
-                cb.disabled = false;
+                sel.value = on ? 'on' : 'off';
+                if (hint) {
+                    if (!res.hasAddon) hint.textContent = 'Comment Reply add-on required';
+                    else if (on) hint.textContent = 'Saved: ON';
+                    else hint.textContent = 'Saved: OFF';
+                }
                 window.__commentAiSettings = res;
                 return res;
             } catch (e) {
-                console.warn('comment AI toggle refresh', e);
+                console.warn('comment AI mode refresh', e);
                 return null;
             }
         }
 
-        async function clientSetCommentReplyFromUi() {
-            var sel = window.__commentSelected || {};
-            // When no post selected, apply globally (all platforms) so the checkbox state persists
-            var platform = sel.platform || ((document.getElementById('commentFilterPlatform') || {}).value) || 'all';
+        async function clientSaveCommentAiMode() {
+            var sel = document.getElementById('commentAiModeSelect');
+            var enabled = sel && sel.value === 'on';
+            var postSel = window.__commentSelected || {};
+            var platform = postSel.platform || ((document.getElementById('commentFilterPlatform') || {}).value) || 'all';
             if (!String(platform).trim()) platform = 'all';
-            var postId = sel.postId || '*';
-            var enabled = !!(document.getElementById('commentAiToggle') || {}).checked;
-            var res = await callGateway('clientportal', 'clientPortalSetCommentReply', {
-                platform: platform, postId: postId, enabled: enabled
-            });
-            if (!res || !res.success) {
-                if (typeof showToast === 'function') showToast((res && res.message) || 'Could not update', 'error');
-                if (res && res.addonRequired && typeof goBillingUpgrade === 'function') goBillingUpgrade();
-                // revert checkbox if save failed
+            var postId = postSel.postId || '*';
+            var btn = document.getElementById('commentAiSaveBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+            try {
+                var res = await callGateway('clientportal', 'clientPortalSetCommentReply', {
+                    platform: platform,
+                    postId: postId,
+                    enabled: enabled
+                });
+                if (!res || !res.success) {
+                    if (typeof showToast === 'function') showToast((res && res.message) || 'Could not save', 'error');
+                    if (res && res.addonRequired && typeof goBillingUpgrade === 'function') goBillingUpgrade();
+                    try { await clientRefreshCommentAiToggle(); } catch (_) { }
+                    return;
+                }
+                if (typeof showToast === 'function') showToast(enabled ? 'AI replies ON' : 'AI replies OFF', 'success');
                 try { await clientRefreshCommentAiToggle(); } catch (_) { }
-                return;
+            } catch (e) {
+                if (typeof showToast === 'function') showToast(e.message || 'Save failed', 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
             }
-            if (typeof showToast === 'function') showToast(enabled ? 'AI replies ON' : 'AI replies OFF', 'success');
-            try { await clientRefreshCommentAiToggle(); } catch (_) { }
+        }
+
+        // Back-compat aliases
+        async function clientSetCommentReplyFromUi() {
+            return clientSaveCommentAiMode();
         }
 
         async function clientReplyToComment(commentId) {
@@ -6383,8 +6411,6 @@
                 } catch (_) { }
             };
 
-
-
             window.loadChat = async function () {
                 try { await gw("clientportal", "clientPortalChatPoll", { clientId: sid(), token: tok() }); } catch (_) { }
             };
@@ -6710,9 +6736,13 @@
                     }).join("");
                 }
             }
-        };
 
-        try { if (typeof clientRefreshCommentAiToggle === "function") await clientRefreshCommentAiToggle(); } catch (_) { }
+            try {
+                if (typeof clientRefreshCommentAiToggle === "function") {
+                    await clientRefreshCommentAiToggle();
+                }
+            } catch (_) { }
+        };
 
         window.clientRequestSocialDisconnect = async function (platform) {
             try {
