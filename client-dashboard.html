@@ -6131,6 +6131,10 @@
             // of truth); cache is used only as a speed layer for polling.
             // =====================================================================
 
+            // --- explicit global exports: these functions are invoked from inline
+            // onclick/onchange HTML attributes and from showView()'s hook, both of
+            // which resolve names against window — required because this code now
+            // lives inside the surrounding IIFE, not at true top level. ---
             window._industryKey = _industryKey;
             window._categoryKey = _categoryKey;
             window._titleCaseKey = _titleCaseKey;
@@ -6346,9 +6350,7 @@
                 } catch (_) { }
             };
 
-            window.loadIntegrationsPanel = async function () {
-                try { if (typeof loadClientServiceFlags === "function") await loadClientServiceFlags(); } catch (_) { }
-            };
+
 
             window.loadChat = async function () {
                 try { await gw("clientportal", "clientPortalChatPoll", { clientId: sid(), token: tok() }); } catch (_) { }
@@ -6444,43 +6446,7 @@
                 }
             };
 
-            window.loadIntegrationsPanel = async function loadIntegrationsPanel() {
-                var list = document.getElementById("integrationsMailboxList");
-                if (list) list.innerHTML = '<p class="text-slate-500">Loading…</p>';
-                try {
-                    var res = await callGateway("clientportal", "clientPortalListMailboxes", {});
-                    var boxes = (res && (res.mailboxes || res.data || [])) || [];
-                    if (!Array.isArray(boxes)) boxes = [];
-                    if (list) {
-                        if (!boxes.length) {
-                            list.innerHTML = '<p class="text-slate-600">No mailboxes connected yet. Use Connect email (1× per month on an active plan).</p>';
-                        } else {
-                            list.innerHTML = boxes.map(function (m) {
-                                var email = m.email || m.EmailAddress || m.address || "";
-                                var label = m.label || m.Label || email;
-                                var status = m.status || m.Status || "";
-                                var id = m.mailboxId || m.MailboxID || m.id || "";
-                                return '<div class="flex flex-wrap items-center justify-between gap-2 bg-slate-900 rounded px-3 py-2">' +
-                                    '<div><span class="text-slate-200 font-medium">' + esc(label) + '</span>' +
-                                    '<span class="text-slate-500 ml-2">' + esc(email) + '</span>' +
-                                    '<span class="text-[10px] text-slate-500 ml-2">' + esc(status) + '</span></div>' +
-                                    '<div class="flex gap-1">' +
-                                    '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-300" onclick="clientReconnectMailbox(\'' + esc(id) + '\',\'' + esc(email) + '\')">Reconnect</button>' +
-                                    '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientRequestMailboxDisconnect(\'' + esc(id) + '\')">Request remove</button>' +
-                                    '</div></div>';
-                            }).join("");
-                        }
-                    }
-                } catch (e) {
-                    if (list) list.innerHTML = '<p class="text-red-400">' + esc(e.message || "Load failed") + '</p>';
-                }
-                // WhatsApp numbers
-                try {
-                    var wa = await callGateway("clientportal", "clientPortalListWhatsAppNumbers", {});
-                    // optional: paint if there is a list element
-                    window._waNumbers = wa;
-                } catch (_) { }
-            };
+
 
             window.clientReconnectMailbox = async function (mailboxId, email) {
                 try {
@@ -6565,6 +6531,191 @@
         })();
     </script>
 
+    <script>
+
+        window.loadIntegrationsPanel = async function loadIntegrationsPanel() {
+            function esc(s) {
+                return String(s == null ? "" : s)
+                    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+            }
+            function row(left, rightHtml) {
+                return '<div class="flex flex-wrap items-center justify-between gap-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2">' +
+                    '<div class="min-w-0">' + left + '</div>' +
+                    '<div class="flex flex-wrap gap-1 shrink-0">' + (rightHtml || "") + '</div></div>';
+            }
+            var mbList = document.getElementById("integrationsMailboxList");
+            var waApi = document.getElementById("integrationsWhatsAppApi");
+            var waList = document.getElementById("integrationsWhatsAppList");
+            var socList = document.getElementById("integrationsSocialList");
+            var crmList = document.getElementById("integrationsCrmList");
+            if (mbList) mbList.innerHTML = '<p class="text-slate-500">Loading…</p>';
+            if (socList) socList.innerHTML = '<p class="text-slate-500">Loading…</p>';
+            if (crmList) crmList.innerHTML = '<p class="text-slate-500">Loading…</p>';
+            if (waApi) waApi.innerHTML = '<p class="text-slate-500">Loading…</p>';
+            if (waList) waList.innerHTML = '<p class="text-slate-500">Loading…</p>';
+
+            var data = null;
+            try {
+                data = await callGateway("clientportal", "clientPortalListIntegrations", {});
+            } catch (e1) {
+                data = null;
+            }
+            // Fallback: assemble from individual endpoints if combined fails
+            if (!data || data.success === false) {
+                data = { success: true, mailboxes: [], social: [], crm: [], whatsapp: [] };
+                try {
+                    var mb = await callGateway("clientportal", "clientPortalListMailboxes", {});
+                    data.mailboxes = (mb && (mb.mailboxes || mb.data)) || [];
+                } catch (_) { }
+                try {
+                    var wa = await callGateway("clientportal", "clientPortalListWhatsAppNumbers", {});
+                    data.whatsapp = (wa && (wa.numbers || wa.connections || wa.data || wa.whatsapp)) || [];
+                    if (!Array.isArray(data.whatsapp) && wa) data.whatsapp = wa.connections || [];
+                } catch (_) { }
+            }
+            if (!Array.isArray(data.mailboxes)) data.mailboxes = [];
+            if (!Array.isArray(data.social)) data.social = [];
+            if (!Array.isArray(data.crm)) data.crm = [];
+            if (!Array.isArray(data.whatsapp)) data.whatsapp = [];
+
+            // Mailboxes
+            if (mbList) {
+                if (!data.mailboxes.length) {
+                    mbList.innerHTML = '<p class="text-slate-600">No mailboxes connected yet. Use Connect email (1× per month on an active plan).</p>';
+                } else {
+                    mbList.innerHTML = data.mailboxes.map(function (m) {
+                        var email = m.email || m.EmailAddress || m.address || "";
+                        var label = m.label || m.Label || email;
+                        var status = m.status || m.Status || "Connected";
+                        var id = m.mailboxId || m.MailboxID || m.id || "";
+                        return row(
+                            '<span class="text-slate-200 font-medium">' + esc(label) + '</span>' +
+                            '<span class="text-slate-500 ml-2 text-[11px]">' + esc(email) + '</span>' +
+                            '<span class="text-[10px] text-emerald-400/80 ml-2">' + esc(status) + '</span>',
+                            '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-300" onclick="clientReconnectMailbox(\'' + esc(id) + '\',\'' + esc(email) + '\')">Reconnect</button>' +
+                            '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientRequestMailboxDisconnect(\'' + esc(id) + '\')">Request remove</button>'
+                        );
+                    }).join("");
+                }
+            }
+
+            // WhatsApp — split API vs team if possible
+            var waApiItems = [];
+            var waTeamItems = [];
+            data.whatsapp.forEach(function (w) {
+                var kind = String(w.kind || w.type || w.Type || w.numberType || w.role || "").toLowerCase();
+                var isTeam = /team|staff|referral|linked/.test(kind) || w.isTeam === true;
+                if (isTeam) waTeamItems.push(w);
+                else waApiItems.push(w);
+            });
+            if (!waApiItems.length && !waTeamItems.length && data.whatsapp.length) {
+                waApiItems = data.whatsapp.slice();
+            }
+            function paintWa(el, items, emptyMsg) {
+                if (!el) return;
+                if (!items.length) {
+                    el.innerHTML = '<p class="text-slate-600">' + emptyMsg + '</p>';
+                    return;
+                }
+                el.innerHTML = items.map(function (w) {
+                    var phone = w.phone || w.number || w.msisdn || w.displayPhone || w.Phone || "";
+                    var label = w.label || w.Label || w.name || phone;
+                    var status = w.status || w.Status || "Connected";
+                    var id = w.whatsAppId || w.id || w.WhatsAppID || phone;
+                    return row(
+                        '<span class="text-slate-200 font-medium">' + esc(label) + '</span>' +
+                        '<span class="text-slate-500 ml-2 text-[11px]">' + esc(phone) + '</span>' +
+                        '<span class="text-[10px] text-emerald-400/80 ml-2">' + esc(status) + '</span>',
+                        '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientRequestWhatsAppDisconnect && clientRequestWhatsAppDisconnect(\'' + esc(id) + '\')">Request remove</button>'
+                    );
+                }).join("");
+            }
+            paintWa(waApi, waApiItems, "No API WhatsApp number connected yet.");
+            paintWa(waList, waTeamItems, "No staff/team WhatsApp links yet.");
+
+            // Social
+            if (socList) {
+                if (!data.social.length) {
+                    socList.innerHTML = '<p class="text-slate-600">No social accounts connected. Choose a platform above and Connect.</p>';
+                } else {
+                    socList.innerHTML = data.social.map(function (c) {
+                        var platform = c.platform || c.Platform || "";
+                        var name = c.pageName || c.PageName || c.name || platform;
+                        var status = c.status || c.Status || "Connected";
+                        var platLow = String(platform).toLowerCase();
+                        var badge = "";
+                        if (platLow === "tiktok_business" || platLow === "tiktok-business") {
+                            badge = '<span class="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-emerald-900/50 text-emerald-300 border border-emerald-800">Business</span>';
+                        } else if (platLow === "tiktok") {
+                            badge = '<span class="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">Standard</span>';
+                        }
+                        return row(
+                            '<span class="text-slate-200 font-medium capitalize">' + esc(String(platform).replace(/_/g, " ")) + '</span>' + badge +
+                            '<span class="text-slate-500 ml-2 text-[11px]">' + esc(name) + '</span>' +
+                            '<span class="text-[10px] text-emerald-400/80 ml-2">' + esc(status) + '</span>',
+                            '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientRequestSocialDisconnect && clientRequestSocialDisconnect(\'' + esc(platform) + '\')">Request remove</button>'
+                        );
+                    }).join("");
+                }
+            }
+
+            // CRM
+            if (crmList) {
+                if (!data.crm.length) {
+                    crmList.innerHTML = '<p class="text-slate-600">No CRM connected yet.</p>';
+                } else {
+                    crmList.innerHTML = data.crm.map(function (c) {
+                        var type = c.type || c.Type || c.provider || "";
+                        var label = c.label || c.Label || type;
+                        var status = c.status || c.Status || "Connected";
+                        return row(
+                            '<span class="text-slate-200 font-medium">' + esc(label) + '</span>' +
+                            '<span class="text-slate-500 ml-2 text-[11px]">' + esc(type) + '</span>' +
+                            '<span class="text-[10px] text-emerald-400/80 ml-2">' + esc(status) + '</span>',
+                            '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientRequestCrmDisconnect && clientRequestCrmDisconnect(\'' + esc(type) + '\')">Request remove</button>'
+                        );
+                    }).join("");
+                }
+            }
+        };
+
+        window.clientRequestSocialDisconnect = async function (platform) {
+            try {
+                var res = await callGateway("clientportal", "clientPortalRequestDisconnect", {
+                    category: "social", platform: platform, type: platform
+                });
+                if (res && res.success === false) throw new Error(res.message || "Failed");
+                if (typeof toast === "function") toast(res.message || "Disconnect requested — admin will complete removal");
+                else if (typeof showToast === "function") showToast(res.message || "Disconnect requested", "success");
+            } catch (e) {
+                if (typeof toast === "function") toast(e.message || "Request failed", true);
+                else if (typeof showToast === "function") showToast(e.message || "Request failed", "error");
+            }
+        };
+        window.clientRequestCrmDisconnect = async function (type) {
+            try {
+                var res = await callGateway("clientportal", "clientPortalRequestDisconnect", {
+                    category: "crm", type: type
+                });
+                if (res && res.success === false) throw new Error(res.message || "Failed");
+                if (typeof toast === "function") toast(res.message || "Disconnect requested");
+            } catch (e) {
+                if (typeof toast === "function") toast(e.message || "Request failed", true);
+            }
+        };
+        window.clientRequestWhatsAppDisconnect = async function (whatsAppId) {
+            try {
+                var res = await callGateway("clientportal", "clientPortalRequestDisconnect", {
+                    category: "whatsapp", whatsAppId: whatsAppId
+                });
+                if (res && res.success === false) throw new Error(res.message || "Failed");
+                if (typeof toast === "function") toast(res.message || "Disconnect requested");
+            } catch (e) {
+                if (typeof toast === "function") toast(e.message || "Request failed", true);
+            }
+        };
+
+    </script>
     <script>
         (function () {
             var tries = 0;
