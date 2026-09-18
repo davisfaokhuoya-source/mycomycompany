@@ -2832,7 +2832,7 @@
                 });
             }
             if (name === 'overview') loadOverview();
-            if (name === 'integrations') { try { loadIntegrationsPanel(); } catch (_) { } try { if (typeof clientLoadCommentActivityPosts === 'function') clientLoadCommentActivityPosts(); } catch (_) { } }
+            if (name === 'integrations') { try { loadIntegrationsPanel(); } catch (_) { } try { if (typeof clientLoadCommentActivityPosts === 'function') clientLoadCommentActivityPosts(); } catch (_) { } try { if (typeof clientRefreshCommentAiToggle === 'function') clientRefreshCommentAiToggle(); } catch (_) { } }
             if (name === 'donate') prefillDonationForm();
             if (name === 'billing') {
                 const err = document.getElementById('renewError');
@@ -4433,9 +4433,39 @@
             return res2;
         }
 
+        async function clientRefreshCommentAiToggle() {
+            try {
+                var res = await callGateway('clientportal', 'clientPortalGetCommentSettings', {});
+                var cb = document.getElementById('commentAiToggle');
+                if (!cb) return res;
+                if (!res || res.success === false) {
+                    cb.checked = false;
+                    cb.disabled = !!(res && res.hasAddon === false);
+                    return res;
+                }
+                var on = !!(res.anyEnabled);
+                if (!on && res.platforms) {
+                    on = !!(res.platforms.tiktok_business || res.platforms.tiktok ||
+                        res.platforms.facebook || res.platforms.instagram ||
+                        res.platforms.threads || res.platforms.linkedin || res.platforms.x);
+                }
+                // Default ON when add-on + business tiktok even if platforms empty
+                if (!on && res.hasAddon && String(res.tikTokMode || '').toLowerCase() === 'business') on = true;
+                cb.checked = on;
+                cb.disabled = false;
+                window.__commentAiSettings = res;
+                return res;
+            } catch (e) {
+                console.warn('comment AI toggle refresh', e);
+                return null;
+            }
+        }
+
         async function clientSetCommentReplyFromUi() {
             var sel = window.__commentSelected || {};
-            var platform = sel.platform || 'facebook';
+            // When no post selected, apply globally (all platforms) so the checkbox state persists
+            var platform = sel.platform || ((document.getElementById('commentFilterPlatform') || {}).value) || 'all';
+            if (!String(platform).trim()) platform = 'all';
             var postId = sel.postId || '*';
             var enabled = !!(document.getElementById('commentAiToggle') || {}).checked;
             var res = await callGateway('clientportal', 'clientPortalSetCommentReply', {
@@ -4444,9 +4474,12 @@
             if (!res || !res.success) {
                 if (typeof showToast === 'function') showToast((res && res.message) || 'Could not update', 'error');
                 if (res && res.addonRequired && typeof goBillingUpgrade === 'function') goBillingUpgrade();
+                // revert checkbox if save failed
+                try { await clientRefreshCommentAiToggle(); } catch (_) { }
                 return;
             }
             if (typeof showToast === 'function') showToast(enabled ? 'AI replies ON' : 'AI replies OFF', 'success');
+            try { await clientRefreshCommentAiToggle(); } catch (_) { }
         }
 
         async function clientReplyToComment(commentId) {
@@ -6516,6 +6549,7 @@
         })();
     </script>
 
+
     <script>
         (function initClientUiLangInHeader() {
             function run() {
@@ -6677,6 +6711,8 @@
                 }
             }
         };
+
+        try { if (typeof clientRefreshCommentAiToggle === "function") await clientRefreshCommentAiToggle(); } catch (_) { }
 
         window.clientRequestSocialDisconnect = async function (platform) {
             try {
