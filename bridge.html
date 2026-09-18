@@ -5053,7 +5053,8 @@
                             </label>
                             <p class="text-[10px] text-slate-500 md:col-span-2 self-center">Offshore clients are billed
                                 from USD list prices × the FX rate above. Local clients use NGN list prices. Save with
-                                <strong class="text-slate-300">Save tiers only</strong>.</p>
+                                <strong class="text-slate-300">Save tiers only</strong>.
+                            </p>
                         </div>
                         <div class="border border-slate-800 rounded-lg p-3 bg-slate-950/50">
                             <p class="text-[11px] font-semibold text-emerald-400 mb-2"><i
@@ -11858,7 +11859,8 @@
             facebook: { label: 'Facebook Page', scaleOnly: false },
             instagram: { label: 'Instagram Business', scaleOnly: false },
             linkedin: { label: 'LinkedIn Company Page', scaleOnly: false },
-            tiktok: { label: 'TikTok', scaleOnly: false },
+            tiktok: { label: 'TikTok (Standard)', scaleOnly: false },
+            tiktok_business: { label: 'TikTok (Business)', scaleOnly: false },
             threads: { label: 'Threads', scaleOnly: true },
             x: { label: 'X (Twitter)', scaleOnly: true }
         };
@@ -13386,9 +13388,15 @@
                 return;
             }
 
-            tbody.innerHTML = res.connections.map(c => `
+            tbody.innerHTML = res.connections.map(c => {
+                var plat = String(c.platform || '');
+                var typeNote = '';
+                if (plat === 'tiktok_business') typeNote = ' <span class="text-[9px] text-emerald-400">Business · AI comments</span>';
+                else if (plat === 'tiktok') typeNote = ' <span class="text-[9px] text-slate-500">Standard · publish only</span>';
+                var label = (typeof SOCIAL_PLATFORM_META !== 'undefined' && SOCIAL_PLATFORM_META[plat] && SOCIAL_PLATFORM_META[plat].label) ? SOCIAL_PLATFORM_META[plat].label : plat;
+                return `
     <tr>
-        <td class="p-3">${badge(c.platform)}</td>
+        <td class="p-3">${badge(label)}${typeNote}</td>
         <td class="p-3 text-slate-300">${escapeHtml(c.pageName || '—')}</td>
         <td class="p-3 text-center">${badge(c.status || 'Connected')}</td>
         <td class="p-3 text-slate-500">${c.tokenExpiry ? fmtDate(c.tokenExpiry) : 'No expiry'}</td>
@@ -13405,7 +13413,8 @@
                 class="text-xs px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-red-200">Disconnect</button>
         </td>
     </tr>
-`).join('');
+`;
+            }).join('');
         }
 
         function togglePlatformPublish(clientId, platform, enabled) {
@@ -19810,14 +19819,6 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             if (typeof showToast === 'function') showToast((res && res.message) || 'Reset', res && res.success === false ? 'error' : 'success');
         }
     </script>
-
-
-
-
-    <!-- Comments moderation — Social Publishing tools (not in sidebar) -->
-
-
-
 
     <script>
         (function () {
