@@ -6319,9 +6319,102 @@
             };
 
             window.loadSocialCalendar = async function () {
+                var list = document.getElementById("socialCalendarList");
+                if (list) list.innerHTML = '<p class="text-slate-500 text-xs">Loading your social calendar…</p>';
                 try {
-                    await gw("clientportal", "clientPortalGetSocialCalendar", { clientId: sid(), token: tok() });
-                } catch (e) { console.warn(e); }
+                    var res = await gw("clientportal", "clientPortalGetSocialCalendar", { clientId: sid(), token: tok() });
+                    if (!res || res.success === false) {
+                        var msg = (res && res.message) || "Could not load calendar.";
+                        if (list) list.innerHTML = '<p class="text-red-400 text-xs">' + esc(msg) + '</p>';
+                        if (typeof toast === "function") toast(msg, true);
+                        return res;
+                    }
+                    var posts = res.calendar || res.posts || res.items || [];
+                    window.__SOCIAL_CALENDAR_CACHE = posts;
+                    // Fill batch selector if present
+                    try {
+                        var sel = document.getElementById("socialBatchSelector");
+                        if (sel) {
+                            var batches = {};
+                            posts.forEach(function (p) {
+                                var b = p.BatchID || p.batchId || "";
+                                if (b) batches[b] = true;
+                            });
+                            var cur = sel.value;
+                            sel.innerHTML = '<option value="">All batches</option>' +
+                                Object.keys(batches).map(function (b) {
+                                    return '<option value="' + esc(b) + '">' + esc(b) + '</option>';
+                                }).join("");
+                            if (cur) sel.value = cur;
+                        }
+                    } catch (_) { }
+                    renderSocialCalendarPosts(posts);
+                    return res;
+                } catch (e) {
+                    if (list) list.innerHTML = '<p class="text-red-400 text-xs">' + esc(String(e.message || e)) + '</p>';
+                    if (typeof toast === "function") toast(String(e.message || e), true);
+                }
+            };
+
+            window.renderSocialCalendarPosts = function (posts) {
+                var list = document.getElementById("socialCalendarList");
+                if (!list) return;
+                posts = posts || window.__SOCIAL_CALENDAR_CACHE || [];
+                var batchFilter = "";
+                try {
+                    var sel = document.getElementById("socialBatchSelector");
+                    if (sel) batchFilter = sel.value || "";
+                } catch (_) { }
+                if (batchFilter) {
+                    posts = posts.filter(function (p) {
+                        return String(p.BatchID || p.batchId || "") === batchFilter;
+                    });
+                }
+                if (!posts.length) {
+                    list.innerHTML = '<p class="text-slate-500 text-xs">No posts yet. Pick dates, platforms, and click <strong>Generate calendar</strong>.</p>';
+                    return;
+                }
+                // newest first by date
+                posts = posts.slice().sort(function (a, b) {
+                    return String(b.Date || b.date || "").localeCompare(String(a.Date || a.date || ""));
+                });
+                list.innerHTML = posts.map(function (p) {
+                    var id = p.PostID || p.postId || p.Id || "";
+                    var date = String(p.Date || p.date || "").slice(0, 10);
+                    var plat = p.Platform || p.platform || "—";
+                    var status = p.Status || p.status || "Draft";
+                    var caption = p.Caption || p.caption || p.Content || "";
+                    var preview = String(caption).slice(0, 160);
+                    var media = (p.MediaItems && p.MediaItems[0]) || {};
+                    var mediaUrl = media.previewUrl || media.url || p.ImagePreviewURL || p.ImageURL || "";
+                    var mediaHtml = mediaUrl
+                        ? '<a href="' + esc(mediaUrl) + '" target="_blank" rel="noopener" class="text-[10px] text-indigo-400">Media</a>'
+                        : '<span class="text-[10px] text-slate-600">No media</span>';
+                    return (
+                        '<div class="rounded-xl border border-slate-800 bg-slate-950/70 p-3 space-y-1.5">' +
+                        '<div class="flex flex-wrap items-center justify-between gap-2">' +
+                        '<div class="text-xs text-white font-medium">' + esc(plat) + ' · ' + esc(date) + '</div>' +
+                        '<span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">' + esc(status) + '</span>' +
+                        '</div>' +
+                        '<p class="text-[11px] text-slate-400 whitespace-pre-wrap">' + esc(preview) + (String(caption).length > 160 ? "…" : "") + '</p>' +
+                        '<div class="flex flex-wrap gap-2 items-center">' + mediaHtml +
+                        (id ? ('<button type="button" class="text-[10px] text-emerald-400 hover:underline" onclick="clientApproveSocialPost && clientApproveSocialPost(\'' + String(id).replace(/\'/g, "") + '\')">Approve</button>') : "") +
+                        '</div></div>'
+                    );
+                }).join("");
+            };
+
+            window.clientApproveSocialPost = async function (postId) {
+                try {
+                    var res = await gw("clientportal", "clientPortalApproveSocialPost", {
+                        clientId: sid(), token: tok(), postId: postId
+                    });
+                    if (res && res.success === false) throw new Error(res.message || "Failed");
+                    if (typeof toast === "function") toast("Approved");
+                    loadSocialCalendar();
+                } catch (e) {
+                    if (typeof toast === "function") toast(String(e.message || e), true);
+                }
             };
 
             window.ensureSocialDateDefaults = function () {
@@ -6336,17 +6429,60 @@
             };
 
             window.clientGenerateSocialCalendar = async function () {
+                var btn = document.getElementById("clientSocialGenerateBtn");
+                var list = document.getElementById("socialCalendarList");
                 try {
-                    var startEl = document.getElementById("clientSocialStart");
-                    var endEl = document.getElementById("clientSocialEnd");
-                    var res = await gw("clientportal", "clientPortalGenerateSocialCalendar", {
+                    if (btn) { btn.disabled = true; btn.dataset.orig = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating…'; }
+                    if (list) list.innerHTML = '<p class="text-sky-400 text-xs"><i class="fa-solid fa-spinner fa-spin"></i> Generating posts — this can take up to a minute…</p>';
+                    if (typeof toast === "function") toast("Generating calendar…", false);
+
+                    var startEl = document.getElementById("clientSocialStart") || document.getElementById("socialDateFrom");
+                    var endEl = document.getElementById("clientSocialEnd") || document.getElementById("socialDateTo");
+                    var startDate = startEl ? startEl.value : "";
+                    var endDate = endEl ? endEl.value : "";
+                    if (!startDate || !endDate) {
+                        throw new Error("Select From and To dates (same calendar month).");
+                    }
+                    if (startDate.slice(0, 7) !== endDate.slice(0, 7)) {
+                        throw new Error("From and To must be in the same month.");
+                    }
+
+                    var platforms = Array.prototype.map.call(
+                        document.querySelectorAll(".client-soc-plat:checked"),
+                        function (el) { return el.value; }
+                    ).filter(Boolean);
+                    var weekdays = Array.prototype.map.call(
+                        document.querySelectorAll(".client-soc-wd:checked"),
+                        function (el) { return Number(el.value); }
+                    ).filter(function (n) { return !isNaN(n); });
+                    var topicsEl = document.getElementById("clientSocialTopics");
+                    var topics = topicsEl ? String(topicsEl.value || "").trim() : "";
+
+                    var res = await callGateway("clientportal", "clientPortalGenerateSocialCalendar", {
                         clientId: sid(), token: tok(),
-                        startDate: startEl ? startEl.value : "",
-                        endDate: endEl ? endEl.value : ""
-                    });
-                    if (res && res.success === false) throw new Error(res.message || "Failed");
-                    toast("Calendar job started");
-                } catch (e) { toast(e.message || "Generate failed", true); }
+                        startDate: startDate,
+                        endDate: endDate,
+                        platforms: platforms.length ? platforms : null,
+                        weekdays: weekdays.length ? weekdays : null,
+                        topics: topics || null
+                    }, { timeoutMs: 120000 });
+
+                    if (res && res.success === false) {
+                        throw new Error(res.message || "Generate failed");
+                    }
+                    if (typeof toast === "function") {
+                        toast((res && res.message) || ("Calendar generated" + (res && res.count ? (" (" + res.count + " posts)") : "")), false);
+                    }
+                    await loadSocialCalendar();
+                } catch (e) {
+                    if (typeof toast === "function") toast(e.message || "Generate failed", true);
+                    if (list) list.innerHTML = '<p class="text-red-400 text-xs">' + esc(String(e.message || e)) + '</p>';
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        if (btn.dataset.orig) btn.innerHTML = btn.dataset.orig;
+                    }
+                }
             };
 
             window.clientConnectWhatsApp = async function () {
@@ -6620,8 +6756,10 @@
 
         window.renderSocialCalendar = function renderSocialCalendar() {
             try {
+                if (typeof renderSocialCalendarPosts === "function" && window.__SOCIAL_CALENDAR_CACHE) {
+                    return renderSocialCalendarPosts(window.__SOCIAL_CALENDAR_CACHE);
+                }
                 if (typeof loadSocialCalendar === "function") return loadSocialCalendar();
-                if (typeof renderSocialCalendarPosts === "function") return renderSocialCalendarPosts();
             } catch (e) { console.warn(e); }
         };
 
@@ -6684,7 +6822,9 @@
                     if (typeof toast === "function") toast("Image max 5 MB", true);
                     return;
                 }
-                if (typeof toast === "function") toast("Uploading…");
+                if (typeof toast === "function") toast("Uploading media…");
+                var libEl = document.getElementById("clientSocialMediaLibrary");
+                if (libEl) libEl.innerHTML = '<span class="text-sky-400"><i class="fa-solid fa-spinner fa-spin"></i> Uploading…</span>';
                 var base64 = await new Promise(function (resolve, reject) {
                     var reader = new FileReader();
                     reader.onload = function () {
