@@ -6413,19 +6413,34 @@
 
                 function mediaThumbs(p) {
                     var items = Array.isArray(p.MediaItems) ? p.MediaItems : [];
-                    if (!items.length && (p.ImageURL || p.ImagePreviewURL || p.MediaURL)) {
-                        items = [{ url: p.ImagePreviewURL || p.ImageURL || p.MediaURL, previewUrl: p.ImagePreviewURL || p.ImageURL || p.MediaURL }];
+                    if (!items.length && (p.ImageURL || p.ImagePreviewURL || p.MediaURL || p.ImageFileID)) {
+                        items = [{
+                            url: p.ImagePreviewURL || p.ImageURL || p.MediaURL,
+                            previewUrl: p.ImagePreviewURL || p.ImageURL || p.MediaURL,
+                            fileId: p.ImageFileID || p.ImageID || "",
+                            assetType: "image"
+                        }];
                     }
                     if (!items.length) return '<span class="text-[10px] text-slate-600">No media</span>';
                     return '<div class="flex flex-wrap gap-1.5">' + items.map(function (m) {
-                        var url = m.previewUrl || m.openUrl || m.url || m.ImageURL || "";
-                        var isVid = String(m.assetType || m.AssetType || "").toLowerCase() === "video" || /\.(mp4|webm|mov)(\?|$)/i.test(url);
-                        if (!url) return "";
-                        if (isVid) {
-                            return '<a href="' + esc(url) + '" target="_blank" rel="noopener" class="block w-14 h-14 rounded-lg border border-slate-700 bg-slate-900 flex items-center justify-center text-slate-400 text-[10px]">VID</a>';
+                        var fid = m.fileId || m.FileID || m.imageId || "";
+                        var at = String(m.assetType || m.AssetType || "").toLowerCase();
+                        var name = String(m.fileName || m.url || "").toLowerCase();
+                        var isVid = at === "video" || at === "reel" || /\.(mp4|webm|mov)(\?|$)/i.test(name);
+                        if (at === "image" || at === "photo" || at === "picture" || /\.(jpe?g|png|gif|webp)(\?|$)/i.test(name)) isVid = false;
+                        var openUrl = m.openUrl || m.url || "";
+                        var thumb = m.previewUrl || "";
+                        if (fid && !isVid) {
+                            thumb = "https://drive.google.com/thumbnail?id=" + encodeURIComponent(fid) + "&sz=w400";
+                            openUrl = openUrl || ("https://drive.google.com/file/d/" + fid + "/view?usp=sharing");
                         }
-                        return '<a href="' + esc(url) + '" target="_blank" rel="noopener" class="block w-14 h-14 rounded-lg border border-slate-700 overflow-hidden bg-slate-900">' +
-                            '<img src="' + esc(url) + '" alt="" class="w-full h-full object-cover" loading="lazy" onerror="this.parentNode.innerHTML=\'<span class=\\\'text-[9px] text-slate-500 p-1\\\'>img</span>\'" />' +
+                        if (!thumb) thumb = openUrl || m.url || "";
+                        if (!thumb && !openUrl) return "";
+                        if (isVid) {
+                            return '<a href="' + esc(openUrl || thumb) + '" target="_blank" rel="noopener" class="block w-14 h-14 rounded-lg border border-slate-700 bg-slate-900 flex items-center justify-center text-slate-400 text-[10px]">VID</a>';
+                        }
+                        return '<a href="' + esc(openUrl || thumb) + '" target="_blank" rel="noopener" class="block w-14 h-14 rounded-lg border border-slate-700 overflow-hidden bg-slate-900 shrink-0">' +
+                            '<img src="' + esc(thumb) + '" alt="photo" class="w-full h-full object-cover" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src=\'https://drive.google.com/uc?export=view&id=' + esc(fid) + '\';" />' +
                             '</a>';
                     }).join("") + '</div>';
                 }
