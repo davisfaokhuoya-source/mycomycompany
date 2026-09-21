@@ -444,6 +444,18 @@
                 max-width: 100%;
             }
         }
+
+        #view-social {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        #view-social #socialCalendarList {
+            flex: 1 1 auto;
+            min-height: 180px;
+            overflow-y: auto;
+        }
     </style>
     <script>window.toggleDocGenGuide = window.toggleDocGenGuide || function () { var p = document.getElementById("docGenGuide"); if (!p) return; p.classList.toggle("hidden"); };</script>
     <script>
@@ -1295,7 +1307,8 @@
                 </section>
 
                 <!-- SOCIAL CALENDAR -->
-                <section id="view-social" class="view flex-1 h-full flex-col overflow-hidden space-y-3 p-1">
+                <section id="view-social"
+                    class="view flex-1 h-full min-h-0 flex flex-col overflow-hidden space-y-3 p-1">
                     <!-- Header -->
                     <div class="shrink-0 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3">
                         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -1426,7 +1439,7 @@
                                 <i class="fa-solid fa-cloud-arrow-up"></i> Upload photo / video
                                 <input type="file" class="hidden"
                                     accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
-                                    onchange="clientUploadSocialMediaLibrary(this)" />
+                                    multiple onchange="clientUploadSocialMediaLibrary(this)" />
                             </label>
                         </div>
                         <div id="clientSocialMediaLibrary" class="text-[11px] text-slate-500">No library items loaded
@@ -1448,7 +1461,9 @@
                         </div>
                     </div>
 
-                    <div id="socialCalendarList" class="flex-1 overflow-y-auto custom-scrollbar space-y-2">
+                    <div id="socialCalendarList"
+                        class="flex-1 min-h-[12rem] overflow-y-auto custom-scrollbar space-y-2 pb-8"
+                        style="max-height:none;-webkit-overflow-scrolling:touch;">
                         <p class="text-slate-500 text-xs">Loading your social calendar…</p>
                     </div>
                 </section>
@@ -2828,7 +2843,7 @@
 
             if (name === 'documents') loadDocuments();
             if (name === 'generate') { loadDocumentCatalog(); loadAutoSendPreference(); }
-            if (name === 'social') { ensureSocialDateDefaults(); loadSocialCalendar(); }
+            if (name === 'social') { ensureSocialDateDefaults(); loadSocialCalendar(); try { loadSocialPerformance(); } catch (_) { } }
             if (name === 'billing') {
                 try { loadBillingPanel(); } catch (_) { }
                 try { clientLoadBillingCatalog(); } catch (_) { }
@@ -6301,7 +6316,7 @@
                 var text = input ? String(input.value || "").trim() : "";
                 if (!text) return;
                 try {
-                    var res = await gw("clientportal", "clientPortalChatSend", { clientId: sid(), token: tok(), message: text });
+                    var res = await gw("clientportal", "clientPortalChatSend", { clientId: sid(), token: tok(), text: text, message: text });
                     if (res && res.success === false) throw new Error(res.message || "Failed");
                     if (input) input.value = "";
                     if (typeof loadChat === "function") loadChat();
@@ -6390,18 +6405,102 @@
                     var mediaHtml = mediaUrl
                         ? '<a href="' + esc(mediaUrl) + '" target="_blank" rel="noopener" class="text-[10px] text-indigo-400">Media</a>'
                         : '<span class="text-[10px] text-slate-600">No media</span>';
+                    var safeId = String(id).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+                    var canAct = !!id;
+                    var actions = '';
+                    if (canAct) {
+                        actions =
+                            '<button type="button" class="text-[10px] px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white" onclick="clientApproveSocialPost(\'' + safeId + '\')">Approve</button>' +
+                            '<button type="button" class="text-[10px] px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white" onclick="clientEditSocialPost(\'' + safeId + '\')">Edit</button>' +
+                            '<button type="button" class="text-[10px] px-2 py-1 rounded bg-red-900/80 hover:bg-red-800 text-red-100" onclick="clientDeleteSocialPost(\'' + safeId + '\')">Delete</button>' +
+                            '<label class="text-[10px] px-2 py-1 rounded bg-indigo-800 hover:bg-indigo-700 text-white cursor-pointer">' +
+                            'Add media<input type="file" class="hidden" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime" onchange="clientAttachMediaToPost(\'' + safeId + '\', this)" /></label>';
+                    }
                     return (
-                        '<div class="rounded-xl border border-slate-800 bg-slate-950/70 p-3 space-y-1.5">' +
+                        '<div class="rounded-xl border border-slate-800 bg-slate-950/70 p-3 space-y-2">' +
                         '<div class="flex flex-wrap items-center justify-between gap-2">' +
                         '<div class="text-xs text-white font-medium">' + esc(plat) + ' · ' + esc(date) + '</div>' +
                         '<span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">' + esc(status) + '</span>' +
                         '</div>' +
                         '<p class="text-[11px] text-slate-400 whitespace-pre-wrap">' + esc(preview) + (String(caption).length > 160 ? "…" : "") + '</p>' +
-                        '<div class="flex flex-wrap gap-2 items-center">' + mediaHtml +
-                        (id ? ('<button type="button" class="text-[10px] text-emerald-400 hover:underline" onclick="clientApproveSocialPost && clientApproveSocialPost(\'' + String(id).replace(/\'/g, "") + '\')">Approve</button>') : "") +
-                        '</div></div>'
+                        '<div class="flex flex-wrap gap-2 items-center">' + mediaHtml + '</div>' +
+                        '<div class="flex flex-wrap gap-2 items-center pt-1 border-t border-slate-800/80">' + actions + '</div>' +
+                        '</div>'
                     );
                 }).join("");
+            };
+
+
+            window.clientEditSocialPost = async function (postId) {
+                try {
+                    var posts = window.__SOCIAL_CALENDAR_CACHE || [];
+                    var p = posts.find(function (x) {
+                        return String(x.PostID || x.postId || "") === String(postId);
+                    }) || {};
+                    var current = p.Caption || p.caption || "";
+                    var next = prompt("Edit caption:", current);
+                    if (next == null) return;
+                    next = String(next).trim();
+                    if (!next) return toast("Caption cannot be empty", true);
+                    var res = await gw("clientportal", "clientPortalEditSocialPost", {
+                        clientId: sid(), token: tok(), postId: postId, caption: next, fields: { Caption: next }
+                    });
+                    if (res && res.success === false) throw new Error(res.message || "Edit failed");
+                    toast("Post updated");
+                    loadSocialCalendar();
+                } catch (e) {
+                    toast(String(e.message || e), true);
+                }
+            };
+
+            window.clientDeleteSocialPost = async function (postId) {
+                if (!confirm("Delete this post from your calendar?")) return;
+                try {
+                    var res = await gw("clientportal", "clientPortalDeleteSocialPost", {
+                        clientId: sid(), token: tok(), postId: postId
+                    });
+                    if (res && res.success === false) throw new Error(res.message || "Delete failed");
+                    toast("Deleted");
+                    loadSocialCalendar();
+                } catch (e) {
+                    toast(String(e.message || e), true);
+                }
+            };
+
+            window.clientAttachMediaToPost = async function (postId, input) {
+                try {
+                    if (!input || !input.files || !input.files.length) return;
+                    var files = Array.prototype.slice.call(input.files, 0, 5);
+                    toast("Uploading " + files.length + " file(s)…");
+                    for (var i = 0; i < files.length; i++) {
+                        var file = files[i];
+                        var base64 = await new Promise(function (resolve, reject) {
+                            var reader = new FileReader();
+                            reader.onload = function () {
+                                var s = String(reader.result || "");
+                                var j = s.indexOf(",");
+                                resolve(j >= 0 ? s.slice(j + 1) : s);
+                            };
+                            reader.onerror = reject;
+                            reader.readAsDataURL(file);
+                        });
+                        var res = await callGateway("clientportal", "clientPortalUploadSocialMedia", {
+                            clientId: sid(), token: tok(),
+                            postId: postId,
+                            fileName: file.name,
+                            mimeType: file.type,
+                            base64: base64,
+                            libraryOnly: false
+                        }, { timeoutMs: 120000 });
+                        if (res && res.success === false) throw new Error(res.message || ("Upload failed: " + file.name));
+                    }
+                    toast("Media attached");
+                    loadSocialCalendar();
+                } catch (e) {
+                    toast(String(e.message || e), true);
+                } finally {
+                    try { input.value = ""; } catch (_) { }
+                }
             };
 
             window.clientApproveSocialPost = async function (postId) {
@@ -6539,20 +6638,106 @@
 
             window.loadWhatsAppActivityHeaderStats = async function () {
                 try {
-                    await gw("clientportal", "clientPortalGetWhatsAppStats", { clientId: sid(), token: tok() });
+                    var res = await gw("clientportal", "clientPortalGetWhatsAppStats", { clientId: sid(), token: tok() });
+                    if (!res) return;
+                    // Best-effort fill common overview/header nodes if present
+                    var map = {
+                        waStatMessages: res.messages || res.totalMessages || res.count,
+                        waStatReplies: res.replies || res.aiReplies,
+                        waStatHandoffs: res.handoffs || res.handoffCount
+                    };
+                    Object.keys(map).forEach(function (id) {
+                        var el = document.getElementById(id);
+                        if (el && map[id] != null) el.textContent = String(map[id]);
+                    });
+                    return res;
                 } catch (_) { }
             };
 
             window.loadSocialPerformance = async function () {
+                var summary = document.getElementById("socialPerformanceSummary");
+                var list = document.getElementById("socialPerformanceList");
+                if (summary) summary.textContent = "Loading…";
                 try {
-                    await gw("clientportal", "clientPortalGetSocialPerformance", { clientId: sid(), token: tok() });
-                } catch (_) { }
+                    var res = await gw("clientportal", "clientPortalGetSocialPerformance", { clientId: sid(), token: tok() });
+                    if (!res || res.success === false) {
+                        var msg = (res && res.message) || "No performance data yet.";
+                        if (summary) summary.textContent = msg;
+                        if (list) list.innerHTML = "";
+                        return res;
+                    }
+                    var s = res.summary || {};
+                    var total = s.totalPosts != null ? s.totalPosts : (res.totalRecords || 0);
+                    var avg = s.avgEngagementRate != null ? s.avgEngagementRate : "—";
+                    if (summary) {
+                        summary.innerHTML = "Posts tracked: <strong class=\"text-white\">" + esc(String(total)) +
+                            "</strong> · Avg engagement: <strong class=\"text-emerald-400\">" + esc(String(avg)) +
+                            (typeof avg === "number" || /^\d/.test(String(avg)) ? "%" : "") + "</strong>";
+                    }
+                    var records = res.records || res.posts || [];
+                    if (list) {
+                        if (!records.length) {
+                            list.innerHTML = '<p class="text-slate-600 text-[11px]">No published post stats yet.</p>';
+                        } else {
+                            list.innerHTML = records.slice(0, 30).map(function (r) {
+                                var plat = r.Platform || r.platform || "—";
+                                var er = r.EngagementRate != null ? r.EngagementRate : (r.engagementRate || "—");
+                                var when = String(r.PublishedAt || r.RecordedAt || r.Date || "").slice(0, 10);
+                                var pid = r.PostID || r.postId || "";
+                                return '<div class="flex justify-between gap-2 text-[11px] border-b border-slate-800/80 py-1">' +
+                                    '<span class="text-slate-300">' + esc(plat) + (pid ? (" · " + esc(String(pid).slice(0, 10))) : "") + '</span>' +
+                                    '<span class="text-slate-500">' + esc(when) + ' · ' + esc(String(er)) + '%</span></div>';
+                            }).join("");
+                        }
+                    }
+                    return res;
+                } catch (e) {
+                    if (summary) summary.textContent = String(e.message || e);
+                }
             };
 
 
 
             window.loadChat = async function () {
-                try { await gw("clientportal", "clientPortalChatPoll", { clientId: sid(), token: tok() }); } catch (_) { }
+                var thread = document.getElementById("chatThread");
+                try {
+                    var res = await gw("clientportal", "clientPortalChatPoll", { clientId: sid(), token: tok() });
+                    if (!thread) return res;
+                    if (!res || res.success === false) {
+                        if (!thread.dataset.hasMessages) {
+                            thread.innerHTML = '<p class="text-slate-500 text-xs">' + esc((res && res.message) || "Could not load chat.") + '</p>';
+                        }
+                        return res;
+                    }
+                    var messages = res.messages || res.data || [];
+                    if (!messages.length) {
+                        thread.innerHTML = '<p class="text-slate-500 text-xs">No messages yet. Say hello — your account team will reply here.</p>';
+                        return res;
+                    }
+                    thread.dataset.hasMessages = "1";
+                    thread.innerHTML = messages.map(function (m) {
+                        var who = String(m.sender || m.Sender || "").toLowerCase() === "client" ? "you" : "team";
+                        var align = who === "you" ? "items-end" : "items-start";
+                        var bubble = who === "you"
+                            ? "bg-emerald-900/40 border-emerald-800 text-emerald-100"
+                            : "bg-slate-800 border-slate-700 text-slate-200";
+                        var text = m.text || m.Text || m.message || "";
+                        var ts = m.ts || m.Timestamp || m.time || "";
+                        return (
+                            '<div class="flex flex-col ' + align + '">' +
+                            '<div class="max-w-[85%] rounded-lg border px-3 py-2 ' + bubble + '">' +
+                            '<p class="whitespace-pre-wrap">' + esc(text) + '</p>' +
+                            (ts ? ('<p class="text-[9px] opacity-60 mt-1">' + esc(String(ts).slice(0, 19)) + '</p>') : '') +
+                            '</div></div>'
+                        );
+                    }).join("");
+                    try { thread.scrollTop = thread.scrollHeight; } catch (_) { }
+                    return res;
+                } catch (e) {
+                    if (thread && !thread.dataset.hasMessages) {
+                        thread.innerHTML = '<p class="text-red-400 text-xs">' + esc(String(e.message || e)) + '</p>';
+                    }
+                }
             };
 
             window.startChatPolling = function () {
@@ -6809,48 +6994,44 @@
 
         window.clientUploadSocialMediaLibrary = async function (input) {
             try {
-                if (!input || !input.files || !input.files[0]) return;
-                var file = input.files[0];
+                if (!input || !input.files || !input.files.length) return;
+                var files = Array.prototype.slice.call(input.files, 0, 10);
                 var maxImg = 5 * 1024 * 1024;
                 var maxVid = 25 * 1024 * 1024;
-                var isVid = /^video\//i.test(file.type);
-                if (isVid && file.size > maxVid) {
-                    if (typeof toast === "function") toast("Video max 25 MB", true);
-                    return;
-                }
-                if (!isVid && file.size > maxImg) {
-                    if (typeof toast === "function") toast("Image max 5 MB", true);
-                    return;
-                }
-                if (typeof toast === "function") toast("Uploading media…");
                 var libEl = document.getElementById("clientSocialMediaLibrary");
-                if (libEl) libEl.innerHTML = '<span class="text-sky-400"><i class="fa-solid fa-spinner fa-spin"></i> Uploading…</span>';
-                var base64 = await new Promise(function (resolve, reject) {
-                    var reader = new FileReader();
-                    reader.onload = function () {
-                        var s = String(reader.result || "");
-                        var i = s.indexOf(",");
-                        resolve(i >= 0 ? s.slice(i + 1) : s);
-                    };
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                });
-                var res = await callGateway("clientportal", "clientPortalUploadSocialMedia", {
-                    clientId: (typeof getClientId === "function" ? getClientId() : (window.CLIENT_ID || localStorage.getItem("clientId"))),
-                    token: (typeof getClientToken === "function" ? getClientToken() : (window.CLIENT_TOKEN || localStorage.getItem("clientToken"))),
-                    fileName: file.name,
-                    mimeType: file.type,
-                    base64: base64,
-                    assetType: isVid ? "video" : "image",
-                    libraryOnly: true
-                });
-                if (res && res.success) {
-                    if (typeof toast === "function") toast(res.message || "Uploaded");
-                    if (typeof loadClientSocialMediaLibrary === "function") loadClientSocialMediaLibrary();
-                    else if (typeof loadSocialCalendar === "function") loadSocialCalendar();
-                } else {
-                    if (typeof toast === "function") toast((res && res.message) || "Upload failed", true);
+                if (typeof toast === "function") toast("Uploading " + files.length + " file(s)…");
+                if (libEl) libEl.innerHTML = '<span class="text-sky-400"><i class="fa-solid fa-spinner fa-spin"></i> Uploading ' + files.length + ' file(s)…</span>';
+                var ok = 0, fail = 0;
+                for (var i = 0; i < files.length; i++) {
+                    var file = files[i];
+                    var isVid = /^video\//i.test(file.type);
+                    if (isVid && file.size > maxVid) { fail++; continue; }
+                    if (!isVid && file.size > maxImg) { fail++; continue; }
+                    var base64 = await new Promise(function (resolve, reject) {
+                        var reader = new FileReader();
+                        reader.onload = function () {
+                            var s = String(reader.result || "");
+                            var j = s.indexOf(",");
+                            resolve(j >= 0 ? s.slice(j + 1) : s);
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                    var res = await callGateway("clientportal", "clientPortalUploadSocialMedia", {
+                        clientId: (typeof getClientId === "function" ? getClientId() : (sid ? sid() : window.CLIENT_ID)),
+                        token: (typeof getClientToken === "function" ? getClientToken() : (tok ? tok() : window.CLIENT_TOKEN)),
+                        fileName: file.name,
+                        mimeType: file.type,
+                        base64: base64,
+                        assetType: isVid ? "video" : "image",
+                        libraryOnly: true
+                    }, { timeoutMs: 120000 });
+                    if (res && res.success) ok++;
+                    else fail++;
                 }
+                if (typeof toast === "function") toast(ok + " uploaded" + (fail ? (", " + fail + " failed") : ""));
+                if (typeof loadClientSocialMediaLibrary === "function") loadClientSocialMediaLibrary();
+                else if (libEl) libEl.innerHTML = ok ? (ok + " file(s) in library. Attach from each post card.") : "Upload finished with errors.";
             } catch (e) {
                 if (typeof toast === "function") toast(String(e.message || e), true);
             } finally {
@@ -6918,6 +7099,17 @@
                     var wa = await callGateway("clientportal", "clientPortalListWhatsAppNumbers", {});
                     data.whatsapp = (wa && (wa.numbers || wa.connections || wa.data || wa.whatsapp)) || [];
                     if (!Array.isArray(data.whatsapp) && wa) data.whatsapp = wa.connections || [];
+                } catch (_) { }
+                try {
+                    var soc = await callGateway("clientportal", "clientPortalListIntegrations", {});
+                    if (soc && soc.social) data.social = soc.social;
+                    if (soc && soc.crm) data.crm = soc.crm;
+                } catch (_) { }
+            }
+            // If list succeeded but social empty, still OK — user may have none
+            if (data && (!data.social || !data.social.length)) {
+                try {
+                    // no separate list endpoint for social on clientportal beyond ListIntegrations
                 } catch (_) { }
             }
             if (!Array.isArray(data.mailboxes)) data.mailboxes = [];
