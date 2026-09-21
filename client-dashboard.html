@@ -1787,8 +1787,8 @@
                                 (and the Comment Reply add-on). Standard cannot reply to comments.</p>
                         </div>
                         <p class="text-[10px] text-slate-500 leading-relaxed">Account count is limited by your <strong
-                                class="text-slate-400">Digital tier</strong>. To remove a connection, request disconnect
-                            — admin completes it.
+                                class="text-slate-400">Digital tier</strong>. You can disconnect a network here anytime,
+                            then connect another account.
                         </p>
                         <div id="integrationsSocialList" class="space-y-2 text-xs"></div>
                         <div id="postCommentsMount" class="mt-2 border-t border-slate-800 pt-2"></div>
@@ -5490,8 +5490,10 @@
                 }
             }
 
-            const CLIENT_GEN_TABLE_STATE = {}; // docType|key -> [{ colKey: value, ... }]
-            const CLIENT_GEN_TABLE_COLS = {};  // docType|key -> [{ key, label }]
+            window.CLIENT_GEN_TABLE_STATE = window.CLIENT_GEN_TABLE_STATE || {}; // docType|key -> rows
+            window.CLIENT_GEN_TABLE_COLS = window.CLIENT_GEN_TABLE_COLS || {};  // docType|key -> cols
+            const CLIENT_GEN_TABLE_STATE = window.CLIENT_GEN_TABLE_STATE;
+            const CLIENT_GEN_TABLE_COLS = window.CLIENT_GEN_TABLE_COLS;
             let CLIENT_GEN_EXTRA_SEQ = 0;
 
             function clientGenTableColumns(docType, key) {
@@ -6411,6 +6413,8 @@
                 } catch (_) { }
             };
 
+
+
             window.loadChat = async function () {
                 try { await gw("clientportal", "clientPortalChatPoll", { clientId: sid(), token: tok() }); } catch (_) { }
             };
@@ -6652,7 +6656,7 @@
                             '<span class="text-slate-500 ml-2 text-[11px]">' + esc(email) + '</span>' +
                             '<span class="text-[10px] text-emerald-400/80 ml-2">' + esc(status) + '</span>',
                             '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-300" onclick="clientReconnectMailbox(\'' + esc(id) + '\',\'' + esc(email) + '\')">Reconnect</button>' +
-                            '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientRequestMailboxDisconnect(\'' + esc(id) + '\')">Request remove</button>'
+                            '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientRequestMailboxDisconnect(\'' + esc(id) + '\')">Remove</button>'
                         );
                     }).join("");
                 }
@@ -6685,7 +6689,7 @@
                         '<span class="text-slate-200 font-medium">' + esc(label) + '</span>' +
                         '<span class="text-slate-500 ml-2 text-[11px]">' + esc(phone) + '</span>' +
                         '<span class="text-[10px] text-emerald-400/80 ml-2">' + esc(status) + '</span>',
-                        '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientRequestWhatsAppDisconnect && clientRequestWhatsAppDisconnect(\'' + esc(id) + '\')">Request remove</button>'
+                        '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientRequestWhatsAppDisconnect && clientRequestWhatsAppDisconnect(\'' + esc(id) + '\')">Remove</button>'
                     );
                 }).join("");
             }
@@ -6712,7 +6716,7 @@
                             '<span class="text-slate-200 font-medium capitalize">' + esc(String(platform).replace(/_/g, " ")) + '</span>' + badge +
                             '<span class="text-slate-500 ml-2 text-[11px]">' + esc(name) + '</span>' +
                             '<span class="text-[10px] text-emerald-400/80 ml-2">' + esc(status) + '</span>',
-                            '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientRequestSocialDisconnect && clientRequestSocialDisconnect(\'' + esc(platform) + '\')">Request remove</button>'
+                            '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientRequestSocialDisconnect && clientRequestSocialDisconnect(\'' + esc(platform) + '\')">Remove</button>'
                         );
                     }).join("");
                 }
@@ -6731,7 +6735,7 @@
                             '<span class="text-slate-200 font-medium">' + esc(label) + '</span>' +
                             '<span class="text-slate-500 ml-2 text-[11px]">' + esc(type) + '</span>' +
                             '<span class="text-[10px] text-emerald-400/80 ml-2">' + esc(status) + '</span>',
-                            '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientRequestCrmDisconnect && clientRequestCrmDisconnect(\'' + esc(type) + '\')">Request remove</button>'
+                            '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientRequestCrmDisconnect && clientRequestCrmDisconnect(\'' + esc(type) + '\')">Remove</button>'
                         );
                     }).join("");
                 }
@@ -6750,6 +6754,16 @@
                     category: "social", platform: platform, type: platform
                 });
                 if (res && res.success === false) throw new Error(res.message || "Failed");
+                if (res && res.success) {
+                    if (typeof toast === "function") toast(res.message || "Disconnected");
+                    else if (typeof showToast === "function") showToast(res.message || "Disconnected", "success");
+                    if (typeof loadIntegrationsPanel === "function") loadIntegrationsPanel();
+                } else {
+                    var msg = (res && res.message) || "Could not disconnect";
+                    if (typeof toast === "function") toast(msg);
+                    else if (typeof showToast === "function") showToast(msg, "error");
+                }
+                return;
                 if (typeof toast === "function") toast(res.message || "Disconnect requested — admin will complete removal");
                 else if (typeof showToast === "function") showToast(res.message || "Disconnect requested", "success");
             } catch (e) {
