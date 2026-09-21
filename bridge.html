@@ -4559,20 +4559,91 @@
            HUB: OPS MONITOR — health, errors, success rates, social performance
       ================================================================= -->
 
+
             <!-- ================================================================
            HUB: AI PROVIDERS
       ================================================================= -->
             <section id="hub-aiproviders" class="hidden flex-1 flex flex-col overflow-hidden bg-slate-950">
                 <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-5">
-                    <!-- ===== AI Providers (pluggable models) ===== -->
-                    <div id="aiProvidersPanel" class="bg-slate-900 border border-slate-700 rounded-xl p-5 mb-8">
+                    <div id="aiProvidersPanel" class="bg-slate-900 border border-slate-700 rounded-xl p-5">
                         <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
                             <div>
                                 <h2 class="text-xl font-bold text-white">AI Providers</h2>
                                 <p class="text-xs text-slate-400 mt-1">Add API keys and assign roles (text, image,
                                     vision, comments). No code deploy needed for new models.</p>
                             </div>
+                            <button type="button" onclick="loadAiProvidersUI()"
+                                class="px-3 py-1.5 text-xs rounded-lg bg-slate-700 text-white hover:bg-slate-600">Refresh</button>
                         </div>
+                        <div class="grid md:grid-cols-2 gap-4 mb-4">
+                            <div class="bg-slate-950/60 border border-slate-700 rounded-lg p-4">
+                                <h3 class="text-sm font-semibold text-orange-400 mb-3">Add / update provider</h3>
+                                <div class="space-y-2 text-xs">
+                                    <input id="aiProvId"
+                                        class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-white"
+                                        placeholder="id (optional, auto if empty)">
+                                    <input id="aiProvLabel"
+                                        class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-white"
+                                        placeholder="Label e.g. Gemini Main">
+                                    <select id="aiProvType"
+                                        class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-white">
+                                        <option value="gemini">gemini</option>
+                                        <option value="openai">openai</option>
+                                        <option value="openai_compatible">openai_compatible (DeepSeek etc.)</option>
+                                    </select>
+                                    <input id="aiProvKey" type="password"
+                                        class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-white"
+                                        placeholder="API key / secret">
+                                    <input id="aiProvBase"
+                                        class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-white"
+                                        placeholder="Base URL (optional)">
+                                    <input id="aiProvTextModel"
+                                        class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-white"
+                                        placeholder="Text model e.g. gemini-2.5-flash">
+                                    <input id="aiProvImageModel"
+                                        class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-white"
+                                        placeholder="Image model e.g. gemini-3.1-flash-image">
+                                    <input id="aiProvVisionModel"
+                                        class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-white"
+                                        placeholder="Vision model (optional)">
+                                    <button type="button" onclick="saveAiProvider()"
+                                        class="w-full py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-semibold">Save
+                                        provider</button>
+                                </div>
+                            </div>
+                            <div class="bg-slate-950/60 border border-slate-700 rounded-lg p-4">
+                                <h3 class="text-sm font-semibold text-orange-400 mb-3">Role assignment</h3>
+                                <p class="text-[11px] text-slate-500 mb-2">Each role uses one provider from the
+                                    dropdown.</p>
+                                <div id="aiRoleAssignRows" class="space-y-2 text-xs"></div>
+                                <button type="button" onclick="testAiImageGen()"
+                                    class="mt-3 w-full py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white">Test
+                                    image generation</button>
+                                <pre id="aiProvStatus"
+                                    class="mt-2 text-[10px] text-slate-400 whitespace-pre-wrap max-h-40 overflow-auto"></pre>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs text-slate-300">
+                                <thead class="text-slate-500 border-b border-slate-700">
+                                    <tr>
+                                        <th class="py-2 pr-2">ID</th>
+                                        <th class="py-2 pr-2">Label</th>
+                                        <th class="py-2 pr-2">Type</th>
+                                        <th class="py-2 pr-2">Key</th>
+                                        <th class="py-2 pr-2">Models</th>
+                                        <th class="py-2 pr-2">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="aiProvidersTableBody">
+                                    <tr>
+                                        <td colspan="6" class="py-4 text-slate-500">Click Refresh to load providers</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <section id="hub-monitor" class="hidden flex-1 flex overflow-hidden">
@@ -20023,6 +20094,13 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
     <script>
 
         /* ===== AI Providers admin ===== */
+        async function apiCall(system, action, payload) {
+            if (typeof executeSecureBridgeCall === 'function') {
+                return executeSecureBridgeCall(system, action, payload || {});
+            }
+            throw new Error('executeSecureBridgeCall missing');
+        }
+
         async function loadAiProvidersUI() {
             const status = document.getElementById('aiProvStatus');
             const tbody = document.getElementById('aiProvidersTableBody');
@@ -20030,7 +20108,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             if (!tbody) return;
             tbody.innerHTML = '<tr><td colspan="6" class="py-3 text-slate-500">Loading…</td></tr>';
             try {
-                const res = await apiCall('agent', 'admin-list-ai-providers', {});
+                const res = await executeSecureBridgeCall('agent', 'admin-list-ai-providers', {});
                 if (!res || !res.success) {
                     tbody.innerHTML = '<tr><td colspan="6" class="py-3 text-red-400">' + (res && res.message ? res.message : 'Failed') + '</td></tr>';
                     return;
@@ -20090,7 +20168,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 imageModel: document.getElementById('aiProvImageModel')?.value?.trim() || undefined,
                 visionModel: document.getElementById('aiProvVisionModel')?.value?.trim() || undefined
             };
-            const res = await apiCall('agent', 'admin-upsert-ai-provider', payload);
+            const res = await executeSecureBridgeCall('agent', 'admin-upsert-ai-provider', payload);
             const status = document.getElementById('aiProvStatus');
             if (status) status.textContent = JSON.stringify(res, null, 2);
             if (res && res.success) {
@@ -20102,20 +20180,20 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         }
 
         async function setAiRole(role, providerId) {
-            const res = await apiCall('agent', 'admin-set-ai-role', { role, providerId: providerId || '' });
+            const res = await executeSecureBridgeCall('agent', 'admin-set-ai-role', { role, providerId: providerId || '' });
             const status = document.getElementById('aiProvStatus');
             if (status) status.textContent = JSON.stringify(res, null, 2);
         }
 
         async function deleteAiProvider(id) {
             if (!confirm('Delete provider ' + id + '?')) return;
-            const res = await apiCall('agent', 'admin-delete-ai-provider', { id });
+            const res = await executeSecureBridgeCall('agent', 'admin-delete-ai-provider', { id });
             loadAiProvidersUI();
             if (!res || !res.success) alert((res && res.message) || 'Delete failed');
         }
 
         async function testAiProvider(id) {
-            const res = await apiCall('agent', 'admin-test-ai-provider', { id, role: 'text_primary' });
+            const res = await executeSecureBridgeCall('agent', 'admin-test-ai-provider', { id, role: 'text_primary' });
             const status = document.getElementById('aiProvStatus');
             if (status) status.textContent = JSON.stringify(res, null, 2);
         }
@@ -20123,7 +20201,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         async function testAiImageGen() {
             const status = document.getElementById('aiProvStatus');
             if (status) status.textContent = 'Testing image generation…';
-            const res = await apiCall('agent', 'agent-generate-social-image', {
+            const res = await executeSecureBridgeCall('agent', 'agent-generate-social-image', {
                 prompt: 'Simple professional test graphic: Nigerian business registration theme, clean, no logos of other brands',
                 aspectRatio: '1:1'
             });
