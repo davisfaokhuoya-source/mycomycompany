@@ -6596,6 +6596,150 @@
 
     <script>
 
+
+
+        window.applyAppointmentFilters = function applyAppointmentFilters() {
+            try {
+                if (typeof loadAppointments === "function") return loadAppointments();
+                if (typeof renderAppointmentsTable === "function") {
+                    var items = window.__APPOINTMENTS_CACHE || [];
+                    var st = (document.getElementById("apptFilterStatus") || {}).value || "";
+                    var from = (document.getElementById("apptFilterFrom") || {}).value || "";
+                    var to = (document.getElementById("apptFilterTo") || {}).value || "";
+                    var filtered = items.filter(function (a) {
+                        if (st && String(a.status || a.Status || "").toLowerCase() !== st.toLowerCase()) return false;
+                        var d = String(a.date || a.Date || a.when || "").slice(0, 10);
+                        if (from && d && d < from) return false;
+                        if (to && d && d > to) return false;
+                        return true;
+                    });
+                    renderAppointmentsTable(filtered);
+                }
+            } catch (e) { console.warn(e); }
+        };
+
+        window.renderSocialCalendar = function renderSocialCalendar() {
+            try {
+                if (typeof loadSocialCalendar === "function") return loadSocialCalendar();
+                if (typeof renderSocialCalendarPosts === "function") return renderSocialCalendarPosts();
+            } catch (e) { console.warn(e); }
+        };
+
+        window.onServiceFlagSelectChange = function onServiceFlagSelectChange() {
+            try {
+                var sel = document.getElementById("serviceFlagSelect");
+                var key = sel ? sel.value : "";
+                var wrap = document.getElementById("serviceFlagToggleWrap");
+                var cb = document.getElementById("serviceFlagCheckbox");
+                var status = document.getElementById("serviceFlagStatus");
+                var hint = document.getElementById("serviceFlagHint");
+                if (!key) {
+                    if (wrap) wrap.classList.add("hidden");
+                    return;
+                }
+                if (wrap) wrap.classList.remove("hidden");
+                var flags = window.__SERVICE_FLAGS || {};
+                var on = !!(flags[key] === true || flags[key] === "true" || flags[key] === 1);
+                if (cb) cb.checked = on;
+                if (status) status.textContent = on ? "ON" : "OFF";
+                if (hint) {
+                    hint.classList.remove("hidden");
+                    hint.textContent = "Toggle to enable/disable " + key + " for your account (where your plan allows).";
+                }
+            } catch (e) { console.warn(e); }
+        };
+
+        window.toggleSelectedServiceFlag = async function toggleSelectedServiceFlag(checked) {
+            try {
+                var sel = document.getElementById("serviceFlagSelect");
+                var key = sel ? sel.value : "";
+                if (!key) return;
+                var res = await callGateway("clientportal", "clientPortalSetServiceFlag", {
+                    clientId: (typeof getClientId === "function" ? getClientId() : window.CLIENT_ID),
+                    token: (typeof getClientToken === "function" ? getClientToken() : window.CLIENT_TOKEN),
+                    flag: key,
+                    enabled: !!checked
+                });
+                if (typeof toast === "function") toast((res && res.message) || (checked ? "Enabled" : "Disabled"), !(res && res.success));
+                window.__SERVICE_FLAGS = window.__SERVICE_FLAGS || {};
+                window.__SERVICE_FLAGS[key] = !!checked;
+                onServiceFlagSelectChange();
+            } catch (e) {
+                if (typeof toast === "function") toast(String(e.message || e), true);
+            }
+        };
+
+        window.clientUploadSocialMediaLibrary = async function (input) {
+            try {
+                if (!input || !input.files || !input.files[0]) return;
+                var file = input.files[0];
+                var maxImg = 5 * 1024 * 1024;
+                var maxVid = 25 * 1024 * 1024;
+                var isVid = /^video\//i.test(file.type);
+                if (isVid && file.size > maxVid) {
+                    if (typeof toast === "function") toast("Video max 25 MB", true);
+                    return;
+                }
+                if (!isVid && file.size > maxImg) {
+                    if (typeof toast === "function") toast("Image max 5 MB", true);
+                    return;
+                }
+                if (typeof toast === "function") toast("Uploading…");
+                var base64 = await new Promise(function (resolve, reject) {
+                    var reader = new FileReader();
+                    reader.onload = function () {
+                        var s = String(reader.result || "");
+                        var i = s.indexOf(",");
+                        resolve(i >= 0 ? s.slice(i + 1) : s);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+                var res = await callGateway("clientportal", "clientPortalUploadSocialMedia", {
+                    clientId: (typeof getClientId === "function" ? getClientId() : (window.CLIENT_ID || localStorage.getItem("clientId"))),
+                    token: (typeof getClientToken === "function" ? getClientToken() : (window.CLIENT_TOKEN || localStorage.getItem("clientToken"))),
+                    fileName: file.name,
+                    mimeType: file.type,
+                    base64: base64,
+                    assetType: isVid ? "video" : "image",
+                    libraryOnly: true
+                });
+                if (res && res.success) {
+                    if (typeof toast === "function") toast(res.message || "Uploaded");
+                    if (typeof loadClientSocialMediaLibrary === "function") loadClientSocialMediaLibrary();
+                    else if (typeof loadSocialCalendar === "function") loadSocialCalendar();
+                } else {
+                    if (typeof toast === "function") toast((res && res.message) || "Upload failed", true);
+                }
+            } catch (e) {
+                if (typeof toast === "function") toast(String(e.message || e), true);
+            } finally {
+                try { input.value = ""; } catch (_) { }
+            }
+        };
+        window.loadClientSocialMediaLibrary = async function () {
+            var el = document.getElementById("clientSocialMediaLibrary");
+            if (!el) return;
+            try {
+                var res = await callGateway("clientportal", "clientPortalListSocialMedia", {
+                    clientId: (typeof getClientId === "function" ? getClientId() : (window.CLIENT_ID || localStorage.getItem("clientId"))),
+                    token: (typeof getClientToken === "function" ? getClientToken() : (window.CLIENT_TOKEN || localStorage.getItem("clientToken")))
+                });
+                var items = (res && (res.items || res.assets || res.media)) || [];
+                if (!items.length) {
+                    el.innerHTML = "No library items loaded yet — upload above or attach on each post.";
+                    return;
+                }
+                el.innerHTML = items.map(function (it) {
+                    var name = it.name || it.fileName || it.id || "asset";
+                    var url = it.url || it.viewUrl || it.driveUrl || "#";
+                    return '<a class="text-indigo-400 hover:underline mr-2" href="' + url + '" target="_blank" rel="noopener">' + name + '</a>';
+                }).join(" ");
+            } catch (e) {
+                el.textContent = "Could not load library.";
+            }
+        };
+
         window.loadIntegrationsPanel = async function loadIntegrationsPanel() {
             function esc(s) {
                 return String(s == null ? "" : s)
