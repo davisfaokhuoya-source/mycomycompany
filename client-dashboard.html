@@ -2212,15 +2212,48 @@
 
         /** Client-facing error line: "Error occurred — error code 4203" (no internal text). */
         function clientFriendlyError(msg) {
-            try { console.error('[client-error]', msg); } catch (_) { }
+            try { console.warn('[client]', msg); } catch (_) { }
             const raw = String(msg || '').trim();
             const code = clientErrorCode(raw);
-            // Prefer human text; keep code as suffix for support
-            if (!raw) return 'Something went wrong · code ' + code;
-            if (/^error occurred/i.test(raw) && /error code\s*\d{4}/i.test(raw)) return raw;
-            // Avoid double-coding
-            if (new RegExp('code\\s*' + code, 'i').test(raw)) return raw;
-            return raw + ' · code ' + code;
+            const m = raw.toLowerCase();
+            if (code === '4101' || /session expired|sign in again|access code expired|login required/i.test(m)) {
+                return 'Your session expired — please sign in again.';
+            }
+            if (/cookie|csrf/i.test(m)) {
+                return 'Browser session expired — refresh the page or sign in again.';
+            }
+            if (code === '4201' || /timed out|timeout/i.test(m)) {
+                return 'That took too long — try again in a moment.';
+            }
+            if (code === '4202' || /network|failed to fetch|load failed/i.test(m)) {
+                return 'Connection issue — check your internet and try again.';
+            }
+            if (code === '4203') {
+                return 'Service is busy — try again shortly.';
+            }
+            if (code === '4501' || /reconnect|oauth|integration/i.test(m)) {
+                return 'Please reconnect this account under Integrations.';
+            }
+            if (code === '4900' || /handshake denied|not permitted|whitelist/i.test(m)) {
+                return 'Something went wrong · ' + code + '. Refresh and try again.';
+            }
+            if (/^error occurred/i.test(raw)) {
+                return 'Something went wrong · ' + code + '.';
+            }
+            var clean = raw.replace(/^error occurred\s*[—\-–]?\s*/i, '').replace(/\berror code\b/gi, 'code').trim();
+            if (!clean) return 'Something went wrong · ' + code + '.';
+            if (new RegExp(code).test(clean)) return clean;
+            return clean + ' · ' + code;
+        }
+
+        function clientToastType(msg, preferred) {
+            if (preferred === 'success') return 'success';
+            const m = String(msg || '').toLowerCase();
+            const code = clientErrorCode(msg);
+            if (code === '4101' || /session expired|sign in|cookie/i.test(m)) return 'warn';
+            if (code === '4900' || /something went wrong|busy|try again|reconnect/i.test(m)) return 'info';
+            if (preferred === 'error') return 'info';
+            return preferred || 'info';
         }
 
         /** Non-blocking status toast. Always defined so send/approve paths never throw. */
@@ -2231,7 +2264,9 @@
                 return;
             }
             const el = document.createElement('div');
-            el.className = 'client-toast ' + (type === 'success' ? 'success' : type === 'error' ? 'error' : 'info');
+            var tone = type;
+            if (tone === 'error') tone = 'info';
+            el.className = 'client-toast ' + (tone === 'success' ? 'success' : tone === 'warn' ? 'warn' : 'info');
             el.textContent = String(message || '');
             host.appendChild(el);
             setTimeout(function () {
@@ -2241,9 +2276,10 @@
             }, 4200);
         }
         function notifyUser(message, type) {
-            const t = type || 'info';
-            // Show real message (with code suffix from clientFriendlyError when useful)
-            const display = (t === 'error') ? clientFriendlyError(message) : message;
+            const display = (type === 'error' || type === 'warn')
+                ? clientFriendlyError(message)
+                : String(message || '');
+            const t = clientToastType(message, type || 'info');
             try { showToast(display, t); } catch (_) {
                 try { alert(display); } catch (__) { }
             }
@@ -2449,7 +2485,7 @@
                 const code = clientErrorCode(raw);
                 return {
                     success: false,
-                    message: 'Error occurred — error code ' + code,
+                    message: clientFriendlyError('Error occurred — error code ' + code),
                     errorCode: code,
                     _rawMessage: raw
                 };
@@ -4345,7 +4381,7 @@
                 res = null;
             }
             if (!res || res.success === false) {
-                sel.innerHTML = '<option value="">No moderated posts yet</option>';
+                sel.innerHTML = '<option value="">No AI replies logged yet — try All platforms or widen dates</option>';
                 return;
             }
             var posts = (res.posts || []).slice();
@@ -4364,6 +4400,24 @@
                 if (!isNaN(toMs) && t > toMs) return false;
                 return true;
             });
+
+            if (!posts.length && platform) {
+                // Retry without platform filter so replies still show
+                try {
+                    var res2 = await callGateway('clientportal', 'clientPortalListCommentActivityPosts', {
+                        platform: '',
+                        dateFrom: dateFrom,
+                        dateTo: dateTo
+                    });
+                    var posts2 = (res2 && (res2.posts || res2.data || [])) || [];
+                    if (posts2.length) {
+                        posts = posts2;
+                        platform = '';
+                        var platEl = document.getElementById('commentFilterPlatform');
+                        if (platEl) platEl.value = '';
+                    }
+                } catch (_) { }
+            }
             window.__commentActivityPosts = posts;
             if (!posts.length) {
                 sel.innerHTML = '<option value="">No posts for this platform / date range</option>';
@@ -4371,8 +4425,14 @@
             }
             sel.innerHTML = '<option value="">Select a post (' + posts.length + ')</option>' +
                 posts.map(function (p, i) {
-                    var label = (p.platform || '') + ' · ' + String(p.postId || '').slice(0, 28) +
-                        ' · replies ' + (p.replies || 0) + ' · hidden ' + (p.deleted || 0);
+                    var sample = '';
+                    if (p.replyItems && p.replyItems[0] && p.replyItems[0].replyText) {
+                        sample = ' — ' + String(p.replyItems[0].replyText).slice(0, 40);
+                    } else if (p.samples && p.samples[0] && p.samples[0].preview) {
+                        sample = ' — ' + String(p.samples[0].preview).slice(0, 40);
+                    }
+                    var label = (p.platform || '') + ' · ' + String(p.postId || '').slice(0, 22) +
+                        ' · replies ' + (p.replies || 0) + sample;
                     return '<option value="' + i + '">' + (typeof escapeHtml === 'function' ? escapeHtml(label) : label) + '</option>';
                 }).join('');
         }
@@ -4534,7 +4594,7 @@
                     enabled: enabled
                 });
                 if (!res || !res.success) {
-                    if (typeof showToast === 'function') showToast((res && res.message) || 'Could not save', 'error');
+                    if (typeof showToast === 'function') notifyUser((res && res.message) || 'Could not save', 'info');
                     if (res && res.addonRequired && typeof goBillingUpgrade === 'function') goBillingUpgrade();
                     try { await clientRefreshCommentAiToggle(); } catch (_) { }
                     return;
