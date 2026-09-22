@@ -1571,7 +1571,8 @@
                     class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
                     <p class="text-xs text-slate-400 max-w-2xl">Connect social and CRM yourself when your plan allows.
                         To <strong class="text-slate-300">remove</strong> a
-                        connection, request disconnect — only your account team can complete removal. TikTok defaults to
+                        connection, request disconnect — you can remove social accounts yourself anytime. TikTok
+                        defaults to
                         standard TikTok; choose <strong class="text-slate-300">Business TikTok</strong> to enable AI
                         replies on comments.</p>
 
@@ -1802,8 +1803,8 @@
                                 (and the Comment Reply add-on). Standard cannot reply to comments.</p>
                         </div>
                         <p class="text-[10px] text-slate-500 leading-relaxed">Account count is limited by your <strong
-                                class="text-slate-400">Digital tier</strong>. You can disconnect a network here anytime,
-                            then connect another account.
+                                class="text-slate-400">Digital tier</strong>. You can disconnect a network here anytime
+                            (no admin needed), then connect another account.
                         </p>
                         <div id="integrationsSocialList" class="space-y-2 text-xs"></div>
                         <div id="postCommentsMount" class="mt-2 border-t border-slate-800 pt-2"></div>
@@ -4285,16 +4286,21 @@
             if (res.authUrl) window.location.href = res.authUrl;
         }
         async function clientRequestDisconnect(category, key) {
-            if (!confirm('Request removal of this connection? Only admin can complete disconnect.')) return;
+            if (!confirm('Disconnect this social account? You can reconnect a different one anytime.')) return;
             const payload = { category: category };
             if (category === 'social') payload.platform = key;
             else if (category === 'crm') payload.type = key;
             else if (category === 'mailbox') payload.mailboxId = key;
             else if (category === 'whatsapp') payload.whatsAppId = key;
-            const res = await callGateway('clientportal', 'clientPortalRequestDisconnect', payload);
+            var action = (category === 'social')
+                ? 'clientPortalDisconnectSocial'
+                : 'clientPortalRequestDisconnect';
+            const res = await callGateway('clientportal', action, payload);
             if (typeof showToast === 'function') {
-                showToast((res && res.message) || (res && res.success ? 'Request sent' : 'Request failed'), res && res.success ? 'success' : 'error');
+                var okMsg = category === 'social' ? 'Disconnected' : 'Request sent';
+                showToast((res && res.message) || (res && res.success ? okMsg : 'Request failed'), res && res.success ? 'success' : 'error');
             }
+            try { if (typeof loadIntegrationsPanel === 'function') loadIntegrationsPanel(); } catch (_) { }
         }
         async function clientSetTikTokMode(mode) {
             const res = await callGateway('clientportal', 'clientPortalSetTikTokMode', { mode: mode });
@@ -4375,28 +4381,50 @@
             var sel = document.getElementById('commentActivitySelect');
             var posts = window.__commentActivityPosts || [];
             var i = sel ? Number(sel.value) : -1;
+            var root = document.getElementById('commentsListRoot');
             if (isNaN(i) || i < 0 || !posts[i]) {
-                var root = document.getElementById('commentsListRoot');
                 if (root) root.innerHTML = '';
                 return;
             }
             var p = posts[i];
             window.__commentSelected = { platform: p.platform || 'facebook', postId: p.postId || '' };
-            clientLoadPostComments();
+            // Show AI replies logged for this post immediately
+            if (root) {
+                var replies = p.replyItems || (p.samples || []).filter(function (s) {
+                    return s.action === 'reply' || s.action === 'ai_reply';
+                });
+                var htmlR = '';
+                if (replies.length) {
+                    htmlR = '<div class="mb-3 rounded-lg border border-emerald-800/50 bg-emerald-950/30 p-2 space-y-1.5">' +
+                        '<p class="text-[10px] font-semibold text-emerald-400 uppercase tracking-wide">AI replies on this post (' + replies.length + ')</p>' +
+                        replies.map(function (r) {
+                            var t = (r.replyText || r.preview || '').slice(0, 200);
+                            var esc = (typeof escapeHtml === 'function') ? escapeHtml : function (x) { return String(x || ''); };
+                            return '<div class="text-[11px] text-slate-200 border-b border-slate-800/80 pb-1">' +
+                                '<span class="text-slate-500 text-[9px]">' + esc(String(r.at || '')) + '</span> ' +
+                                '<span class="text-slate-300">' + esc(t) + '</span></div>';
+                        }).join('') + '</div>';
+                } else {
+                    htmlR = '<p class="text-[10px] text-slate-500 mb-2">No AI reply rows logged yet for this post (replies still appear on the social network).</p>';
+                }
+                root.innerHTML = htmlR + '<p class="text-[10px] text-slate-500 mb-1">Live comments:</p><div id="commentsLiveList" class="space-y-2 text-xs text-slate-400">Loading…</div>';
+            }
+            clientLoadPostComments(null, null, 'commentsLiveList');
         }
 
         async function clientLoadPostComments(platform, postId, mountId) {
             // Comments card path (dropdown selection)
-            if (platform == null && postId == null && !mountId) {
+            if (platform == null && postId == null) {
                 var sel = window.__commentSelected || {};
                 platform = sel.platform;
                 postId = sel.postId;
-                var root = document.getElementById('commentsListRoot');
+                var root = document.getElementById(mountId || 'commentsListRoot');
                 if (!platform || !postId) {
-                    if (root) root.innerHTML = '<p class="text-slate-500">Select a post from the list above.</p>';
+                    if (root && !mountId) root.innerHTML = '<p class="text-slate-500">Select a post from the list above.</p>';
                     return;
                 }
-                if (root) root.innerHTML = '<p class="text-slate-500">Loading…</p>';
+                if (root && !mountId) root.innerHTML = '<p class="text-slate-500">Loading…</p>';
+                else if (root && mountId) root.innerHTML = '<p class="text-slate-500">Loading…</p>';
                 var res;
                 try {
                     res = await callGateway('clientportal', 'clientPortalListPostComments', {
@@ -7271,8 +7299,8 @@
 
         window.clientRequestSocialDisconnect = async function (platform) {
             try {
-                var res = await callGateway("clientportal", "clientPortalRequestDisconnect", {
-                    category: "social", platform: platform, type: platform
+                var res = await callGateway("clientportal", "clientPortalDisconnectSocial", {
+                    platform: platform, type: platform
                 });
                 if (res && res.success === false) throw new Error(res.message || "Failed");
                 if (res && res.success) {
@@ -7285,8 +7313,8 @@
                     else if (typeof showToast === "function") showToast(msg, "error");
                 }
                 return;
-                if (typeof toast === "function") toast(res.message || "Disconnect requested — admin will complete removal");
-                else if (typeof showToast === "function") showToast(res.message || "Disconnect requested", "success");
+                if (typeof toast === "function") toast(res.message || "Disconnected");
+                else if (typeof showToast === "function") showToast(res.message || "Disconnected", "success");
             } catch (e) {
                 if (typeof toast === "function") toast(e.message || "Request failed", true);
                 else if (typeof showToast === "function") showToast(e.message || "Request failed", "error");
