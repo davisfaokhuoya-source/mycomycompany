@@ -1938,6 +1938,15 @@
                             class="text-[10px] font-mono tracking-wider text-slate-500 uppercase px-2 mb-1 block">Quick
                             Run</span>
                         <div>
+                            <label class="block text-[10px] text-slate-500 mb-0.5">Client (ties to programmes)</label>
+                            <select id="v5QuickClient"
+                                class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-[10px] text-white focus:outline-none focus:border-emerald-500">
+                                <option value="">— Admin / no client —</option>
+                            </select>
+                            <p class="text-[9px] text-slate-600 mt-0.5">Uses client About + services for AI. History
+                                still loads from V5 sheets.</p>
+                        </div>
+                        <div>
                             <label class="block text-[10px] text-slate-500 mb-0.5">Industry / Niche</label>
                             <select id="v5QuickIndustry"
                                 class="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-[10px] text-white focus:outline-none focus:border-emerald-500">
@@ -5142,8 +5151,7 @@
                             </label>
                             <p class="text-[10px] text-slate-500 md:col-span-2 self-center">Offshore clients are billed
                                 from USD list prices × the FX rate above. Local clients use NGN list prices. Save with
-                                <strong class="text-slate-300">Save tiers only</strong>.
-                            </p>
+                                <strong class="text-slate-300">Save tiers only</strong>.</p>
                         </div>
                         <div class="border border-slate-800 rounded-lg p-3 bg-slate-950/50">
                             <p class="text-[11px] font-semibold text-emerald-400 mb-2"><i
@@ -5873,6 +5881,15 @@
                     <label class="block text-xs text-slate-400 mb-1">Company Name</label>
                     <input type="text" id="agentCompanyName" required placeholder="Acme Corp Ltd"
                         class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Business about <span class="text-slate-600">(AI —
+                            replies &amp; documents)</span></label>
+                    <textarea id="agentClientAbout" rows="3" maxlength="4000"
+                        placeholder="What the company does, who they serve, location, main services…"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500 leading-relaxed"></textarea>
+                    <p class="text-[10px] text-slate-600 mt-1">Optional. Can also be edited later under Edit client. AI
+                        uses this for comment replies and documents.</p>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -7932,8 +7949,74 @@
                 summary: 'Unlimited campaigns · paid amplification · dedicated strategist · predictive lead scoring — admin-quoted'
             }
         };
-        const OPS_TIER_KEYS = Object.keys(AGENT_TIER_INFO).filter(k => AGENT_TIER_INFO[k].suite === 'ops');
-        const DIGITAL_TIER_KEYS = Object.keys(AGENT_TIER_INFO).filter(k => AGENT_TIER_INFO[k].suite === 'digital');
+        let OPS_TIER_KEYS = Object.keys(AGENT_TIER_INFO).filter(k => AGENT_TIER_INFO[k].suite === 'ops');
+        let DIGITAL_TIER_KEYS = Object.keys(AGENT_TIER_INFO).filter(k => AGENT_TIER_INFO[k].suite === 'digital');
+
+        async function syncRegistrationTiersFromCatalog() {
+            try {
+                var res = await executeSecureBridgeCall('agent', 'agent-list-service-tiers', {});
+                var tiers = (res && (res.tiers || res.data || res.list)) || [];
+                if (!Array.isArray(tiers) || !tiers.length) {
+                    // billing catalog fallback
+                    var cat = await executeSecureBridgeCall('agent', 'agent-get-billing-catalog', { region: 'NG' });
+                    tiers = [];
+                    if (cat && cat.success) {
+                        (cat.opsTiers || []).forEach(function (t) {
+                            tiers.push({ id: t.id, suite: 'ops', name: t.name, tagline: t.tagline, priceNgn: t.priceLocalNgn, priceUsd: t.priceOffshoreUsd });
+                        });
+                        (cat.digitalTiers || []).forEach(function (t) {
+                            tiers.push({ id: t.id, suite: 'digital', name: t.name, tagline: t.tagline, priceNgn: t.priceLocalNgn, priceUsd: t.priceOffshoreUsd });
+                        });
+                    }
+                }
+                if (!tiers.length) return;
+                tiers.forEach(function (t) {
+                    var id = String(t.id || t.key || '').trim();
+                    if (!id) return;
+                    var suite = String(t.suite || t.Suite || '').toLowerCase();
+                    if (!suite) {
+                        suite = (id.indexOf('digital') >= 0) ? 'digital' : 'ops';
+                    }
+                    var label = t.name || t.label || id;
+                    var summary = t.tagline || t.summary || t.description || '';
+                    var priceNgn = Number(t.priceNgn || t.priceLocalNgn || t.price || 0) || null;
+                    var priceUsd = Number(t.priceUsd || t.priceOffshoreUsd || 0) || null;
+                    if (!AGENT_TIER_INFO[id]) {
+                        AGENT_TIER_INFO[id] = { suite: suite, label: label, summary: summary, priceNgn: priceNgn };
+                    } else {
+                        AGENT_TIER_INFO[id].label = label || AGENT_TIER_INFO[id].label;
+                        AGENT_TIER_INFO[id].summary = summary || AGENT_TIER_INFO[id].summary;
+                        if (priceNgn) AGENT_TIER_INFO[id].priceNgn = priceNgn;
+                        if (priceUsd) AGENT_TIER_INFO[id].priceUsd = priceUsd;
+                        AGENT_TIER_INFO[id].suite = suite || AGENT_TIER_INFO[id].suite;
+                    }
+                    if (priceNgn && AGENT_TIER_INFO[id].priceFrom !== undefined) {
+                        AGENT_TIER_INFO[id].priceFrom = priceNgn;
+                    }
+                });
+                // rebuild key lists
+                window.OPS_TIER_KEYS = Object.keys(AGENT_TIER_INFO).filter(function (k) { return AGENT_TIER_INFO[k].suite === 'ops'; });
+                window.DIGITAL_TIER_KEYS = Object.keys(AGENT_TIER_INFO).filter(function (k) { return AGENT_TIER_INFO[k].suite === 'digital'; });
+                // refresh register dropdowns if present
+                try {
+                    var ops = document.getElementById('agentOpsTier');
+                    var dig = document.getElementById('agentDigitalTier');
+                    if (ops && typeof buildTierOptionsHtml === 'function') {
+                        var keepO = ops.value;
+                        ops.innerHTML = buildTierOptionsHtml(window.OPS_TIER_KEYS || OPS_TIER_KEYS, true);
+                        if (keepO) ops.value = keepO;
+                    }
+                    if (dig && typeof buildTierOptionsHtml === 'function') {
+                        var keepD = dig.value;
+                        dig.innerHTML = buildTierOptionsHtml(window.DIGITAL_TIER_KEYS || DIGITAL_TIER_KEYS, true);
+                        if (keepD) dig.value = keepD;
+                    }
+                } catch (_) { }
+            } catch (e) {
+                console.warn('syncRegistrationTiersFromCatalog', e);
+            }
+        }
+
 
         // Single source of truth for resolving a client's Ops / Digital tier.
         // A client's suite tier normally lives in its own OpsTier/DigitalTier
@@ -8605,7 +8688,7 @@
                 'publish-connections': loadSocialConnections,
                 'publish-queue': loadPublishQueue,
                 'publish-settings': loadPublishGlobalSwitch,
-                'v5-linkedin': loadV5LinkedInHistory,
+                'v5-linkedin': function () { try { v5PopulateClientSelect(); } catch (_) { } loadV5LinkedInHistory(); },
                 'v5-trends': loadV5TrendsHistory,
                 'v5-content': loadV5ContentHistory,
                 'v5-calendar-content': loadV5CalendarHistory,
@@ -10976,6 +11059,7 @@
             if (res.success) { closeEventCreationModal(); loadCalendarEvents(); }
         }
 
+        document.addEventListener('DOMContentLoaded', function () { try { syncRegistrationTiersFromCatalog(); } catch (_) { } });
         document.addEventListener('DOMContentLoaded', () => {
             const editForm = document.getElementById('edit-form');
             if (!editForm) return;
@@ -11072,6 +11156,29 @@
             return document.getElementById('v5QuickLocation')?.value?.trim() || 'Nigeria';
         }
 
+
+        function v5GetSelectedClientId() {
+            var el = document.getElementById('v5QuickClient');
+            return (el && el.value) ? String(el.value).trim() : '';
+        }
+        async function v5PopulateClientSelect() {
+            var sel = document.getElementById('v5QuickClient');
+            if (!sel) return;
+            try {
+                var res = await executeSecureBridgeCall('agent', 'agent-get-clients', {});
+                var list = (res && (res.clients || res.data || res.rows)) || [];
+                if (!Array.isArray(list)) list = [];
+                var cur = sel.value;
+                sel.innerHTML = '<option value="">— Admin / no client —</option>' + list.map(function (c) {
+                    var id = c.ClientID || c.clientId || '';
+                    var name = c.CompanyName || c.companyName || id;
+                    return '<option value="' + String(id).replace(/"/g, '') + '">' +
+                        String(name).replace(/</g, '') + ' (' + String(id).replace(/</g, '') + ')</option>';
+                }).join('');
+                if (cur) sel.value = cur;
+            } catch (e) { console.warn('v5 clients', e); }
+        }
+
         async function runV5LinkedIn() {
             const query = document.getElementById('v5LinkedInQuery')?.value?.trim();
             const title = document.getElementById('v5LinkedInTitle')?.value;
@@ -11083,7 +11190,7 @@
             }
 
             showToast('Running LinkedIn scrape…', 'info');
-            const res = await executeSecureBridgeCall('leads', 'v5-scrape-linkedin', { query, title, location });
+            const res = await executeSecureBridgeCall('leads', 'v5-scrape-linkedin', { clientId: v5GetSelectedClientId(), query, title, location });
 
             if (res.success) {
                 showToast(`Scrape complete: ${res.snippetsCount || 0} snippets found.`, 'success');
@@ -11100,7 +11207,7 @@
             if (!industry) { showToast('Set an industry in Quick Run or the sidebar.', 'error'); return; }
 
             showToast('Scanning trends…', 'info');
-            const res = await executeSecureBridgeCall('leads', 'v5-scrape-trends', { industry, location });
+            const res = await executeSecureBridgeCall('leads', 'v5-scrape-trends', { clientId: v5GetSelectedClientId(), industry, location });
 
             if (res.success) {
                 showToast(`Trends loaded for ${industry}.`, 'success');
@@ -11133,7 +11240,7 @@
             if (!industry) { showToast('Enter an industry.', 'error'); return; }
 
             showToast('Generating content…', 'info');
-            const res = await executeSecureBridgeCall('leads', 'v5-generate-content', { industry, platform });
+            const res = await executeSecureBridgeCall('leads', 'v5-generate-content', { clientId: v5GetSelectedClientId(), industry, platform });
 
             if (res.success) {
                 showToast(`Generated ${res.postsCreated || 0} posts using "${res.angle}" angle.`, 'success');
@@ -11148,7 +11255,7 @@
             if (!topic) { showToast('Enter a topic.', 'error'); return; }
 
             showToast('Building 30-day calendar…', 'info');
-            const res = await executeSecureBridgeCall('leads', 'v5-generate-calendar', { topic });
+            const res = await executeSecureBridgeCall('leads', 'v5-generate-calendar', { clientId: v5GetSelectedClientId(), topic, industry: topic, days: 30 });
 
             if (res.success) {
                 showToast(`Calendar built: ${res.postsPlanned || 0} posts planned.`, 'success');
@@ -11163,7 +11270,7 @@
             if (!niche) { showToast('Enter a niche.', 'error'); return; }
 
             showToast('Building drip sequence…', 'info');
-            const res = await executeSecureBridgeCall('leads', 'v5-generate-drip', { niche });
+            const res = await executeSecureBridgeCall('leads', 'v5-generate-drip', { clientId: v5GetSelectedClientId(), niche, industry: niche });
 
             if (res.success) {
                 showToast(`${res.emailsCreated || 5}-email drip sequence created.`, 'success');
@@ -11180,7 +11287,7 @@
             if (!industry) { showToast('Enter an industry.', 'error'); return; }
 
             showToast('Generating WhatsApp drafts…', 'info');
-            const res = await executeSecureBridgeCall('leads', 'v5-whatsapp-drafts', { industry, leadCount });
+            const res = await executeSecureBridgeCall('leads', 'v5-whatsapp-drafts', { clientId: v5GetSelectedClientId(), industry, leadCount });
 
             if (res.success) {
                 showToast(`${res.draftCount || 0} WhatsApp drafts created.`, 'success');
@@ -11195,7 +11302,7 @@
             if (!niche) { showToast('Enter a niche.', 'error'); return; }
 
             showToast('Analyzing market…', 'info');
-            const res = await executeSecureBridgeCall('leads', 'v5-competitor-analysis', { niche });
+            const res = await executeSecureBridgeCall('leads', 'v5-competitor-analysis', { clientId: v5GetSelectedClientId(), niche, industry: niche, competitor: niche });
 
             if (res.success) {
                 showToast(`Analyzed ${res.competitorsAnalyzed || 0} competitors.`, 'success');
@@ -11943,6 +12050,7 @@
             }
         }
 
+        async function __openAgentClientRegisterWithTiers() { try { await syncRegistrationTiersFromCatalog(); } catch (_) { } }
         function openAgentClientRegisterModal() {
             const modal = document.getElementById('modalAgentClientRegister');
             if (!modal) return;
@@ -12245,7 +12353,9 @@
                 return;
             }
 
+            const about = ((document.getElementById('agentClientAbout') || {}).value || '').trim();
             let payload = { companyName, contactEmail, phone, website, country, industry };
+            if (about) payload.about = about;
 
             if (customTier === 'custom') {
                 payload.tier = 'custom';
@@ -12288,6 +12398,16 @@
 
             if (res.success) {
                 showToast(`Client ${companyName} registered successfully!`, 'success');
+                try {
+                    var about = (document.getElementById('agentClientAbout') || {}).value || '';
+                    var newId = (res.clientId || res.ClientID || (res.client && (res.client.ClientID || res.client.clientId)) || '');
+                    if (about && newId) {
+                        await executeSecureBridgeCall('agent', 'agent-set-business-about', {
+                            clientId: newId,
+                            about: about
+                        });
+                    }
+                } catch (_ab) { console.warn('about on register', _ab); }
                 closeAgentClientRegisterModal();
                 loadAgentClients();
             } else {
@@ -15934,8 +16054,8 @@ ${a.Status === 'Pending Review' ? `
         async function loadAdminClientBusinessAbout(clientId) {
             var cid = clientId || adminCurrentClientId();
             var hint = document.getElementById('adminBusinessAboutHint');
-            var ta = document.getElementById('adminBusinessAbout');
             var ta2 = document.getElementById('editClientAbout');
+            var ta = ta2;
             if (!cid) {
                 if (hint) hint.textContent = 'Select a client first';
                 return null;
@@ -15957,7 +16077,7 @@ ${a.Status === 'Pending Review' ? `
         async function saveAdminClientBusinessAbout(clientId) {
             var cid = clientId || adminCurrentClientId();
             var hint = document.getElementById('adminBusinessAboutHint');
-            var ta = document.getElementById('adminBusinessAbout') || document.getElementById('editClientAbout');
+            var ta = document.getElementById('editClientAbout');
             if (!cid) {
                 if (typeof showToast === 'function') showToast('Select a client first', 'info');
                 return;
@@ -20317,20 +20437,4 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
     </script>
 </body>
 
-</html <!-- Business about (AI) -->
-<div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2 mb-3">
-    <p class="text-xs font-semibold text-white"><i class="fa-solid fa-building text-emerald-500"></i> Business about
-        <span class="text-[10px] text-slate-500 font-normal">(AI — replies &amp; documents)</span>
-    </p>
-    <textarea id="adminBusinessAbout" rows="4" maxlength="4000"
-        placeholder="Select a client, then describe their business…"
-        class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white leading-relaxed"></textarea>
-    <div class="flex flex-wrap gap-2 items-center">
-        <button type="button" onclick="saveAdminClientBusinessAbout()"
-            class="text-[10px] px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white">Save about</button>
-        <button type="button" onclick="loadAdminClientBusinessAbout()"
-            class="text-[10px] px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-200">Reload</button>
-        <span id="adminBusinessAboutHint" class="text-[10px] text-slate-500"></span>
-    </div>
-</div>
->
+</html>
