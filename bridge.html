@@ -6163,6 +6163,15 @@
                             (NGN).</p>
                     </div>
                 </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-[10px] text-slate-500 mb-0.5">Business about <span
+                            class="text-slate-600">(AI profile)</span></label>
+                    <textarea id="editClientAbout" rows="4" maxlength="4000"
+                        placeholder="What the company does, who they serve, location, main services…"
+                        class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white leading-relaxed"></textarea>
+                    <p class="text-[9px] text-slate-600 mt-0.5">Used by AI for comment replies and documents. Client can
+                        also edit this under Integrations.</p>
+                </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Notes</label>
                     <textarea id="editClientNotes" rows="3"
@@ -15908,6 +15917,70 @@ ${a.Status === 'Pending Review' ? `
             }
         }
 
+
+        function adminCurrentClientId() {
+            try {
+                if (window.ADMIN_SELECTED_CLIENT_ID) return String(window.ADMIN_SELECTED_CLIENT_ID);
+                if (window.selectedClientId) return String(window.selectedClientId);
+                var el = document.getElementById('editClientInfoId');
+                if (el && el.value) return String(el.value);
+                var el2 = document.getElementById('adminClientSelect');
+                if (el2 && el2.value) return String(el2.value);
+                var el3 = document.getElementById('sigClientId');
+                if (el3 && el3.value) return String(el3.value);
+            } catch (_) { }
+            return '';
+        }
+        async function loadAdminClientBusinessAbout(clientId) {
+            var cid = clientId || adminCurrentClientId();
+            var hint = document.getElementById('adminBusinessAboutHint');
+            var ta = document.getElementById('adminBusinessAbout');
+            var ta2 = document.getElementById('editClientAbout');
+            if (!cid) {
+                if (hint) hint.textContent = 'Select a client first';
+                return null;
+            }
+            if (hint) hint.textContent = 'Loading…';
+            try {
+                var res = await callGateway('agent', 'agent-get-business-about', { clientId: cid });
+                var about = (res && res.about) || '';
+                if (ta) ta.value = about;
+                if (ta2) ta2.value = about;
+                if (hint) hint.textContent = about ? 'Loaded' : 'Not set yet';
+                return res;
+            } catch (e) {
+                if (hint) hint.textContent = 'Could not load';
+                console.warn(e);
+                return null;
+            }
+        }
+        async function saveAdminClientBusinessAbout(clientId) {
+            var cid = clientId || adminCurrentClientId();
+            var hint = document.getElementById('adminBusinessAboutHint');
+            var ta = document.getElementById('adminBusinessAbout') || document.getElementById('editClientAbout');
+            if (!cid) {
+                if (typeof showToast === 'function') showToast('Select a client first', 'info');
+                return;
+            }
+            var about = ta ? ta.value : '';
+            if (hint) hint.textContent = 'Saving…';
+            try {
+                var res = await callGateway('agent', 'agent-set-business-about', { clientId: cid, about: about });
+                if (res && res.success) {
+                    if (hint) hint.textContent = 'Saved';
+                    if (typeof showToast === 'function') showToast(res.message || 'Business about saved', 'success');
+                } else {
+                    if (hint) hint.textContent = 'Save failed';
+                    if (typeof showToast === 'function') showToast((res && res.message) || 'Could not save', 'info');
+                }
+                return res;
+            } catch (e) {
+                if (hint) hint.textContent = 'Save failed';
+                if (typeof showToast === 'function') showToast(String(e.message || e), 'info');
+                return null;
+            }
+        }
+
         async function saveAdminClientSignatory() {
             const clientId = document.getElementById('adminSigClientId')?.value || document.getElementById('dsUploadClientId')?.value;
             const status = document.getElementById('adminSigStatus');
@@ -17410,6 +17483,11 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             document.getElementById('editClientContactEmail').value = c.ContactEmail || '';
             document.getElementById('editClientPhone').value = c.Phone || '';
             document.getElementById('editClientWebsite').value = c.Website || '';
+            try {
+                var aboutEl = document.getElementById('editClientAbout');
+                if (aboutEl) aboutEl.value = c.About || c.BusinessDescription || c.about || '';
+                loadAdminClientBusinessAbout(clientId);
+            } catch (_) { }
             document.getElementById('editClientCountry').value = c.Country || 'NG';
             try {
                 var br = c.BillingRegion || c.billingRegion || 'NG';
@@ -17444,6 +17522,17 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
             const res = await executeSecureBridgeCall('agent', 'agent-update-client-info', payload);
             if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
+            // Also persist Business about for AI (if field present)
+            try {
+                var aboutEl = document.getElementById('editClientAbout');
+                var cidAbout = (document.getElementById('editClientInfoId') || {}).value || payload.clientId;
+                if (res && res.success && aboutEl && cidAbout) {
+                    await executeSecureBridgeCall('agent', 'agent-set-business-about', {
+                        clientId: cidAbout,
+                        about: aboutEl.value || ''
+                    });
+                }
+            } catch (_ab) { console.warn('about save', _ab); }
             showToast(res.success ? 'Client info updated.' : (res.message || 'Update failed.'), res.success ? 'success' : 'error');
             if (res.success) { closeAgentEditClientInfoModal(); loadAgentClients(); }
         }
@@ -20228,4 +20317,20 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
     </script>
 </body>
 
-</html>
+</html <!-- Business about (AI) -->
+<div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2 mb-3">
+    <p class="text-xs font-semibold text-white"><i class="fa-solid fa-building text-emerald-500"></i> Business about
+        <span class="text-[10px] text-slate-500 font-normal">(AI — replies &amp; documents)</span>
+    </p>
+    <textarea id="adminBusinessAbout" rows="4" maxlength="4000"
+        placeholder="Select a client, then describe their business…"
+        class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white leading-relaxed"></textarea>
+    <div class="flex flex-wrap gap-2 items-center">
+        <button type="button" onclick="saveAdminClientBusinessAbout()"
+            class="text-[10px] px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white">Save about</button>
+        <button type="button" onclick="loadAdminClientBusinessAbout()"
+            class="text-[10px] px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-200">Reload</button>
+        <span id="adminBusinessAboutHint" class="text-[10px] text-slate-500"></span>
+    </div>
+</div>
+>
