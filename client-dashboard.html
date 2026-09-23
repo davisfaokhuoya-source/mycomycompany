@@ -1811,6 +1811,27 @@
                     </div>
 
 
+
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2" id="businessAboutCard">
+                        <div class="flex items-center justify-between gap-2">
+                            <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
+                                    class="fa-solid fa-building text-emerald-500"></i> Business about</h3>
+                            <span class="text-[10px] text-slate-500">AI uses this for replies &amp; documents</span>
+                        </div>
+                        <p class="text-[10px] text-slate-500 leading-relaxed">Write what your company does, who you
+                            serve, location, and main services. Keep it factual so AI answers and documents stay
+                            accurate.</p>
+                        <textarea id="businessAboutText" rows="5" maxlength="4000"
+                            placeholder="e.g. We are an Abuja-based firm helping SMEs with company registration, CAC filings, compliance, and digital operations…"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg text-[12px] text-white px-3 py-2 leading-relaxed"></textarea>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" onclick="clientSaveBusinessAbout()"
+                                class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-medium">Save
+                                about</button>
+                            <span id="businessAboutHint" class="text-[10px] text-slate-500"></span>
+                        </div>
+                    </div>
+
                     <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3"
                         id="commentsModerationCard">
                         <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
@@ -2894,7 +2915,7 @@
                 });
             }
             if (name === 'overview') loadOverview();
-            if (name === 'integrations') { try { loadIntegrationsPanel(); } catch (_) { } try { if (typeof clientLoadCommentActivityPosts === 'function') clientLoadCommentActivityPosts(); } catch (_) { } try { if (typeof clientRefreshCommentAiToggle === 'function') clientRefreshCommentAiToggle(); } catch (_) { } }
+            if (name === 'integrations') { try { loadIntegrationsPanel(); } catch (_) { } try { if (typeof clientLoadBusinessAbout === 'function') clientLoadBusinessAbout(); } catch (_) { } try { if (typeof clientLoadCommentActivityPosts === 'function') clientLoadCommentActivityPosts(); } catch (_) { } try { if (typeof clientRefreshCommentAiToggle === 'function') clientRefreshCommentAiToggle(); } catch (_) { } }
             if (name === 'donate') prefillDonationForm();
             if (name === 'billing') {
                 const err = document.getElementById('renewError');
@@ -4353,6 +4374,39 @@
             return res;
         }
 
+
+
+        async function clientLoadBusinessAbout() {
+            try {
+                var res = await callGateway('clientportal', 'clientPortalGetBusinessAbout', {});
+                var ta = document.getElementById('businessAboutText');
+                var hint = document.getElementById('businessAboutHint');
+                if (ta && res && res.about != null) ta.value = res.about || '';
+                if (hint) hint.textContent = (res && res.about) ? 'Loaded' : 'Not set yet';
+            } catch (e) {
+                console.warn('load about', e);
+            }
+        }
+        async function clientSaveBusinessAbout() {
+            var ta = document.getElementById('businessAboutText');
+            var hint = document.getElementById('businessAboutHint');
+            var about = ta ? ta.value : '';
+            if (hint) hint.textContent = 'Saving…';
+            try {
+                var res = await callGateway('clientportal', 'clientPortalSetBusinessAbout', { about: about });
+                if (res && res.success) {
+                    if (hint) hint.textContent = 'Saved — AI will use this';
+                    if (typeof notifyUser === 'function') notifyUser(res.message || 'Business about saved', 'success');
+                    else if (typeof showToast === 'function') showToast(res.message || 'Saved', 'success');
+                } else {
+                    if (hint) hint.textContent = 'Could not save';
+                    if (typeof notifyUser === 'function') notifyUser((res && res.message) || 'Could not save', 'info');
+                }
+            } catch (e) {
+                if (hint) hint.textContent = 'Could not save';
+                if (typeof notifyUser === 'function') notifyUser(String(e.message || e), 'info');
+            }
+        }
 
         async function clientLoadCommentActivityPosts() {
             var sel = document.getElementById('commentActivitySelect');
