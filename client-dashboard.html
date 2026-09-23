@@ -5462,20 +5462,19 @@
                 return true;
             });
 
+            // Do NOT reset platform dropdown to "All" — keep user selection.
+            // If empty for this platform, try live discover for that platform only.
             if (!posts.length && platform) {
-                // Retry without platform filter so replies still show
                 try {
-                    var res2 = await callGateway('clientportal', 'clientPortalListCommentActivityPosts', {
-                        platform: '',
-                        dateFrom: dateFrom,
-                        dateTo: dateTo
+                    var res3 = await callGateway('clientportal', 'clientPortalDiscoverCommentPosts', {
+                        platform: platform,
+                        limit: 10
                     });
-                    var posts2 = (res2 && (res2.posts || res2.data || [])) || [];
-                    if (posts2.length) {
-                        posts = posts2;
-                        platform = '';
-                        var platEl = document.getElementById('commentFilterPlatform');
-                        if (platEl) platEl.value = '';
+                    var ids = (res3 && (res3.postIds || [])) || [];
+                    if (ids.length) {
+                        posts = ids.map(function (pid) {
+                            return { platform: platform, postId: String(pid), replies: 0, deleted: 0, lastAt: new Date().toISOString(), samples: [], replyItems: [], source: 'live_discover' };
+                        });
                     }
                 } catch (_) { }
             }
@@ -7429,13 +7428,68 @@
                 if (p) p.classList.toggle("hidden");
             };
 
-            window.loadClientServiceFlags = async function () {
-                try {
-                    var res = await gw("clientportal", "clientPortalGetServiceFlags", { clientId: sid(), token: tok() });
-                    window._clientServiceFlags = res;
-                    toast("Service flags refreshed");
-                } catch (e) { toast(e.message || "Flags failed", true); }
+            window.SERVICE_FLAG_LABELS = window.SERVICE_FLAG_LABELS || {
+                "mailbox.connect": "Email — connect mailbox",
+                "mailbox.read": "Email — read inbox",
+                "mailbox.autoReply": "Email — auto-reply",
+                "mailbox.send": "Email — send",
+                "whatsapp.connect": "WhatsApp — connect",
+                "whatsapp.read": "WhatsApp — read",
+                "whatsapp.reply": "WhatsApp — reply",
+                "crm.connect": "CRM — connect",
+                "crm.sync": "CRM — sync",
+                "social.connect": "Social — connect accounts",
+                "social.calendar": "Social — calendar",
+                "social.publish": "Social — publish",
+                "docs.generate": "Documents — generate",
+                "docs.send": "Documents — send",
+                "docs.preview": "Documents — preview",
+                "chat.live": "Live chat",
+                "appointments": "Appointments",
+                "billing.selfServe": "Billing self-serve"
             };
+            window.loadClientServiceFlags = async function loadClientServiceFlags() {
+                try {
+                    var res = await callGateway("clientportal", "clientPortalGetServiceFlags", {});
+                    if (!res || res.success === false) {
+                        if (typeof toast === "function") toast((res && res.message) || "Could not load service switches", true);
+                        return res;
+                    }
+                    var flags = res.flags || {};
+                    window.__SERVICE_FLAGS = flags;
+                    window._clientServiceFlags = res;
+                    var catalog = res.catalog || Object.keys(flags);
+                    var controllable = res.clientControllable;
+                    if (!Array.isArray(controllable) || !controllable.length) controllable = catalog;
+                    var sel = document.getElementById("serviceFlagSelect");
+                    if (sel) {
+                        var cur = sel.value;
+                        var opts = '<option value="">Choose a capability…</option>';
+                        catalog.forEach(function (k) {
+                            var label = (window.SERVICE_FLAG_LABELS && window.SERVICE_FLAG_LABELS[k]) || k;
+                            opts += '<option value="' + String(k).replace(/"/g, "") + '">' + label + '</option>';
+                        });
+                        sel.innerHTML = opts;
+                        if (cur) sel.value = cur;
+                    }
+                    var sum = document.getElementById("serviceFlagsOnSummary");
+                    if (sum) {
+                        var onKeys = Object.keys(flags).filter(function (k) { return flags[k] === true || flags[k] === "true"; });
+                        sum.innerHTML = onKeys.length
+                            ? onKeys.map(function (k) {
+                                var lab = (window.SERVICE_FLAG_LABELS && window.SERVICE_FLAG_LABELS[k]) || k;
+                                return '<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-900/40 text-emerald-300 border border-emerald-800">' + lab + '</span>';
+                            }).join(" ")
+                            : '<span class="text-[10px] text-slate-600">No capabilities marked ON (or defaults apply).</span>';
+                    }
+                    if (typeof onServiceFlagSelectChange === "function") onServiceFlagSelectChange();
+                    return res;
+                } catch (e) {
+                    if (typeof toast === "function") toast(String(e.message || e), true);
+                    return { success: false, message: String(e) };
+                }
+            };
+
 
             window.downloadDocument = async function (docId) {
                 try {
@@ -8038,6 +8092,25 @@
                 } catch (e) { toast(e.message || "Reconnect failed", true); }
             };
 
+            window.clientDisconnectMailbox = async function (mailboxId) {
+                if (!mailboxId) return;
+                if (!confirm("Remove this mailbox connection?")) return;
+                try {
+                    var res = await callGateway("clientportal", "clientPortalRevokeIntegration", {
+                        category: "mailbox", mailboxId: mailboxId
+                    });
+                    if (res && res.success === false) {
+                        res = await callGateway("clientportal", "clientPortalRequestDisconnect", {
+                            category: "mailbox", mailboxId: mailboxId
+                        });
+                    }
+                    if (res && res.success === false) throw new Error(res.message || "Failed");
+                    if (typeof toast === "function") toast((res && res.message) || "Mailbox removed");
+                    if (typeof loadIntegrationsPanel === "function") loadIntegrationsPanel();
+                } catch (e) {
+                    if (typeof toast === "function") toast(e.message || "Remove failed", true);
+                }
+            };
             window.clientRequestMailboxDisconnect = async function (mailboxId) {
                 try {
                     var res = await callGateway("clientportal", "clientPortalRequestDisconnect", {
@@ -8375,6 +8448,7 @@
                         var platform = c.platform || c.Platform || "";
                         var name = c.pageName || c.PageName || c.name || platform;
                         var status = c.status || c.Status || "Connected";
+                        var pageId = c.pageId || c.PageId || c.connectionId || "";
                         var platLow = String(platform).toLowerCase();
                         var badge = "";
                         if (platLow === "tiktok_business" || platLow === "tiktok-business") {
@@ -8386,7 +8460,7 @@
                             '<span class="text-slate-200 font-medium capitalize">' + esc(String(platform).replace(/_/g, " ")) + '</span>' + badge +
                             '<span class="text-slate-500 ml-2 text-[11px]">' + esc(name) + '</span>' +
                             '<span class="text-[10px] text-emerald-400/80 ml-2">' + esc(status) + '</span>',
-                            '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientRequestSocialDisconnect && clientRequestSocialDisconnect(\'' + esc(platform) + '\')">Remove</button>'
+                            '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientRequestSocialDisconnect(\'' + esc(platform) + '\',\'' + esc(pageId || '') + '\')">Disconnect</button>'
                         );
                     }).join("");
                 }
@@ -8416,29 +8490,29 @@
                     await clientRefreshCommentAiToggle();
                 }
             } catch (_) { }
+            try {
+                if (typeof loadClientServiceFlags === "function") {
+                    await loadClientServiceFlags();
+                }
+            } catch (_) { }
         };
 
-        window.clientRequestSocialDisconnect = async function (platform) {
+        window.clientRequestSocialDisconnect = async function (platform, pageId) {
+            if (!platform) return;
+            if (!confirm("Disconnect " + platform + "? You can reconnect anytime from Integrations.")) return;
             try {
                 var res = await callGateway("clientportal", "clientPortalDisconnectSocial", {
-                    platform: platform, type: platform
+                    platform: platform,
+                    pageId: pageId || "",
+                    connectionId: pageId || ""
                 });
                 if (res && res.success === false) throw new Error(res.message || "Failed");
-                if (res && res.success) {
-                    if (typeof toast === "function") toast(res.message || "Disconnected");
-                    else if (typeof showToast === "function") showToast(res.message || "Disconnected", "success");
-                    if (typeof loadIntegrationsPanel === "function") loadIntegrationsPanel();
-                } else {
-                    var msg = (res && res.message) || "Could not disconnect";
-                    if (typeof toast === "function") toast(msg);
-                    else if (typeof showToast === "function") showToast(msg, "error");
-                }
-                return;
-                if (typeof toast === "function") toast(res.message || "Disconnected");
-                else if (typeof showToast === "function") showToast(res.message || "Disconnected", "success");
+                if (typeof toast === "function") toast((res && res.message) || "Disconnected");
+                else if (typeof notifyUser === "function") notifyUser((res && res.message) || "Disconnected", "success");
+                if (typeof loadIntegrationsPanel === "function") loadIntegrationsPanel();
             } catch (e) {
-                if (typeof toast === "function") toast(e.message || "Request failed", true);
-                else if (typeof showToast === "function") showToast(e.message || "Request failed", "error");
+                if (typeof toast === "function") toast(e.message || "Disconnect failed", true);
+                else if (typeof notifyUser === "function") notifyUser(e.message || "Disconnect failed", "error");
             }
         };
         window.clientRequestCrmDisconnect = async function (type) {
@@ -8465,7 +8539,6 @@
         };
 
     </script>
-
     <script>
         (function () {
             var tries = 0;
