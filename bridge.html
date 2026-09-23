@@ -1629,6 +1629,8 @@
                     <span class="text-[10px] font-mono tracking-wider text-slate-500 uppercase px-3 mb-2 block">CRM
                         Pipelines</span>
                     <button class="leads-subview-link active" data-target-view="leads-matrix">Lead Table Matrix</button>
+                    <button class="leads-subview-link" data-target-view="client-lead-book">Client lead books</button>
+                    <button class="leads-subview-link" data-target-view="admin-lead-source">Admin lead source</button>
                     <button class="leads-subview-link" data-target-view="leads-broadcast">Broadcast
                         Configuration</button>
                     <button class="leads-subview-link" data-target-view="leads-drive">Mail Drive Reports</button>
@@ -1640,6 +1642,81 @@
 
                     <!-- VIEW: Lead Table Matrix -->
                     <!-- VIEW: Lead Table Matrix -->
+
+                    <div id="view-client-lead-book"
+                        class="leads-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex flex-wrap justify-between items-center gap-2 shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Client lead books</h3>
+                                <p class="text-xs text-slate-400">Free client-owned lists (ClientLeads). External CRM
+                                    stays paid under Integrations.</p>
+                            </div>
+                            <div class="flex gap-2 items-center">
+                                <select id="adminLeadBookClient"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white min-w-[180px]"></select>
+                                <button type="button" onclick="loadAdminClientLeadBook()"
+                                    class="text-xs px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white">Load</button>
+                            </div>
+                        </div>
+                        <div class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto">
+                            <table class="w-full text-left text-[11px]">
+                                <thead class="bg-slate-900 text-slate-400 sticky top-0">
+                                    <tr>
+                                        <th class="p-2">Name</th>
+                                        <th class="p-2">Company</th>
+                                        <th class="p-2">Email</th>
+                                        <th class="p-2">Stage</th>
+                                        <th class="p-2">Source</th>
+                                        <th class="p-2">Updated</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminClientLeadBookBody" class="divide-y divide-slate-800 text-slate-300">
+                                    <tr>
+                                        <td colspan="6" class="p-3 text-slate-500">Select a client and Load.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="view-admin-lead-source"
+                        class="leads-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex flex-wrap justify-between items-center gap-2 shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Admin lead source (mirror)</h3>
+                                <p class="text-xs text-slate-400">Append-only copies of every client lead
+                                    create/update/delete.</p>
+                            </div>
+                            <div class="flex gap-2 items-center">
+                                <select id="adminLeadSourceClient"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white min-w-[180px]">
+                                    <option value="">All clients</option>
+                                </select>
+                                <button type="button" onclick="loadAdminLeadSourceTable()"
+                                    class="text-xs px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white">Refresh</button>
+                            </div>
+                        </div>
+                        <div class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-auto">
+                            <table class="w-full text-left text-[11px]">
+                                <thead class="bg-slate-900 text-slate-400 sticky top-0">
+                                    <tr>
+                                        <th class="p-2">When</th>
+                                        <th class="p-2">Event</th>
+                                        <th class="p-2">Client</th>
+                                        <th class="p-2">Name</th>
+                                        <th class="p-2">Email</th>
+                                        <th class="p-2">Stage</th>
+                                        <th class="p-2">Source</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminLeadSourceBody" class="divide-y divide-slate-800 text-slate-300">
+                                    <tr>
+                                        <td colspan="7" class="p-3 text-slate-500">Click Refresh.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <div id="view-leads-matrix" class="leads-view flex-1 flex flex-col overflow-hidden space-y-4">
                         <div class="flex justify-between items-center shrink-0">
                             <div>
@@ -5151,7 +5228,8 @@
                             </label>
                             <p class="text-[10px] text-slate-500 md:col-span-2 self-center">Offshore clients are billed
                                 from USD list prices × the FX rate above. Local clients use NGN list prices. Save with
-                                <strong class="text-slate-300">Save tiers only</strong>.</p>
+                                <strong class="text-slate-300">Save tiers only</strong>.
+                            </p>
                         </div>
                         <div class="border border-slate-800 rounded-lg p-3 bg-slate-950/50">
                             <p class="text-[11px] font-semibold text-emerald-400 mb-2"><i
@@ -8668,6 +8746,8 @@
                 'client-onboarded': loadProductionFulfillment,
                 'client-interest': loadInterestApplications,
                 'leads-matrix': loadLeadsMatrix,
+                'client-lead-book': function () { adminPopulateLeadClientSelects(); },
+                'admin-lead-source': function () { adminPopulateLeadClientSelects(); loadAdminLeadSourceTable(); },
                 'leads-broadcast': loadBroadcastQueue,
                 'leads-drive': loadMailDriveReports,
                 'career-complaints': initializeModule_career_complaints,
@@ -11177,6 +11257,86 @@
                 }).join('');
                 if (cur) sel.value = cur;
             } catch (e) { console.warn('v5 clients', e); }
+        }
+
+
+
+        async function adminPopulateLeadClientSelects() {
+            try {
+                var res = await executeSecureBridgeCall('agent', 'agent-get-clients', {});
+                var list = (res && (res.clients || res.data || res.rows)) || [];
+                if (!Array.isArray(list)) list = [];
+                var opts = '<option value="">All clients</option>' + list.map(function (c) {
+                    var id = c.ClientID || c.clientId || '';
+                    var name = c.CompanyName || c.companyName || id;
+                    return '<option value="' + String(id).replace(/"/g, '') + '">' + String(name).replace(/</g, '') + '</option>';
+                }).join('');
+                var optsClient = '<option value="">Select client…</option>' + list.map(function (c) {
+                    var id = c.ClientID || c.clientId || '';
+                    var name = c.CompanyName || c.companyName || id;
+                    return '<option value="' + String(id).replace(/"/g, '') + '">' + String(name).replace(/</g, '') + '</option>';
+                }).join('');
+                var a = document.getElementById('adminLeadSourceClient');
+                var b = document.getElementById('adminLeadBookClient');
+                if (a) a.innerHTML = opts;
+                if (b) b.innerHTML = optsClient;
+            } catch (e) { console.warn(e); }
+        }
+        async function loadAdminClientLeadBook() {
+            var clientId = (document.getElementById('adminLeadBookClient') || {}).value;
+            var tb = document.getElementById('adminClientLeadBookBody');
+            if (!clientId) {
+                if (tb) tb.innerHTML = '<tr><td colspan="6" class="p-3 text-slate-500">Select a client.</td></tr>';
+                return;
+            }
+            if (tb) tb.innerHTML = '<tr><td colspan="6" class="p-3 text-slate-500">Loading…</td></tr>';
+            var res = await executeSecureBridgeCall('agent', 'agent-list-client-leads', { clientId: clientId });
+            var leads = (res && res.leads) || [];
+            if (!tb) return;
+            if (!leads.length) {
+                tb.innerHTML = '<tr><td colspan="6" class="p-3 text-slate-500">No leads for this client.</td></tr>';
+                return;
+            }
+            tb.innerHTML = leads.map(function (l) {
+                return '<tr><td class="p-2">' + escapeHtml(l.ContactName || '') + '</td><td class="p-2">' + escapeHtml(l.Company || '') +
+                    '</td><td class="p-2">' + escapeHtml(l.Email || '') + '</td><td class="p-2">' + escapeHtml(l.Stage || '') +
+                    '</td><td class="p-2">' + escapeHtml(l.Source || '') + '</td><td class="p-2 text-slate-500">' +
+                    escapeHtml(String(l.UpdatedAt || '').slice(0, 19)) + '</td></tr>';
+            }).join('');
+        }
+        async function loadAdminLeadSourceTable() {
+            var clientId = (document.getElementById('adminLeadSourceClient') || {}).value || '';
+            var tb = document.getElementById('adminLeadSourceBody');
+            if (tb) tb.innerHTML = '<tr><td colspan="7" class="p-3 text-slate-500">Loading…</td></tr>';
+            var res = await executeSecureBridgeCall('agent', 'agent-list-admin-lead-source', { clientId: clientId, limit: 150 });
+            var rows = (res && res.rows) || [];
+            if (!tb) return;
+            if (!rows.length) {
+                tb.innerHTML = '<tr><td colspan="7" class="p-3 text-slate-500">No mirror rows yet.</td></tr>';
+                return;
+            }
+            tb.innerHTML = rows.map(function (r) {
+                return '<tr><td class="p-2 text-slate-500">' + escapeHtml(String(r.SnapshotAt || '').slice(0, 19)) +
+                    '</td><td class="p-2">' + escapeHtml(r.Event || '') + '</td><td class="p-2">' + escapeHtml(r.ClientID || '') +
+                    '</td><td class="p-2">' + escapeHtml(r.ContactName || '') + '</td><td class="p-2">' + escapeHtml(r.Email || '') +
+                    '</td><td class="p-2">' + escapeHtml(r.Stage || '') + '</td><td class="p-2">' + escapeHtml(r.Source || '') + '</td></tr>';
+            }).join('');
+        }
+
+        async function loadAdminLeadSource(clientId) {
+            try {
+                var res = await executeSecureBridgeCall('agent', 'agent-list-admin-lead-source', {
+                    clientId: clientId || '',
+                    limit: 100
+                });
+                console.log('[AdminLeadSource]', res);
+                if (typeof showToast === 'function') {
+                    showToast((res && res.success) ? ('Admin lead source: ' + (res.count || 0) + ' rows') : ((res && res.message) || 'Failed'), res && res.success ? 'success' : 'error');
+                }
+                return res;
+            } catch (e) {
+                console.warn(e);
+            }
         }
 
         async function runV5LinkedIn() {
