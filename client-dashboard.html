@@ -3829,48 +3829,94 @@
             }).join('') : '<tr><td class="p-3 text-slate-600" colspan="5">No appointments match your filters.</td></tr>';
         }
 
+
         async function loadEmailActivity(page) {
             if (page < 1) return;
             const tbody = document.getElementById('emailActivityTableBody');
             const prevBtn = document.getElementById('emailActivityPrevBtn');
             const nextBtn = document.getElementById('emailActivityNextBtn');
             const pageInfo = document.getElementById('emailActivityPageInfo');
-            tbody.innerHTML = '<tr><td class="p-3 text-slate-500" colspan="5">Loading…</td></tr>';
+            if (tbody) tbody.innerHTML = '<tr><td class="p-3 text-slate-500" colspan="6">Loading…</td></tr>';
 
             const res = await callGateway('clientportal', 'clientPortalGetEmailActivity', { page });
-            if (!res.success) {
-                tbody.innerHTML = `<tr><td class="p-3 text-red-400" colspan="5">${escapeHtml(res.message || 'Failed to load.')}</td></tr>`;
-                pageInfo.textContent = '';
-                prevBtn.disabled = true; nextBtn.disabled = true;
+            if (!res || !res.success) {
+                if (tbody) tbody.innerHTML = '<tr><td class="p-3 text-slate-500" colspan="6">' + escapeHtml((res && res.message) || 'Could not load.') + '</td></tr>';
+                if (pageInfo) pageInfo.textContent = '';
+                if (prevBtn) prevBtn.disabled = true;
+                if (nextBtn) nextBtn.disabled = true;
                 return;
             }
 
             EMAIL_ACTIVITY_PAGE = res.page || page;
-            const items = res.data || [];
+            const items = res.data || res.activity || [];
+            const retDays = res.retentionDays || 14;
 
+            const statusLabel = (s) => {
+                s = String(s || '');
+                const low = s.toLowerCase();
+                if (low.indexOf('send failed') !== -1 || (low.indexOf('draft ready') !== -1 && low.indexOf('failed') !== -1))
+                    return 'Draft saved · not sent';
+                if (low.indexOf('resent') !== -1) return 'Sent (resent once)';
+                if (low.indexOf('auto-sent') !== -1 || low.indexOf('replied') !== -1) return s;
+                return s || '—';
+            };
             const statusColor = (s) => {
                 s = String(s || '').toLowerCase();
                 if (s.indexOf('flagged') !== -1) return 'text-amber-400';
-                if (s.indexOf('failed') !== -1) return 'text-red-400';
-                if (s.indexOf('skipped') !== -1) return 'text-slate-500';
+                if (s.indexOf('failed') !== -1 || s.indexOf('not sent') !== -1) return 'text-amber-400';
+                if (s.indexOf('skipped') !== -1 || s.indexOf('dismissed') !== -1) return 'text-slate-500';
                 return 'text-emerald-400';
             };
 
-            tbody.innerHTML = items.length ? items.map(m => `
-            <tr>
-                <td class="p-3 text-white align-top">${escapeHtml(m.from || '—')}</td>
-                <td class="p-3 align-top">${escapeHtml(m.subject || '—')}</td>
-                <td class="p-3 text-slate-400 align-top">${escapeHtml(m.bodySummary || '—')}</td>
-                <td class="p-3 text-slate-400 align-top">${m.aiReply ? escapeHtml(m.aiReply) : '<span class="text-slate-600">—</span>'}</td>
-                <td class="p-3 text-center align-top ${statusColor(m.status)}">${escapeHtml(m.status || '—')}</td>
-            </tr>`).join('') : '<tr><td class="p-3 text-slate-600" colspan="5">No replies sent yet.</td></tr>';
+            if (!tbody) return;
+            tbody.innerHTML = items.length ? items.map((m, idx) => {
+                const tid = escapeHtml(m.threadId || m.ThreadID || '');
+                const fa = escapeHtml(String(m.fetchedAt || m.FetchedAt || ''));
+                const actions = [];
+                if (m.canResend) {
+                    actions.push('<button type="button" class="text-emerald-400 hover:underline mr-2" onclick="clientResendEmailActivity(\'' + tid + '\',\'' + fa.replace(/'/g, '') + '\')">Resend once</button>');
+                }
+                actions.push('<button type="button" class="text-slate-500 hover:underline" onclick="clientDismissEmailActivity(\'' + tid + '\',\'' + fa.replace(/'/g, '') + '\')">Dismiss</button>');
+                return '<tr>' +
+                    '<td class="p-3 text-white align-top">' + escapeHtml(m.from || m.From || '—') + '</td>' +
+                    '<td class="p-3 text-slate-300 align-top">' + escapeHtml(m.subject || m.Subject || '—') + '</td>' +
+                    '<td class="p-3 text-slate-400 align-top whitespace-pre-wrap text-[11px]">' + escapeHtml(m.bodySummary || m.BodySummary || '—') + '</td>' +
+                    '<td class="p-3 text-slate-300 align-top whitespace-pre-wrap text-[11px]">' + (m.aiReply || m.AIReply ? escapeHtml(m.aiReply || m.AIReply) : '<span class="text-slate-600">—</span>') + '</td>' +
+                    '<td class="p-3 text-center align-top ' + statusColor(m.status || m.Status) + ' text-[11px]">' + escapeHtml(statusLabel(m.status || m.Status)) + '</td>' +
+                    '<td class="p-3 align-top text-[10px] whitespace-nowrap">' + actions.join(' ') + '</td>' +
+                    '</tr>';
+            }).join('') : '<tr><td class="p-3 text-slate-600" colspan="6">No email activity yet. Logs older than ' + retDays + ' days are removed automatically.</td></tr>';
 
-            pageInfo.textContent = `Page ${res.page} of ${res.totalPages} — ${res.total} total`;
-            prevBtn.disabled = !res.hasPrev;
-            nextBtn.disabled = !res.hasNext;
-
-            loadMailboxPrivacyPanel();
+            if (pageInfo) pageInfo.textContent = 'Page ' + (res.page || 1) + ' of ' + (res.totalPages || 1) + ' — ' + (res.total || 0) + ' total · kept ' + retDays + ' days';
+            if (prevBtn) prevBtn.disabled = (res.page || 1) <= 1;
+            if (nextBtn) nextBtn.disabled = (res.page || 1) >= (res.totalPages || 1);
         }
+
+        async function clientResendEmailActivity(threadId, fetchedAt) {
+            if (!threadId) return;
+            if (!confirm('Send this draft once only? We will not send a second reply if this thread was already answered successfully.')) return;
+            const res = await callGateway('clientportal', 'clientPortalResendEmailActivity', {
+                threadId: threadId,
+                fetchedAt: fetchedAt || ''
+            });
+            if (typeof notifyUser === 'function') {
+                notifyUser((res && res.message) || (res && res.success ? 'Sent' : 'Could not send'), res && res.success ? 'success' : 'info');
+            }
+            loadEmailActivity(typeof EMAIL_ACTIVITY_PAGE !== 'undefined' ? EMAIL_ACTIVITY_PAGE : 1);
+        }
+
+        async function clientDismissEmailActivity(threadId, fetchedAt) {
+            if (!threadId) return;
+            const res = await callGateway('clientportal', 'clientPortalDismissEmailActivity', {
+                threadId: threadId,
+                fetchedAt: fetchedAt || ''
+            });
+            if (typeof notifyUser === 'function') {
+                notifyUser((res && res.message) || 'Dismissed', 'info');
+            }
+            loadEmailActivity(typeof EMAIL_ACTIVITY_PAGE !== 'undefined' ? EMAIL_ACTIVITY_PAGE : 1);
+        }
+
 
         async function populateWhatsAppActivityFilters() {
             const apiSel = document.getElementById('waFilterApiId');
