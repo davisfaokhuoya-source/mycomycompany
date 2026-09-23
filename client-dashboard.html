@@ -50,6 +50,20 @@
             color: #f1f5f9;
         }
 
+
+        #loginView:not(.hidden)~#helpFab,
+        body:has(#loginView:not(.hidden)) #helpFab {
+            display: none !important;
+        }
+
+        #mainView.hidden~#helpFab {
+            display: none !important;
+        }
+
+        details.help-topic>summary::-webkit-details-marker {
+            display: none;
+        }
+
         .nav-link.active {
             background: #1e293b;
             color: #34d399;
@@ -780,6 +794,9 @@
                 </button>
                 <button class="nav-link" data-view="billing" onclick="showView('billing', this)">
                     <i class="fa-solid fa-credit-card w-4"></i> Billing &amp; Renewal
+                </button>
+                <button class="nav-link" data-view="help" onclick="showView('help', this)">
+                    <i class="fa-solid fa-circle-question w-4"></i> Help &amp; tutorials
                 </button>
                 <button class="nav-link" data-view="donate" onclick="showView('donate', this)">
                     <i class="fa-solid fa-heart w-4"></i> Support Us
@@ -2375,6 +2392,301 @@
                     </div>
                 </section>
 
+
+                <section id="view-help"
+                    class="view hidden flex-1 h-full min-h-0 flex flex-col overflow-y-auto custom-scrollbar space-y-4 p-1">
+                    <div class="max-w-3xl mx-auto w-full space-y-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-white">Help &amp; tutorials</h2>
+                            <p class="text-[11px] text-slate-500 mt-1">Short guides for each part of your dashboard.
+                                Open a topic, follow the steps, then use <span class="text-slate-400">Open this
+                                    screen</span> to go there.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <input type="search" id="helpSearch" placeholder="Search help…" oninput="filterHelpTopics()"
+                                class="flex-1 min-w-[180px] bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white" />
+                            <button type="button"
+                                onclick="document.querySelectorAll('.help-topic').forEach(function(d){d.open=true})"
+                                class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200">Expand
+                                all</button>
+                            <button type="button"
+                                onclick="document.querySelectorAll('.help-topic').forEach(function(d){d.open=false})"
+                                class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200">Collapse
+                                all</button>
+                        </div>
+                        <div id="helpTopicsList" class="space-y-2">
+
+                            <details
+                                class="help-topic bg-slate-950 border border-slate-800 rounded-xl p-0 overflow-hidden"
+                                data-help="start overview login">
+                                <summary
+                                    class="cursor-pointer px-4 py-3 text-sm font-semibold text-white hover:bg-slate-900/80 list-none flex items-center justify-between gap-2">
+                                    <span><i class="fa-solid fa-rocket text-emerald-500 mr-2"></i>Getting started</span>
+                                    <span class="text-[10px] text-slate-500 font-normal">First login</span>
+                                </summary>
+                                <div
+                                    class="px-4 pb-4 text-[12px] text-slate-400 space-y-2 border-t border-slate-800 pt-3">
+                                    <p>Sign in with your <strong class="text-slate-300">Client ID</strong> and <strong
+                                            class="text-slate-300">access code</strong> (from your welcome message).
+                                        Keep them private.</p>
+                                    <ol class="list-decimal pl-4 space-y-1">
+                                        <li>Open <strong class="text-slate-300">Overview</strong> to see quotas
+                                            (documents, email, WhatsApp, social).</li>
+                                        <li>Connect tools under <strong class="text-slate-300">Integrations</strong>
+                                            (mailbox, social, WhatsApp) when your plan allows.</li>
+                                        <li>Use <strong class="text-slate-300">Billing &amp; Renewal</strong> for
+                                            upgrades and add-ons — prices stay in one place.</li>
+                                    </ol>
+                                    <button type="button" class="text-emerald-400 text-[11px] underline"
+                                        onclick="showView('overview', document.querySelector('.nav-link[data-view=overview]'))">Open
+                                        Overview</button>
+                                </div>
+                            </details>
+
+                            <details class="help-topic bg-slate-950 border border-slate-800 rounded-xl overflow-hidden"
+                                data-help="documents generate proposal">
+                                <summary
+                                    class="cursor-pointer px-4 py-3 text-sm font-semibold text-white hover:bg-slate-900/80 list-none flex items-center justify-between gap-2">
+                                    <span><i class="fa-solid fa-file-lines text-emerald-500 mr-2"></i>Documents</span>
+                                    <span class="text-[10px] text-slate-500 font-normal">My Documents · Generate</span>
+                                </summary>
+                                <div
+                                    class="px-4 pb-4 text-[12px] text-slate-400 space-y-2 border-t border-slate-800 pt-3">
+                                    <p><strong class="text-slate-300">My Documents</strong> lists files the agent or
+                                        your team produced. Preview/download when a Drive link is available.</p>
+                                    <p><strong class="text-slate-300">Generate a Document</strong>: pick a type → fill
+                                        instructions → send. Grey cards mean that type is not in quota or not available.
+                                        Preview with placeholders does not use a document unit.</p>
+                                    <button type="button" class="text-emerald-400 text-[11px] underline mr-3"
+                                        onclick="showView('documents', document.querySelector('.nav-link[data-view=documents]'))">My
+                                        Documents</button>
+                                    <button type="button" class="text-emerald-400 text-[11px] underline"
+                                        onclick="showView('generate', document.querySelector('.nav-link[data-view=generate]'))">Generate</button>
+                                </div>
+                            </details>
+
+                            <details class="help-topic bg-slate-950 border border-slate-800 rounded-xl overflow-hidden"
+                                data-help="social calendar post approve">
+                                <summary
+                                    class="cursor-pointer px-4 py-3 text-sm font-semibold text-white hover:bg-slate-900/80 list-none flex items-center justify-between gap-2">
+                                    <span><i class="fa-solid fa-share-nodes text-emerald-500 mr-2"></i>Social
+                                        Calendar</span>
+                                    <span class="text-[10px] text-slate-500 font-normal">Posts · media</span>
+                                </summary>
+                                <div
+                                    class="px-4 pb-4 text-[12px] text-slate-400 space-y-2 border-t border-slate-800 pt-3">
+                                    <ol class="list-decimal pl-4 space-y-1">
+                                        <li>Connect Facebook, Instagram, etc. under <strong
+                                                class="text-slate-300">Integrations</strong> first.</li>
+                                        <li>Generate or schedule content in batches (your plan sets how many
+                                            posts/calendars).</li>
+                                        <li>Review each post → <strong class="text-slate-300">Approve</strong> → send
+                                            when ready. Upload images where the form allows.</li>
+                                    </ol>
+                                    <button type="button" class="text-emerald-400 text-[11px] underline"
+                                        onclick="showView('social', document.querySelector('.nav-link[data-view=social]'))">Open
+                                        Social Calendar</button>
+                                </div>
+                            </details>
+
+                            <details class="help-topic bg-slate-950 border border-slate-800 rounded-xl overflow-hidden"
+                                data-help="email activity resend mailbox">
+                                <summary
+                                    class="cursor-pointer px-4 py-3 text-sm font-semibold text-white hover:bg-slate-900/80 list-none flex items-center justify-between gap-2">
+                                    <span><i class="fa-solid fa-envelope-open-text text-emerald-500 mr-2"></i>Email
+                                        Activity</span>
+                                    <span class="text-[10px] text-slate-500 font-normal">Replies · resend</span>
+                                </summary>
+                                <div
+                                    class="px-4 pb-4 text-[12px] text-slate-400 space-y-2 border-t border-slate-800 pt-3">
+                                    <p>Shows messages the agent drafted or sent from your connected mailbox. Private
+                                        mode hides content from admin.</p>
+                                    <ul class="list-disc pl-4 space-y-1">
+                                        <li><strong class="text-slate-300">Draft saved · not sent</strong> —
+                                            connect/reconnect the mailbox, then use <strong
+                                                class="text-slate-300">Resend once</strong>.</li>
+                                        <li>We never send a <strong class="text-slate-300">second</strong> reply on a
+                                            thread that already sent successfully.</li>
+                                        <li>Logs are cleaned after about <strong class="text-slate-300">14
+                                                days</strong>.</li>
+                                    </ul>
+                                    <button type="button" class="text-emerald-400 text-[11px] underline"
+                                        onclick="showView('emailactivity', document.querySelector('.nav-link[data-view=emailactivity]'))">Open
+                                        Email Activity</button>
+                                </div>
+                            </details>
+
+                            <details class="help-topic bg-slate-950 border border-slate-800 rounded-xl overflow-hidden"
+                                data-help="whatsapp activity api">
+                                <summary
+                                    class="cursor-pointer px-4 py-3 text-sm font-semibold text-white hover:bg-slate-900/80 list-none flex items-center justify-between gap-2">
+                                    <span><i class="fa-brands fa-whatsapp text-emerald-500 mr-2"></i>WhatsApp
+                                        Activity</span>
+                                    <span class="text-[10px] text-slate-500 font-normal">API · team</span>
+                                </summary>
+                                <div
+                                    class="px-4 pb-4 text-[12px] text-slate-400 space-y-2 border-t border-slate-800 pt-3">
+                                    <p>Inbox for API-connected numbers and team handoffs. Connect an API number from
+                                        this screen or Integrations. Activity is retained about <strong
+                                            class="text-slate-300">7 days</strong>.</p>
+                                    <button type="button" class="text-emerald-400 text-[11px] underline"
+                                        onclick="showView('whatsappactivity', document.querySelector('.nav-link[data-view=whatsappactivity]'))">Open
+                                        WhatsApp Activity</button>
+                                </div>
+                            </details>
+
+                            <details class="help-topic bg-slate-950 border border-slate-800 rounded-xl overflow-hidden"
+                                data-help="leads pipeline csv catalog offer">
+                                <summary
+                                    class="cursor-pointer px-4 py-3 text-sm font-semibold text-white hover:bg-slate-900/80 list-none flex items-center justify-between gap-2">
+                                    <span><i class="fa-solid fa-address-book text-emerald-500 mr-2"></i>My Leads</span>
+                                    <span class="text-[10px] text-slate-500 font-normal">Free list · offers</span>
+                                </summary>
+                                <div
+                                    class="px-4 pb-4 text-[12px] text-slate-400 space-y-2 border-t border-slate-800 pt-3">
+                                    <ol class="list-decimal pl-4 space-y-1">
+                                        <li><strong class="text-slate-300">Add lead</strong> or <strong
+                                                class="text-slate-300">Upload CSV</strong> (free).</li>
+                                        <li>Filter by stage (New → … → Customer / Lost). Use <strong
+                                                class="text-slate-300">All stages</strong> to see everyone.</li>
+                                        <li>Optional: follow-up tasks, product catalog, offers. <strong
+                                                class="text-slate-300">Notify leads</strong> uses email/WhatsApp quotas
+                                            — not free messaging.</li>
+                                        <li>HubSpot / Zoho / Salesforce stay under paid Integrations.</li>
+                                    </ol>
+                                    <button type="button" class="text-emerald-400 text-[11px] underline"
+                                        onclick="showView('leads', document.querySelector('.nav-link[data-view=leads]'))">Open
+                                        My Leads</button>
+                                </div>
+                            </details>
+
+                            <details class="help-topic bg-slate-950 border border-slate-800 rounded-xl overflow-hidden"
+                                data-help="inbox needs reply">
+                                <summary
+                                    class="cursor-pointer px-4 py-3 text-sm font-semibold text-white hover:bg-slate-900/80 list-none flex items-center justify-between gap-2">
+                                    <span><i class="fa-solid fa-inbox text-emerald-500 mr-2"></i>Needs reply</span>
+                                    <span class="text-[10px] text-slate-500 font-normal">One queue</span>
+                                </summary>
+                                <div
+                                    class="px-4 pb-4 text-[12px] text-slate-400 space-y-2 border-t border-slate-800 pt-3">
+                                    <p>Combined queue: social comments waiting attention, email/WhatsApp items, and
+                                        overdue lead follow-ups. Open an item, then jump to the right screen to act.</p>
+                                    <button type="button" class="text-emerald-400 text-[11px] underline"
+                                        onclick="showView('inbox', document.querySelector('.nav-link[data-view=inbox]'))">Open
+                                        Needs reply</button>
+                                </div>
+                            </details>
+
+                            <details class="help-topic bg-slate-950 border border-slate-800 rounded-xl overflow-hidden"
+                                data-help="comment replies moderation tiktok">
+                                <summary
+                                    class="cursor-pointer px-4 py-3 text-sm font-semibold text-white hover:bg-slate-900/80 list-none flex items-center justify-between gap-2">
+                                    <span><i class="fa-solid fa-comment-dots text-emerald-500 mr-2"></i>Comment
+                                        replies</span>
+                                    <span class="text-[10px] text-slate-500 font-normal">AI · spam</span>
+                                </summary>
+                                <div
+                                    class="px-4 pb-4 text-[12px] text-slate-400 space-y-2 border-t border-slate-800 pt-3">
+                                    <ol class="list-decimal pl-4 space-y-1">
+                                        <li>Buy the <strong class="text-slate-300">comment reply</strong> / spam add-on
+                                            if needed (Billing).</li>
+                                        <li>Connect social under Integrations. For TikTok AI comments use <strong
+                                                class="text-slate-300">Business TikTok</strong>.</li>
+                                        <li>Here: filter platform/dates, pick a moderated post, turn AI replies on/off,
+                                            review comments.</li>
+                                    </ol>
+                                    <button type="button" class="text-emerald-400 text-[11px] underline mr-3"
+                                        onclick="showView('comments', document.querySelector('.nav-link[data-view=comments]'))">Comment
+                                        replies</button>
+                                    <button type="button" class="text-emerald-400 text-[11px] underline"
+                                        onclick="showView('integrations', document.querySelector('.nav-link[data-view=integrations]'))">Integrations</button>
+                                </div>
+                            </details>
+
+                            <details class="help-topic bg-slate-950 border border-slate-800 rounded-xl overflow-hidden"
+                                data-help="integrations connect disconnect tiktok crm">
+                                <summary
+                                    class="cursor-pointer px-4 py-3 text-sm font-semibold text-white hover:bg-slate-900/80 list-none flex items-center justify-between gap-2">
+                                    <span><i class="fa-solid fa-plug text-emerald-500 mr-2"></i>Integrations</span>
+                                    <span class="text-[10px] text-slate-500 font-normal">Connect accounts</span>
+                                </summary>
+                                <div
+                                    class="px-4 pb-4 text-[12px] text-slate-400 space-y-2 border-t border-slate-800 pt-3">
+                                    <p>Connect or remove social, mailbox, WhatsApp API, and paid CRM. After connecting,
+                                        use Social Calendar, Email Activity, or Comment replies to work with the data.
+                                    </p>
+                                    <p>You can set a short <strong class="text-slate-300">About your business</strong>
+                                        so AI replies and documents stay on-brand.</p>
+                                    <button type="button" class="text-emerald-400 text-[11px] underline"
+                                        onclick="showView('integrations', document.querySelector('.nav-link[data-view=integrations]'))">Open
+                                        Integrations</button>
+                                </div>
+                            </details>
+
+                            <details class="help-topic bg-slate-950 border border-slate-800 rounded-xl overflow-hidden"
+                                data-help="appointments booking">
+                                <summary
+                                    class="cursor-pointer px-4 py-3 text-sm font-semibold text-white hover:bg-slate-900/80 list-none flex items-center justify-between gap-2">
+                                    <span><i
+                                            class="fa-solid fa-calendar-days text-emerald-500 mr-2"></i>Appointments</span>
+                                    <span class="text-[10px] text-slate-500 font-normal">Meetings</span>
+                                </summary>
+                                <div
+                                    class="px-4 pb-4 text-[12px] text-slate-400 space-y-2 border-t border-slate-800 pt-3">
+                                    <p>Upcoming and past meetings the system logged (including from email appointment
+                                        requests). Confirm times with your team when a request is pending review.</p>
+                                    <button type="button" class="text-emerald-400 text-[11px] underline"
+                                        onclick="showView('appointments', document.querySelector('.nav-link[data-view=appointments]'))">Open
+                                        Appointments</button>
+                                </div>
+                            </details>
+
+                            <details class="help-topic bg-slate-950 border border-slate-800 rounded-xl overflow-hidden"
+                                data-help="billing upgrade addon quota">
+                                <summary
+                                    class="cursor-pointer px-4 py-3 text-sm font-semibold text-white hover:bg-slate-900/80 list-none flex items-center justify-between gap-2">
+                                    <span><i class="fa-solid fa-credit-card text-emerald-500 mr-2"></i>Billing &amp;
+                                        Renewal</span>
+                                    <span class="text-[10px] text-slate-500 font-normal">Plans · add-ons</span>
+                                </summary>
+                                <div
+                                    class="px-4 pb-4 text-[12px] text-slate-400 space-y-2 border-t border-slate-800 pt-3">
+                                    <p>All plan changes, add-ons (comment reply, human hours, etc.), and renewals. After
+                                        paying, use <strong class="text-slate-300">I paid — confirm &amp;
+                                            activate</strong> if the page asks for it.</p>
+                                    <button type="button" class="text-emerald-400 text-[11px] underline"
+                                        onclick="showView('billing', document.querySelector('.nav-link[data-view=billing]'))">Open
+                                        Billing</button>
+                                </div>
+                            </details>
+
+                            <details class="help-topic bg-slate-950 border border-slate-800 rounded-xl overflow-hidden"
+                                data-help="chat live support privacy">
+                                <summary
+                                    class="cursor-pointer px-4 py-3 text-sm font-semibold text-white hover:bg-slate-900/80 list-none flex items-center justify-between gap-2">
+                                    <span><i class="fa-solid fa-comments text-emerald-500 mr-2"></i>Live Chat &amp;
+                                        support</span>
+                                    <span class="text-[10px] text-slate-500 font-normal">Ask the agent</span>
+                                </summary>
+                                <div
+                                    class="px-4 pb-4 text-[12px] text-slate-400 space-y-2 border-t border-slate-800 pt-3">
+                                    <p><strong class="text-slate-300">Live Chat</strong> is for questions about your
+                                        account and services inside the portal. For public website questions, use the
+                                        site chat. For bugs or human help, use Support / contact options on the site.
+                                    </p>
+                                    <button type="button" class="text-emerald-400 text-[11px] underline"
+                                        onclick="showView('chat', document.querySelector('.nav-link[data-view=chat]'))">Open
+                                        Live Chat</button>
+                                </div>
+                            </details>
+
+                        </div>
+                        <p class="text-[11px] text-slate-600 pb-6">More detail on data &amp; privacy: <a
+                                href="/intro.html" target="_blank" rel="noopener"
+                                class="text-emerald-400 hover:underline">Client Dashboard info page</a>.</p>
+                    </div>
+                </section>
+
                 <!-- DONATE / SUPPORT US -->
                 <section id="view-donate" class="view flex-1 h-full flex-col overflow-auto custom-scrollbar space-y-4">
                     <div class="max-w-lg mx-auto w-full space-y-4 pt-2">
@@ -3181,6 +3493,16 @@
             MYWORK_TIMER = null;
         }
 
+
+        function filterHelpTopics() {
+            var q = String((document.getElementById('helpSearch') || {}).value || '').toLowerCase().trim();
+            document.querySelectorAll('.help-topic').forEach(function (el) {
+                var hay = (el.getAttribute('data-help') || '') + ' ' + (el.textContent || '');
+                hay = hay.toLowerCase();
+                el.style.display = (!q || hay.indexOf(q) !== -1) ? '' : 'none';
+            });
+        }
+
         function showView(name, btn) {
             try { closeMobileSidebar(); } catch (_) { }
 
@@ -3215,7 +3537,7 @@
                 if (nb) nb.classList.add('active');
             }
 
-            const titles = { overview: 'Overview', documents: 'My Documents', generate: 'Generate a Document', chat: 'Live Chat', mywork: 'My Work', social: 'Social Calendar', appointments: 'Appointments', emailactivity: 'Email Activity', whatsappactivity: 'WhatsApp Activity', leads: 'My Leads', inbox: 'Needs reply', comments: 'Comment replies', integrations: 'Integrations', billing: 'Billing & Renewal', donate: 'Support Us', support: 'Support' };
+            const titles = { overview: 'Overview', documents: 'My Documents', generate: 'Generate a Document', chat: 'Live Chat', mywork: 'My Work', social: 'Social Calendar', appointments: 'Appointments', emailactivity: 'Email Activity', whatsappactivity: 'WhatsApp Activity', leads: 'My Leads', inbox: 'Needs reply', comments: 'Comment replies', integrations: 'Integrations', billing: 'Billing & Renewal', donate: 'Support Us', support: 'Support', help: 'Help & tutorials' };
             var pt = document.getElementById('pageTitle');
             if (pt) pt.textContent = titles[name] || name;
 
@@ -8196,6 +8518,13 @@
             wrapToast();
         })();
     </script>
+
+
+    <button type="button" id="helpFab" title="Help & tutorials" aria-label="Help"
+        onclick="showView('help', document.querySelector('.nav-link[data-view=help]'))"
+        class="fixed bottom-5 right-5 z-40 h-11 w-11 rounded-full bg-emerald-700 hover:bg-emerald-600 text-white shadow-lg flex items-center justify-center border border-emerald-500/40">
+        <i class="fa-solid fa-circle-question text-lg"></i>
+    </button>
 
 </body>
 
