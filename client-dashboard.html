@@ -172,6 +172,26 @@
             display: block;
         }
 
+        .nav-subgroup-body.hidden {
+            display: none !important;
+        }
+
+        .nav-subgroup.open .nav-subgroup-body {
+            display: block !important;
+        }
+
+        .nav-subgroup .nav-group-btn {
+            font-size: 0.65rem;
+            text-transform: none;
+            letter-spacing: 0;
+            color: #94a3b8;
+        }
+
+        .leads-subview.hidden,
+        .integ-subview.hidden {
+            display: none !important;
+        }
+
         .nav-group-body .nav-link {
             padding-left: 0.85rem;
         }
@@ -1042,10 +1062,50 @@
                         <i class="fa-solid fa-chevron-down chev"></i>
                     </button>
                     <div class="nav-group-body space-y-0.5">
-                        <button class="nav-link" data-view="leads" onclick="showView('leads', this)"><i
-                                class="fa-solid fa-address-book w-4"></i> My Leads</button>
-                        <button class="nav-link" data-view="integrations" onclick="showView('integrations', this)"><i
-                                class="fa-solid fa-plug w-4"></i> Integrations</button>
+                        <div class="nav-subgroup" data-subgroup="leads">
+                            <button type="button" class="nav-group-btn pl-2" onclick="toggleNavSubgroup(this)">
+                                <span><i class="fa-solid fa-address-book mr-1.5 opacity-70"></i> My Leads</span>
+                                <i class="fa-solid fa-chevron-down chev"></i>
+                            </button>
+                            <div class="nav-subgroup-body hidden space-y-0.5 pl-2">
+                                <button class="nav-link" data-view="leads-list"
+                                    onclick="showView('leads-list', this)"><i class="fa-solid fa-list w-4"></i> Lead
+                                    list</button>
+                                <button class="nav-link" data-view="leads-catalog"
+                                    onclick="showView('leads-catalog', this)"><i class="fa-solid fa-box w-4"></i>
+                                    Product catalog</button>
+                                <button class="nav-link" data-view="leads-message"
+                                    onclick="showView('leads-message', this)"><i
+                                        class="fa-solid fa-paper-plane w-4"></i> Message leads</button>
+                                <button class="nav-link" data-view="leads-tasks"
+                                    onclick="showView('leads-tasks', this)"><i class="fa-solid fa-list-check w-4"></i>
+                                    Follow-ups</button>
+                                <button class="nav-link" data-view="leads-queue"
+                                    onclick="showView('leads-queue', this)"><i class="fa-solid fa-clock w-4"></i>
+                                    Message queue</button>
+                            </div>
+                        </div>
+                        <div class="nav-subgroup" data-subgroup="integrations">
+                            <button type="button" class="nav-group-btn pl-2" onclick="toggleNavSubgroup(this)">
+                                <span><i class="fa-solid fa-plug mr-1.5 opacity-70"></i> Integrations</span>
+                                <i class="fa-solid fa-chevron-down chev"></i>
+                            </button>
+                            <div class="nav-subgroup-body hidden space-y-0.5 pl-2">
+                                <button class="nav-link" data-view="integ-social"
+                                    onclick="showView('integ-social', this)"><i class="fa-solid fa-share-nodes w-4"></i>
+                                    Social accounts</button>
+                                <button class="nav-link" data-view="integ-whatsapp"
+                                    onclick="showView('integ-whatsapp', this)"><i class="fa-brands fa-whatsapp w-4"></i>
+                                    WhatsApp</button>
+                                <button class="nav-link" data-view="integ-email"
+                                    onclick="showView('integ-email', this)"><i class="fa-solid fa-envelope w-4"></i>
+                                    Email / mailbox</button>
+                                <button class="nav-link" data-view="integ-crm" onclick="showView('integ-crm', this)"><i
+                                        class="fa-solid fa-building w-4"></i> CRM</button>
+                                <button class="nav-link" data-view="integ-ai" onclick="showView('integ-ai', this)"><i
+                                        class="fa-solid fa-robot w-4"></i> AI comment settings</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="nav-group" data-group="account">
@@ -1986,220 +2046,98 @@
                             data-section-refresh="leads"
                             class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white inline-flex items-center gap-1.5"><span
                                 class="btn-spin"></span><i class="fa-solid fa-rotate"></i> Refresh</button></div>
-
-                    <div class="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                            <h2 class="text-lg font-bold text-white flex items-center gap-2">My Leads <button
-                                    type="button" class="vic-info"
-                                    data-tip="Your private lead list (free). Add, edit, delete, CSV upload. Messaging uses email/WhatsApp quotas. External CRM stays paid."
-                                    aria-label="Info">i</button></h2>
-                            <p class="text-[11px] text-slate-500">Free to add, edit, delete, and upload. Messaging &amp;
-                                product alerts use your existing plan (email / WhatsApp). External CRM (HubSpot etc.)
-                                stays a paid integration.</p>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                            <button type="button" onclick="clientLeadsShowForm()"
-                                class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white">Add
-                                lead</button>
-                            <label
-                                class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white cursor-pointer border border-slate-700">
-                                Upload CSV
-                                <input type="file" id="clientLeadsFile" accept=".csv,text/csv" class="hidden"
-                                    onchange="clientLeadsUploadFile(event)" />
-                            </label>
-                            <button type="button" onclick="clientLoadLeads()"
-                                class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">Refresh</button>
-                        </div>
+                    <div class="flex flex-wrap gap-2 mb-2" id="leadsSubTabs">
+                        <button type="button"
+                            class="leads-subtab px-3 py-2 rounded-lg bg-emerald-800 text-white text-sm"
+                            data-sub="leads-list"
+                            onclick="showView('leads-list', document.querySelector('[data-view=&quot;leads-list&quot;]'))">Lead
+                            list</button>
+                        <button type="button"
+                            class="leads-subtab px-3 py-2 rounded-lg bg-slate-800 text-slate-300 text-sm"
+                            data-sub="leads-catalog"
+                            onclick="showView('leads-catalog', document.querySelector('[data-view=&quot;leads-catalog&quot;]'))">Catalog</button>
+                        <button type="button"
+                            class="leads-subtab px-3 py-2 rounded-lg bg-slate-800 text-slate-300 text-sm"
+                            data-sub="leads-message"
+                            onclick="showView('leads-message', document.querySelector('[data-view=&quot;leads-message&quot;]'))">Message</button>
+                        <button type="button"
+                            class="leads-subtab px-3 py-2 rounded-lg bg-slate-800 text-slate-300 text-sm"
+                            data-sub="leads-tasks"
+                            onclick="showView('leads-tasks', document.querySelector('[data-view=&quot;leads-tasks&quot;]'))">Follow-ups</button>
+                        <button type="button"
+                            class="leads-subtab px-3 py-2 rounded-lg bg-slate-800 text-slate-300 text-sm"
+                            data-sub="leads-queue"
+                            onclick="showView('leads-queue', document.querySelector('[data-view=&quot;leads-queue&quot;]'))">Queue</button>
                     </div>
-
-                    <div
-                        class="rounded-lg border border-slate-800 bg-slate-900/50 px-3 py-2 text-[11px] text-slate-400 shrink-0">
-                        <strong class="text-slate-300">How this page works:</strong>
-                        1) <strong class="text-slate-300">Add lead</strong> / CSV → 2) set stage &amp; tags → 3) set
-                        <strong class="text-slate-300">contact cadence</strong> →
-                        4) <strong class="text-slate-300">Step A</strong> save products in catalog → 5) <strong
-                            class="text-slate-300">Step B</strong> message leads (batched, personalized).
-                        Scroll for the lead table. Hover the <strong class="text-slate-300">i</strong> icons for tips.
-                    </div>
-
-                    <div class="flex flex-wrap gap-2 items-center">
-                        <select id="leadFilterStage" onchange="clientRenderLeadsTable()"
-                            class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white">
-                            <option value="">All stages</option>
-                            <option value="New">New</option>
-                            <option value="Contacted">Contacted</option>
-                            <option value="Interested">Interested</option>
-                            <option value="Proposal">Proposal</option>
-                            <option value="Customer">Customer / Won</option>
-                            <option value="Lost">Lost</option>
-                        </select>
-                        <button type="button" onclick="clientLoadLeadSuggestions()"
-                            class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200">Refresh
-                            suggestions</button>
-                    </div>
-
-                    <div class="text-[10px] text-slate-500 shrink-0">Your leads list</div>
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left text-[11px]">
-                                <thead class="bg-slate-900 text-slate-400">
-                                    <tr>
-                                        <th class="p-2">Name</th>
-                                        <th class="p-2">Company</th>
-                                        <th class="p-2">Email</th>
-                                        <th class="p-2">Phone</th>
-                                        <th class="p-2">Stage</th>
-                                        <th class="p-2">Source</th>
-                                        <th class="p-2">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="clientLeadsTableBody" class="divide-y divide-slate-800 text-slate-300">
-                                    <tr>
-                                        <td colspan="7" class="p-3 text-slate-500">Loading…</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div id="productCatalogBox" class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
-                        <p class="text-xs font-semibold text-white flex items-center gap-1.5">
-                            Step A — Product / service catalog
-                            <button type="button" class="vic-info"
-                                data-tip="Save the products or services you sell. Free. Used by AI for context and as a quick picker when you message leads about a new offer. This does not send messages by itself."
-                                aria-label="Info">i</button>
-                        </p>
-                        <p class="text-[10px] text-slate-500">1) Save items here → 2) When you message leads (Step B),
-                            pick a catalog item or type a custom offer.</p>
-                        <div class="flex flex-wrap gap-2">
-                            <input id="prodName" placeholder="Name"
-                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white flex-1 min-w-[100px]" />
-                            <input id="prodLink" placeholder="Link (optional)"
-                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white flex-1 min-w-[100px]" />
-                        </div>
-                        <textarea id="prodDesc" rows="2" placeholder="Short description"
-                            class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white"></textarea>
-                        <button type="button" onclick="clientSaveProduct()"
-                            class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-white">Save
-                            to catalog</button>
-                        <ul id="productCatalogList" class="text-[11px] text-slate-400 space-y-1"></ul>
-                    </div>
-
-                    <div id="leadSuggestionsBox"
-                        class="hidden bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
-                        <p class="text-xs font-semibold text-white">Suggested next actions</p>
-                        <div id="leadSuggestionsList" class="space-y-2 text-[11px] text-slate-300"></div>
-                    </div>
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
-                        <p class="text-xs font-semibold text-white">Follow-up task</p>
-                        <div class="flex flex-wrap gap-2">
-                            <select id="taskLeadSelect"
-                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white min-w-[140px]">
-                                <option value="">Lead…</option>
-                            </select>
-                            <input id="taskTitle" placeholder="e.g. Call back"
-                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white flex-1 min-w-[120px]" />
-                            <input id="taskDueDays" type="number" min="0" value="3"
-                                class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white"
-                                title="Days from now" />
-                            <button type="button" onclick="clientSaveLeadTask()"
-                                class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 text-white">Add task</button>
-                        </div>
-                        <ul id="leadTasksList" class="text-[11px] text-slate-400 space-y-1"></ul>
-                    </div>
-
-                    <div id="clientLeadForm"
-                        class="hidden bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
-                        <input type="hidden" id="leadEditId" value="" />
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <input id="leadName" placeholder="Contact name"
-                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                            <input id="leadCompany" placeholder="Company"
-                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                            <input id="leadEmail" placeholder="Email"
-                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                            <input id="leadPhone" placeholder="Phone"
-                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                            <input id="leadWhatsApp" placeholder="WhatsApp"
-                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                            <input id="leadRole" placeholder="Role / title"
-                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                            <input id="leadIndustry" placeholder="Industry"
-                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                            <input id="leadCity" placeholder="City"
-                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                            <select id="leadStage"
-                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white">
+                    <div id="sub-leads-list" class="leads-subview space-y-4">
+                        <div class="flex flex-wrap gap-2 items-center bg-slate-950 border border-slate-800 rounded-xl p-3"
+                            id="leadsFilterBar">
+                            <input id="leadFilterSearch" type="text" placeholder="Search name, email, company…"
+                                oninput="window.__LEADS_PAGE=1;try{clientRenderLeadsTable();}catch(e){clientLeadsApplyFilter();}"
+                                class="flex-1 min-w-[140px] bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white" />
+                            <select id="leadFilterStage" onchange="clientLeadsApplyFilter()"
+                                class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white">
+                                <option value="">All stages</option>
                                 <option value="New">New</option>
                                 <option value="Contacted">Contacted</option>
                                 <option value="Interested">Interested</option>
                                 <option value="Proposal">Proposal</option>
-                                <option value="Customer">Customer / Won</option>
+                                <option value="Customer">Customer</option>
                                 <option value="Lost">Lost</option>
                             </select>
-                            <div class="flex flex-col gap-1 min-w-[140px] flex-1">
-                                <input id="leadTags" placeholder="Tags (pick or type)" list="leadTagPresets"
-                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                                <datalist id="leadTagPresets">
-                                    <option value="hot"></option>
-                                    <option value="warm"></option>
-                                    <option value="cold"></option>
-                                    <option value="vip"></option>
-                                    <option value="decision-maker"></option>
-                                    <option value="referral"></option>
-                                    <option value="partner"></option>
-                                    <option value="newsletter"></option>
-                                    <option value="event"></option>
-                                    <option value="whatsapp"></option>
-                                    <option value="email-only"></option>
-                                    <option value="upsell"></option>
-                                    <option value="renewal"></option>
-                                    <option value="cac"></option>
-                                    <option value="compliance"></option>
-                                    <option value="digital"></option>
-                                    <option value="ops"></option>
-                                </datalist>
-                                <p class="text-[9px] text-slate-600">Suggested: hot, warm, cold, vip, decision-maker,
-                                    referral, partner, newsletter, event, upsell, renewal, cac, compliance, digital, ops
-                                </p>
-                            </div>
-                            <input id="leadValue" placeholder="Est. value (optional, tracking only)"
-                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                            <input id="leadSourceCampaign" placeholder="Source campaign / post id"
-                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                        </div>
-                        <textarea id="leadNotes" rows="2" placeholder="Notes / interest"
-                            class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"></textarea>
-                        <div class="flex flex-wrap gap-3 text-[10px] text-slate-400">
-                            <label class="flex items-center gap-1"><input type="checkbox" id="leadEmailOK" checked />
-                                Email OK</label>
-                            <label class="flex items-center gap-1"><input type="checkbox" id="leadWaOK" checked />
-                                WhatsApp OK</label>
-                        </div>
-                        <div class="flex gap-2">
-                            <button type="button" onclick="clientSaveLead()"
-                                class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 text-white">Save lead</button>
-                            <button type="button" onclick="clientLeadsHideForm()"
-                                class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300">Cancel</button>
-                        </div>
-                    </div>
-
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                        <h3 class="text-xs font-bold text-white flex items-center gap-1.5">Contact cadence
-                            <button type="button" class="vic-info"
-                                data-tip="Controls how often a lead may get outreach. Do not contact = never included. Week / two weeks / month enforces a minimum gap since last contact."
-                                aria-label="Info">i</button>
-                        </h3>
-                        <p class="text-[10px] text-slate-500">How often eligible leads may receive outreach. &quot;Do
-                            not contact&quot; = never messaged.</p>
-                        <div class="flex flex-wrap gap-2 items-center">
-                            <select id="leadCadenceSelect"
-                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white">
-                                <option value="week">Every week</option>
-                                <option value="biweekly">Every two weeks</option>
-                                <option value="month">Once per month</option>
-                                <option value="none" selected>Do not contact</option>
+                            <select id="leadFilterCadence" onchange="clientLeadsApplyFilter()"
+                                class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white">
+                                <option value="">All cadences</option>
+                                <option value="week">Weekly</option>
+                                <option value="biweekly">Biweekly</option>
+                                <option value="month">Monthly</option>
+                                <option value="none">Do not contact</option>
                             </select>
-                            <select id="leadCadenceStage"
+                            <button type="button" onclick="clientLeadsApplyFilter()"
+                                class="px-3 py-2 rounded-lg bg-slate-800 text-white text-sm">Apply</button>
+                        </div>
+                        <div id="clientLeadsPager" class="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+                        </div>
+
+
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <h2 class="text-lg font-bold text-white flex items-center gap-2">My Leads <button
+                                        type="button" class="vic-info"
+                                        data-tip="Your private lead list (free). Add, edit, delete, CSV upload. Messaging uses email/WhatsApp quotas. External CRM stays paid."
+                                        aria-label="Info">i</button></h2>
+                                <p class="text-[11px] text-slate-500">Free to add, edit, delete, and upload. Messaging
+                                    &amp; product alerts use your existing plan (email / WhatsApp). External CRM
+                                    (HubSpot etc.) stays a paid integration.</p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" onclick="clientLeadsShowForm()"
+                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white">Add
+                                    lead</button>
+                                <label
+                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white cursor-pointer border border-slate-700">
+                                    Upload CSV
+                                    <input type="file" id="clientLeadsFile" accept=".csv,text/csv" class="hidden"
+                                        onchange="clientLeadsUploadFile(event)" />
+                                </label>
+                                <button type="button" onclick="clientLoadLeads()"
+                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">Refresh</button>
+                            </div>
+                        </div>
+
+                        <div
+                            class="rounded-lg border border-slate-800 bg-slate-900/50 px-3 py-2 text-[11px] text-slate-400 shrink-0">
+                            <strong class="text-slate-300">How this page works:</strong>
+                            1) <strong class="text-slate-300">Add lead</strong> / CSV → 2) set stage &amp; tags → 3) set
+                            <strong class="text-slate-300">contact cadence</strong> →
+                            4) <strong class="text-slate-300">Step A</strong> save products in catalog → 5) <strong
+                                class="text-slate-300">Step B</strong> message leads (batched, personalized).
+                            Scroll for the lead table. Hover the <strong class="text-slate-300">i</strong> icons for
+                            tips.
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 items-center">
+                            <select id="leadFilterStage" onchange="window.__LEADS_PAGE=1;clientRenderLeadsTable()"
                                 class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white">
                                 <option value="">All stages</option>
                                 <option value="New">New</option>
@@ -2207,65 +2145,108 @@
                                 <option value="Interested">Interested</option>
                                 <option value="Proposal">Proposal</option>
                                 <option value="Customer">Customer / Won</option>
+                                <option value="Lost">Lost</option>
                             </select>
-                            <button type="button" onclick="clientSetLeadCadence()"
-                                class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 border border-slate-700">Apply
-                                cadence</button>
-                            <span id="cadenceHint" class="text-[10px] text-slate-500"></span>
+                            <button type="button" onclick="clientLoadLeadSuggestions()"
+                                class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200">Refresh
+                                suggestions</button>
                         </div>
-                    </div>
 
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
-                        <h3 class="text-xs font-bold text-white flex items-center gap-1.5">Step B — Message leads /
-                            announce product
-                            <button type="button" class="vic-info"
-                                data-tip="Send or schedule personalized outreach. Optional: pick a product from your catalog (Step A). Messages go out in small batches with gaps — not all at once."
-                                aria-label="Info">i</button>
-                        </h3>
-                        <p class="text-[10px] text-slate-500">Uses your catalog (optional) + custom text. Each message
-                            is <strong class="text-slate-400">personalized</strong>. Delivery is <strong
-                                class="text-slate-400">batched</strong> (gaps between sends) to respect email/WhatsApp
-                            limits.</p>
-                        <div class="flex flex-wrap gap-2 items-center">
-                            <label class="text-[10px] text-slate-500">From catalog
-                                <select id="offerFromCatalog" onchange="clientFillOfferFromCatalog()"
-                                    class="ml-1 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white max-w-[200px]">
-                                    <option value="">Custom message…</option>
-                                </select>
-                            </label>
-                            <label class="text-[10px] text-slate-500">Filter by tag
-                                <input id="offerTagFilter" list="leadTagPresets" placeholder="e.g. hot"
-                                    class="ml-1 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white w-28" />
-                            </label>
+                        <div class="text-[10px] text-slate-500 shrink-0">Your leads list</div>
+                    </div>
+                    <div id="sub-leads-catalog" class="leads-subview hidden space-y-4">
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-[11px]">
+                                    <thead class="bg-slate-900 text-slate-400">
+                                        <tr>
+                                            <th class="p-2">Name</th>
+                                            <th class="p-2">Company</th>
+                                            <th class="p-2">Email</th>
+                                            <th class="p-2">Phone</th>
+                                            <th class="p-2">Stage</th>
+                                            <th class="p-2">Source</th>
+                                            <th class="p-2">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="clientLeadsTableBody" class="divide-y divide-slate-800 text-slate-300">
+                                        <tr>
+                                            <td colspan="7" class="p-3 text-slate-500">Loading…</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                        <input id="offerTitle" placeholder="Subject / offer title"
-                            class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                        <textarea id="offerBody" rows="3"
-                            placeholder="Message body. Use {{name}} {{first_name}} {{company}} {{role}} {{interest}} for personalization."
-                            class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"></textarea>
-                        <input id="offerLink" placeholder="Link (optional)"
-                            class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                        <div class="flex flex-wrap gap-2 items-center">
-                            <label class="text-[10px] text-slate-500">Tone
-                                <select id="offerTone"
-                                    class="ml-1 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white">
-                                    <option value="professional">Professional</option>
-                                    <option value="familiar">Familiar / friendly</option>
-                                    <option value="both">Both (balanced)</option>
+                        <div id="productCatalogBox"
+                            class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
+                            <p class="text-xs font-semibold text-white flex items-center gap-1.5">
+                                Step A — Product / service catalog
+                                <button type="button" class="vic-info"
+                                    data-tip="Save the products or services you sell. Free. Used by AI for context and as a quick picker when you message leads about a new offer. This does not send messages by itself."
+                                    aria-label="Info">i</button>
+                            </p>
+                            <p class="text-[10px] text-slate-500">1) Save items here → 2) When you message leads (Step
+                                B), pick a catalog item or type a custom offer.</p>
+                            <div class="flex flex-wrap gap-2">
+                                <input id="prodName" placeholder="Name"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white flex-1 min-w-[100px]" />
+                                <input id="prodLink" placeholder="Link (optional)"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white flex-1 min-w-[100px]" />
+                            </div>
+                            <textarea id="prodDesc" rows="2" placeholder="Short description"
+                                class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white"></textarea>
+                            <button type="button" onclick="clientSaveProduct()"
+                                class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-white">Save
+                                to catalog</button>
+                            <ul id="productCatalogList" class="text-[11px] text-slate-400 space-y-1"></ul>
+                        </div>
+
+                        <div id="leadSuggestionsBox"
+                            class="hidden bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
+                            <p class="text-xs font-semibold text-white">Suggested next actions</p>
+                            <div id="leadSuggestionsList" class="space-y-2 text-[11px] text-slate-300"></div>
+                        </div>
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
+                            <p class="text-xs font-semibold text-white">Follow-up task</p>
+                            <div class="flex flex-wrap gap-2">
+                                <select id="taskLeadSelect"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white min-w-[140px]">
+                                    <option value="">Lead…</option>
                                 </select>
-                            </label>
-                            <label class="text-[10px] text-slate-500">Channel
-                                <select id="offerChannel"
-                                    class="ml-1 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white">
-                                    <option value="email">Email</option>
-                                    <option value="whatsapp">WhatsApp</option>
-                                    <option value="both">Both</option>
-                                </select>
-                            </label>
-                            <label class="text-[10px] text-slate-500">Stage
-                                <select id="offerStage"
-                                    class="ml-1 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white">
-                                    <option value="">All stages</option>
+                                <input id="taskTitle" placeholder="e.g. Call back"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white flex-1 min-w-[120px]" />
+                                <input id="taskDueDays" type="number" min="0" value="3"
+                                    class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white"
+                                    title="Days from now" />
+                                <button type="button" onclick="clientSaveLeadTask()"
+                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 text-white">Add
+                                    task</button>
+                            </div>
+                            <ul id="leadTasksList" class="text-[11px] text-slate-400 space-y-1"></ul>
+                        </div>
+
+                        <div id="clientLeadForm"
+                            class="hidden bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                            <input type="hidden" id="leadEditId" value="" />
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <input id="leadName" placeholder="Contact name"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                                <input id="leadCompany" placeholder="Company"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                                <input id="leadEmail" placeholder="Email"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                                <input id="leadPhone" placeholder="Phone"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                                <input id="leadWhatsApp" placeholder="WhatsApp"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                                <input id="leadRole" placeholder="Role / title"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                                <input id="leadIndustry" placeholder="Industry"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                                <input id="leadCity" placeholder="City"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                                <select id="leadStage"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white">
                                     <option value="New">New</option>
                                     <option value="Contacted">Contacted</option>
                                     <option value="Interested">Interested</option>
@@ -2273,354 +2254,548 @@
                                     <option value="Customer">Customer / Won</option>
                                     <option value="Lost">Lost</option>
                                 </select>
-                            </label>
-                            <label class="text-[10px] text-slate-500">Send at
-                                <input type="datetime-local" id="offerSendAt"
-                                    class="ml-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[11px] text-white" />
-                            </label>
-                        </div>
-                        <div class="space-y-2">
-                            <p class="text-[10px] text-slate-400 flex items-center gap-1">Images (up to 5) — upload
-                                and/or paste URLs
-                                <button type="button" class="vic-info"
-                                    data-tip="Attach up to 5 images. Upload from your device or paste public https links (one per line). Uploads are stored and the link is added automatically."
-                                    aria-label="Info">i</button>
-                            </p>
-                            <div class="flex flex-wrap gap-2 items-center">
-                                <label
-                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 cursor-pointer">
-                                    Upload images
-                                    <input type="file" id="offerImageFiles" accept="image/*" multiple class="hidden"
-                                        onchange="clientUploadOfferImages(event)" />
-                                </label>
-                                <span id="offerImageUploadStatus" class="text-[10px] text-slate-500"></span>
+                                <div class="flex flex-col gap-1 min-w-[140px] flex-1">
+                                    <input id="leadTags" placeholder="Tags (pick or type)" list="leadTagPresets"
+                                        class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                                    <datalist id="leadTagPresets">
+                                        <option value="hot"></option>
+                                        <option value="warm"></option>
+                                        <option value="cold"></option>
+                                        <option value="vip"></option>
+                                        <option value="decision-maker"></option>
+                                        <option value="referral"></option>
+                                        <option value="partner"></option>
+                                        <option value="newsletter"></option>
+                                        <option value="event"></option>
+                                        <option value="whatsapp"></option>
+                                        <option value="email-only"></option>
+                                        <option value="upsell"></option>
+                                        <option value="renewal"></option>
+                                        <option value="cac"></option>
+                                        <option value="compliance"></option>
+                                        <option value="digital"></option>
+                                        <option value="ops"></option>
+                                    </datalist>
+                                    <p class="text-[9px] text-slate-600">Suggested: hot, warm, cold, vip,
+                                        decision-maker, referral, partner, newsletter, event, upsell, renewal, cac,
+                                        compliance, digital, ops</p>
+                                </div>
+                                <input id="leadValue" placeholder="Est. value (optional, tracking only)"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                                <input id="leadSourceCampaign" placeholder="Source campaign / post id"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
                             </div>
-                            <textarea id="offerImageUrls" oninput="clientRefreshOfferImagePreview()" rows="2"
-                                placeholder="Or paste image URLs, one per line&#10;https://…"
-                                class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white font-mono"></textarea>
-                            <div id="offerImagePreview" class="flex flex-wrap gap-2"></div>
-                            <p class="text-[10px] text-slate-400 flex items-center gap-1">Video (paid: ₦300 / $0.50 each
-                                · packs of 10+) — <span id="videoCreditsLabel">credits: —</span>
-                                <button type="button" class="vic-info"
-                                    data-tip="Video attachment uses Lead video credits. Buy a pack of at least 10 under Billing. Upload a file or paste a URL."
-                                    aria-label="Info">i</button>
-                            </p>
-                            <div class="flex flex-wrap gap-2 items-center">
-                                <label
-                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 cursor-pointer">
-                                    Upload video
-                                    <input type="file" id="offerVideoFile" accept="video/*" class="hidden"
-                                        onchange="clientUploadOfferVideo(event)" />
-                                </label>
-                                <span id="offerVideoUploadStatus" class="text-[10px] text-slate-500"></span>
+                            <textarea id="leadNotes" rows="2" placeholder="Notes / interest"
+                                class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"></textarea>
+                            <div class="flex flex-wrap gap-3 text-[10px] text-slate-400">
+                                <label class="flex items-center gap-1"><input type="checkbox" id="leadEmailOK"
+                                        checked /> Email OK</label>
+                                <label class="flex items-center gap-1"><input type="checkbox" id="leadWaOK" checked />
+                                    WhatsApp OK</label>
                             </div>
-                            <textarea id="offerVideoUrls" rows="1" placeholder="Or paste video URL&#10;https://…"
-                                class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white font-mono"></textarea>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="clientSaveLead()"
+                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 text-white">Save
+                                    lead</button>
+                                <button type="button" onclick="clientLeadsHideForm()"
+                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300">Cancel</button>
+                            </div>
                         </div>
-                        <div class="flex flex-wrap gap-2 items-center">
-                            <button type="button" onclick="clientSaveOfferOnly()"
-                                class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 border border-slate-700">Save
-                                offer</button>
-                            <button type="button" onclick="clientNotifyLeadsOffer()"
-                                class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 text-white">Queue
-                                messages</button>
-                            <button type="button" onclick="clientLoadLeadMsgQueue()"
-                                class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">Queue
-                                status</button>
-                            <span id="offerHint" class="text-[10px] text-slate-500"></span>
+
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                            <h3 class="text-xs font-bold text-white flex items-center gap-1.5">Contact cadence
+                                <button type="button" class="vic-info"
+                                    data-tip="Controls how often a lead may get outreach. Do not contact = never included. Week / two weeks / month enforces a minimum gap since last contact."
+                                    aria-label="Info">i</button>
+                            </h3>
+                            <p class="text-[10px] text-slate-500">How often eligible leads may receive outreach.
+                                &quot;Do not contact&quot; = never messaged.</p>
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <select id="leadCadenceSelect"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white">
+                                    <option value="week">Every week</option>
+                                    <option value="biweekly">Every two weeks</option>
+                                    <option value="month">Once per month</option>
+                                    <option value="none" selected>Do not contact</option>
+                                </select>
+                                <select id="leadCadenceStage"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white">
+                                    <option value="">All stages</option>
+                                    <option value="New">New</option>
+                                    <option value="Contacted">Contacted</option>
+                                    <option value="Interested">Interested</option>
+                                    <option value="Proposal">Proposal</option>
+                                    <option value="Customer">Customer / Won</option>
+                                </select>
+                                <button type="button" onclick="clientSetLeadCadence()"
+                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 border border-slate-700">Apply
+                                    cadence</button>
+                                <span id="cadenceHint" class="text-[10px] text-slate-500"></span>
+                            </div>
                         </div>
-                        <div id="leadMsgQueueRoot"
-                            class="text-[10px] text-slate-400 space-y-1 max-h-32 overflow-y-auto"></div>
+
                     </div>
+                    <div id="sub-leads-message" class="leads-subview hidden space-y-4">
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                            <h3 class="text-xs font-bold text-white flex items-center gap-1.5">Step B — Message leads /
+                                announce product
+                                <button type="button" class="vic-info"
+                                    data-tip="Send or schedule personalized outreach. Optional: pick a product from your catalog (Step A). Messages go out in small batches with gaps — not all at once."
+                                    aria-label="Info">i</button>
+                            </h3>
+                            <p class="text-[10px] text-slate-500">Uses your catalog (optional) + custom text. Each
+                                message is <strong class="text-slate-400">personalized</strong>. Delivery is <strong
+                                    class="text-slate-400">batched</strong> (gaps between sends) to respect
+                                email/WhatsApp limits.</p>
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <label class="text-[10px] text-slate-500">From catalog
+                                    <select id="offerFromCatalog" onchange="clientFillOfferFromCatalog()"
+                                        class="ml-1 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white max-w-[200px]">
+                                        <option value="">Custom message…</option>
+                                    </select>
+                                </label>
+                                <label class="text-[10px] text-slate-500">Filter by tag
+                                    <input id="offerTagFilter" list="leadTagPresets" placeholder="e.g. hot"
+                                        class="ml-1 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white w-28" />
+                                </label>
+                            </div>
+                            <input id="offerTitle" placeholder="Subject / offer title"
+                                class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                            <textarea id="offerBody" rows="3"
+                                placeholder="Message body. Use {{name}} {{first_name}} {{company}} {{role}} {{interest}} for personalization."
+                                class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"></textarea>
+                            <input id="offerLink" placeholder="Link (optional)"
+                                class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <label class="text-[10px] text-slate-500">Tone
+                                    <select id="offerTone"
+                                        class="ml-1 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white">
+                                        <option value="professional">Professional</option>
+                                        <option value="familiar">Familiar / friendly</option>
+                                        <option value="both">Both (balanced)</option>
+                                    </select>
+                                </label>
+                                <label class="text-[10px] text-slate-500">Channel
+                                    <select id="offerChannel"
+                                        class="ml-1 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white">
+                                        <option value="email">Email</option>
+                                        <option value="whatsapp">WhatsApp</option>
+                                        <option value="both">Both</option>
+                                    </select>
+                                </label>
+                                <label class="text-[10px] text-slate-500">Stage
+                                    <select id="offerStage"
+                                        class="ml-1 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white">
+                                        <option value="">All stages</option>
+                                        <option value="New">New</option>
+                                        <option value="Contacted">Contacted</option>
+                                        <option value="Interested">Interested</option>
+                                        <option value="Proposal">Proposal</option>
+                                        <option value="Customer">Customer / Won</option>
+                                        <option value="Lost">Lost</option>
+                                    </select>
+                                </label>
+                                <label class="text-[10px] text-slate-500">Send at
+                                    <input type="datetime-local" id="offerSendAt"
+                                        class="ml-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[11px] text-white" />
+                                </label>
+                            </div>
+                            <div class="space-y-2">
+                                <p class="text-[10px] text-slate-400 flex items-center gap-1">Images (up to 5) — upload
+                                    and/or paste URLs
+                                    <button type="button" class="vic-info"
+                                        data-tip="Attach up to 5 images. Upload from your device or paste public https links (one per line). Uploads are stored and the link is added automatically."
+                                        aria-label="Info">i</button>
+                                </p>
+                                <div class="flex flex-wrap gap-2 items-center">
+                                    <label
+                                        class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 cursor-pointer">
+                                        Upload images
+                                        <input type="file" id="offerImageFiles" accept="image/*" multiple class="hidden"
+                                            onchange="clientUploadOfferImages(event)" />
+                                    </label>
+                                    <span id="offerImageUploadStatus" class="text-[10px] text-slate-500"></span>
+                                </div>
+                                <textarea id="offerImageUrls" oninput="clientRefreshOfferImagePreview()" rows="2"
+                                    placeholder="Or paste image URLs, one per line&#10;https://…"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white font-mono"></textarea>
+                                <div id="offerImagePreview" class="flex flex-wrap gap-2"></div>
+                                <p class="text-[10px] text-slate-400 flex items-center gap-1">Video (paid: ₦300 / $0.50
+                                    each · packs of 10+) — <span id="videoCreditsLabel">credits: —</span>
+                                    <button type="button" class="vic-info"
+                                        data-tip="Video attachment uses Lead video credits. Buy a pack of at least 10 under Billing. Upload a file or paste a URL."
+                                        aria-label="Info">i</button>
+                                </p>
+                                <div class="flex flex-wrap gap-2 items-center">
+                                    <label
+                                        class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 cursor-pointer">
+                                        Upload video
+                                        <input type="file" id="offerVideoFile" accept="video/*" class="hidden"
+                                            onchange="clientUploadOfferVideo(event)" />
+                                    </label>
+                                    <span id="offerVideoUploadStatus" class="text-[10px] text-slate-500"></span>
+                                </div>
+                                <textarea id="offerVideoUrls" rows="1" placeholder="Or paste video URL&#10;https://…"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white font-mono"></textarea>
+                            </div>
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <button type="button" onclick="clientSaveOfferOnly()"
+                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 border border-slate-700">Save
+                                    offer</button>
+                                <button type="button" onclick="clientNotifyLeadsOffer()"
+                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 text-white">Queue
+                                    messages</button>
+                                <button type="button" onclick="clientLoadLeadMsgQueue()"
+                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">Queue
+                                    status</button>
+                                <span id="offerHint" class="text-[10px] text-slate-500"></span>
+                            </div>
+                            <div id="leadMsgQueueRoot"
+                                class="text-[10px] text-slate-400 space-y-1 max-h-32 overflow-y-auto"></div>
+                        </div>
 
 
                 </section>
-                <section id="view-integrations" class="view flex-1 flex-col space-y-4">
+                <section </div>
+                    <div id="sub-leads-tasks" class="leads-subview hidden space-y-4">
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                            <h3 class="text-xs font-bold text-white">Follow-ups</h3>
+                            <div id="leadTasksList" class="text-xs text-slate-300">Open this tab to load.</div>
+                        </div>
+                    </div>
+                    <div id="sub-leads-queue" class="leads-subview hidden space-y-4">
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                            <h3 class="text-xs font-bold text-white">Message queue</h3>
+                            <div id="leadMsgQueueList" class="text-xs text-slate-300">Open this tab to load.</div>
+                            <div id="leadMsgQueuePager" class="flex gap-2 mt-2"></div>
+                        </div>
+                    </div>id="view-integrations"
+                    class="view flex-1 flex-col space-y-4">
                     <div class="flex justify-end shrink-0 mb-1 section-refresh-bar"><button type="button"
                             data-section-refresh="integrations"
                             class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white inline-flex items-center gap-1.5"><span
                                 class="btn-spin"></span><i class="fa-solid fa-rotate"></i> Refresh</button></div>
-
-                    <p class="text-xs text-slate-400 max-w-2xl">Connect social and CRM yourself when your plan allows.
-                        You can <strong class="text-slate-300">disconnect</strong> accounts yourself — no admin needed.
-                        To <strong class="text-slate-300">remove</strong> a
-                        connection, request disconnect — you can remove social accounts yourself anytime. TikTok
-                        defaults to
-                        standard TikTok; choose <strong class="text-slate-300">Business TikTok</strong> to enable AI
-                        replies on comments.</p>
-
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                        <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
-                                class="fa-solid fa-signature text-emerald-500"></i> Official signatory</h3>
-                        <p class="text-[11px] text-slate-500 leading-relaxed">Used on letters, proposals, and formal
-                            documents — one signature only (name, position, and optional image). Law-firm / bank
-                            standard.</p>
-                        <div
-                            class="rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2 text-[10px] text-slate-400 leading-relaxed space-y-1">
-                            <p class="font-semibold text-slate-300 uppercase tracking-wide text-[9px]">Signature image
-                                rules</p>
-                            <ul class="list-disc pl-4 space-y-0.5">
-                                <li>Optional — you can save <strong class="text-slate-300">name and title only</strong>.
-                                </li>
-                                <li>Formats: <strong class="text-slate-300">PNG or JPG</strong> (transparent PNG works
-                                    best).</li>
-                                <li>Prefer a <strong class="text-slate-300">cropped signature only</strong>, not a full
-                                    phone photo.</li>
-                                <li>Keep the file small (about <strong class="text-slate-300">under 1.5 MB</strong>).
-                                    Large WhatsApp photos are auto-compressed; very large files may still fail.</li>
-                                <li>One official signatory per account. Replacing the image updates future letters and
-                                    proposals.</li>
-                            </ul>
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-[10px] text-slate-500 mb-0.5">Full name</label>
-                                <input id="clientSigName" type="text" placeholder="e.g. Ada Okoye"
-                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white" />
-                            </div>
-                            <div>
-                                <label class="block text-[10px] text-slate-500 mb-0.5">Position / title</label>
-                                <input id="clientSigPosition" type="text" placeholder="e.g. Managing Director"
-                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white" />
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] text-slate-500 mb-0.5">Signature image (PNG/JPG,
-                                optional)</label>
-                            <input id="clientSigFile" type="file" accept="image/png,image/jpeg,image/webp"
-                                class="w-full text-[11px] text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-slate-800 file:text-slate-200" />
-                            <p id="clientSigStatus" class="text-[10px] text-slate-600 mt-1">No signatory saved yet.</p>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                            <button type="button" onclick="saveClientSignatory()"
-                                class="text-[10px] px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white font-medium">Save
-                                signatory</button>
-                            <button type="button" onclick="loadClientSignatory()"
-                                class="text-[10px] px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Refresh</button>
-                        </div>
+                    <div class="flex flex-wrap gap-2 mb-3" id="integSubTabs">
+                        <button type="button"
+                            class="integ-subtab px-3 py-2 rounded-lg bg-emerald-800 text-white text-sm"
+                            data-sub="integ-social"
+                            onclick="showView('integ-social', document.querySelector('[data-view=&quot;integ-social&quot;]'))">Social
+                            accounts</button>
+                        <button type="button"
+                            class="integ-subtab px-3 py-2 rounded-lg bg-slate-800 text-slate-300 text-sm"
+                            data-sub="integ-whatsapp"
+                            onclick="showView('integ-whatsapp', document.querySelector('[data-view=&quot;integ-whatsapp&quot;]'))">WhatsApp</button>
+                        <button type="button"
+                            class="integ-subtab px-3 py-2 rounded-lg bg-slate-800 text-slate-300 text-sm"
+                            data-sub="integ-email"
+                            onclick="showView('integ-email', document.querySelector('[data-view=&quot;integ-email&quot;]'))">Email</button>
+                        <button type="button"
+                            class="integ-subtab px-3 py-2 rounded-lg bg-slate-800 text-slate-300 text-sm"
+                            data-sub="integ-crm"
+                            onclick="showView('integ-crm', document.querySelector('[data-view=&quot;integ-crm&quot;]'))">CRM</button>
+                        <button type="button"
+                            class="integ-subtab px-3 py-2 rounded-lg bg-slate-800 text-slate-300 text-sm"
+                            data-sub="integ-ai"
+                            onclick="showView('integ-ai', document.querySelector('[data-view=&quot;integ-ai&quot;]'))">AI
+                            comments</button>
                     </div>
+                    <div id="sub-integ-social" class="integ-subview space-y-4" data-integ-root="1">
 
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
-                                    class="fa-solid fa-envelope text-slate-500"></i> Mailboxes</h3>
-                            <button type="button" id="btnConnectMailbox" onclick="clientConnectMailbox()"
-                                class="text-[10px] px-2.5 py-1 bg-sky-800 hover:bg-sky-700 rounded text-white">
-                                Connect email
-                            </button>
-                        </div>
-                        <p id="mailboxSelfServiceHint" class="text-[11px] text-slate-500">Self-service: connect <strong
-                                class="text-slate-300">one new email per calendar month</strong> while your plan is
-                            active. Locked if subscription expired. Extra mailboxes: contact admin or buy quota.</p>
-                        <div id="mailboxConnectForm" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
-                            <div>
-                                <label class="text-[10px] text-slate-500">Email address</label>
-                                <input id="mailboxConnectEmail" type="email" placeholder="you@company.com"
-                                    class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                            </div>
-                            <div>
-                                <label class="text-[10px] text-slate-500">Label</label>
-                                <input id="mailboxConnectLabel" type="text" placeholder="Main inbox"
-                                    class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                            </div>
-                            <div>
-                                <label class="text-[10px] text-slate-500">Provider</label>
-                                <select id="mailboxConnectProvider"
-                                    class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white">
-                                    <option value="gmail">Gmail / Google</option>
-                                    <option value="microsoft">Microsoft 365 / Outlook</option>
-                                    <option value="custom">Other IMAP</option>
-                                </select>
-                            </div>
-                            <div class="sm:col-span-3 flex gap-2">
-                                <button type="button" onclick="clientSubmitMailboxConnect(event)"
-                                    class="text-[10px] px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white">Start
-                                    connect</button>
-                                <button type="button"
-                                    onclick="document.getElementById('mailboxConnectForm').classList.add('hidden')"
-                                    class="text-[10px] px-3 py-1.5 bg-slate-800 rounded text-slate-300">Cancel</button>
-                            </div>
-                        </div>
-                        <div id="integrationsMailboxList" class="space-y-2 text-xs"></div>
-                    </div>
+                        <p class="text-xs text-slate-400 max-w-2xl">Connect social and CRM yourself when your plan
+                            allows.
+                            You can <strong class="text-slate-300">disconnect</strong> accounts yourself — no admin
+                            needed. To <strong class="text-slate-300">remove</strong> a
+                            connection, request disconnect — you can remove social accounts yourself anytime. TikTok
+                            defaults to
+                            standard TikTok; choose <strong class="text-slate-300">Business TikTok</strong> to enable AI
+                            replies on comments.</p>
 
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                        <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
                             <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
-                                    class="fa-brands fa-whatsapp text-slate-500"></i> WhatsApp</h3>
-                            <div class="flex flex-wrap gap-2">
-                                <button type="button" onclick="clientConnectWhatsApp()"
-                                    class="text-[10px] px-2.5 py-1 bg-green-800 hover:bg-green-700 rounded text-white">
-                                    Connect API number
-                                </button>
-                                <button type="button" onclick="clientBuyWhatsAppPack()"
-                                    class="text-[10px] px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded text-white">
-                                    Buy 50 messages ($8)
-                                </button>
+                                    class="fa-solid fa-signature text-emerald-500"></i> Official signatory</h3>
+                            <p class="text-[11px] text-slate-500 leading-relaxed">Used on letters, proposals, and formal
+                                documents — one signature only (name, position, and optional image). Law-firm / bank
+                                standard.</p>
+                            <div
+                                class="rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2 text-[10px] text-slate-400 leading-relaxed space-y-1">
+                                <p class="font-semibold text-slate-300 uppercase tracking-wide text-[9px]">Signature
+                                    image
+                                    rules</p>
+                                <ul class="list-disc pl-4 space-y-0.5">
+                                    <li>Optional — you can save <strong class="text-slate-300">name and title
+                                            only</strong>.
+                                    </li>
+                                    <li>Formats: <strong class="text-slate-300">PNG or JPG</strong> (transparent PNG
+                                        works
+                                        best).</li>
+                                    <li>Prefer a <strong class="text-slate-300">cropped signature only</strong>, not a
+                                        full
+                                        phone photo.</li>
+                                    <li>Keep the file small (about <strong class="text-slate-300">under 1.5
+                                            MB</strong>).
+                                        Large WhatsApp photos are auto-compressed; very large files may still fail.</li>
+                                    <li>One official signatory per account. Replacing the image updates future letters
+                                        and
+                                        proposals.</li>
+                                </ul>
                             </div>
-                        </div>
-                        <p class="text-[11px] text-slate-500">1) Connect <strong class="text-slate-300">one</strong> API
-                            number that is <strong class="text-slate-300">not</strong> already on WhatsApp Business /
-                            consumer WhatsApp. 2) Link staff phones for referrals. Extra API lines: contact admin
-                            (coexistence lines: +50% on business-initiated Meta charges).</p>
-                        <p id="clientWaUsageLabel" class="text-[11px] text-slate-500"></p>
-                        <p id="clientWaWeeklyLabel" class="text-[11px] text-slate-400"></p>
-                        <div id="integrationsWhatsAppApi" class="space-y-2 text-xs"></div>
-                        <div class="border-t border-slate-800 pt-3 space-y-2">
-                            <div class="flex flex-wrap items-end gap-2">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 <div>
-                                    <label class="text-[10px] text-slate-500">Staff WhatsApp (digits)</label>
-                                    <input id="waTeamPhone" type="text" id="teamWaPhone" placeholder="2348012345678"
-                                        class="block w-36 bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white" />
+                                    <label class="block text-[10px] text-slate-500 mb-0.5">Full name</label>
+                                    <input id="clientSigName" type="text" placeholder="e.g. Ada Okoye"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white" />
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-slate-500 mb-0.5">Position / title</label>
+                                    <input id="clientSigPosition" type="text" placeholder="e.g. Managing Director"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white" />
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-500 mb-0.5">Signature image (PNG/JPG,
+                                    optional)</label>
+                                <input id="clientSigFile" type="file" accept="image/png,image/jpeg,image/webp"
+                                    class="w-full text-[11px] text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-slate-800 file:text-slate-200" />
+                                <p id="clientSigStatus" class="text-[10px] text-slate-600 mt-1">No signatory saved yet.
+                                </p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" onclick="saveClientSignatory()"
+                                    class="text-[10px] px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white font-medium">Save
+                                    signatory</button>
+                                <button type="button" onclick="loadClientSignatory()"
+                                    class="text-[10px] px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Refresh</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
+                                        class="fa-solid fa-envelope text-slate-500"></i> Mailboxes</h3>
+                                <button type="button" id="btnConnectMailbox" onclick="clientConnectMailbox()"
+                                    class="text-[10px] px-2.5 py-1 bg-sky-800 hover:bg-sky-700 rounded text-white">
+                                    Connect email
+                                </button>
+                            </div>
+                            <p id="mailboxSelfServiceHint" class="text-[11px] text-slate-500">Self-service: connect
+                                <strong class="text-slate-300">one new email per calendar month</strong> while your plan
+                                is
+                                active. Locked if subscription expired. Extra mailboxes: contact admin or buy quota.</p>
+                            <div id="mailboxConnectForm" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
+                                <div>
+                                    <label class="text-[10px] text-slate-500">Email address</label>
+                                    <input id="mailboxConnectEmail" type="email" placeholder="you@company.com"
+                                        class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
                                 </div>
                                 <div>
                                     <label class="text-[10px] text-slate-500">Label</label>
-                                    <input id="waTeamLabel" type="text" placeholder="Sales lead"
-                                        class="block w-28 bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white" />
+                                    <input id="mailboxConnectLabel" type="text" placeholder="Main inbox"
+                                        class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
                                 </div>
                                 <div>
-                                    <label class="text-[10px] text-slate-500">Department</label>
-                                    <select id="waTeamDept"
-                                        class="block bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white">
-                                        <option value="sales">sales</option>
-                                        <option value="support">support</option>
-                                        <option value="admin">admin</option>
-                                        <option value="billing">billing</option>
-                                        <option value="operations">operations</option>
-                                        <option value="general">general</option>
+                                    <label class="text-[10px] text-slate-500">Provider</label>
+                                    <select id="mailboxConnectProvider"
+                                        class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white">
+                                        <option value="gmail">Gmail / Google</option>
+                                        <option value="microsoft">Microsoft 365 / Outlook</option>
+                                        <option value="custom">Other IMAP</option>
                                     </select>
                                 </div>
-                                <button type="button" onclick="clientAddTeamWhatsApp()"
-                                    class="text-[10px] px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white">Add
-                                    team number</button>
+                                <div class="sm:col-span-3 flex gap-2">
+                                    <button type="button" onclick="clientSubmitMailboxConnect(event)"
+                                        class="text-[10px] px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white">Start
+                                        connect</button>
+                                    <button type="button"
+                                        onclick="document.getElementById('mailboxConnectForm').classList.add('hidden')"
+                                        class="text-[10px] px-3 py-1.5 bg-slate-800 rounded text-slate-300">Cancel</button>
+                                </div>
                             </div>
-                            <div id="integrationsWhatsAppList" class="space-y-2 text-xs"></div>
+                            <div id="integrationsMailboxList" class="space-y-2 text-xs"></div>
                         </div>
-                        <p id="clientWaSignupHint" class="hidden text-[11px] text-emerald-300 break-all"></p>
-                    </div>
 
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                        <div class="flex items-start justify-between gap-2">
-                            <div>
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
                                 <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
-                                        class="fa-solid fa-toggle-on text-emerald-500"></i> Service switches</h3>
-                                <p class="text-[10px] text-slate-500 mt-1">Pick a capability from the list, then turn it
-                                    on or off.
-                                    Some items are admin-only. Social options require a Digital tier.
-                                </p>
+                                        class="fa-brands fa-whatsapp text-slate-500"></i> WhatsApp</h3>
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" onclick="clientConnectWhatsApp()"
+                                        class="text-[10px] px-2.5 py-1 bg-green-800 hover:bg-green-700 rounded text-white">
+                                        Connect API number
+                                    </button>
+                                    <button type="button" onclick="clientBuyWhatsAppPack()"
+                                        class="text-[10px] px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded text-white">
+                                        Buy 50 messages ($8)
+                                    </button>
+                                </div>
                             </div>
-                            <button type="button" onclick="loadClientServiceFlags()"
-                                class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Refresh</button>
+                            <p class="text-[11px] text-slate-500">1) Connect <strong class="text-slate-300">one</strong>
+                                API
+                                number that is <strong class="text-slate-300">not</strong> already on WhatsApp Business
+                                /
+                                consumer WhatsApp. 2) Link staff phones for referrals. Extra API lines: contact admin
+                                (coexistence lines: +50% on business-initiated Meta charges).</p>
+                            <p id="clientWaUsageLabel" class="text-[11px] text-slate-500"></p>
+                            <p id="clientWaWeeklyLabel" class="text-[11px] text-slate-400"></p>
+                            <div id="integrationsWhatsAppApi" class="space-y-2 text-xs"></div>
+                            <div class="border-t border-slate-800 pt-3 space-y-2">
+                                <div class="flex flex-wrap items-end gap-2">
+                                    <div>
+                                        <label class="text-[10px] text-slate-500">Staff WhatsApp (digits)</label>
+                                        <input id="waTeamPhone" type="text" id="teamWaPhone" placeholder="2348012345678"
+                                            class="block w-36 bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white" />
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-slate-500">Label</label>
+                                        <input id="waTeamLabel" type="text" placeholder="Sales lead"
+                                            class="block w-28 bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white" />
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-slate-500">Department</label>
+                                        <select id="waTeamDept"
+                                            class="block bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white">
+                                            <option value="sales">sales</option>
+                                            <option value="support">support</option>
+                                            <option value="admin">admin</option>
+                                            <option value="billing">billing</option>
+                                            <option value="operations">operations</option>
+                                            <option value="general">general</option>
+                                        </select>
+                                    </div>
+                                    <button type="button" onclick="clientAddTeamWhatsApp()"
+                                        class="text-[10px] px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-white">Add
+                                        team number</button>
+                                </div>
+                                <div id="integrationsWhatsAppList" class="space-y-2 text-xs"></div>
+                            </div>
+                            <p id="clientWaSignupHint" class="hidden text-[11px] text-emerald-300 break-all"></p>
                         </div>
-                        <div id="clientServiceFlagsList" class="space-y-2 text-xs">
+
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                            <div class="flex items-start justify-between gap-2">
+                                <div>
+                                    <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
+                                            class="fa-solid fa-toggle-on text-emerald-500"></i> Service switches</h3>
+                                    <p class="text-[10px] text-slate-500 mt-1">Pick a capability from the list, then
+                                        turn it
+                                        on or off.
+                                        Some items are admin-only. Social options require a Digital tier.
+                                    </p>
+                                </div>
+                                <button type="button" onclick="loadClientServiceFlags()"
+                                    class="text-[10px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">Refresh</button>
+                            </div>
+                            <div id="clientServiceFlagsList" class="space-y-2 text-xs">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <select id="serviceFlagSelect" onchange="onServiceFlagSelectChange()"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg text-[11px] text-white px-2 py-1.5 min-w-[220px] max-w-full flex-1">
+                                        <option value="">Choose a capability…</option>
+                                    </select>
+                                    <label id="serviceFlagToggleWrap"
+                                        class="hidden items-center gap-2 px-2 py-1 rounded-lg border border-slate-700 bg-slate-900/60">
+                                        <span id="serviceFlagStatus" class="text-[10px] text-slate-400">—</span>
+                                        <input type="checkbox" id="serviceFlagCheckbox"
+                                            class="rounded border-slate-600 text-emerald-500 focus:ring-emerald-500/40"
+                                            onchange="toggleSelectedServiceFlag(this.checked)" />
+                                    </label>
+                                </div>
+                                <p id="serviceFlagHint" class="text-[10px] text-slate-500 hidden"></p>
+                                <div id="serviceFlagsOnSummary" class="flex flex-wrap gap-1"></div>
+                            </div>
+                            <p id="clientServiceFlagsMeta" class="text-[10px] text-slate-600"></p>
+                        </div>
+
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
+                                        class="fa-solid fa-share-nodes text-emerald-500"></i> Social Media</h3>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <select id="socialConnectPlatform" onchange="clientOnSocialPlatformChange()"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg text-[11px] text-white px-2 py-1.5 min-w-[160px]">
+                                        <option value="">Connect platform…</option>
+                                        <option value="facebook">Facebook</option>
+                                        <option value="instagram">Instagram</option>
+                                        <option value="linkedin">LinkedIn</option>
+                                        <option value="threads">Threads</option>
+                                        <option value="x">X (Twitter)</option>
+                                        <option value="tiktok">TikTok</option>
+                                    </select>
+                                    <button type="button" id="btnSocialConnectMain"
+                                        onclick="clientStartSocialConnectFromSelect()"
+                                        class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-medium">Connect</button>
+                                </div>
+                            </div>
+                            <!-- TikTok: Standard vs Business (explicit buttons) -->
+                            <div id="tiktokModePanel"
+                                class="hidden rounded-lg border border-slate-700 bg-slate-900/80 p-3 space-y-2">
+                                <p class="text-[10px] font-semibold text-slate-300 uppercase tracking-wide">Choose
+                                    TikTok type</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" id="btnTikTokStandard"
+                                        onclick="clientPickTikTokMode('consumer')"
+                                        class="text-[11px] px-3 py-2 rounded-lg border border-emerald-600 bg-emerald-700/30 text-white font-medium">
+                                        Standard TikTok
+                                        <span class="block text-[9px] text-slate-400 font-normal">Publish only · no AI
+                                            comments</span>
+                                    </button>
+                                    <button type="button" id="btnTikTokBusiness"
+                                        onclick="clientPickTikTokMode('business')"
+                                        class="text-[11px] px-3 py-2 rounded-lg border border-slate-600 bg-slate-950 text-slate-200 font-medium">
+                                        Business TikTok
+                                        <span class="block text-[9px] text-slate-400 font-normal">Publish + AI
+                                            comments</span>
+                                    </button>
+                                </div>
+                                <input type="hidden" id="tiktokModeValue" value="consumer" />
+                                <p class="text-[10px] text-slate-500">Business TikTok is required for AI comment replies
+                                    (and the Comment Reply add-on). Standard cannot reply to comments.</p>
+                            </div>
+                            <p class="text-[10px] text-slate-500 leading-relaxed">Account count is limited by your
+                                <strong class="text-slate-400">Digital tier</strong>. You can disconnect a network here
+                                anytime (no admin needed), then connect another account.
+                            </p>
+                            <div id="integrationsSocialList" class="space-y-2 text-xs"></div>
+                            <div id="postCommentsMount" class="mt-2 border-t border-slate-800 pt-2"></div>
+                        </div>
+
+
+
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2"
+                            id="businessAboutCard">
+                            <div class="flex items-center justify-between gap-2">
+                                <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
+                                        class="fa-solid fa-building text-emerald-500"></i> Business about</h3>
+                                <span class="text-[10px] text-slate-500">You can edit anytime</span>
+                            </div>
+                            <p class="text-[10px] text-slate-500 leading-relaxed">Describe your company so AI can answer
+                                comments and draft documents accurately. Admin can also set this when registering or
+                                editing your account.</p>
+                            <textarea id="businessAboutText" rows="5" maxlength="4000"
+                                placeholder="What you do, who you serve, location, main services…"
+                                class="w-full bg-slate-900 border border-slate-700 rounded-lg text-[12px] text-white px-3 py-2 leading-relaxed"></textarea>
                             <div class="flex flex-wrap items-center gap-2">
-                                <select id="serviceFlagSelect" onchange="onServiceFlagSelectChange()"
-                                    class="bg-slate-900 border border-slate-700 rounded-lg text-[11px] text-white px-2 py-1.5 min-w-[220px] max-w-full flex-1">
-                                    <option value="">Choose a capability…</option>
-                                </select>
-                                <label id="serviceFlagToggleWrap"
-                                    class="hidden items-center gap-2 px-2 py-1 rounded-lg border border-slate-700 bg-slate-900/60">
-                                    <span id="serviceFlagStatus" class="text-[10px] text-slate-400">—</span>
-                                    <input type="checkbox" id="serviceFlagCheckbox"
-                                        class="rounded border-slate-600 text-emerald-500 focus:ring-emerald-500/40"
-                                        onchange="toggleSelectedServiceFlag(this.checked)" />
-                                </label>
+                                <button type="button" onclick="clientSaveBusinessAbout()"
+                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-medium">Save
+                                    about</button>
+                                <span id="businessAboutHint" class="text-[10px] text-slate-500"></span>
                             </div>
-                            <p id="serviceFlagHint" class="text-[10px] text-slate-500 hidden"></p>
-                            <div id="serviceFlagsOnSummary" class="flex flex-wrap gap-1"></div>
                         </div>
-                        <p id="clientServiceFlagsMeta" class="text-[10px] text-slate-600"></p>
-                    </div>
 
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                        <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
                             <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
-                                    class="fa-solid fa-share-nodes text-emerald-500"></i> Social Media</h3>
-                            <div class="flex flex-wrap items-center gap-2">
-                                <select id="socialConnectPlatform" onchange="clientOnSocialPlatformChange()"
-                                    class="bg-slate-900 border border-slate-700 rounded-lg text-[11px] text-white px-2 py-1.5 min-w-[160px]">
-                                    <option value="">Connect platform…</option>
-                                    <option value="facebook">Facebook</option>
-                                    <option value="instagram">Instagram</option>
-                                    <option value="linkedin">LinkedIn</option>
-                                    <option value="threads">Threads</option>
-                                    <option value="x">X (Twitter)</option>
-                                    <option value="tiktok">TikTok</option>
+                                    class="fa-solid fa-database text-slate-500"></i> CRM</h3>
+                            <div id="integrationsCrmList" class="space-y-2 text-xs"></div>
+                            <div class="flex flex-wrap items-center gap-2 pt-1">
+                                <select id="crmConnectType"
+                                    class="bg-slate-900 border border-slate-700 rounded-lg text-[11px] text-white px-2 py-1.5 min-w-[140px]">
+                                    <option value="">Connect CRM…</option>
+                                    <option value="hubspot">HubSpot</option>
+                                    <option value="zoho">Zoho</option>
+                                    <option value="salesforce">Salesforce</option>
                                 </select>
-                                <button type="button" id="btnSocialConnectMain"
-                                    onclick="clientStartSocialConnectFromSelect()"
-                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-medium">Connect</button>
+                                <button type="button" onclick="clientStartCrmConnectFromSelect()"
+                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white">Connect</button>
                             </div>
                         </div>
-                        <!-- TikTok: Standard vs Business (explicit buttons) -->
-                        <div id="tiktokModePanel"
-                            class="hidden rounded-lg border border-slate-700 bg-slate-900/80 p-3 space-y-2">
-                            <p class="text-[10px] font-semibold text-slate-300 uppercase tracking-wide">Choose TikTok
-                                type</p>
-                            <div class="flex flex-wrap gap-2">
-                                <button type="button" id="btnTikTokStandard" onclick="clientPickTikTokMode('consumer')"
-                                    class="text-[11px] px-3 py-2 rounded-lg border border-emerald-600 bg-emerald-700/30 text-white font-medium">
-                                    Standard TikTok
-                                    <span class="block text-[9px] text-slate-400 font-normal">Publish only · no AI
-                                        comments</span>
-                                </button>
-                                <button type="button" id="btnTikTokBusiness" onclick="clientPickTikTokMode('business')"
-                                    class="text-[11px] px-3 py-2 rounded-lg border border-slate-600 bg-slate-950 text-slate-200 font-medium">
-                                    Business TikTok
-                                    <span class="block text-[9px] text-slate-400 font-normal">Publish + AI
-                                        comments</span>
-                                </button>
-                            </div>
-                            <input type="hidden" id="tiktokModeValue" value="consumer" />
-                            <p class="text-[10px] text-slate-500">Business TikTok is required for AI comment replies
-                                (and the Comment Reply add-on). Standard cannot reply to comments.</p>
-                        </div>
-                        <p class="text-[10px] text-slate-500 leading-relaxed">Account count is limited by your <strong
-                                class="text-slate-400">Digital tier</strong>. You can disconnect a network here anytime
-                            (no admin needed), then connect another account.
-                        </p>
-                        <div id="integrationsSocialList" class="space-y-2 text-xs"></div>
-                        <div id="postCommentsMount" class="mt-2 border-t border-slate-800 pt-2"></div>
-                    </div>
-
-
-
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2" id="businessAboutCard">
-                        <div class="flex items-center justify-between gap-2">
-                            <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
-                                    class="fa-solid fa-building text-emerald-500"></i> Business about</h3>
-                            <span class="text-[10px] text-slate-500">You can edit anytime</span>
-                        </div>
-                        <p class="text-[10px] text-slate-500 leading-relaxed">Describe your company so AI can answer
-                            comments and draft documents accurately. Admin can also set this when registering or editing
-                            your account.</p>
-                        <textarea id="businessAboutText" rows="5" maxlength="4000"
-                            placeholder="What you do, who you serve, location, main services…"
-                            class="w-full bg-slate-900 border border-slate-700 rounded-lg text-[12px] text-white px-3 py-2 leading-relaxed"></textarea>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <button type="button" onclick="clientSaveBusinessAbout()"
-                                class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-medium">Save
-                                about</button>
-                            <span id="businessAboutHint" class="text-[10px] text-slate-500"></span>
-                        </div>
-                    </div>
-
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                        <h3 class="text-xs font-bold text-white flex items-center gap-2"><i
-                                class="fa-solid fa-database text-slate-500"></i> CRM</h3>
-                        <div id="integrationsCrmList" class="space-y-2 text-xs"></div>
-                        <div class="flex flex-wrap items-center gap-2 pt-1">
-                            <select id="crmConnectType"
-                                class="bg-slate-900 border border-slate-700 rounded-lg text-[11px] text-white px-2 py-1.5 min-w-[140px]">
-                                <option value="">Connect CRM…</option>
-                                <option value="hubspot">HubSpot</option>
-                                <option value="zoho">Zoho</option>
-                                <option value="salesforce">Salesforce</option>
-                            </select>
-                            <button type="button" onclick="clientStartCrmConnectFromSelect()"
-                                class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white">Connect</button>
-                        </div>
-                    </div>
                 </section>
 
                 <!-- WHATSAPP ACTIVITY -->
@@ -2846,7 +3021,24 @@
                 </section>
 
                 <!-- BILLING & RENEWAL -->
-                <section id="view-billing" class="view flex-1 flex-col space-y-4">
+                <section </div>
+                    <div id="sub-integ-whatsapp" class="integ-subview hidden space-y-3">
+                        <p class="text-sm text-slate-300">WhatsApp numbers appear under Integrations after load. Use the
+                            list below (same data).</p>
+                        <div id="integWaFocusHost"></div>
+                    </div>
+                    <div id="sub-integ-email" class="integ-subview hidden space-y-3">
+                        <p class="text-sm text-slate-300">Mailboxes:</p>
+                        <div id="integEmailFocusHost"></div>
+                    </div>
+                    <div id="sub-integ-crm" class="integ-subview hidden space-y-3">
+                        <p class="text-sm text-slate-300">CRM connections:</p>
+                        <div id="integCrmFocusHost"></div>
+                    </div>
+                    <div id="sub-integ-ai" class="integ-subview hidden space-y-3">
+                        <p class="text-sm text-slate-300">AI comment reply toggles:</p>
+                        <div id="integAiFocusHost"></div>
+                    </div>id="view-billing" class="view flex-1 flex-col space-y-4">
                     <div class="flex justify-end shrink-0 mb-1 section-refresh-bar"><button type="button"
                             data-section-refresh="billing"
                             class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white inline-flex items-center gap-1.5"><span
@@ -3999,30 +4191,57 @@
         function showView(name, btn) {
             try { closeMobileSidebar(); } catch (_) { }
 
-            document.querySelectorAll('.view, .view-panel').forEach(function (v) {
+            document.querySelectorAll('.view, .view-panel, section[id^="view-"]').forEach(function (v) {
                 v.classList.remove('active');
                 v.classList.add('hidden');
-                v.style.display = '';
+                try { v.style.setProperty('display', 'none', 'important'); } catch (_) { v.style.display = 'none'; }
             });
-            // Also hide any section[id^=view-] that might lack .view
-            document.querySelectorAll('section[id^="view-"]').forEach(function (v) {
-                if (v.id === 'view-' + name) return;
-                v.classList.remove('active');
+            // Sub-panels inside leads/integrations
+            document.querySelectorAll('.leads-subview, .integ-subview').forEach(function (v) {
                 v.classList.add('hidden');
-                v.style.display = '';
+                try { v.style.setProperty('display', 'none', 'important'); } catch (_) { v.style.display = 'none'; }
             });
-            const viewEl = document.getElementById('view-' + name);
+            var viewEl = document.getElementById('view-' + name);
+            // Map sub-routes: leads-list -> view-leads + sub
+            var leadsSubs = { 'leads': 'leads-list', 'leads-list': 'leads-list', 'leads-catalog': 'leads-catalog', 'leads-message': 'leads-message', 'leads-tasks': 'leads-tasks', 'leads-queue': 'leads-queue' };
+            var integSubs = { 'integrations': 'integ-social', 'integ-social': 'integ-social', 'integ-whatsapp': 'integ-whatsapp', 'integ-email': 'integ-email', 'integ-crm': 'integ-crm', 'integ-ai': 'integ-ai' };
+            if (leadsSubs[name]) {
+                viewEl = document.getElementById('view-leads');
+                name = 'leads'; // for title/nav base
+            }
+            if (integSubs[arguments[0]]) {
+                viewEl = document.getElementById('view-integrations');
+            }
             if (!viewEl) {
                 try { console.error('[showView] missing view-', name); } catch (_) { }
                 return;
             }
             viewEl.classList.remove('hidden');
             viewEl.classList.add('active');
-            viewEl.style.display = '';
+            try { viewEl.style.setProperty('display', 'flex', 'important'); } catch (_) { viewEl.style.display = 'flex'; }
+            // Show matching subview
+            var rawName = arguments[0];
+            if (leadsSubs[rawName]) {
+                var sub = document.getElementById('sub-' + leadsSubs[rawName]);
+                if (sub) {
+                    sub.classList.remove('hidden');
+                    try { sub.style.setProperty('display', 'block', 'important'); } catch (_) { sub.style.display = 'block'; }
+                }
+                try { if (typeof onLeadsSubview === 'function') onLeadsSubview(leadsSubs[rawName]); } catch (_) { }
+            }
+            if (integSubs[rawName]) {
+                var isub = document.getElementById('sub-' + integSubs[rawName]);
+                if (isub) {
+                    isub.classList.remove('hidden');
+                    try { isub.style.setProperty('display', 'block', 'important'); } catch (_) { isub.style.display = 'block'; }
+                }
+                try { if (typeof onIntegSubview === 'function') onIntegSubview(integSubs[rawName]); } catch (_) { }
+            }
             document.querySelectorAll('.nav-link').forEach(function (l) { l.classList.remove('active'); });
             if (btn) btn.classList.add('active');
             else {
-                var nb = document.querySelector('.nav-link[data-view="' + name + '"]');
+                var nb = document.querySelector('.nav-link[data-view="' + (rawName || name) + '"]')
+                    || document.querySelector('.nav-link[data-view="' + name + '"]');
                 if (nb) nb.classList.add('active');
             }
             // Scroll main content to top when switching
@@ -4031,9 +4250,10 @@
                 if (shell) shell.scrollTop = 0;
             } catch (_) { }
 
-            const titles = { overview: 'Overview', documents: 'My Documents', generate: 'Generate a Document', chat: 'Live Chat', mywork: 'My Work', social: 'Social Calendar', appointments: 'Appointments', emailactivity: 'Email Activity', whatsappactivity: 'WhatsApp Activity', leads: 'My Leads', inbox: 'Needs reply', comments: 'Comment replies', integrations: 'Integrations', billing: 'Billing & Renewal', donate: 'Support Us', support: 'Support', help: 'Help & tutorials' };
+            const titles = { overview: 'Overview', documents: 'My Documents', generate: 'Generate a Document', chat: 'Live Chat', mywork: 'My Work', social: 'Social Calendar', appointments: 'Appointments', emailactivity: 'Email Activity', whatsappactivity: 'WhatsApp Activity', leads: 'My Leads', inbox: 'Needs reply', comments: 'Comment replies', integrations: 'Integrations', billing: 'Billing & Renewal', donate: 'Support Us', support: 'Support', help: 'Help & tutorials', leads: 'My Leads', 'leads-list': 'Lead list', 'leads-catalog': 'Product catalog', 'leads-message': 'Message leads', 'leads-tasks': 'Follow-ups', 'leads-queue': 'Message queue', integrations: 'Integrations', 'integ-social': 'Social accounts', 'integ-whatsapp': 'WhatsApp', 'integ-email': 'Email / mailbox', 'integ-crm': 'CRM', 'integ-ai': 'AI comment settings' };
             var pt = document.getElementById('pageTitle');
-            if (pt) pt.textContent = titles[name] || name;
+            if (pt) pt.textContent = titles[rawName] || titles[name] || name;
+            try { var mt = document.getElementById('mobilePageTitle'); if (mt) mt.textContent = titles[rawName] || titles[name] || name; } catch (_) { }
 
             if (name === 'documents') loadDocuments();
             if (name === 'generate') { loadDocumentCatalog(); loadAutoSendPreference(); }
@@ -4050,8 +4270,8 @@
                     loadWhatsAppActivityHeaderStats();
                 });
             }
-            if (name === 'overview') loadOverview();
-            if (name === 'leads') { try { if (typeof clientLoadLeadMsgQueue === 'function') clientLoadLeadMsgQueue(); } catch (_) { } try { clientLoadLeads(); clientLoadLeadTasks(); clientLoadLeadSuggestions(); clientLoadProducts(); } catch (_) { } }
+            if (name === 'overview') { try { loadOverview(); } catch (_) { } /* never load social calendar on overview */ }
+            if (name === 'leads' && !leadsSubs[rawName]) { try { clientLoadLeads(); } catch (_) { } }
             if (name === 'inbox') { try { clientLoadInbox(); } catch (_) { } }
             if (name === 'comments') {
                 try {
@@ -5627,7 +5847,10 @@
 
         function clientRenderLeadsTable() {
             var leads = window.__clientLeads || [];
+            window.__LEADS_CACHE = leads;
             var stage = (document.getElementById('leadFilterStage') || {}).value || '';
+            var q = ((document.getElementById('leadFilterSearch') || {}).value || '').toLowerCase().trim();
+            var cad = ((document.getElementById('leadFilterCadence') || {}).value || '').trim();
             if (stage) {
                 leads = leads.filter(function (l) {
                     var st = String(l.Stage || '');
@@ -5635,36 +5858,55 @@
                     return st.toLowerCase() === stage.toLowerCase();
                 });
             }
+            if (cad) {
+                leads = leads.filter(function (l) {
+                    return String(l.ContactFrequency || l.cadence || '').toLowerCase() === cad.toLowerCase();
+                });
+            }
+            if (q) {
+                leads = leads.filter(function (l) {
+                    var blob = [l.ContactName, l.Company, l.Email, l.Phone, l.WhatsApp, l.Tags, l.Stage].join(' ').toLowerCase();
+                    return blob.indexOf(q) >= 0;
+                });
+            }
+            var pageSize = 50;
+            var page = window.__LEADS_PAGE || 1;
+            var total = leads.length;
+            var pages = Math.max(1, Math.ceil(total / pageSize) || 1);
+            if (page > pages) page = pages;
+            if (page < 1) page = 1;
+            window.__LEADS_PAGE = page;
+            var slice = leads.slice((page - 1) * pageSize, page * pageSize);
+            var pager = document.getElementById('clientLeadsPager');
+            if (pager) {
+                pager.innerHTML = '<span class="text-slate-400 text-sm">Showing ' + (total ? ((page - 1) * pageSize + 1) : 0) + '–' + Math.min(total, page * pageSize) + ' of ' + total + '</span>' +
+                    '<button type="button" class="px-3 py-1.5 rounded bg-slate-800 text-white text-sm" ' + (page <= 1 ? 'disabled style="opacity:0.4"' : '') + ' onclick="window.__LEADS_PAGE=Math.max(1,(window.__LEADS_PAGE||1)-1);clientRenderLeadsTable();">Previous</button>' +
+                    '<span class="text-slate-500 text-sm">Page ' + page + ' / ' + pages + '</span>' +
+                    '<button type="button" class="px-3 py-1.5 rounded bg-slate-800 text-white text-sm" ' + (page >= pages ? 'disabled style="opacity:0.4"' : '') + ' onclick="window.__LEADS_PAGE=(window.__LEADS_PAGE||1)+1;clientRenderLeadsTable();">Next</button>';
+            }
             var tb = document.getElementById('clientLeadsTableBody');
             if (!tb) return;
-            if (!leads.length) {
-                tb.innerHTML = '<tr><td colspan="7" class="p-3 text-slate-500">No leads in this filter.</td></tr>';
+            if (!slice.length) {
+                tb.innerHTML = '<tr><td colspan="7" class="p-3 text-slate-500">' + (total ? 'No leads on this page.' : 'No leads yet. Add or upload CSV (free).') + '</td></tr>';
                 return;
             }
-            var esc = typeof escapeHtml === 'function' ? escapeHtml : function (x) { return String(x == null ? '' : x); };
-            tb.innerHTML = leads.map(function (l) {
-                var idx = (window.__clientLeads || []).indexOf(l);
+            var esc = typeof escapeHtml === 'function' ? escapeHtml : function (x) { return String(x || ''); };
+            // Map idx to full __clientLeads for Edit
+            tb.innerHTML = slice.map(function (l) {
+                var fullIdx = (window.__clientLeads || []).indexOf(l);
+                if (fullIdx < 0) fullIdx = (window.__clientLeads || []).findIndex(function (x) { return x.LeadID === l.LeadID; });
                 return '<tr>' +
                     '<td class="p-2 text-slate-200">' + esc(l.ContactName) + '</td>' +
                     '<td class="p-2">' + esc(l.Company) + '</td>' +
                     '<td class="p-2">' + esc(l.Email) + '</td>' +
                     '<td class="p-2">' + esc(l.Phone || l.WhatsApp) + '</td>' +
-                    '<td class="p-2">' + esc(l.Stage) + (l.Value ? ' · ' + esc(l.Value) : '') + '</td>' +
-                    '<td class="p-2 text-slate-500">' + esc(l.Source) + (l.SourceCampaign ? ' / ' + esc(l.SourceCampaign) : '') + '</td>' +
+                    '<td class="p-2">' + esc(l.Stage) + '</td>' +
+                    '<td class="p-2 text-slate-500">' + esc(l.Source) + '</td>' +
                     '<td class="p-2 whitespace-nowrap">' +
-                    '<button type="button" class="text-emerald-400 hover:underline mr-1" onclick="clientLeadsShowForm(window.__clientLeads[' + idx + '])">Edit</button>' +
-                    '<button type="button" class="text-sky-400 hover:underline mr-1" onclick="clientBookFromLead(\'' + esc(l.LeadID) + '\')">Book</button>' +
-                    '<button type="button" class="text-slate-400 hover:underline" onclick="clientDeleteLead(\'' + esc(l.LeadID) + '\')">Del</button>' +
+                    '<button type="button" class="text-emerald-400 hover:underline mr-2" onclick="clientLeadsShowForm(window.__clientLeads[' + fullIdx + '])">Edit</button>' +
+                    '<button type="button" class="text-slate-400 hover:underline" onclick="clientDeleteLead(\'' + esc(l.LeadID) + '\')">Delete</button>' +
                     '</td></tr>';
             }).join('');
-            var sel = document.getElementById('taskLeadSelect');
-            if (sel) {
-                var cur = sel.value;
-                sel.innerHTML = '<option value="">Lead…</option>' + (window.__clientLeads || []).map(function (l) {
-                    return '<option value="' + esc(l.LeadID) + '">' + esc(l.ContactName || l.Company || l.Email || l.LeadID) + '</option>';
-                }).join('');
-                if (cur) sel.value = cur;
-            }
         }
 
         async function clientLoadInbox() {
@@ -9485,6 +9727,164 @@
                 };
             }
             patchCg();
+        })();
+    </script>
+
+
+    <script>
+        function toggleNavSubgroup(btn) {
+            var g = btn && btn.closest && btn.closest('.nav-subgroup');
+            if (!g) return;
+            g.classList.toggle('open');
+            var body = g.querySelector('.nav-subgroup-body');
+            if (body) body.classList.toggle('hidden');
+        }
+
+        window.__LEADS_CACHE = window.__LEADS_CACHE || [];
+        window.__LEADS_PAGE = 1;
+        window.LEADS_PAGE_SIZE = 50;
+
+        function clientTablePagerHtml(page, total, pageSize, onPrev, onNext) {
+            var pages = Math.max(1, Math.ceil(total / pageSize));
+            page = Math.min(Math.max(1, page), pages);
+            return '<span class="text-slate-400">Showing ' + Math.min(total, (page - 1) * pageSize + 1) + '–' + Math.min(total, page * pageSize) + ' of ' + total + '</span>' +
+                '<button type="button" class="px-3 py-1.5 rounded bg-slate-800 text-white text-sm ' + (page <= 1 ? 'opacity-40' : '') + '" ' + (page <= 1 ? 'disabled' : '') + ' onclick="' + onPrev + '">Previous</button>' +
+                '<span class="text-slate-500">Page ' + page + ' / ' + pages + '</span>' +
+                '<button type="button" class="px-3 py-1.5 rounded bg-slate-800 text-white text-sm ' + (page >= pages ? 'opacity-40' : '') + '" ' + (page >= pages ? 'disabled' : '') + ' onclick="' + onNext + '">Next</button>';
+        }
+
+        function clientLeadsApplyFilter() {
+            window.__LEADS_PAGE = 1;
+            clientRenderLeadsPage();
+        }
+
+        function clientLeadsNextPage() {
+            window.__LEADS_PAGE = (window.__LEADS_PAGE || 1) + 1;
+            clientRenderLeadsPage();
+        }
+        function clientLeadsPrevPage() {
+            window.__LEADS_PAGE = Math.max(1, (window.__LEADS_PAGE || 1) - 1);
+            clientRenderLeadsPage();
+        }
+
+        function clientLeadsFiltered() {
+            var rows = window.__LEADS_CACHE || [];
+            var q = ((document.getElementById('leadFilterSearch') || {}).value || '').toLowerCase().trim();
+            var stage = ((document.getElementById('leadFilterStage') || {}).value || '').trim();
+            var cad = ((document.getElementById('leadFilterCadence') || {}).value || '').trim();
+            return rows.filter(function (r) {
+                if (stage && String(r.stage || r.Stage || '') !== stage) return false;
+                if (cad && String(r.contactFrequency || r.ContactFrequency || r.cadence || '').toLowerCase() !== cad.toLowerCase()) return false;
+                if (!q) return true;
+                var blob = [r.name, r.Name, r.email, r.Email, r.company, r.Company, r.phone, r.Phone, r.tags, r.Tags].join(' ').toLowerCase();
+                return blob.indexOf(q) >= 0;
+            });
+        }
+
+        function clientRenderLeadsPage() {
+            var host = document.getElementById('clientLeadsTable') || document.getElementById('clientLeadsList') || document.getElementById('leadsTableBody');
+            var pager = document.getElementById('clientLeadsPager');
+            var filtered = clientLeadsFiltered();
+            var page = window.__LEADS_PAGE || 1;
+            var size = window.LEADS_PAGE_SIZE || 50;
+            var pages = Math.max(1, Math.ceil(filtered.length / size));
+            if (page > pages) page = pages;
+            window.__LEADS_PAGE = page;
+            var slice = filtered.slice((page - 1) * size, page * size);
+            if (pager) pager.innerHTML = clientTablePagerHtml(page, filtered.length, size, 'clientLeadsPrevPage()', 'clientLeadsNextPage()');
+            // Prefer existing renderer if present
+            if (typeof window.__renderLeadsRows === 'function') {
+                window.__renderLeadsRows(slice);
+                return;
+            }
+            if (!host) return;
+            if (!slice.length) {
+                host.innerHTML = '<p class="text-slate-500 text-sm p-3">No leads match this filter.</p>';
+                return;
+            }
+            // Generic table body
+            if (host.tagName === 'TBODY') {
+                host.innerHTML = slice.map(function (r) {
+                    var id = r.leadId || r.LeadId || r.id || '';
+                    var name = r.name || r.Name || '—';
+                    var email = r.email || r.Email || '';
+                    var stage = r.stage || r.Stage || '';
+                    return '<tr class="border-b border-slate-800"><td class="p-2 text-white">' + name + '</td><td class="p-2 text-slate-400">' + email + '</td><td class="p-2">' + stage + '</td><td class="p-2"><button type="button" class="text-red-300 text-xs" onclick="clientDeleteLead(\'' + id + '\')">Remove</button></td></tr>';
+                }).join('');
+            } else {
+                host.innerHTML = slice.map(function (r) {
+                    var id = r.leadId || r.LeadId || r.id || '';
+                    var name = r.name || r.Name || '—';
+                    var email = r.email || r.Email || '';
+                    var stage = r.stage || r.Stage || '';
+                    return '<div class="flex flex-wrap justify-between gap-2 p-3 border-b border-slate-800"><div><p class="text-white font-medium">' + name + '</p><p class="text-xs text-slate-500">' + email + ' · ' + stage + '</p></div><button type="button" class="text-xs text-red-300" onclick="clientDeleteLead(\'' + id + '\')">Remove</button></div>';
+                }).join('');
+            }
+        }
+
+        function onLeadsSubview(sub) {
+            document.querySelectorAll('.leads-subtab').forEach(function (b) {
+                var on = b.getAttribute('data-sub') === sub;
+                b.className = 'leads-subtab px-3 py-2 rounded-lg text-sm ' + (on ? 'bg-emerald-800 text-white' : 'bg-slate-800 text-slate-300');
+            });
+            if (sub === 'leads-list') { try { clientLoadLeads(); } catch (_) { } }
+            if (sub === 'leads-catalog') { try { clientLoadProducts(); } catch (_) { } }
+            if (sub === 'leads-message') { try { clientLoadProducts(); } catch (_) { } }
+            if (sub === 'leads-tasks') { try { clientLoadLeadTasks(); } catch (_) { } }
+            if (sub === 'leads-queue') { try { clientLoadLeadMsgQueue(); } catch (_) { } }
+        }
+
+        function onIntegSubview(sub) {
+            document.querySelectorAll('.integ-subtab').forEach(function (b) {
+                var on = b.getAttribute('data-sub') === sub;
+                b.className = 'integ-subtab px-3 py-2 rounded-lg text-sm ' + (on ? 'bg-emerald-800 text-white' : 'bg-slate-800 text-slate-300');
+            });
+            try { if (typeof loadIntegrationsPanel === 'function') loadIntegrationsPanel(); } catch (_) { }
+            // Focus hosts: clone visible lists if present
+            try {
+                if (sub === 'integ-whatsapp') {
+                    var host = document.getElementById('integWaFocusHost');
+                    var a = document.getElementById('integWaApiList');
+                    var t = document.getElementById('integWaTeamList');
+                    if (host) host.innerHTML = (a ? a.outerHTML : '') + (t ? t.outerHTML : '');
+                }
+                if (sub === 'integ-email') {
+                    var host = document.getElementById('integEmailFocusHost');
+                    var e = document.getElementById('integEmailList') || document.getElementById('clientMailboxList');
+                    if (host && e) host.innerHTML = e.outerHTML;
+                }
+                if (sub === 'integ-crm') {
+                    var host = document.getElementById('integCrmFocusHost');
+                    var c = document.getElementById('integCrmList') || document.getElementById('clientCrmList');
+                    if (host && c) host.innerHTML = c.outerHTML;
+                }
+            } catch (_) { }
+        }
+
+        // Patch clientLoadLeads to cache + paginate
+        (function () {
+            var tries = 0;
+            function patch() {
+                if (typeof window.clientLoadLeads !== 'function') {
+                    if (tries++ < 40) return setTimeout(patch, 200);
+                    return;
+                }
+                if (window.__leadsPagePatched) return;
+                window.__leadsPagePatched = true;
+                var orig = window.clientLoadLeads;
+                window.clientLoadLeads = async function () {
+                    var res = await orig.apply(this, arguments);
+                    try {
+                        // Try to capture from DOM or global
+                        if (window.__LAST_LEADS_ROWS) {
+                            window.__LEADS_CACHE = window.__LAST_LEADS_ROWS;
+                            clientRenderLeadsPage();
+                        }
+                    } catch (_) { }
+                    return res;
+                };
+            }
+            patch();
         })();
     </script>
 
