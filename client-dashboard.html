@@ -1805,24 +1805,19 @@
                         </div>
                     </div>
 
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
-                        <h3 class="text-xs font-bold text-white">New product / offer → notify leads</h3>
-                        <p class="text-[10px] text-slate-500">Saving the offer is free. Sending uses email/WhatsApp and
-                            your plan limits.</p>
-                        <input id="offerTitle" placeholder="Offer title"
-                            class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                        <textarea id="offerBody" rows="2" placeholder="Short message to your leads"
-                            class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"></textarea>
-                        <input id="offerLink" placeholder="Link (optional)"
-                            class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <h3 class="text-xs font-bold text-white">Contact cadence</h3>
+                        <p class="text-[10px] text-slate-500">How often eligible leads may receive outreach. Leads set
+                            to &quot;Do not contact&quot; are never messaged.</p>
                         <div class="flex flex-wrap gap-2 items-center">
-                            <select id="offerChannel"
+                            <select id="leadCadenceSelect"
                                 class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white">
-                                <option value="email">Email</option>
-                                <option value="whatsapp">WhatsApp</option>
-                                <option value="both">Both</option>
+                                <option value="week">Every week</option>
+                                <option value="biweekly">Every two weeks</option>
+                                <option value="month">Once per month</option>
+                                <option value="none" selected>Do not contact</option>
                             </select>
-                            <select id="offerStage"
+                            <select id="leadCadenceStage"
                                 class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white">
                                 <option value="">All stages</option>
                                 <option value="New">New</option>
@@ -1830,22 +1825,91 @@
                                 <option value="Interested">Interested</option>
                                 <option value="Proposal">Proposal</option>
                                 <option value="Customer">Customer / Won</option>
-                                <option value="Lost">Lost</option>
                             </select>
+                            <button type="button" onclick="clientSetLeadCadence()"
+                                class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 border border-slate-700">Apply
+                                cadence</button>
+                            <span id="cadenceHint" class="text-[10px] text-slate-500"></span>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                        <h3 class="text-xs font-bold text-white">Message leads / new product</h3>
+                        <p class="text-[10px] text-slate-500">Each message is <strong
+                                class="text-slate-400">personalized</strong> (name, company, etc.). Messages leave in
+                            <strong class="text-slate-400">small batches</strong> with gaps between sends — not all at
+                            once — to reduce spam risk and respect email/WhatsApp limits.</p>
+                        <input id="offerTitle" placeholder="Subject / offer title"
+                            class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                        <textarea id="offerBody" rows="3"
+                            placeholder="Message body. Use {{name}} {{first_name}} {{company}} {{role}} {{interest}} for personalization."
+                            class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"></textarea>
+                        <input id="offerLink" placeholder="Link (optional)"
+                            class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                        <div class="flex flex-wrap gap-2 items-center">
+                            <label class="text-[10px] text-slate-500">Tone
+                                <select id="offerTone"
+                                    class="ml-1 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white">
+                                    <option value="professional">Professional</option>
+                                    <option value="familiar">Familiar / friendly</option>
+                                    <option value="both">Both (balanced)</option>
+                                </select>
+                            </label>
+                            <label class="text-[10px] text-slate-500">Channel
+                                <select id="offerChannel"
+                                    class="ml-1 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white">
+                                    <option value="email">Email</option>
+                                    <option value="whatsapp">WhatsApp</option>
+                                    <option value="both">Both</option>
+                                </select>
+                            </label>
+                            <label class="text-[10px] text-slate-500">Stage
+                                <select id="offerStage"
+                                    class="ml-1 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white">
+                                    <option value="">All stages</option>
+                                    <option value="New">New</option>
+                                    <option value="Contacted">Contacted</option>
+                                    <option value="Interested">Interested</option>
+                                    <option value="Proposal">Proposal</option>
+                                    <option value="Customer">Customer / Won</option>
+                                    <option value="Lost">Lost</option>
+                                </select>
+                            </label>
+                            <label class="text-[10px] text-slate-500">Send at
+                                <input type="datetime-local" id="offerSendAt"
+                                    class="ml-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[11px] text-white" />
+                            </label>
+                        </div>
+                        <div class="space-y-1">
+                            <p class="text-[10px] text-slate-500">Images (up to 5) — paste image URLs, one per line</p>
+                            <textarea id="offerImageUrls" rows="2" placeholder="https://…&#10;https://…"
+                                class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white font-mono"></textarea>
+                            <p class="text-[10px] text-slate-500">Video URLs (paid: ₦300 / $0.50 each, packs of 10+) —
+                                <span id="videoCreditsLabel">credits: —</span></p>
+                            <textarea id="offerVideoUrls" rows="1" placeholder="https://…"
+                                class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white font-mono"></textarea>
+                        </div>
+                        <div class="flex flex-wrap gap-2 items-center">
                             <button type="button" onclick="clientSaveOfferOnly()"
                                 class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 border border-slate-700">Save
                                 offer</button>
                             <button type="button" onclick="clientNotifyLeadsOffer()"
-                                class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 text-white">Notify
-                                leads</button>
+                                class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 text-white">Queue
+                                messages</button>
+                            <button type="button" onclick="clientLoadLeadMsgQueue()"
+                                class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">Queue
+                                status</button>
                             <span id="offerHint" class="text-[10px] text-slate-500"></span>
                         </div>
+                        <div id="leadMsgQueueRoot"
+                            class="text-[10px] text-slate-400 space-y-1 max-h-32 overflow-y-auto"></div>
                     </div>
 
 
                 </section>
                 <section id="view-integrations" class="view flex-1 flex-col space-y-4">
                     <p class="text-xs text-slate-400 max-w-2xl">Connect social and CRM yourself when your plan allows.
+                        You can <strong class="text-slate-300">disconnect</strong> accounts yourself — no admin needed.
                         To <strong class="text-slate-300">remove</strong> a
                         connection, request disconnect — you can remove social accounts yourself anytime. TikTok
                         defaults to
@@ -3526,7 +3590,7 @@
                 });
             }
             if (name === 'overview') loadOverview();
-            if (name === 'leads') { try { clientLoadLeads(); clientLoadLeadTasks(); clientLoadLeadSuggestions(); clientLoadProducts(); } catch (_) { } }
+            if (name === 'leads') { try { if (typeof clientLoadLeadMsgQueue === 'function') clientLoadLeadMsgQueue(); } catch (_) { } try { clientLoadLeads(); clientLoadLeadTasks(); clientLoadLeadSuggestions(); clientLoadProducts(); } catch (_) { } }
             if (name === 'inbox') { try { clientLoadInbox(); } catch (_) { } }
             if (name === 'comments') {
                 try {
@@ -5367,21 +5431,98 @@
             if (h) h.textContent = (res && res.message) || '';
             if (typeof notifyUser === 'function') notifyUser((res && res.message) || 'Saved', res && res.success ? 'success' : 'info');
         }
-        async function clientNotifyLeadsOffer() {
-            if (!confirm('Send this offer to matching leads? This uses email/WhatsApp limits on your plan.')) return;
-            var h = document.getElementById('offerHint');
-            if (h) h.textContent = 'Sending…';
-            var res = await callGateway('clientportal', 'clientPortalNotifyLeadsOffer', {
-                title: document.getElementById('offerTitle').value,
-                body: document.getElementById('offerBody').value,
-                link: document.getElementById('offerLink').value,
-                channel: document.getElementById('offerChannel').value,
-                stage: document.getElementById('offerStage').value
-            });
-            if (h) h.textContent = (res && res.message) || '';
-            if (typeof notifyUser === 'function') notifyUser((res && res.message) || 'Done', res && res.success ? 'success' : 'info');
-            clientLoadLeads();
+        function _parseUrlLines_(elId, maxN) {
+            var el = document.getElementById(elId);
+            var raw = el ? String(el.value || "") : "";
+            return raw.split(/[\n,]+/).map(function (s) { return s.trim(); }).filter(Boolean).slice(0, maxN || 5);
         }
+
+        async function clientSetLeadCadence() {
+            var freq = (document.getElementById('leadCadenceSelect') || {}).value || 'none';
+            var stage = (document.getElementById('leadCadenceStage') || {}).value || '';
+            var hint = document.getElementById('cadenceHint');
+            try {
+                var res = await callGateway('clientportal', 'clientPortalSetLeadContactFrequency', {
+                    contactFrequency: freq,
+                    stage: stage || undefined
+                });
+                if (!res || res.success === false) throw new Error((res && res.message) || 'Failed');
+                if (hint) hint.textContent = res.message || ('Updated ' + (res.updated || 0) + ' lead(s) → ' + (res.label || freq));
+                if (typeof loadClientLeads === 'function') loadClientLeads();
+            } catch (e) {
+                if (hint) hint.textContent = e.message || String(e);
+            }
+        }
+
+        async function clientLoadLeadMsgQueue() {
+            var root = document.getElementById('leadMsgQueueRoot');
+            try {
+                var res = await callGateway('clientportal', 'clientPortalListLeadMsgQueue', {});
+                var cred = await callGateway('clientportal', 'clientPortalGetLeadVideoCredits', {});
+                var vc = document.getElementById('videoCreditsLabel');
+                if (vc && cred && cred.success) vc.textContent = 'credits: ' + (cred.credits || 0);
+                if (!root) return;
+                if (!res || res.success === false) {
+                    root.textContent = (res && res.message) || 'Could not load queue';
+                    return;
+                }
+                var batch = (res.batchInfo && res.batchInfo.message) || 'Messages send in batches.';
+                var items = res.items || [];
+                root.innerHTML = '<p class="text-slate-500">' + batch + '</p>' + (items.length ? items.map(function (it) {
+                    return '<div class="border border-slate-800 rounded px-2 py-1">' +
+                        (it.status || '') + ' · ' + (it.channel || '') + ' · ' + (it.tone || '') +
+                        ' · lead ' + (it.leadId || '') +
+                        (it.scheduledAt ? (' · ' + String(it.scheduledAt).slice(0, 16)) : '') +
+                        (it.error ? (' · ' + it.error) : '') + '</div>';
+                }).join('') : '<p>No queued messages yet.</p>');
+            } catch (e) {
+                if (root) root.textContent = String(e.message || e);
+            }
+        }
+
+        async function clientNotifyLeadsOffer() {
+            var hint = document.getElementById('offerHint');
+            var title = (document.getElementById('offerTitle') || {}).value || '';
+            var body = (document.getElementById('offerBody') || {}).value || '';
+            var link = (document.getElementById('offerLink') || {}).value || '';
+            var channel = (document.getElementById('offerChannel') || {}).value || 'email';
+            var stage = (document.getElementById('offerStage') || {}).value || '';
+            var tone = (document.getElementById('offerTone') || {}).value || 'professional';
+            var sendAtEl = document.getElementById('offerSendAt');
+            var scheduledAt = '';
+            if (sendAtEl && sendAtEl.value) {
+                try { scheduledAt = new Date(sendAtEl.value).toISOString(); } catch (_) { }
+            }
+            var images = _parseUrlLines_('offerImageUrls', 5);
+            var videos = _parseUrlLines_('offerVideoUrls', 5);
+            if (hint) hint.textContent = 'Queuing personalized messages (batched)…';
+            try {
+                var res = await callGateway('clientportal', 'clientPortalNotifyLeadsOffer', {
+                    title: title,
+                    body: body,
+                    link: link,
+                    channel: channel,
+                    stage: stage || undefined,
+                    tone: tone,
+                    scheduledAt: scheduledAt || undefined,
+                    mediaUrls: images,
+                    videoUrls: videos
+                });
+                if (!res || res.success === false) {
+                    throw new Error((res && res.message) || 'Queue failed');
+                }
+                var msg = res.message || ('Queued ' + (res.queued || 0));
+                if (res.batchInfo && res.batchInfo.message) msg += ' — ' + res.batchInfo.message;
+                if (hint) hint.textContent = msg;
+                if (typeof toast === 'function') toast(msg);
+                try { clientLoadLeadMsgQueue(); } catch (_) { }
+            } catch (e) {
+                if (hint) hint.textContent = e.message || String(e);
+                if (typeof toast === 'function') toast(e.message || String(e), true);
+            }
+        }
+
+
 
         async function clientLoadBusinessAbout() {
             try {
