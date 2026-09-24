@@ -1995,78 +1995,6 @@
                 </div>
             </section>
             <section id="hub-v5" class="hidden flex-1 flex overflow-hidden">
-                <section id="admin-lead-messaging"
-                    class="p-4 border border-emerald-800/40 rounded-xl m-3 space-y-2 bg-slate-950/80 shrink-0">
-                    <h3 class="text-sm font-bold text-white flex items-center gap-2"><i
-                            class="fa-solid fa-paper-plane text-emerald-400 text-xs"></i> Lead messaging (on behalf of
-                        client)</h3>
-                    <p class="text-[11px] text-slate-400">Personalized, batched sends. Tone: professional / familiar /
-                        both. Videos need lead_video_pack credits.</p>
-                    <input id="adminLeadMsgClientId" placeholder="Client ID"
-                        class="w-full max-w-md bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                    <input id="adminLeadMsgSubject" placeholder="Subject"
-                        class="w-full max-w-md bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                    <textarea id="adminLeadMsgBody" rows="3" placeholder="Body with {{name}} {{company}}"
-                        class="w-full max-w-xl bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"></textarea>
-                    <div class="flex flex-wrap gap-2">
-                        <select id="adminLeadMsgTone"
-                            class="bg-slate-950 border border-slate-700 rounded text-xs text-white px-2 py-1">
-                            <option value="professional">Professional</option>
-                            <option value="familiar">Familiar</option>
-                            <option value="both">Both</option>
-                        </select>
-                        <select id="adminLeadMsgChannel"
-                            class="bg-slate-950 border border-slate-700 rounded text-xs text-white px-2 py-1">
-                            <option value="email">Email</option>
-                            <option value="whatsapp">WhatsApp</option>
-                            <option value="both">Both</option>
-                        </select>
-                        <select id="adminLeadCadence"
-                            class="bg-slate-950 border border-slate-700 rounded text-xs text-white px-2 py-1">
-                            <option value="week">Weekly</option>
-                            <option value="biweekly">Biweekly</option>
-                            <option value="month">Monthly</option>
-                            <option value="none">None</option>
-                        </select>
-                        <button type="button" onclick="adminEnqueueLeadMessages()"
-                            class="px-3 py-1.5 rounded bg-emerald-700 text-white text-xs">Queue messages</button>
-                        <button type="button" onclick="adminSetLeadCadence()"
-                            class="px-3 py-1.5 rounded bg-slate-700 text-white text-xs">Set cadence</button>
-                    </div>
-                </section>
-
-                <script>
-                    /** Admin: enqueue lead messages on behalf of a client */
-                    async function adminEnqueueLeadMessages() {
-                        var clientId = (document.getElementById('adminLeadMsgClientId') || {}).value || (document.getElementById('selectedClientId') || {}).value || '';
-                        var body = (document.getElementById('adminLeadMsgBody') || {}).value || '';
-                        var tone = (document.getElementById('adminLeadMsgTone') || {}).value || 'professional';
-                        var channel = (document.getElementById('adminLeadMsgChannel') || {}).value || 'email';
-                        if (!clientId || !body) { alert('Client ID and message body required'); return; }
-                        try {
-                            var res = await (typeof callAdmin === 'function' ? callAdmin('agent-enqueue-lead-messages', {
-                                clientId: clientId, body: body, tone: tone, channel: channel,
-                                subject: (document.getElementById('adminLeadMsgSubject') || {}).value || 'Update',
-                                scheduledAt: (document.getElementById('adminLeadMsgWhen') || {}).value || ''
-                            }) : callGateway('agent', 'agent-enqueue-lead-messages', {
-                                clientId: clientId, body: body, tone: tone, channel: channel
-                            }));
-                            alert((res && res.message) || JSON.stringify(res));
-                        } catch (e) { alert(e.message || e); }
-                    }
-                    async function adminSetLeadCadence() {
-                        var clientId = (document.getElementById('adminLeadMsgClientId') || {}).value || '';
-                        var freq = (document.getElementById('adminLeadCadence') || {}).value || 'none';
-                        if (!clientId) { alert('Client ID required'); return; }
-                        try {
-                            var res = await (typeof callAdmin === 'function' ? callAdmin('agent-set-lead-contact-frequency', { clientId: clientId, contactFrequency: freq })
-                                : callGateway('agent', 'agent-set-lead-contact-frequency', { clientId: clientId, contactFrequency: freq }));
-                            alert((res && res.message) || JSON.stringify(res));
-                        } catch (e) { alert(e.message || e); }
-                    }
-                </script>
-
-
                 <!-- V5 Sub-Nav -->
                 <div
                     class="w-56 bg-slate-950/40 border-r border-slate-800/60 flex flex-col shrink-0 px-2 py-4 space-y-1">
@@ -2079,6 +2007,7 @@
                     <button class="leads-subview-link" data-target-view="v5-drip">Email Drip Builder</button>
                     <button class="leads-subview-link" data-target-view="v5-whatsapp">WhatsApp Drafts</button>
                     <button class="leads-subview-link" data-target-view="v5-competitors">Competitor Analysis</button>
+                    <button class="leads-subview-link" data-target-view="v5-lead-messaging">Lead messaging</button>
 
                     <!-- Run controls -->
                     <div class="mt-4 border-t border-slate-800 pt-3 px-1 space-y-2">
@@ -2568,6 +2497,129 @@
                             </table>
                         </div>
                     </div>
+
+
+                    <!-- ============================================================
+                         VIEW: Lead messaging (on behalf of client)
+                    ============================================================= -->
+                    <div id="view-v5-lead-messaging"
+                        class="v5-view hidden flex-1 flex flex-col overflow-hidden space-y-4 p-4">
+                        <div class="shrink-0">
+                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-paper-plane text-emerald-400 text-sm"></i>
+                                Lead messaging (on behalf of client)
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-1 max-w-2xl">
+                                Personalized, batched outreach for a client&rsquo;s leads. Tone: professional / familiar
+                                / both.
+                                Messages leave in small waves with gaps (not all at once). Videos need <code
+                                    class="text-slate-500">lead_video_pack</code> credits.
+                            </p>
+                        </div>
+                        <div
+                            class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3 max-w-3xl overflow-y-auto custom-scrollbar">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div class="sm:col-span-2">
+                                    <label class="block text-[10px] text-slate-500 mb-1">Client</label>
+                                    <div class="admin-client-combo flex flex-col sm:flex-row gap-2"
+                                        data-combo="adminLeadMsg">
+                                        <input type="text" id="adminLeadMsgClientId" list="adminClientDatalist"
+                                            placeholder="Type Client ID or company…"
+                                            class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                                            autocomplete="off" />
+                                        <select id="adminLeadMsgClientSelect"
+                                            class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2 py-2 text-xs text-white"
+                                            onchange="adminSyncClientCombo('adminLeadMsg')">
+                                            <option value="">Select client…</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-slate-500 mb-1">Subject</label>
+                                    <input type="text" id="adminLeadMsgSubject" placeholder="Subject / offer title"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white" />
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-slate-500 mb-1">Send at (optional)</label>
+                                    <input type="datetime-local" id="adminLeadMsgWhen"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="block text-[10px] text-slate-500 mb-1">Message body — use {{name}}
+                                        {{first_name}} {{company}} {{role}} {{interest}}</label>
+                                    <textarea id="adminLeadMsgBody" rows="5" placeholder="Hello {{first_name}}, …"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-slate-500 mb-1">Tone</label>
+                                    <select id="adminLeadMsgTone"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-2 text-xs text-white">
+                                        <option value="professional">Professional</option>
+                                        <option value="familiar">Familiar / friendly</option>
+                                        <option value="both">Both (balanced)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-slate-500 mb-1">Channel</label>
+                                    <select id="adminLeadMsgChannel"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-2 text-xs text-white">
+                                        <option value="email">Email</option>
+                                        <option value="whatsapp">WhatsApp</option>
+                                        <option value="both">Both</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-slate-500 mb-1">Stage filter (optional)</label>
+                                    <select id="adminLeadMsgStage"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-2 text-xs text-white">
+                                        <option value="">All stages</option>
+                                        <option value="New">New</option>
+                                        <option value="Contacted">Contacted</option>
+                                        <option value="Interested">Interested</option>
+                                        <option value="Proposal">Proposal</option>
+                                        <option value="Customer">Customer / Won</option>
+                                        <option value="Lost">Lost</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-slate-500 mb-1">Tag filter (optional)</label>
+                                    <input type="text" id="adminLeadMsgTags" list="adminLeadTagPresets"
+                                        placeholder="e.g. hot"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <datalist id="adminLeadTagPresets">
+                                        <option value="hot"></option>
+                                        <option value="warm"></option>
+                                        <option value="cold"></option>
+                                        <option value="vip"></option>
+                                        <option value="decision-maker"></option>
+                                        <option value="referral"></option>
+                                        <option value="upsell"></option>
+                                        <option value="renewal"></option>
+                                    </datalist>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-2 items-center pt-2 border-t border-slate-800">
+                                <button type="button" onclick="adminEnqueueLeadMessages()"
+                                    class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium">
+                                    Queue messages
+                                </button>
+                                <span class="text-[10px] text-slate-500">Cadence for this client:</span>
+                                <select id="adminLeadCadence"
+                                    class="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white">
+                                    <option value="week">Every week</option>
+                                    <option value="biweekly">Every two weeks</option>
+                                    <option value="month">Once per month</option>
+                                    <option value="none">Do not contact</option>
+                                </select>
+                                <button type="button" onclick="adminSetLeadCadence()"
+                                    class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs border border-slate-700">
+                                    Set cadence
+                                </button>
+                                <span id="adminLeadMsgHint" class="text-[10px] text-slate-500"></span>
+                            </div>
+                        </div>
+                    </div>
+
 
                 </div><!-- end V5 Views Container -->
             </section>
@@ -8845,6 +8897,7 @@
                 'v5-drip': loadV5DripHistory,
                 'v5-whatsapp': loadV5WhatsAppHistory,
                 'v5-competitors': loadV5CompetitorsHistory,
+                'v5-lead-messaging': function () { try { ensureAdminClientList(true); } catch (_) { } },
                 'agent-approvals': loadAgentApprovals,
                 'agent-compliance-frameworks': () => { populateAgentClientSelector('compFrameworksClientSelector', loadComplianceFrameworksUI); },
                 'agent-ai-console': () => {
@@ -11312,21 +11365,16 @@
             return (el && el.value) ? String(el.value).trim() : '';
         }
         async function v5PopulateClientSelect() {
+            await ensureAdminClientList(false);
             var sel = document.getElementById('v5QuickClient');
             if (!sel) return;
-            try {
-                var res = await executeSecureBridgeCall('agent', 'agent-get-clients', {});
-                var list = (res && (res.clients || res.data || res.rows)) || [];
-                if (!Array.isArray(list)) list = [];
-                var cur = sel.value;
-                sel.innerHTML = '<option value="">— Admin / no client —</option>' + list.map(function (c) {
-                    var id = c.ClientID || c.clientId || '';
-                    var name = c.CompanyName || c.companyName || id;
-                    return '<option value="' + String(id).replace(/"/g, '') + '">' +
-                        String(name).replace(/</g, '') + ' (' + String(id).replace(/</g, '') + ')</option>';
-                }).join('');
-                if (cur) sel.value = cur;
-            } catch (e) { console.warn('v5 clients', e); }
+            var cur = sel.value;
+            var list = window.__ADMIN_CLIENT_LIST || [];
+            sel.innerHTML = '<option value="">— Admin / no client —</option>' + list.map(function (c) {
+                return '<option value="' + c.id.replace(/"/g, '') + '">' +
+                    ((c.name || c.id) + ' (' + c.id + ')').replace(/</g, '') + '</option>';
+            }).join('');
+            if (cur) sel.value = cur;
         }
 
 
@@ -12833,16 +12881,24 @@
             const select = document.getElementById(selectId);
             if (!select) return;
             select.innerHTML = '<option value="">Loading…</option>';
-            const res = await executeSecureBridgeCall('agent', 'agent-get-clients', {});
-            if (res.success && res.data?.length) {
-                res.data.forEach(c => { AGENT_CLIENTS_CACHE[c.ClientID] = c; });
-                select.innerHTML = '<option value="">Select…</option>' + res.data.map(c =>
-                    `<option value="${escapeHtml(c.ClientID)}">${escapeHtml(c.CompanyName)}</option>`
-                ).join('');
+            try { if (typeof ensureAdminClientList === 'function') await ensureAdminClientList(false); } catch (_) { }
+            let rows = (window.__ADMIN_CLIENT_LIST || []).map(c => ({ ClientID: c.id, CompanyName: c.name || c.id }));
+            if (!rows.length) {
+                const res = await executeSecureBridgeCall('agent', 'agent-get-clients', {});
+                if (res.success && res.data?.length) rows = res.data;
+                else if (res.success && (res.clients || []).length) rows = res.clients;
+            }
+            if (rows.length) {
+                rows.forEach(c => { try { AGENT_CLIENTS_CACHE[c.ClientID || c.clientId] = c; } catch (_) { } });
+                select.innerHTML = '<option value="">Select…</option>' + rows.map(c => {
+                    const id = c.ClientID || c.clientId || '';
+                    const name = c.CompanyName || c.companyName || id;
+                    return `<option value="${escapeHtml(id)}">${escapeHtml(name)} (${escapeHtml(id)})</option>`;
+                }).join('');
                 if (autoLoadFn) {
                     const preselect = select.dataset.preselect;
                     if (preselect) { delete select.dataset.preselect; select.value = preselect; }
-                    else select.value = res.data[0].ClientID;
+                    else select.value = rows[0].ClientID || rows[0].clientId || '';
                     autoLoadFn();
                 }
             } else {
@@ -13753,16 +13809,28 @@
             const select = document.getElementById(selectId);
             if (!select) return;
             select.innerHTML = '<option value="">Loading…</option>';
-            const res = await executeSecureBridgeCall('agent', 'agent-get-all-clients', {});
-            if (res.success && res.data?.length) {
-                select.innerHTML = '<option value="">Select…</option>' + res.data.map(c =>
+            try { if (typeof ensureAdminClientList === 'function') await ensureAdminClientList(false); } catch (_) { }
+            let rows = (window.__ADMIN_CLIENT_LIST || []).map(c => ({ clientId: c.id, displayName: (c.name || c.id) + ' (' + c.id + ')' }));
+            if (!rows.length) {
+                const res = await executeSecureBridgeCall('agent', 'agent-get-all-clients', {});
+                if (res.success && res.data?.length) rows = res.data;
+                else {
+                    const res2 = await executeSecureBridgeCall('agent', 'agent-get-clients', {});
+                    const list = (res2 && (res2.data || res2.clients)) || [];
+                    rows = list.map(c => ({
+                        clientId: c.ClientID || c.clientId,
+                        displayName: (c.CompanyName || c.companyName || c.ClientID || '') + ' (' + (c.ClientID || c.clientId || '') + ')'
+                    }));
+                }
+            }
+            if (rows.length) {
+                select.innerHTML = '<option value="">Select…</option>' + rows.map(c =>
                     `<option value="${escapeHtml(c.clientId)}">${escapeHtml(c.displayName)}</option>`
                 ).join('');
-
                 if (autoLoadFn) {
                     const preselect = select.dataset.preselect;
                     if (preselect) { delete select.dataset.preselect; select.value = preselect; }
-                    else select.value = res.data[0].clientId;
+                    else select.value = rows[0].clientId;
                     autoLoadFn();
                 }
             } else {
@@ -20667,6 +20735,199 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
     </script>
 
 
+
+
+    <script>
+        /* ===== Admin shared client list (type + dropdown) ===== */
+        window.__ADMIN_CLIENT_LIST = window.__ADMIN_CLIENT_LIST || [];
+
+        async function ensureAdminClientList(force) {
+            if (!force && window.__ADMIN_CLIENT_LIST && window.__ADMIN_CLIENT_LIST.length) {
+                return window.__ADMIN_CLIENT_LIST;
+            }
+            try {
+                var res = await executeSecureBridgeCall('agent', 'agent-get-clients', {});
+                var list = (res && (res.clients || res.data || res.rows)) || [];
+                if (!Array.isArray(list)) list = [];
+                window.__ADMIN_CLIENT_LIST = list.map(function (c) {
+                    return {
+                        id: String(c.ClientID || c.clientId || '').trim(),
+                        name: String(c.CompanyName || c.companyName || c.ClientID || c.clientId || '').trim(),
+                        email: String(c.ContactEmail || c.email || '').trim(),
+                        status: String(c.Status || c.status || '').trim()
+                    };
+                }).filter(function (c) { return c.id; });
+            } catch (e) {
+                console.warn('ensureAdminClientList', e);
+                window.__ADMIN_CLIENT_LIST = window.__ADMIN_CLIENT_LIST || [];
+            }
+            try { refreshAdminClientDatalist(); } catch (_) { }
+            try { fillAllAdminClientSelects(); } catch (_) { }
+            return window.__ADMIN_CLIENT_LIST;
+        }
+
+        function refreshAdminClientDatalist() {
+            var dl = document.getElementById('adminClientDatalist');
+            if (!dl) {
+                dl = document.createElement('datalist');
+                dl.id = 'adminClientDatalist';
+                document.body.appendChild(dl);
+            }
+            var list = window.__ADMIN_CLIENT_LIST || [];
+            dl.innerHTML = list.map(function (c) {
+                return '<option value="' + c.id.replace(/"/g, '') + '">' + (c.name + ' — ' + c.id).replace(/</g, '') + '</option>';
+            }).join('');
+        }
+
+        function adminClientOptionsHtml(placeholder) {
+            var list = window.__ADMIN_CLIENT_LIST || [];
+            var ph = placeholder || 'Select client…';
+            return '<option value="">' + ph + '</option>' + list.map(function (c) {
+                var label = (c.name || c.id) + ' (' + c.id + ')';
+                return '<option value="' + c.id.replace(/"/g, '') + '">' + label.replace(/</g, '') + '</option>';
+            }).join('');
+        }
+
+        function fillAllAdminClientSelects() {
+            var opts = adminClientOptionsHtml('Select client…');
+            var optsAll = adminClientOptionsHtml('All clients');
+            document.querySelectorAll('select.admin-client-select, select[data-admin-clients="1"]').forEach(function (sel) {
+                var cur = sel.value;
+                var useAll = sel.getAttribute('data-allow-all') === '1';
+                sel.innerHTML = useAll ? optsAll : opts;
+                if (cur) sel.value = cur;
+            });
+            // Named selects used across the app
+            ['v5QuickClient', 'adminLeadMsgClientSelect', 'aiConsoleClientSelector', 'accessControlClientSelector',
+                'compFrameworksClientSelector'].forEach(function (id) {
+                    var sel = document.getElementById(id);
+                    if (!sel) return;
+                    var cur = sel.value;
+                    var emptyLabel = (id === 'v5QuickClient') ? '— Admin / no client —' : 'Select client…';
+                    sel.innerHTML = '<option value="">' + emptyLabel + '</option>' + (window.__ADMIN_CLIENT_LIST || []).map(function (c) {
+                        return '<option value="' + c.id.replace(/"/g, '') + '">' + ((c.name || c.id) + ' (' + c.id + ')').replace(/</g, '') + '</option>';
+                    }).join('');
+                    if (cur) sel.value = cur;
+                });
+            document.querySelectorAll('input[list="adminClientDatalist"], input.admin-client-id').forEach(function (inp) {
+                inp.setAttribute('list', 'adminClientDatalist');
+            });
+        }
+
+        function adminSyncClientCombo(prefix) {
+            var sel = document.getElementById(prefix + 'ClientSelect');
+            var inp = document.getElementById(prefix + 'ClientId');
+            if (sel && inp && sel.value) inp.value = sel.value;
+        }
+
+        function adminReadClientCombo(prefix) {
+            var inp = document.getElementById(prefix + 'ClientId');
+            var sel = document.getElementById(prefix + 'ClientSelect');
+            var v = (inp && inp.value) || (sel && sel.value) || '';
+            return String(v).trim();
+        }
+
+        /** Upgrade bare client-id text inputs to type + dropdown (best-effort). */
+        function enhanceAdminClientIdFields() {
+            var ids = [
+                'adminLeadMsgClientId',
+                'selectedClientId',
+                'agentTaskClientId',
+                'agentAddonClientId',
+                'manualClientId',
+                'billingClientId'
+            ];
+            ids.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (!el || el.tagName !== 'INPUT') return;
+                el.setAttribute('list', 'adminClientDatalist');
+                el.classList.add('admin-client-id');
+                el.setAttribute('placeholder', el.placeholder || 'Type Client ID or pick from list…');
+                el.setAttribute('autocomplete', 'off');
+            });
+            // Any input whose id/name looks like clientId
+            document.querySelectorAll('input[id*="lientId"], input[id*="lientID"], input[name*="lientId"]').forEach(function (el) {
+                if (el.type === 'hidden') return;
+                el.setAttribute('list', 'adminClientDatalist');
+                el.classList.add('admin-client-id');
+            });
+        }
+
+        async function adminEnqueueLeadMessages() {
+            var clientId = adminReadClientCombo('adminLeadMsg') || (document.getElementById('adminLeadMsgClientId') || {}).value || '';
+            var body = (document.getElementById('adminLeadMsgBody') || {}).value || '';
+            var tone = (document.getElementById('adminLeadMsgTone') || {}).value || 'professional';
+            var channel = (document.getElementById('adminLeadMsgChannel') || {}).value || 'email';
+            var subject = (document.getElementById('adminLeadMsgSubject') || {}).value || 'Update';
+            var stage = (document.getElementById('adminLeadMsgStage') || {}).value || '';
+            var tags = (document.getElementById('adminLeadMsgTags') || {}).value || '';
+            var whenEl = document.getElementById('adminLeadMsgWhen');
+            var scheduledAt = '';
+            if (whenEl && whenEl.value) {
+                try { scheduledAt = new Date(whenEl.value).toISOString(); } catch (_) { }
+            }
+            var hint = document.getElementById('adminLeadMsgHint');
+            if (!clientId || !body) {
+                if (hint) hint.textContent = 'Client and message body required';
+                else if (typeof showToast === 'function') showToast('Client and message body required', 'error');
+                return;
+            }
+            if (hint) hint.textContent = 'Queuing…';
+            try {
+                var payload = {
+                    clientId: clientId,
+                    body: body,
+                    tone: tone,
+                    channel: channel,
+                    subject: subject,
+                    stage: stage || undefined,
+                    tags: tags || undefined,
+                    scheduledAt: scheduledAt || undefined
+                };
+                var res = typeof executeSecureBridgeCall === 'function'
+                    ? await executeSecureBridgeCall('agent', 'agent-enqueue-lead-messages', payload)
+                    : await callGateway('agent', 'agent-enqueue-lead-messages', payload);
+                var msg = (res && res.message) || JSON.stringify(res);
+                if (hint) hint.textContent = msg;
+                if (typeof showToast === 'function') showToast(msg, res && res.success === false ? 'error' : 'success');
+            } catch (e) {
+                if (hint) hint.textContent = e.message || String(e);
+                if (typeof showToast === 'function') showToast(e.message || String(e), 'error');
+            }
+        }
+
+        async function adminSetLeadCadence() {
+            var clientId = adminReadClientCombo('adminLeadMsg') || (document.getElementById('adminLeadMsgClientId') || {}).value || '';
+            var freq = (document.getElementById('adminLeadCadence') || {}).value || 'none';
+            var hint = document.getElementById('adminLeadMsgHint');
+            if (!clientId) {
+                if (hint) hint.textContent = 'Client ID required';
+                return;
+            }
+            try {
+                var res = typeof executeSecureBridgeCall === 'function'
+                    ? await executeSecureBridgeCall('agent', 'agent-set-lead-contact-frequency', { clientId: clientId, contactFrequency: freq })
+                    : await callGateway('agent', 'agent-set-lead-contact-frequency', { clientId: clientId, contactFrequency: freq });
+                var msg = (res && res.message) || JSON.stringify(res);
+                if (hint) hint.textContent = msg;
+                if (typeof showToast === 'function') showToast(msg, 'success');
+            } catch (e) {
+                if (hint) hint.textContent = e.message || String(e);
+            }
+        }
+
+        // Boot: load clients once UI is ready
+        (function bootAdminClients() {
+            function run() {
+                ensureAdminClientList(true).then(function () {
+                    enhanceAdminClientIdFields();
+                    fillAllAdminClientSelects();
+                });
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(run, 800); });
+            else setTimeout(run, 800);
+        })();
+    </script>
 
 </body>
 
