@@ -1995,6 +1995,77 @@
                 </div>
             </section>
             <section id="hub-v5" class="hidden flex-1 flex overflow-hidden">
+                <section id="admin-lead-messaging"
+                    class="p-4 border border-emerald-800/40 rounded-xl m-3 space-y-2 bg-slate-950/80 shrink-0">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2"><i
+                            class="fa-solid fa-paper-plane text-emerald-400 text-xs"></i> Lead messaging (on behalf of
+                        client)</h3>
+                    <p class="text-[11px] text-slate-400">Personalized, batched sends. Tone: professional / familiar /
+                        both. Videos need lead_video_pack credits.</p>
+                    <input id="adminLeadMsgClientId" placeholder="Client ID"
+                        class="w-full max-w-md bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                    <input id="adminLeadMsgSubject" placeholder="Subject"
+                        class="w-full max-w-md bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                    <textarea id="adminLeadMsgBody" rows="3" placeholder="Body with {{name}} {{company}}"
+                        class="w-full max-w-xl bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"></textarea>
+                    <div class="flex flex-wrap gap-2">
+                        <select id="adminLeadMsgTone"
+                            class="bg-slate-950 border border-slate-700 rounded text-xs text-white px-2 py-1">
+                            <option value="professional">Professional</option>
+                            <option value="familiar">Familiar</option>
+                            <option value="both">Both</option>
+                        </select>
+                        <select id="adminLeadMsgChannel"
+                            class="bg-slate-950 border border-slate-700 rounded text-xs text-white px-2 py-1">
+                            <option value="email">Email</option>
+                            <option value="whatsapp">WhatsApp</option>
+                            <option value="both">Both</option>
+                        </select>
+                        <select id="adminLeadCadence"
+                            class="bg-slate-950 border border-slate-700 rounded text-xs text-white px-2 py-1">
+                            <option value="week">Weekly</option>
+                            <option value="biweekly">Biweekly</option>
+                            <option value="month">Monthly</option>
+                            <option value="none">None</option>
+                        </select>
+                        <button type="button" onclick="adminEnqueueLeadMessages()"
+                            class="px-3 py-1.5 rounded bg-emerald-700 text-white text-xs">Queue messages</button>
+                        <button type="button" onclick="adminSetLeadCadence()"
+                            class="px-3 py-1.5 rounded bg-slate-700 text-white text-xs">Set cadence</button>
+                    </div>
+                </section>
+
+                <script>
+                    /** Admin: enqueue lead messages on behalf of a client */
+                    async function adminEnqueueLeadMessages() {
+                        var clientId = (document.getElementById('adminLeadMsgClientId') || {}).value || (document.getElementById('selectedClientId') || {}).value || '';
+                        var body = (document.getElementById('adminLeadMsgBody') || {}).value || '';
+                        var tone = (document.getElementById('adminLeadMsgTone') || {}).value || 'professional';
+                        var channel = (document.getElementById('adminLeadMsgChannel') || {}).value || 'email';
+                        if (!clientId || !body) { alert('Client ID and message body required'); return; }
+                        try {
+                            var res = await (typeof callAdmin === 'function' ? callAdmin('agent-enqueue-lead-messages', {
+                                clientId: clientId, body: body, tone: tone, channel: channel,
+                                subject: (document.getElementById('adminLeadMsgSubject') || {}).value || 'Update',
+                                scheduledAt: (document.getElementById('adminLeadMsgWhen') || {}).value || ''
+                            }) : callGateway('agent', 'agent-enqueue-lead-messages', {
+                                clientId: clientId, body: body, tone: tone, channel: channel
+                            }));
+                            alert((res && res.message) || JSON.stringify(res));
+                        } catch (e) { alert(e.message || e); }
+                    }
+                    async function adminSetLeadCadence() {
+                        var clientId = (document.getElementById('adminLeadMsgClientId') || {}).value || '';
+                        var freq = (document.getElementById('adminLeadCadence') || {}).value || 'none';
+                        if (!clientId) { alert('Client ID required'); return; }
+                        try {
+                            var res = await (typeof callAdmin === 'function' ? callAdmin('agent-set-lead-contact-frequency', { clientId: clientId, contactFrequency: freq })
+                                : callGateway('agent', 'agent-set-lead-contact-frequency', { clientId: clientId, contactFrequency: freq }));
+                            alert((res && res.message) || JSON.stringify(res));
+                        } catch (e) { alert(e.message || e); }
+                    }
+                </script>
+
 
                 <!-- V5 Sub-Nav -->
                 <div
@@ -5228,8 +5299,7 @@
                             </label>
                             <p class="text-[10px] text-slate-500 md:col-span-2 self-center">Offshore clients are billed
                                 from USD list prices × the FX rate above. Local clients use NGN list prices. Save with
-                                <strong class="text-slate-300">Save tiers only</strong>.
-                            </p>
+                                <strong class="text-slate-300">Save tiers only</strong>.</p>
                         </div>
                         <div class="border border-slate-800 rounded-lg p-3 bg-slate-950/50">
                             <p class="text-[11px] font-semibold text-emerald-400 mb-2"><i
@@ -20596,73 +20666,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
 
     </script>
 
-    <section id="admin-lead-messaging" class="p-4 border border-slate-700 rounded-xl m-4 space-y-2 bg-slate-900/50">
-        <h3 class="text-sm font-bold text-white">Lead messaging (on behalf of client)</h3>
-        <p class="text-[11px] text-slate-400">Personalized, batched sends. Tone: professional / familiar / both. Videos
-            need lead_video_pack credits.</p>
-        <input id="adminLeadMsgClientId" placeholder="Client ID"
-            class="w-full max-w-md bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-        <input id="adminLeadMsgSubject" placeholder="Subject"
-            class="w-full max-w-md bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-        <textarea id="adminLeadMsgBody" rows="3" placeholder="Body with {{name}} {{company}}"
-            class="w-full max-w-xl bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"></textarea>
-        <div class="flex flex-wrap gap-2">
-            <select id="adminLeadMsgTone"
-                class="bg-slate-950 border border-slate-700 rounded text-xs text-white px-2 py-1">
-                <option value="professional">Professional</option>
-                <option value="familiar">Familiar</option>
-                <option value="both">Both</option>
-            </select>
-            <select id="adminLeadMsgChannel"
-                class="bg-slate-950 border border-slate-700 rounded text-xs text-white px-2 py-1">
-                <option value="email">Email</option>
-                <option value="whatsapp">WhatsApp</option>
-                <option value="both">Both</option>
-            </select>
-            <select id="adminLeadCadence"
-                class="bg-slate-950 border border-slate-700 rounded text-xs text-white px-2 py-1">
-                <option value="week">Weekly</option>
-                <option value="biweekly">Biweekly</option>
-                <option value="month">Monthly</option>
-                <option value="none">None</option>
-            </select>
-            <button type="button" onclick="adminEnqueueLeadMessages()"
-                class="px-3 py-1.5 rounded bg-emerald-700 text-white text-xs">Queue messages</button>
-            <button type="button" onclick="adminSetLeadCadence()"
-                class="px-3 py-1.5 rounded bg-slate-700 text-white text-xs">Set cadence</button>
-        </div>
-    </section>
 
-    <script>
-        /** Admin: enqueue lead messages on behalf of a client */
-        async function adminEnqueueLeadMessages() {
-            var clientId = (document.getElementById('adminLeadMsgClientId') || {}).value || (document.getElementById('selectedClientId') || {}).value || '';
-            var body = (document.getElementById('adminLeadMsgBody') || {}).value || '';
-            var tone = (document.getElementById('adminLeadMsgTone') || {}).value || 'professional';
-            var channel = (document.getElementById('adminLeadMsgChannel') || {}).value || 'email';
-            if (!clientId || !body) { alert('Client ID and message body required'); return; }
-            try {
-                var res = await (typeof callAdmin === 'function' ? callAdmin('agent-enqueue-lead-messages', {
-                    clientId: clientId, body: body, tone: tone, channel: channel,
-                    subject: (document.getElementById('adminLeadMsgSubject') || {}).value || 'Update',
-                    scheduledAt: (document.getElementById('adminLeadMsgWhen') || {}).value || ''
-                }) : callGateway('agent', 'agent-enqueue-lead-messages', {
-                    clientId: clientId, body: body, tone: tone, channel: channel
-                }));
-                alert((res && res.message) || JSON.stringify(res));
-            } catch (e) { alert(e.message || e); }
-        }
-        async function adminSetLeadCadence() {
-            var clientId = (document.getElementById('adminLeadMsgClientId') || {}).value || '';
-            var freq = (document.getElementById('adminLeadCadence') || {}).value || 'none';
-            if (!clientId) { alert('Client ID required'); return; }
-            try {
-                var res = await (typeof callAdmin === 'function' ? callAdmin('agent-set-lead-contact-frequency', { clientId: clientId, contactFrequency: freq })
-                    : callGateway('agent', 'agent-set-lead-contact-frequency', { clientId: clientId, contactFrequency: freq }));
-                alert((res && res.message) || JSON.stringify(res));
-            } catch (e) { alert(e.message || e); }
-        }
-    </script>
 
 </body>
 
