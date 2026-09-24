@@ -770,6 +770,53 @@
                 min-width: 0;
             }
 
+
+            /* Forms & controls stay inside the viewport (like social calendar cards) */
+            form,
+            fieldset {
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            form input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+            form select,
+            form textarea,
+            section.view input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+            section.view select,
+            section.view textarea {
+                max-width: 100% !important;
+                width: 100%;
+                box-sizing: border-box !important;
+            }
+
+            section.view .flex.flex-wrap,
+            section.view .flex.items-center.gap-2,
+            section.view .flex.items-center.gap-3 {
+                max-width: 100%;
+            }
+
+            section.view .grid {
+                max-width: 100%;
+            }
+
+            section.view label {
+                max-width: 100%;
+                word-break: break-word;
+            }
+
+            /* Prevent wide rows from overflowing */
+            section.view .overflow-x-auto,
+            section.view .table-scroll {
+                max-width: 100%;
+            }
+
+            /* Social calendar style cards full width */
+            #socialCalendarList,
+            #socialCalendarList>div {
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
             #statHoursLife,
             #statEmailsLife,
             #statProposalsLife,
@@ -2868,7 +2915,8 @@
                             <p id="mailboxSelfServiceHint" class="text-[11px] text-slate-500">Self-service: connect
                                 <strong class="text-slate-300">one new email per calendar month</strong> while your plan
                                 is
-                                active. Locked if subscription expired. Extra mailboxes: contact admin or buy quota.</p>
+                                active. Locked if subscription expired. Extra mailboxes: contact admin or buy quota.
+                            </p>
                             <div id="mailboxConnectForm" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
                                 <div>
                                     <label class="text-[10px] text-slate-500">Email address</label>
@@ -8908,18 +8956,118 @@
                 }
             };
 
-            window.clientEditSocialPost = async function (postId) {
+
+            window.clientApproveSocialPost = async function (postId) {
                 try {
+                    if (!postId) return;
+                    if (typeof toast === "function") toast("Approving…");
                     var res = await gw("clientportal", "clientPortalApproveSocialPost", {
                         clientId: sid(), token: tok(), postId: postId
                     });
-                    if (res && res.success === false) throw new Error(res.message || "Failed");
-                    if (typeof toast === "function") toast("Approved — use Send now to publish immediately");
-                    loadSocialCalendar();
+                    if (res && res.success === false) throw new Error(res.message || "Approve failed");
+                    if (typeof toast === "function") toast((res && res.message) || "Approved — use Send now to publish");
+                    if (typeof loadSocialCalendar === "function") loadSocialCalendar();
                 } catch (e) {
                     if (typeof toast === "function") toast(String(e.message || e), true);
                 }
             };
+
+            window.clientDeleteSocialPost = async function (postId) {
+                try {
+                    if (!postId) return;
+                    if (!confirm("Delete this scheduled post? This cannot be undone.")) return;
+                    if (typeof toast === "function") toast("Deleting…");
+                    var res = await gw("clientportal", "clientPortalDeleteSocialPost", {
+                        clientId: sid(), token: tok(), postId: postId
+                    });
+                    if (res && res.success === false) throw new Error(res.message || "Delete failed");
+                    if (typeof toast === "function") toast((res && res.message) || "Deleted");
+                    if (typeof loadSocialCalendar === "function") loadSocialCalendar();
+                } catch (e) {
+                    if (typeof toast === "function") toast(String(e.message || e), true);
+                }
+            };
+
+            window.clientEditSocialPost = async function (postId) {
+                try {
+                    if (!postId) return;
+                    var cache = window.__SOCIAL_CALENDAR_CACHE || [];
+                    var post = null;
+                    for (var i = 0; i < cache.length; i++) {
+                        var p = cache[i];
+                        var pid = String(p.PostID || p.postId || p.id || "");
+                        if (pid === String(postId)) { post = p; break; }
+                    }
+                    var current = post ? String(post.Caption || post.caption || post.text || "") : "";
+                    var next = prompt("Edit post caption:", current);
+                    if (next === null) return; // cancelled
+                    if (typeof toast === "function") toast("Saving…");
+                    var res = await gw("clientportal", "clientPortalEditSocialPost", {
+                        clientId: sid(), token: tok(), postId: postId,
+                        caption: next, text: next, Caption: next
+                    });
+                    if (res && res.success === false) throw new Error(res.message || "Edit failed");
+                    if (typeof toast === "function") toast((res && res.message) || "Saved");
+                    if (typeof loadSocialCalendar === "function") loadSocialCalendar();
+                } catch (e) {
+                    if (typeof toast === "function") toast(String(e.message || e), true);
+                }
+            };
+
+            /** Read file as base64 (no data: prefix) */
+            window._fileToBase64_ = function (file) {
+                return new Promise(function (resolve, reject) {
+                    var reader = new FileReader();
+                    reader.onload = function () {
+                        var s = String(reader.result || "");
+                        var i = s.indexOf("base64,");
+                        resolve(i >= 0 ? s.slice(i + 7) : s);
+                    };
+                    reader.onerror = function () { reject(new Error("Could not read file")); };
+                    reader.readAsDataURL(file);
+                });
+            };
+
+            window.clientAttachMediaToPost = async function (postId, input) {
+                try {
+                    if (!postId) return;
+                    if (!input || !input.files || !input.files.length) return;
+                    var files = Array.prototype.slice.call(input.files, 0, 5);
+                    var maxImg = 5 * 1024 * 1024;
+                    var maxVid = 25 * 1024 * 1024;
+                    if (typeof toast === "function") toast("Uploading " + files.length + " file(s)…");
+                    var ok = 0, fail = 0;
+                    for (var i = 0; i < files.length; i++) {
+                        var file = files[i];
+                        var isVid = /^video\//i.test(file.type);
+                        if (isVid && file.size > maxVid) { fail++; continue; }
+                        if (!isVid && file.size > maxImg) { fail++; continue; }
+                        try {
+                            var b64 = await window._fileToBase64_(file);
+                            var res = await gw("clientportal", "clientPortalUploadSocialMedia", {
+                                clientId: sid(), token: tok(),
+                                postId: postId,
+                                fileName: file.name,
+                                mimeType: file.type || "application/octet-stream",
+                                base64: b64
+                            });
+                            if (res && res.success === false) { fail++; continue; }
+                            ok++;
+                        } catch (_) { fail++; }
+                    }
+                    try { input.value = ""; } catch (_) { }
+                    if (typeof toast === "function") {
+                        toast(ok ? ("Attached " + ok + " file(s)" + (fail ? (" · " + fail + " failed") : "")) : "Upload failed", !ok);
+                    }
+                    if (typeof loadSocialCalendar === "function") loadSocialCalendar();
+                } catch (e) {
+                    if (typeof toast === "function") toast(String(e.message || e), true);
+                }
+            };
+
+            // Aliases so older onclick names never throw
+            window.clientSendSocialPost = window.clientSendSocialPostNow;
+
 
             window.ensureSocialDateDefaults = function () {
                 var from = document.getElementById("clientSocialStart") || document.getElementById("socialDateFrom");
