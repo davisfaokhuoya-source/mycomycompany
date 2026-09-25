@@ -2927,8 +2927,7 @@
                             <p id="mailboxSelfServiceHint" class="text-[11px] text-slate-500">Self-service: connect
                                 <strong class="text-slate-300">one new email per calendar month</strong> while your plan
                                 is
-                                active. Locked if subscription expired. Extra mailboxes: contact admin or buy quota.
-                            </p>
+                                active. Locked if subscription expired. Extra mailboxes: contact admin or buy quota.</p>
                             <div id="mailboxConnectForm" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
                                 <div>
                                     <label class="text-[10px] text-slate-500">Email address</label>
@@ -7242,18 +7241,32 @@
                     if (typeof executeSecureBridgeCall === "function") return executeSecureBridgeCall(system, action, extra || {});
                     throw new Error("Gateway not available");
                 }
+                function isCooling(res) {
+                    if (!res) return false;
+                    if (res.systemCooling || res.cooldown || res.jobInProgress) return true;
+                    var m = String(res.message || "").toLowerCase();
+                    return /cooling off|system is busy|system busy|cooldown|another request is using the gateway/.test(m);
+                }
                 return once().then(function (res) {
-                    if (res && res.systemCooling) {
-                        var wait = Math.max(1500, Number(res.retryAfterSec || 3) * 1000);
+                    if (!isCooling(res)) return res;
+                    // Retry up to 3 times with backoff
+                    var attempt = 0;
+                    function retry() {
+                        attempt++;
+                        if (attempt > 3) return res;
+                        var wait = Math.max(1500, Number(res.retryAfterSec || 3) * 1000) * attempt;
                         return new Promise(function (resolve) {
                             setTimeout(function () {
-                                once().then(resolve).catch(function (e) {
+                                once().then(function (res2) {
+                                    if (isCooling(res2) && attempt < 3) resolve(retry());
+                                    else resolve(res2);
+                                }).catch(function (e) {
                                     resolve({ success: false, message: String(e && e.message || e), systemCooling: true });
                                 });
                             }, wait);
                         });
                     }
-                    return res;
+                    return retry();
                 });
             }
             function sid() {
@@ -8813,20 +8826,37 @@
                 } catch (e) { toast(e.message || "Approve failed", true); }
             };
 
-            window.loadSocialCalendar = async function () {
+            window.loadSocialCalendar = async function (opts) {
+                opts = opts || {};
                 var list = document.getElementById("socialCalendarList");
-                if (list) list.innerHTML = '<p class="text-slate-500 text-xs">Loading your social calendar…</p>';
+                var attempt = opts.attempt || 0;
+                if (list && attempt === 0) list.innerHTML = '<p class="text-slate-500 text-xs">Loading your social calendar…</p>';
                 try {
                     var res = await gw("clientportal", "clientPortalGetSocialCalendar", { clientId: sid(), token: tok() });
+                    // Soft cooling: auto-retry without red error (lock contention is temporary)
+                    if (res && (res.systemCooling || (res.message && /cooling off|system is busy|system busy/i.test(String(res.message))))) {
+                        if (attempt < 4) {
+                            if (list) list.innerHTML = '<p class="text-slate-500 text-xs">Gateway is busy — retrying in a moment…</p>';
+                            var wait = Math.max(2000, Number(res.retryAfterSec || 3) * 1000);
+                            await new Promise(function (r) { setTimeout(r, wait); });
+                            return loadSocialCalendar({ attempt: attempt + 1 });
+                        }
+                        if (list) list.innerHTML = '<p class="text-slate-500 text-xs">System is busy right now. Tap Refresh in a few seconds.</p>';
+                        return res;
+                    }
                     if (!res || res.success === false) {
                         var msg = (res && res.message) || "Could not load calendar.";
-                        if (list) list.innerHTML = '<p class="text-red-400 text-xs">' + esc(msg) + '</p>';
+                        // Never paint cooling as hard red
+                        if (/cooling off|system is busy|system busy|4900/i.test(String(msg))) {
+                            if (list) list.innerHTML = '<p class="text-slate-500 text-xs">System is busy right now. Tap Refresh in a few seconds.</p>';
+                            return res;
+                        }
+                        if (list) list.innerHTML = '<p class="text-slate-500 text-xs">' + esc(msg) + '</p>';
                         if (typeof toast === "function") toast(msg, true);
                         return res;
                     }
                     var posts = res.calendar || res.posts || res.items || [];
                     window.__SOCIAL_CALENDAR_CACHE = posts;
-                    // Fill batch selector if present
                     try {
                         var sel = document.getElementById("socialBatchSelector");
                         if (sel) {
@@ -8846,8 +8876,13 @@
                     renderSocialCalendarPosts(posts);
                     return res;
                 } catch (e) {
-                    if (list) list.innerHTML = '<p class="text-red-400 text-xs">' + esc(String(e.message || e)) + '</p>';
-                    if (typeof toast === "function") toast(String(e.message || e), true);
+                    var emsg = String(e && e.message || e);
+                    if (/cooling off|system is busy|system busy|4900/i.test(emsg)) {
+                        if (list) list.innerHTML = '<p class="text-slate-500 text-xs">System is busy right now. Tap Refresh in a few seconds.</p>';
+                        return { success: false, systemCooling: true, message: emsg };
+                    }
+                    if (list) list.innerHTML = '<p class="text-slate-500 text-xs">' + esc(emsg) + '</p>';
+                    if (typeof toast === "function") toast(emsg, true);
                 }
             };
 
@@ -10663,7 +10698,10 @@
             }
             patch();
         })();
+    </script>
 
+
+    <script>
         (function () {
             var tries = 0;
             function patch() {
