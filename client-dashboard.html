@@ -2927,8 +2927,7 @@
                             <p id="mailboxSelfServiceHint" class="text-[11px] text-slate-500">Self-service: connect
                                 <strong class="text-slate-300">one new email per calendar month</strong> while your plan
                                 is
-                                active. Locked if subscription expired. Extra mailboxes: contact admin or buy quota.
-                            </p>
+                                active. Locked if subscription expired. Extra mailboxes: contact admin or buy quota.</p>
                             <div id="mailboxConnectForm" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
                                 <div>
                                     <label class="text-[10px] text-slate-500">Email address</label>
@@ -3843,6 +3842,7 @@
             }
         }
 
+
         function isSessionExpiredMessage(msg, code) {
             const m = String(msg || '');
             const c = String(code || '');
@@ -4425,6 +4425,23 @@
             });
         }
 
+
+        // Social calendar date defaults (hoisted-safe assignment)
+        if (typeof window.ensureSocialDateDefaults !== "function") {
+            window.ensureSocialDateDefaults = function () {
+                try {
+                    var from = document.getElementById("clientSocialStart") || document.getElementById("socialDateFrom");
+                    var to = document.getElementById("clientSocialEnd") || document.getElementById("socialDateTo");
+                    var now = new Date();
+                    if (from && !from.value) from.value = now.toISOString().slice(0, 10);
+                    if (to && !to.value) {
+                        var end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                        to.value = end.toISOString().slice(0, 10);
+                    }
+                } catch (_) { }
+            };
+        }
+
         function showView(name, btn) {
             try { closeMobileSidebar(); } catch (_) { }
 
@@ -4497,7 +4514,7 @@
 
             if (name === 'documents') loadDocuments();
             if (name === 'generate') { loadDocumentCatalog(); loadAutoSendPreference(); }
-            if (name === 'social') { ensureSocialDateDefaults(); loadSocialCalendar(); try { loadSocialPerformance(); } catch (_) { } }
+            if (name === 'social') { try { if (typeof ensureSocialDateDefaults === 'function') ensureSocialDateDefaults(); } catch (_) { } try { loadSocialCalendar(); } catch (_) { } try { loadSocialPerformance(); } catch (_) { } }
             if (name === 'billing') {
                 try { loadBillingPanel(); } catch (_) { }
                 try { clientLoadBillingCatalog(); } catch (_) { }
@@ -9193,8 +9210,8 @@
                             var fid = m.fileId || m.FileID || m.imageId || "";
                             var at = String(m.assetType || m.AssetType || "").toLowerCase();
                             var name = String(m.fileName || m.url || "").toLowerCase();
-                            var isVid = at === "video" || at === "reel" || /\\.(mp4|webm|mov)(\\?|$)/i.test(name);
-                            if (at === "image" || at === "photo" || at === "picture" || /\\.(jpe?g|png|gif|webp)(\\?|$)/i.test(name)) isVid = false;
+                            var isVid = at === "video" || at === "reel" || /\.(mp4|webm|mov)(\?|$)/i.test(name);
+                            if (at === "image" || at === "photo" || at === "picture" || /\.(jpe?g|png|gif|webp)(\?|$)/i.test(name)) isVid = false;
                             var openUrl = m.openUrl || m.url || "";
                             var thumb = m.previewUrl || "";
                             if (fid && !isVid) {
@@ -9212,7 +9229,7 @@
                         }).join("") + "</div>";
                     }
                     var id = p.PostID || p.postId || p.Id || "";
-                    var safeId = String(id).replace(/\\\\/g, "\\\\").replace(/'/g, "\\\\'");
+                    var safeId = String(id).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
                     var date = String(p.Date || p.date || "").slice(0, 10);
                     var plat = p.Platform || p.platform || "—";
                     var status = String(p.Status || p.status || "Draft");
@@ -9227,16 +9244,16 @@
                     var actions = "";
                     if (id) {
                         if (isPending) {
-                            actions += '<button type="button" class="text-[10px] px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-medium" onclick="clientApproveSocialPost(\\'' + safeId + '\\')">Approve</button>';
+                            actions += '<button type="button" class="text-[10px] px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-medium" onclick="clientApproveSocialPost(\'' + safeId + '\')">Approve</button>';
                         }
                         if (isApproved && !isPublished) {
-                            actions += '<button type="button" class="text-[10px] px-2 py-1 rounded bg-sky-600 hover:bg-sky-500 text-white font-medium" onclick="clientSendSocialPostNow(\\'' + safeId + '\\')"><i class="fa-solid fa-paper-plane"></i> Send now</button>';
+                            actions += '<button type="button" class="text-[10px] px-2 py-1 rounded bg-sky-600 hover:bg-sky-500 text-white font-medium" onclick="clientSendSocialPostNow(\'' + safeId + '\')"><i class="fa-solid fa-paper-plane"></i> Send now</button>';
                         }
                         if (!isPublished) {
-                            actions += '<button type="button" class="text-[10px] px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white" onclick="clientEditSocialPost(\\'' + safeId + '\\')">Edit</button>';
-                            actions += '<button type="button" class="text-[10px] px-2 py-1 rounded bg-red-900/80 hover:bg-red-800 text-red-100" onclick="clientDeleteSocialPost(\\'' + safeId + '\\')">Delete</button>';
+                            actions += '<button type="button" class="text-[10px] px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white" onclick="clientEditSocialPost(\'' + safeId + '\')">Edit</button>';
+                            actions += '<button type="button" class="text-[10px] px-2 py-1 rounded bg-red-900/80 hover:bg-red-800 text-red-100" onclick="clientDeleteSocialPost(\'' + safeId + '\')">Delete</button>';
                             actions += '<label class="text-[10px] px-2 py-1 rounded bg-indigo-800 hover:bg-indigo-700 text-white cursor-pointer">' +
-                                'Add media<input type="file" class="hidden" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime" onchange="clientAttachMediaToPost(\\'' + safeId + '\\', this)" /></label>';
+                                'Add media<input type="file" class="hidden" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime" onchange="clientAttachMediaToPost(\'' + safeId + '\', this)" /></label>';
                         }
                     }
                     return (
