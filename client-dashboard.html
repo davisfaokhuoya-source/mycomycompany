@@ -2927,8 +2927,7 @@
                             <p id="mailboxSelfServiceHint" class="text-[11px] text-slate-500">Self-service: connect
                                 <strong class="text-slate-300">one new email per calendar month</strong> while your plan
                                 is
-                                active. Locked if subscription expired. Extra mailboxes: contact admin or buy quota.
-                            </p>
+                                active. Locked if subscription expired. Extra mailboxes: contact admin or buy quota.</p>
                             <div id="mailboxConnectForm" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
                                 <div>
                                     <label class="text-[10px] text-slate-500">Email address</label>
@@ -3799,9 +3798,17 @@
                 return 'Something went wrong · ' + code + '.';
             }
             var clean = raw.replace(/^error occurred\s*[—\-–]?\s*/i, '').replace(/\berror code\b/gi, 'code').trim();
-            if (!clean) return 'Something went wrong · ' + code + '.';
-            if (new RegExp(code).test(clean)) return clean;
-            return clean + ' · ' + code;
+            if (!clean) return 'Something went wrong · ' + (code || '—') + '.';
+            // Avoid new RegExp(code) — special chars / empty code can throw or behave oddly
+            if (code && clean.indexOf(String(code)) >= 0) return clean;
+            // Don't surface raw "X is not a function" to clients
+            if (/is not a function/i.test(clean)) {
+                return 'Something went wrong while loading this section. Refresh and try again' + (code ? (' · ' + code) : '');
+            }
+            if (/is not defined/i.test(clean)) {
+                return 'A page feature failed to load. Hard-refresh (Ctrl+Shift+R) after deploy' + (code ? (' · ' + code) : '');
+            }
+            return clean + (code ? (' · ' + code) : '');
         }
 
         function clientToastType(msg, preferred) {
@@ -4515,7 +4522,7 @@
 
             if (name === 'documents') loadDocuments();
             if (name === 'generate') { loadDocumentCatalog(); loadAutoSendPreference(); }
-            if (name === 'social') { try { if (typeof ensureSocialDateDefaults === 'function') ensureSocialDateDefaults(); } catch (_) { } try { loadSocialCalendar(); } catch (_) { } try { loadSocialPerformance(); } catch (_) { } }
+            if (name === 'social') { try { if (typeof ensureSocialDateDefaults === 'function') ensureSocialDateDefaults(); } catch (_) { } try { loadSocialCalendar(); } catch (_) { } try { if (typeof loadSocialPerformance === 'function') loadSocialPerformance(); } catch (_) { } try { if (typeof loadSocialMediaLibrary === 'function') loadSocialMediaLibrary(); } catch (_) { } }
             if (name === 'billing') {
                 try { loadBillingPanel(); } catch (_) { }
                 try { clientLoadBillingCatalog(); } catch (_) { }
@@ -7241,6 +7248,26 @@
                         sessionStorage.getItem("clientId") || "";
                 } catch (_) { return ""; }
             }
+
+            function getClientId() {
+                try {
+                    if (typeof sid === "function") return sid();
+                } catch (_) { }
+                try {
+                    return window.CLIENT_ID || localStorage.getItem("vic_client_id") || localStorage.getItem("CLIENT_ID") || "";
+                } catch (_) { return window.CLIENT_ID || ""; }
+            }
+            function getClientToken() {
+                try {
+                    if (typeof tok === "function") return tok();
+                } catch (_) { }
+                try {
+                    return window.CLIENT_TOKEN || localStorage.getItem("vic_client_token") || localStorage.getItem("CLIENT_TOKEN") || "";
+                } catch (_) { return window.CLIENT_TOKEN || ""; }
+            }
+            window.getClientId = getClientId;
+            window.getClientToken = getClientToken;
+
             function tok() {
                 try {
                     return window.CLIENT_TOKEN || window.SESSION_TOKEN ||
@@ -9437,6 +9464,32 @@
                 }
             };
 
+
+            window.loadSocialMediaLibrary = async function () {
+                var libEl = document.getElementById("clientSocialMediaLibrary");
+                try {
+                    if (!libEl) return;
+                    libEl.innerHTML = '<span class="text-slate-500"><i class="fa-solid fa-spinner fa-spin"></i> Loading library…</span>';
+                    var res = await gw("clientportal", "clientPortalListSocialMediaLibrary", { clientId: sid(), token: tok() });
+                    var items = (res && (res.items || res.library || res.media || [])) || [];
+                    if (!items.length) {
+                        libEl.innerHTML = '<span class="text-slate-500">No library items loaded yet — upload above or attach on each post.</span>';
+                        return;
+                    }
+                    libEl.innerHTML = '<div class="flex flex-wrap gap-2">' + items.map(function (it) {
+                        var name = String(it.fileName || it.name || it.FileName || "file");
+                        var url = it.previewUrl || it.url || it.ImagePreviewURL || "";
+                        var fid = it.fileId || it.FileID || "";
+                        if (fid && !url) url = "https://drive.google.com/thumbnail?id=" + encodeURIComponent(fid) + "&sz=w200";
+                        if (url) {
+                            return '<div class="w-12 h-12 rounded border border-slate-700 overflow-hidden bg-slate-900" title="' + name.replace(/"/g, "") + '"><img src="' + url + '" class="w-full h-full object-cover" loading="lazy" /></div>';
+                        }
+                        return '<div class="text-[10px] text-slate-400 px-2 py-1 border border-slate-700 rounded">' + name.replace(/</g, "") + '</div>';
+                    }).join("") + '</div>';
+                } catch (e) {
+                    if (libEl) libEl.innerHTML = '<span class="text-slate-500">No library items loaded yet — upload above or attach on each post.</span>';
+                }
+            };
             window.clientGenerateSocialCalendar = async function () {
                 var btn = document.getElementById("clientSocialGenerateBtn");
                 var list = document.getElementById("socialCalendarList");
@@ -9933,38 +9986,64 @@
                 var ok = 0, fail = 0;
                 for (var i = 0; i < files.length; i++) {
                     var file = files[i];
-                    var isVid = /^video\//i.test(file.type);
+                    var isVid = /^video\//i.test(String(file.type || ""));
                     if (isVid && file.size > maxVid) { fail++; continue; }
                     if (!isVid && file.size > maxImg) { fail++; continue; }
-                    var base64 = await new Promise(function (resolve, reject) {
-                        var reader = new FileReader();
-                        reader.onload = function () {
-                            var s = String(reader.result || "");
-                            var j = s.indexOf(",");
-                            resolve(j >= 0 ? s.slice(j + 1) : s);
-                        };
-                        reader.onerror = reject;
-                        reader.readAsDataURL(file);
-                    });
-                    var res = await callGateway("clientportal", "clientPortalUploadSocialMedia", {
-                        clientId: (typeof getClientId === "function" ? getClientId() : (sid ? sid() : window.CLIENT_ID)),
-                        token: (typeof getClientToken === "function" ? getClientToken() : (tok ? tok() : window.CLIENT_TOKEN)),
+                    var base64;
+                    try {
+                        base64 = await (typeof _fileToBase64WithProgress_ === "function"
+                            ? _fileToBase64WithProgress_(file, function () { })
+                            : (typeof _fileToBase64_ === "function" ? _fileToBase64_(file) : null));
+                        if (!base64) {
+                            base64 = await new Promise(function (resolve, reject) {
+                                var reader = new FileReader();
+                                reader.onload = function () {
+                                    var s = String(reader.result || "");
+                                    var j = s.indexOf(",");
+                                    resolve(j >= 0 ? s.slice(j + 1) : s);
+                                };
+                                reader.onerror = function () { reject(new Error("Could not read file")); };
+                                reader.readAsDataURL(file);
+                            });
+                        }
+                    } catch (re) { fail++; continue; }
+                    var payload = {
+                        clientId: (typeof sid === "function" ? sid() : (window.CLIENT_ID || "")),
+                        token: (typeof tok === "function" ? tok() : (window.CLIENT_TOKEN || "")),
                         fileName: file.name,
-                        mimeType: file.type,
+                        mimeType: file.type || "application/octet-stream",
                         base64: base64,
                         assetType: isVid ? "video" : "image",
                         libraryOnly: true
-                    }, { timeoutMs: 120000 });
-                    if (res && res.success) ok++;
+                    };
+                    var res;
+                    try {
+                        if (typeof gw === "function") {
+                            res = await gw("clientportal", "clientPortalUploadSocialMedia", payload);
+                        } else if (typeof callGateway === "function") {
+                            res = await callGateway("clientportal", "clientPortalUploadSocialMedia", payload, { timeoutMs: 120000 });
+                        } else {
+                            throw new Error("Gateway not available");
+                        }
+                    } catch (ue) { fail++; continue; }
+                    if (res && res.success !== false) ok++;
                     else fail++;
                 }
-                if (typeof toast === "function") toast(ok + " uploaded" + (fail ? (", " + fail + " failed") : ""));
-                if (typeof loadClientSocialMediaLibrary === "function") loadClientSocialMediaLibrary();
-                else if (libEl) libEl.innerHTML = ok ? (ok + " file(s) in library. Attach from each post card.") : "Upload finished with errors.";
-            } catch (e) {
-                if (typeof toast === "function") toast(String(e.message || e), true);
-            } finally {
                 try { input.value = ""; } catch (_) { }
+                if (typeof toast === "function") {
+                    toast(ok ? (ok + " uploaded" + (fail ? (" · " + fail + " failed") : "")) : "Upload failed", !ok);
+                }
+                if (typeof loadSocialMediaLibrary === "function") {
+                    try { await loadSocialMediaLibrary(); } catch (_) { }
+                } else if (libEl) {
+                    libEl.innerHTML = ok
+                        ? '<span class="text-emerald-400">Uploaded ' + ok + ' file(s). Attach from a post card below.</span>'
+                        : '<span class="text-slate-500">No library items loaded yet — upload above or attach on each post.</span>';
+                }
+            } catch (e) {
+                if (typeof toast === "function") toast(String((e && e.message) || e), true);
+                var libEl2 = document.getElementById("clientSocialMediaLibrary");
+                if (libEl2) libEl2.innerHTML = '<span class="text-slate-500">Upload error — try again.</span>';
             }
         };
         window.loadClientSocialMediaLibrary = async function () {
