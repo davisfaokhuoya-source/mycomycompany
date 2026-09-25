@@ -9187,8 +9187,10 @@
 
             window.socialSetUploadProgress = function (postId, pct, label) {
                 try {
-                    var card = document.querySelector('.social-post-card[data-post-id="' + String(postId).replace(/\\\\/g, '\\\\').replace(/"/g, '\\"') + '"]');
-                    if (!card) card = document.getElementById("socPost_" + String(postId).replace(/[^a-zA-Z0-9_-]/g, "_"));
+                    var card = (typeof _socCardEl_ === "function") ? _socCardEl_(postId) : null;
+                    if (!card) {
+                        card = document.getElementById("socPost_" + String(postId).replace(/[^a-zA-Z0-9_-]/g, "_"));
+                    }
                     if (!card) return;
                     var box = card.querySelector(".social-upload-progress");
                     if (!box) return;
@@ -9201,9 +9203,9 @@
                     if (pctEl) pctEl.textContent = p + "%";
                     if (lab && label) lab.textContent = label;
                     if (p >= 100) {
-                        setTimeout(function () { try { box.classList.add("hidden"); } catch (_) { } }, 800);
+                        setTimeout(function () { try { box.classList.add("hidden"); } catch (_) { } }, 900);
                     }
-                } catch (_) { }
+                } catch (e) { console.warn("socialSetUploadProgress", e); }
             };
 
             window.socialHideUploadProgress = function (postId) {
@@ -9442,60 +9444,88 @@
                     var files = Array.prototype.slice.call(input.files, 0, 5);
                     var maxImg = 5 * 1024 * 1024;
                     var maxVid = 25 * 1024 * 1024;
-                    var ok = 0, fail = 0;
-                    socialSetUploadProgress(postId, 0, "Preparing…");
-                    for (var i = 0; i < files.length; i++) {
-                        var file = files[i];
-                        var isVid = /^video\\/ / i.test(file.type);
-                        if (isVid && file.size > maxVid) { fail++; continue; }
-                        if (!isVid && file.size > maxImg) { fail++; continue; }
+                    var ok = 0, fail = 0, lastErr = "";
+                    try { if (typeof socialSetUploadProgress === "function") socialSetUploadProgress(postId, 2, "Preparing…"); } catch (_) { }
+                    for (var fi = 0; fi < files.length; fi++) {
+                        var file = files[fi];
+                        var mime = String(file.type || "").toLowerCase();
+                        var isVid = mime.indexOf("video/") === 0;
+                        if (isVid && file.size > maxVid) { fail++; lastErr = "Video too large (max 25 MB)"; continue; }
+                        if (!isVid && file.size > maxImg) { fail++; lastErr = "Image too large (max 5 MB)"; continue; }
                         try {
-                            var label = "File " + (i + 1) + "/" + files.length + " · reading";
-                            var b64 = await window._fileToBase64WithProgress_(file, function (pct) {
-                                socialSetUploadProgress(postId, pct, label);
-                            });
-                            socialSetUploadProgress(postId, 75, "File " + (i + 1) + "/" + files.length + " · uploading");
+                            var label = "File " + (fi + 1) + "/" + files.length + " · reading";
+                            var b64;
+                            if (typeof window._fileToBase64WithProgress_ === "function") {
+                                b64 = await window._fileToBase64WithProgress_(file, function (pct) {
+                                    try { if (typeof socialSetUploadProgress === "function") socialSetUploadProgress(postId, pct, label); } catch (_) { }
+                                });
+                            } else if (typeof window._fileToBase64_ === "function") {
+                                b64 = await window._fileToBase64_(file);
+                            } else {
+                                b64 = await new Promise(function (resolve, reject) {
+                                    var reader = new FileReader();
+                                    reader.onload = function () {
+                                        var s = String(reader.result || "");
+                                        var j = s.indexOf("base64,");
+                                        resolve(j >= 0 ? s.slice(j + 7) : s);
+                                    };
+                                    reader.onerror = function () { reject(new Error("Could not read file")); };
+                                    reader.readAsDataURL(file);
+                                });
+                            }
+                            try { if (typeof socialSetUploadProgress === "function") socialSetUploadProgress(postId, 78, "File " + (fi + 1) + "/" + files.length + " · uploading"); } catch (_) { }
                             var res = await gw("clientportal", "clientPortalUploadSocialMedia", {
-                                clientId: sid(), token: tok(),
+                                clientId: sid(),
+                                token: tok(),
                                 postId: postId,
                                 fileName: file.name,
-                                mimeType: file.type || "application/octet-stream",
-                                base64: b64
+                                mimeType: file.type || (isVid ? "video/mp4" : "image/jpeg"),
+                                base64: b64,
+                                assetType: isVid ? "video" : "image"
                             });
-                            if (res && res.success === false) { fail++; continue; }
-                            ok++;
-                            socialSetUploadProgress(postId, 90 + Math.round((i + 1) / files.length * 10), "Saving…");
-                            // Merge media into cache if API returns items
-                            if (res && (res.MediaItems || res.mediaItems || res.post)) {
-                                patchSocialPostRow(postId, res.post || { MediaItems: res.MediaItems || res.mediaItems });
+                            if (res && res.success === false) {
+                                fail++;
+                                lastErr = String(res.message || "Upload rejected");
+                                continue;
                             }
-                        } catch (_) { fail++; }
+                            ok++;
+                            try { if (typeof socialSetUploadProgress === "function") socialSetUploadProgress(postId, 92, "Saving…"); } catch (_) { }
+                            if (res && (res.MediaItems || res.mediaItems || res.post)) {
+                                try { patchSocialPostRow(postId, res.post || { MediaItems: res.MediaItems || res.mediaItems }); } catch (_) { }
+                            }
+                        } catch (oneErr) {
+                            fail++;
+                            lastErr = String((oneErr && oneErr.message) || oneErr);
+                            console.warn("attach media file failed", oneErr);
+                        }
                     }
                     try { input.value = ""; } catch (_) { }
-                    socialSetUploadProgress(postId, 100, ok ? "Done" : "Failed");
+                    try { if (typeof socialSetUploadProgress === "function") socialSetUploadProgress(postId, 100, ok ? "Done" : "Failed"); } catch (_) { }
                     if (typeof toast === "function") {
-                        toast(ok ? ("Attached " + ok + " file(s)" + (fail ? (" · " + fail + " failed") : "")) : "Upload failed", !ok);
+                        if (ok) toast("Attached " + ok + " file(s)" + (fail ? (" · " + fail + " failed") : ""));
+                        else toast(lastErr || "Upload failed", true);
                     }
-                    // Soft refresh this post only: re-fetch calendar in background and patch one row
+                    // Refresh this post only from server
                     try {
                         var res2 = await gw("clientportal", "clientPortalGetSocialCalendar", { clientId: sid(), token: tok() });
                         if (res2 && res2.success !== false) {
                             var posts = res2.calendar || res2.posts || res2.items || [];
                             window.__SOCIAL_CALENDAR_CACHE = posts;
-                            var found = null;
                             for (var j = 0; j < posts.length; j++) {
                                 if (String(posts[j].PostID || posts[j].postId || posts[j].Id || "") === String(postId)) {
-                                    found = posts[j];
+                                    try { patchSocialPostRow(postId, posts[j]); } catch (_) { }
                                     break;
                                 }
                             }
-                            if (found) patchSocialPostRow(postId, found);
                         }
                     } catch (_) { }
-                    setTimeout(function () { socialHideUploadProgress(postId); }, 600);
+                    setTimeout(function () {
+                        try { if (typeof socialHideUploadProgress === "function") socialHideUploadProgress(postId); } catch (_) { }
+                    }, 800);
                 } catch (e) {
-                    socialHideUploadProgress(postId);
-                    if (typeof toast === "function") toast(String(e.message || e), true);
+                    try { if (typeof socialHideUploadProgress === "function") socialHideUploadProgress(postId); } catch (_) { }
+                    console.error("clientAttachMediaToPost", e);
+                    if (typeof toast === "function") toast(String((e && e.message) || e), true);
                 }
             };
 
@@ -10034,55 +10064,60 @@
                 var libEl = document.getElementById("clientSocialMediaLibrary");
                 if (typeof toast === "function") toast("Uploading " + files.length + " file(s)…");
                 if (libEl) libEl.innerHTML = '<span class="text-sky-400"><i class="fa-solid fa-spinner fa-spin"></i> Uploading ' + files.length + ' file(s)…</span>';
-                var ok = 0, fail = 0;
-                for (var i = 0; i < files.length; i++) {
-                    var file = files[i];
-                    var isVid = /^video\//i.test(String(file.type || ""));
-                    if (isVid && file.size > maxVid) { fail++; continue; }
-                    if (!isVid && file.size > maxImg) { fail++; continue; }
-                    var base64;
+                var ok = 0, fail = 0, lastErr = "";
+                for (var fi = 0; fi < files.length; fi++) {
+                    var file = files[fi];
+                    var mime = String(file.type || "").toLowerCase();
+                    var isVid = mime.indexOf("video/") === 0;
+                    if (isVid && file.size > maxVid) { fail++; lastErr = "Video too large"; continue; }
+                    if (!isVid && file.size > maxImg) { fail++; lastErr = "Image too large"; continue; }
                     try {
-                        base64 = await (typeof _fileToBase64WithProgress_ === "function"
-                            ? _fileToBase64WithProgress_(file, function () { })
-                            : (typeof _fileToBase64_ === "function" ? _fileToBase64_(file) : null));
-                        if (!base64) {
+                        var base64;
+                        if (typeof window._fileToBase64WithProgress_ === "function") {
+                            base64 = await window._fileToBase64WithProgress_(file, function () { });
+                        } else if (typeof window._fileToBase64_ === "function") {
+                            base64 = await window._fileToBase64_(file);
+                        } else {
                             base64 = await new Promise(function (resolve, reject) {
                                 var reader = new FileReader();
                                 reader.onload = function () {
                                     var s = String(reader.result || "");
-                                    var j = s.indexOf(",");
-                                    resolve(j >= 0 ? s.slice(j + 1) : s);
+                                    var j = s.indexOf("base64,");
+                                    resolve(j >= 0 ? s.slice(j + 7) : s);
                                 };
                                 reader.onerror = function () { reject(new Error("Could not read file")); };
                                 reader.readAsDataURL(file);
                             });
                         }
-                    } catch (re) { fail++; continue; }
-                    var payload = {
-                        clientId: (typeof sid === "function" ? sid() : (window.CLIENT_ID || "")),
-                        token: (typeof tok === "function" ? tok() : (window.CLIENT_TOKEN || "")),
-                        fileName: file.name,
-                        mimeType: file.type || "application/octet-stream",
-                        base64: base64,
-                        assetType: isVid ? "video" : "image",
-                        libraryOnly: true
-                    };
-                    var res;
-                    try {
+                        var payload = {
+                            clientId: (typeof sid === "function" ? sid() : (window.CLIENT_ID || "")),
+                            token: (typeof tok === "function" ? tok() : (window.CLIENT_TOKEN || "")),
+                            fileName: file.name,
+                            mimeType: file.type || (isVid ? "video/mp4" : "image/jpeg"),
+                            base64: base64,
+                            assetType: isVid ? "video" : "image",
+                            libraryOnly: true
+                        };
+                        var res;
                         if (typeof gw === "function") {
                             res = await gw("clientportal", "clientPortalUploadSocialMedia", payload);
                         } else if (typeof callGateway === "function") {
-                            res = await callGateway("clientportal", "clientPortalUploadSocialMedia", payload, { timeoutMs: 120000 });
+                            res = await callGateway("clientportal", "clientPortalUploadSocialMedia", payload);
                         } else {
                             throw new Error("Gateway not available");
                         }
-                    } catch (ue) { fail++; continue; }
-                    if (res && res.success !== false) ok++;
-                    else fail++;
+                        if (res && res.success !== false) ok++;
+                        else { fail++; lastErr = String((res && res.message) || "Upload rejected"); }
+                    } catch (oneErr) {
+                        fail++;
+                        lastErr = String((oneErr && oneErr.message) || oneErr);
+                        console.warn("library upload failed", oneErr);
+                    }
                 }
                 try { input.value = ""; } catch (_) { }
                 if (typeof toast === "function") {
-                    toast(ok ? (ok + " uploaded" + (fail ? (" · " + fail + " failed") : "")) : "Upload failed", !ok);
+                    if (ok) toast(ok + " uploaded" + (fail ? (" · " + fail + " failed") : ""));
+                    else toast(lastErr || "Upload failed", true);
                 }
                 if (typeof loadSocialMediaLibrary === "function") {
                     try { await loadSocialMediaLibrary(); } catch (_) { }
@@ -10092,6 +10127,7 @@
                         : '<span class="text-slate-500">No library items loaded yet — upload above or attach on each post.</span>';
                 }
             } catch (e) {
+                console.error("clientUploadSocialMediaLibrary", e);
                 if (typeof toast === "function") toast(String((e && e.message) || e), true);
                 var libEl2 = document.getElementById("clientSocialMediaLibrary");
                 if (libEl2) libEl2.innerHTML = '<span class="text-slate-500">Upload error — try again.</span>';
