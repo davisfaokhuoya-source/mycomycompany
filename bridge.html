@@ -8470,7 +8470,30 @@
 
                 const text = await response.text();
                 const jsonStart = text.indexOf('{');
-                const result = JSON.parse(jsonStart !== -1 ? text.substring(jsonStart) : text || "{}");
+                let result = JSON.parse(jsonStart !== -1 ? text.substring(jsonStart) : text || "{}");
+
+                // Soft retry on gateway lock / cooling (Document Studio + concurrent admin loads)
+                function isCooling(r) {
+                    if (!r) return false;
+                    if (r.systemCooling || r.cooldown || r.jobInProgress) return true;
+                    var m = String(r.message || "").toLowerCase();
+                    return /cooling off|system is busy|system busy|another request is using the gateway/.test(m);
+                }
+                var coolAttempts = 0;
+                while (isCooling(result) && coolAttempts < 3 && !(opts && opts.noCoolingRetry)) {
+                    coolAttempts++;
+                    var waitMs = Math.max(1500, Number(result.retryAfterSec || 3) * 1000) * coolAttempts;
+                    await new Promise(function (r) { setTimeout(r, waitMs); });
+                    const response2 = await fetch(url, {
+                        method: "POST",
+                        headers: { "Content-Type": "text/plain;charset=utf-8" },
+                        body: JSON.stringify(payload),
+                        redirect: "follow"
+                    });
+                    const text2 = await response2.text();
+                    const js2 = text2.indexOf('{');
+                    result = JSON.parse(js2 !== -1 ? text2.substring(js2) : text2 || "{}");
+                }
 
                 if (useGlobalLoader) toggleSystemLoader(false);
                 try {
@@ -15140,7 +15163,18 @@ ${a.Status === 'Pending Review' ? `
             await populateAgentClientSelector('adminSigClientId', null); populateAgentClientSelector('dsUploadClientId', null);
             if (!DOC_STUDIO_CATALOG) {
                 const res = await executeSecureBridgeCall('agent', 'agent-list-catalog-documents', {});
-                DOC_STUDIO_CATALOG = (res.success && res.documentTypes) ? res.documentTypes : [];
+                if (res && (res.systemCooling || /cooling off|system is busy/i.test(String(res.message || '')))) {
+                    if (typeof showToast === 'function') showToast('Gateway busy — retrying catalog load…', 'info');
+                    // one more explicit wait then retry
+                    await new Promise(r => setTimeout(r, 2500));
+                    const res2 = await executeSecureBridgeCall('agent', 'agent-list-catalog-documents', {}, { noCoolingRetry: false });
+                    DOC_STUDIO_CATALOG = (res2.success && res2.documentTypes) ? res2.documentTypes : [];
+                } else {
+                    DOC_STUDIO_CATALOG = (res.success && res.documentTypes) ? res.documentTypes : [];
+                }
+                if (!DOC_STUDIO_CATALOG.length && res && res.message && typeof showToast === 'function') {
+                    if (!/cooling/i.test(String(res.message))) showToast(res.message, 'info');
+                }
 
                 const catSel = document.getElementById('docStudioCategory');
                 const categories = [...new Set(DOC_STUDIO_CATALOG.map(d => d.category).filter(Boolean))].sort();
