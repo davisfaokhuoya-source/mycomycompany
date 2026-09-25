@@ -1891,6 +1891,18 @@
                             <div class="flex flex-wrap items-center gap-2 shrink-0">
                                 <select id="socialBatchSelector" onchange="renderSocialCalendar()"
                                     class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white min-w-[9rem]"></select>
+                                <label
+                                    class="inline-flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer select-none px-2 py-1.5 rounded-lg border border-slate-700 bg-slate-950">
+                                    <input type="checkbox" id="socialSelectAll"
+                                        onchange="socialToggleSelectAll(this.checked)"
+                                        class="rounded border-slate-600" />
+                                    Select all
+                                </label>
+                                <button type="button" id="socialDeleteSelectedBtn"
+                                    onclick="clientDeleteSelectedSocialPosts()"
+                                    class="text-xs px-3 py-1.5 bg-red-900/80 hover:bg-red-800 rounded-lg text-red-100 font-medium">
+                                    <i class="fa-solid fa-trash"></i> Delete selected
+                                </button>
                                 <button type="button" id="socialApproveAllBtn" onclick="approveSocialBatch()"
                                     class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white font-medium">
                                     <i class="fa-solid fa-check-double"></i> Approve all
@@ -8886,13 +8898,22 @@
                     }
 
                     return (
-                        '<div class="rounded-xl border border-slate-800 bg-slate-950/70 p-3 space-y-2">' +
+                        '<div class="rounded-xl border border-slate-800 bg-slate-950/70 p-3 space-y-2 social-post-card" data-post-id="' + esc(String(id)) + '" id="socPost_' + esc(String(id).replace(/[^a-zA-Z0-9_-]/g, "_")) + '">' +
                         '<div class="flex flex-wrap items-center justify-between gap-2">' +
+                        '<div class="flex items-center gap-2 min-w-0">' +
+                        (id && !isPublished
+                            ? '<input type="checkbox" class="social-post-check rounded border-slate-600 shrink-0" data-post-id="' + esc(String(id)) + '" onchange="socialUpdateSelectCount()" />'
+                            : '') +
                         '<div class="text-xs text-white font-medium">' + esc(plat) + ' · ' + esc(date) + '</div>' +
+                        '</div>' +
                         '<span class="text-[10px] px-2 py-0.5 rounded-full ' + statusCls + '">' + esc(status) + '</span>' +
                         '</div>' +
                         '<p class="text-[11px] text-slate-400 whitespace-pre-wrap">' + esc(preview) + (String(caption).length > 180 ? "…" : "") + '</p>' +
                         mediaThumbs(p) +
+                        '<div class="social-upload-progress hidden mt-1" data-upload-for="' + esc(String(id)) + '">' +
+                        '<div class="flex items-center justify-between text-[10px] text-sky-300 mb-0.5"><span class="upload-label">Uploading…</span><span class="upload-pct">0%</span></div>' +
+                        '<div class="h-1.5 rounded-full bg-slate-800 overflow-hidden"><div class="upload-bar h-full bg-sky-500 transition-all duration-150" style="width:0%"></div></div>' +
+                        '</div>' +
                         '<div class="flex flex-wrap gap-2 items-center pt-1 border-t border-slate-800/80">' + actions + '</div>' +
                         '</div>'
                     );
@@ -8966,7 +8987,21 @@
                     });
                     if (res && res.success === false) throw new Error(res.message || "Approve failed");
                     if (typeof toast === "function") toast((res && res.message) || "Approved — use Send now to publish");
-                    if (typeof loadSocialCalendar === "function") loadSocialCalendar();
+                    patchSocialPostRow(postId, Object.assign({}, res.post || {}, { Status: "Approved", status: "Approved" }));
+                    // sync cache from server for this row only
+                    try {
+                        var res2 = await gw("clientportal", "clientPortalGetSocialCalendar", { clientId: sid(), token: tok() });
+                        if (res2 && res2.success !== false) {
+                            var posts = res2.calendar || res2.posts || res2.items || [];
+                            window.__SOCIAL_CALENDAR_CACHE = posts;
+                            for (var j = 0; j < posts.length; j++) {
+                                if (String(posts[j].PostID || posts[j].postId || "") === String(postId)) {
+                                    patchSocialPostRow(postId, posts[j]);
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (_) { }
                 } catch (e) {
                     if (typeof toast === "function") toast(String(e.message || e), true);
                 }
@@ -8982,7 +9017,7 @@
                     });
                     if (res && res.success === false) throw new Error(res.message || "Delete failed");
                     if (typeof toast === "function") toast((res && res.message) || "Deleted");
-                    if (typeof loadSocialCalendar === "function") loadSocialCalendar();
+                    removeSocialPostRow(postId);
                 } catch (e) {
                     if (typeof toast === "function") toast(String(e.message || e), true);
                 }
@@ -9008,7 +9043,19 @@
                     });
                     if (res && res.success === false) throw new Error(res.message || "Edit failed");
                     if (typeof toast === "function") toast((res && res.message) || "Saved");
-                    if (typeof loadSocialCalendar === "function") loadSocialCalendar();
+                    try {
+                        var res2 = await gw("clientportal", "clientPortalGetSocialCalendar", { clientId: sid(), token: tok() });
+                        if (res2 && res2.success !== false) {
+                            var posts = res2.calendar || res2.posts || res2.items || [];
+                            window.__SOCIAL_CALENDAR_CACHE = posts;
+                            for (var j = 0; j < posts.length; j++) {
+                                if (String(posts[j].PostID || posts[j].postId || "") === String(postId)) {
+                                    patchSocialPostRow(postId, posts[j]);
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (_) { }
                 } catch (e) {
                     if (typeof toast === "function") toast(String(e.message || e), true);
                 }
@@ -9028,6 +9075,271 @@
                 });
             };
 
+
+            /** Progress UI on a single calendar row (does not block other rows) */
+            window._socCardEl_ = function (postId) {
+                try {
+                    var id = String(postId);
+                    var el = document.getElementById("socPost_" + id.replace(/[^a-zA-Z0-9_-]/g, "_"));
+                    if (el) return el;
+                    var nodes = document.querySelectorAll(".social-post-card[data-post-id]");
+                    for (var i = 0; i < nodes.length; i++) {
+                        if (nodes[i].getAttribute("data-post-id") === id) return nodes[i];
+                    }
+                } catch (_) { }
+                return null;
+            };
+
+            window.socialSetUploadProgress = function (postId, pct, label) {
+                try {
+                    var card = document.querySelector('.social-post-card[data-post-id="' + String(postId).replace(/\\\\/g, '\\\\').replace(/"/g, '\\"') + '"]');
+                    if (!card) card = document.getElementById("socPost_" + String(postId).replace(/[^a-zA-Z0-9_-]/g, "_"));
+                    if (!card) return;
+                    var box = card.querySelector(".social-upload-progress");
+                    if (!box) return;
+                    box.classList.remove("hidden");
+                    var bar = box.querySelector(".upload-bar");
+                    var pctEl = box.querySelector(".upload-pct");
+                    var lab = box.querySelector(".upload-label");
+                    var p = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));
+                    if (bar) bar.style.width = p + "%";
+                    if (pctEl) pctEl.textContent = p + "%";
+                    if (lab && label) lab.textContent = label;
+                    if (p >= 100) {
+                        setTimeout(function () { try { box.classList.add("hidden"); } catch (_) { } }, 800);
+                    }
+                } catch (_) { }
+            };
+
+            window.socialHideUploadProgress = function (postId) {
+                try {
+                    var card = document.querySelector('.social-post-card[data-post-id="' + String(postId).replace(/\\\\/g, '\\\\').replace(/"/g, '\\"') + '"]');
+                    if (!card) return;
+                    var box = card.querySelector(".social-upload-progress");
+                    if (box) box.classList.add("hidden");
+                } catch (_) { }
+            };
+
+            window.socialToggleSelectAll = function (on) {
+                document.querySelectorAll("#socialCalendarList .social-post-check").forEach(function (cb) {
+                    cb.checked = !!on;
+                });
+                socialUpdateSelectCount();
+            };
+
+            window.socialUpdateSelectCount = function () {
+                var n = document.querySelectorAll("#socialCalendarList .social-post-check:checked").length;
+                var btn = document.getElementById("socialDeleteSelectedBtn");
+                if (btn) btn.textContent = n ? ("Delete selected (" + n + ")") : "Delete selected";
+                var all = document.getElementById("socialSelectAll");
+                var boxes = document.querySelectorAll("#socialCalendarList .social-post-check");
+                if (all && boxes.length) {
+                    all.checked = n === boxes.length;
+                    all.indeterminate = n > 0 && n < boxes.length;
+                }
+            };
+
+            window.socialSelectedPostIds = function () {
+                var ids = [];
+                document.querySelectorAll("#socialCalendarList .social-post-check:checked").forEach(function (cb) {
+                    var id = cb.getAttribute("data-post-id");
+                    if (id) ids.push(id);
+                });
+                return ids;
+            };
+
+            /** Read file with progress 0–70% (encode); network is 70–100% */
+            window._fileToBase64WithProgress_ = function (file, onProgress) {
+                return new Promise(function (resolve, reject) {
+                    var reader = new FileReader();
+                    reader.onprogress = function (ev) {
+                        if (ev.lengthComputable && typeof onProgress === "function") {
+                            onProgress(Math.round((ev.loaded / ev.total) * 70));
+                        }
+                    };
+                    reader.onload = function () {
+                        if (typeof onProgress === "function") onProgress(70);
+                        var s = String(reader.result || "");
+                        var i = s.indexOf("base64,");
+                        resolve(i >= 0 ? s.slice(i + 7) : s);
+                    };
+                    reader.onerror = function () { reject(new Error("Could not read file")); };
+                    reader.readAsDataURL(file);
+                });
+            };
+
+            /**
+             * Update only one post card from cache (or soft-refresh that post from server cache).
+             * Avoids reloading the entire calendar table.
+             */
+            window.buildSocialPostCardHtml = function (p) {
+                try {
+                    function esc(s) {
+                        return String(s == null ? "" : s)
+                            .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                            .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+                    }
+                    function mediaThumbs(p) {
+                        var items = Array.isArray(p.MediaItems) ? p.MediaItems : [];
+                        if (!items.length && (p.ImageURL || p.ImagePreviewURL || p.MediaURL || p.ImageFileID)) {
+                            items = [{
+                                url: p.ImagePreviewURL || p.ImageURL || p.MediaURL,
+                                previewUrl: p.ImagePreviewURL || p.ImageURL || p.MediaURL,
+                                fileId: p.ImageFileID || p.ImageID || "",
+                                assetType: "image"
+                            }];
+                        }
+                        if (!items.length) return '<span class="text-[10px] text-slate-600">No media</span>';
+                        return '<div class="flex flex-wrap gap-1.5">' + items.map(function (m) {
+                            var fid = m.fileId || m.FileID || m.imageId || "";
+                            var at = String(m.assetType || m.AssetType || "").toLowerCase();
+                            var name = String(m.fileName || m.url || "").toLowerCase();
+                            var isVid = at === "video" || at === "reel" || /\\.(mp4|webm|mov)(\\?|$)/i.test(name);
+                            if (at === "image" || at === "photo" || at === "picture" || /\\.(jpe?g|png|gif|webp)(\\?|$)/i.test(name)) isVid = false;
+                            var openUrl = m.openUrl || m.url || "";
+                            var thumb = m.previewUrl || "";
+                            if (fid && !isVid) {
+                                thumb = "https://drive.google.com/thumbnail?id=" + encodeURIComponent(fid) + "&sz=w400";
+                                openUrl = openUrl || ("https://drive.google.com/file/d/" + fid + "/view?usp=sharing");
+                            }
+                            if (!thumb) thumb = openUrl || m.url || "";
+                            if (!thumb && !openUrl) return "";
+                            if (isVid) {
+                                return '<a href="' + esc(openUrl || thumb) + '" target="_blank" rel="noopener" class="block w-14 h-14 rounded-lg border border-slate-700 bg-slate-900 flex items-center justify-center text-slate-400 text-[10px]">VID</a>';
+                            }
+                            return '<a href="' + esc(openUrl || thumb) + '" target="_blank" rel="noopener" class="block w-14 h-14 rounded-lg border border-slate-700 overflow-hidden bg-slate-900 shrink-0">' +
+                                '<img src="' + esc(thumb) + '" alt="photo" class="w-full h-full object-cover" loading="lazy" referrerpolicy="no-referrer" />' +
+                                "</a>";
+                        }).join("") + "</div>";
+                    }
+                    var id = p.PostID || p.postId || p.Id || "";
+                    var safeId = String(id).replace(/\\\\/g, "\\\\").replace(/'/g, "\\\\'");
+                    var date = String(p.Date || p.date || "").slice(0, 10);
+                    var plat = p.Platform || p.platform || "—";
+                    var status = String(p.Status || p.status || "Draft");
+                    var caption = p.Caption || p.caption || p.Content || "";
+                    var preview = String(caption).slice(0, 180);
+                    var stLower = status.toLowerCase();
+                    var isApproved = stLower.indexOf("approved") >= 0;
+                    var isPublished = stLower.indexOf("publish") >= 0;
+                    var isPending = !isApproved && !isPublished;
+                    var statusCls = isPublished ? "bg-sky-900/50 text-sky-300"
+                        : (isApproved ? "bg-emerald-900/50 text-emerald-300" : "bg-amber-900/40 text-amber-200");
+                    var actions = "";
+                    if (id) {
+                        if (isPending) {
+                            actions += '<button type="button" class="text-[10px] px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-medium" onclick="clientApproveSocialPost(\\'' + safeId + '\\')">Approve</button>';
+                        }
+                        if (isApproved && !isPublished) {
+                            actions += '<button type="button" class="text-[10px] px-2 py-1 rounded bg-sky-600 hover:bg-sky-500 text-white font-medium" onclick="clientSendSocialPostNow(\\'' + safeId + '\\')"><i class="fa-solid fa-paper-plane"></i> Send now</button>';
+                        }
+                        if (!isPublished) {
+                            actions += '<button type="button" class="text-[10px] px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white" onclick="clientEditSocialPost(\\'' + safeId + '\\')">Edit</button>';
+                            actions += '<button type="button" class="text-[10px] px-2 py-1 rounded bg-red-900/80 hover:bg-red-800 text-red-100" onclick="clientDeleteSocialPost(\\'' + safeId + '\\')">Delete</button>';
+                            actions += '<label class="text-[10px] px-2 py-1 rounded bg-indigo-800 hover:bg-indigo-700 text-white cursor-pointer">' +
+                                'Add media<input type="file" class="hidden" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime" onchange="clientAttachMediaToPost(\\'' + safeId + '\\', this)" /></label>';
+                        }
+                    }
+                    return (
+                        '<div class="rounded-xl border border-slate-800 bg-slate-950/70 p-3 space-y-2 social-post-card" data-post-id="' + esc(String(id)) + '" id="socPost_' + esc(String(id).replace(/[^a-zA-Z0-9_-]/g, "_")) + '">' +
+                        '<div class="flex flex-wrap items-center justify-between gap-2">' +
+                        '<div class="flex items-center gap-2 min-w-0">' +
+                        (id && !isPublished
+                            ? '<input type="checkbox" class="social-post-check rounded border-slate-600 shrink-0" data-post-id="' + esc(String(id)) + '" onchange="socialUpdateSelectCount()" />'
+                            : "") +
+                        '<div class="text-xs text-white font-medium">' + esc(plat) + " · " + esc(date) + "</div>" +
+                        "</div>" +
+                        '<span class="text-[10px] px-2 py-0.5 rounded-full ' + statusCls + '">' + esc(status) + "</span>" +
+                        "</div>" +
+                        '<p class="text-[11px] text-slate-400 whitespace-pre-wrap">' + esc(preview) + (String(caption).length > 180 ? "…" : "") + "</p>" +
+                        mediaThumbs(p) +
+                        '<div class="social-upload-progress hidden mt-1" data-upload-for="' + esc(String(id)) + '">' +
+                        '<div class="flex items-center justify-between text-[10px] text-sky-300 mb-0.5"><span class="upload-label">Uploading…</span><span class="upload-pct">0%</span></div>' +
+                        '<div class="h-1.5 rounded-full bg-slate-800 overflow-hidden"><div class="upload-bar h-full bg-sky-500 transition-all duration-150" style="width:0%"></div></div>' +
+                        "</div>" +
+                        '<div class="flex flex-wrap gap-2 items-center pt-1 border-t border-slate-800/80">' + actions + "</div>" +
+                        "</div>"
+                    );
+                } catch (e) {
+                    console.warn(e);
+                    return "";
+                }
+            };
+
+            window.patchSocialPostRow = function (postId, postObj) {
+                try {
+                    if (!postId) return;
+                    var cache = window.__SOCIAL_CALENDAR_CACHE || [];
+                    var idx = -1;
+                    for (var i = 0; i < cache.length; i++) {
+                        var pid = String(cache[i].PostID || cache[i].postId || cache[i].Id || "");
+                        if (pid === String(postId)) { idx = i; break; }
+                    }
+                    if (postObj) {
+                        if (idx >= 0) cache[idx] = Object.assign({}, cache[idx], postObj);
+                        else { cache.push(postObj); idx = cache.length - 1; }
+                        window.__SOCIAL_CALENDAR_CACHE = cache;
+                    }
+                    var p = idx >= 0 ? cache[idx] : postObj;
+                    if (!p) return;
+                    var card = document.querySelector('.social-post-card[data-post-id="' + String(postId).replace(/\\\\/g, '\\\\').replace(/"/g, '\\"') + '"]');
+                    var html = buildSocialPostCardHtml(p);
+                    if (!html) return;
+                    var tmp = document.createElement("div");
+                    tmp.innerHTML = html;
+                    var neu = tmp.firstElementChild;
+                    if (card && neu) card.replaceWith(neu);
+                    else if (neu && !card && typeof renderSocialCalendarPosts === "function") {
+                        renderSocialCalendarPosts(cache);
+                    }
+                    socialUpdateSelectCount();
+                } catch (e) { console.warn(e); }
+            };
+
+            window.removeSocialPostRow = function (postId) {
+                try {
+                    var cache = (window.__SOCIAL_CALENDAR_CACHE || []).filter(function (p) {
+                        return String(p.PostID || p.postId || p.Id || "") !== String(postId);
+                    });
+                    window.__SOCIAL_CALENDAR_CACHE = cache;
+                    var card = document.querySelector('.social-post-card[data-post-id="' + String(postId).replace(/\\\\/g, '\\\\').replace(/"/g, '\\"') + '"]');
+                    if (card) {
+                        var parentBatch = card.closest("[data-batch]");
+                        card.remove();
+                        if (parentBatch && !parentBatch.querySelector(".social-post-card")) {
+                            parentBatch.remove();
+                        }
+                    }
+                    socialUpdateSelectCount();
+                } catch (e) { console.warn(e); }
+            };
+
+            window.clientDeleteSelectedSocialPosts = async function () {
+                var ids = socialSelectedPostIds();
+                if (!ids.length) {
+                    if (typeof toast === "function") toast("Select at least one post", true);
+                    return;
+                }
+                if (!confirm("Delete " + ids.length + " selected post(s)? This cannot be undone.")) return;
+                if (typeof toast === "function") toast("Deleting " + ids.length + "…");
+                var ok = 0, fail = 0;
+                for (var i = 0; i < ids.length; i++) {
+                    try {
+                        var res = await gw("clientportal", "clientPortalDeleteSocialPost", {
+                            clientId: sid(), token: tok(), postId: ids[i]
+                        });
+                        if (res && res.success === false) { fail++; continue; }
+                        removeSocialPostRow(ids[i]);
+                        ok++;
+                    } catch (_) { fail++; }
+                }
+                if (typeof toast === "function") {
+                    toast(ok ? ("Deleted " + ok + (fail ? (" · " + fail + " failed") : "")) : "Delete failed", !ok);
+                }
+                var all = document.getElementById("socialSelectAll");
+                if (all) { all.checked = false; all.indeterminate = false; }
+            };
+
             window.clientAttachMediaToPost = async function (postId, input) {
                 try {
                     if (!postId) return;
@@ -9035,15 +9347,19 @@
                     var files = Array.prototype.slice.call(input.files, 0, 5);
                     var maxImg = 5 * 1024 * 1024;
                     var maxVid = 25 * 1024 * 1024;
-                    if (typeof toast === "function") toast("Uploading " + files.length + " file(s)…");
                     var ok = 0, fail = 0;
+                    socialSetUploadProgress(postId, 0, "Preparing…");
                     for (var i = 0; i < files.length; i++) {
                         var file = files[i];
-                        var isVid = /^video\//i.test(file.type);
+                        var isVid = /^video\\/ / i.test(file.type);
                         if (isVid && file.size > maxVid) { fail++; continue; }
                         if (!isVid && file.size > maxImg) { fail++; continue; }
                         try {
-                            var b64 = await window._fileToBase64_(file);
+                            var label = "File " + (i + 1) + "/" + files.length + " · reading";
+                            var b64 = await window._fileToBase64WithProgress_(file, function (pct) {
+                                socialSetUploadProgress(postId, pct, label);
+                            });
+                            socialSetUploadProgress(postId, 75, "File " + (i + 1) + "/" + files.length + " · uploading");
                             var res = await gw("clientportal", "clientPortalUploadSocialMedia", {
                                 clientId: sid(), token: tok(),
                                 postId: postId,
@@ -9053,17 +9369,41 @@
                             });
                             if (res && res.success === false) { fail++; continue; }
                             ok++;
+                            socialSetUploadProgress(postId, 90 + Math.round((i + 1) / files.length * 10), "Saving…");
+                            // Merge media into cache if API returns items
+                            if (res && (res.MediaItems || res.mediaItems || res.post)) {
+                                patchSocialPostRow(postId, res.post || { MediaItems: res.MediaItems || res.mediaItems });
+                            }
                         } catch (_) { fail++; }
                     }
                     try { input.value = ""; } catch (_) { }
+                    socialSetUploadProgress(postId, 100, ok ? "Done" : "Failed");
                     if (typeof toast === "function") {
                         toast(ok ? ("Attached " + ok + " file(s)" + (fail ? (" · " + fail + " failed") : "")) : "Upload failed", !ok);
                     }
-                    if (typeof loadSocialCalendar === "function") loadSocialCalendar();
+                    // Soft refresh this post only: re-fetch calendar in background and patch one row
+                    try {
+                        var res2 = await gw("clientportal", "clientPortalGetSocialCalendar", { clientId: sid(), token: tok() });
+                        if (res2 && res2.success !== false) {
+                            var posts = res2.calendar || res2.posts || res2.items || [];
+                            window.__SOCIAL_CALENDAR_CACHE = posts;
+                            var found = null;
+                            for (var j = 0; j < posts.length; j++) {
+                                if (String(posts[j].PostID || posts[j].postId || posts[j].Id || "") === String(postId)) {
+                                    found = posts[j];
+                                    break;
+                                }
+                            }
+                            if (found) patchSocialPostRow(postId, found);
+                        }
+                    } catch (_) { }
+                    setTimeout(function () { socialHideUploadProgress(postId); }, 600);
                 } catch (e) {
+                    socialHideUploadProgress(postId);
                     if (typeof toast === "function") toast(String(e.message || e), true);
                 }
             };
+
 
             // Aliases so older onclick names never throw
             window.clientSendSocialPost = window.clientSendSocialPostNow;
