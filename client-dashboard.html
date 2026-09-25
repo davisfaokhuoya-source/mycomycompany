@@ -8784,7 +8784,8 @@
             window.downloadDocument = async function (docId) {
                 try {
                     var res = await gw("clientportal", "clientPortalDownloadDocument", { clientId: sid(), token: tok(), docId: docId });
-                    var url = res && (res.url || res.link || (res.data && res.data.url));
+                    var url = res && (res.url || res.link || res.docUrl || res.downloadUrl ||
+                        (res.data && (res.data.url || res.data.docUrl || res.data.downloadUrl)));
                     if (!url) throw new Error((res && res.message) || "No link");
                     window.open(url, "_blank");
                 } catch (e) { toast(e.message || "Download failed", true); }
