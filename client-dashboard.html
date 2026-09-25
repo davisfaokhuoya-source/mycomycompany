@@ -8927,37 +8927,7 @@
                 });
 
                 function mediaThumbs(p) {
-                    var items = Array.isArray(p.MediaItems) ? p.MediaItems : [];
-                    if (!items.length && (p.ImageURL || p.ImagePreviewURL || p.MediaURL || p.ImageFileID)) {
-                        items = [{
-                            url: p.ImagePreviewURL || p.ImageURL || p.MediaURL,
-                            previewUrl: p.ImagePreviewURL || p.ImageURL || p.MediaURL,
-                            fileId: p.ImageFileID || p.ImageID || "",
-                            assetType: "image"
-                        }];
-                    }
-                    if (!items.length) return '<span class="text-[10px] text-slate-600">No media</span>';
-                    return '<div class="flex flex-wrap gap-1.5">' + items.map(function (m) {
-                        var fid = m.fileId || m.FileID || m.imageId || "";
-                        var at = String(m.assetType || m.AssetType || "").toLowerCase();
-                        var name = String(m.fileName || m.url || "").toLowerCase();
-                        var isVid = at === "video" || at === "reel" || /\.(mp4|webm|mov)(\?|$)/i.test(name);
-                        if (at === "image" || at === "photo" || at === "picture" || /\.(jpe?g|png|gif|webp)(\?|$)/i.test(name)) isVid = false;
-                        var openUrl = m.openUrl || m.url || "";
-                        var thumb = m.previewUrl || "";
-                        if (fid && !isVid) {
-                            thumb = "https://drive.google.com/thumbnail?id=" + encodeURIComponent(fid) + "&sz=w400";
-                            openUrl = openUrl || ("https://drive.google.com/file/d/" + fid + "/view?usp=sharing");
-                        }
-                        if (!thumb) thumb = openUrl || m.url || "";
-                        if (!thumb && !openUrl) return "";
-                        if (isVid) {
-                            return '<a href="' + esc(openUrl || thumb) + '" target="_blank" rel="noopener" class="block w-14 h-14 rounded-lg border border-slate-700 bg-slate-900 flex items-center justify-start text-slate-400 text-[10px]">VID</a>';
-                        }
-                        return '<a href="' + esc(openUrl || thumb) + '" target="_blank" rel="noopener" class="block w-14 h-14 rounded-lg border border-slate-700 overflow-hidden bg-slate-900 shrink-0">' +
-                            '<img src="' + esc(thumb) + '" alt="photo" class="w-full h-full object-cover" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src=\'https://drive.google.com/uc?export=view&id=' + esc(fid) + '\';" />' +
-                            '</a>';
-                    }).join("") + '</div>';
+                    return (typeof socialMediaThumbsHtml === "function") ? socialMediaThumbsHtml(p) : '<span class="text-[10px] text-slate-600">No media</span>';
                 }
 
                 function postCard(p) {
@@ -9269,6 +9239,89 @@
              * Update only one post card from cache (or soft-refresh that post from server cache).
              * Avoids reloading the entire calendar table.
              */
+
+            /** Normalize media fields from API / cache into a consistent MediaItems array */
+            window.normalizeSocialMediaItems = function (p) {
+                if (!p || typeof p !== "object") return [];
+                var items = [];
+                var raw = p.MediaItems || p.mediaItems || p.Media || p.media || p.Attachments || p.attachments || [];
+                if (!Array.isArray(raw)) raw = [];
+                raw.forEach(function (m) {
+                    if (!m) return;
+                    if (typeof m === "string") {
+                        items.push({ url: m, previewUrl: m, assetType: /\.(mp4|webm|mov)(\?|$)/i.test(m) ? "video" : "image" });
+                        return;
+                    }
+                    var fid = m.fileId || m.FileID || m.imageId || m.ImageFileID || m.driveId || m.DriveID || m.id || "";
+                    var url = m.url || m.URL || m.openUrl || m.OpenURL || m.ImageURL || m.MediaURL || "";
+                    var preview = m.previewUrl || m.PreviewURL || m.ImagePreviewURL || m.thumbnailUrl || m.thumb || url || "";
+                    var at = String(m.assetType || m.AssetType || m.type || m.mimeType || "").toLowerCase();
+                    if (!at && m.mimeType) at = String(m.mimeType).indexOf("video/") === 0 ? "video" : "image";
+                    if (!at) at = "image";
+                    items.push({
+                        fileId: fid,
+                        FileID: fid,
+                        url: url,
+                        openUrl: m.openUrl || m.OpenURL || url,
+                        previewUrl: preview,
+                        fileName: m.fileName || m.FileName || m.name || "",
+                        assetType: at.indexOf("video") >= 0 ? "video" : "image"
+                    });
+                });
+                // Legacy single-image fields
+                if (!items.length) {
+                    var fid2 = p.ImageFileID || p.ImageID || p.imageFileId || "";
+                    var url2 = p.ImagePreviewURL || p.ImageURL || p.MediaURL || p.mediaUrl || "";
+                    if (fid2 || url2) {
+                        items.push({
+                            fileId: fid2,
+                            FileID: fid2,
+                            url: url2,
+                            previewUrl: url2,
+                            openUrl: fid2 ? ("https://drive.google.com/file/d/" + fid2 + "/view?usp=sharing") : url2,
+                            assetType: "image"
+                        });
+                    }
+                }
+                return items;
+            };
+
+            window.socialMediaThumbsHtml = function (p) {
+                function esc(s) {
+                    return String(s == null ? "" : s)
+                        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+                }
+                var items = (typeof normalizeSocialMediaItems === "function")
+                    ? normalizeSocialMediaItems(p)
+                    : (Array.isArray(p && p.MediaItems) ? p.MediaItems : []);
+                if (!items.length) return '<span class="text-[10px] text-slate-600">No media</span>';
+                return '<div class="flex flex-wrap gap-1.5 social-media-thumbs">' + items.map(function (m) {
+                    var fid = m.fileId || m.FileID || "";
+                    var at = String(m.assetType || "").toLowerCase();
+                    var name = String(m.fileName || m.url || "").toLowerCase();
+                    var isVid = at === "video" || at === "reel" || (name.indexOf(".mp4") >= 0 || name.indexOf(".webm") >= 0 || name.indexOf(".mov") >= 0);
+                    if (at === "image" || at === "photo" || at === "picture") isVid = false;
+                    var openUrl = m.openUrl || m.url || "";
+                    var thumb = m.previewUrl || "";
+                    if (fid && !isVid) {
+                        thumb = "https://drive.google.com/thumbnail?id=" + encodeURIComponent(fid) + "&sz=w400";
+                        openUrl = openUrl || ("https://drive.google.com/file/d/" + fid + "/view?usp=sharing");
+                    } else if (fid && isVid) {
+                        openUrl = openUrl || ("https://drive.google.com/file/d/" + fid + "/view?usp=sharing");
+                        thumb = thumb || openUrl;
+                    }
+                    if (!thumb) thumb = openUrl || m.url || "";
+                    if (!thumb && !openUrl) return "";
+                    if (isVid) {
+                        return '<a href="' + esc(openUrl || thumb) + '" target="_blank" rel="noopener" class="block w-14 h-14 rounded-lg border border-slate-700 bg-slate-900 flex items-center justify-center text-slate-400 text-[10px]" title="Video">VID</a>';
+                    }
+                    return '<a href="' + esc(openUrl || thumb) + '" target="_blank" rel="noopener" class="block w-14 h-14 rounded-lg border border-slate-700 overflow-hidden bg-slate-900 shrink-0">' +
+                        '<img src="' + esc(thumb) + '" alt="media" class="w-full h-full object-cover" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.opacity=0.3;" />' +
+                        "</a>";
+                }).join("") + "</div>";
+            };
+
             window.buildSocialPostCardHtml = function (p) {
                 try {
                     function esc(s) {
@@ -9277,37 +9330,7 @@
                             .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
                     }
                     function mediaThumbs(p) {
-                        var items = Array.isArray(p.MediaItems) ? p.MediaItems : [];
-                        if (!items.length && (p.ImageURL || p.ImagePreviewURL || p.MediaURL || p.ImageFileID)) {
-                            items = [{
-                                url: p.ImagePreviewURL || p.ImageURL || p.MediaURL,
-                                previewUrl: p.ImagePreviewURL || p.ImageURL || p.MediaURL,
-                                fileId: p.ImageFileID || p.ImageID || "",
-                                assetType: "image"
-                            }];
-                        }
-                        if (!items.length) return '<span class="text-[10px] text-slate-600">No media</span>';
-                        return '<div class="flex flex-wrap gap-1.5">' + items.map(function (m) {
-                            var fid = m.fileId || m.FileID || m.imageId || "";
-                            var at = String(m.assetType || m.AssetType || "").toLowerCase();
-                            var name = String(m.fileName || m.url || "").toLowerCase();
-                            var isVid = at === "video" || at === "reel" || /\.(mp4|webm|mov)(\?|$)/i.test(name);
-                            if (at === "image" || at === "photo" || at === "picture" || /\.(jpe?g|png|gif|webp)(\?|$)/i.test(name)) isVid = false;
-                            var openUrl = m.openUrl || m.url || "";
-                            var thumb = m.previewUrl || "";
-                            if (fid && !isVid) {
-                                thumb = "https://drive.google.com/thumbnail?id=" + encodeURIComponent(fid) + "&sz=w400";
-                                openUrl = openUrl || ("https://drive.google.com/file/d/" + fid + "/view?usp=sharing");
-                            }
-                            if (!thumb) thumb = openUrl || m.url || "";
-                            if (!thumb && !openUrl) return "";
-                            if (isVid) {
-                                return '<a href="' + esc(openUrl || thumb) + '" target="_blank" rel="noopener" class="block w-14 h-14 rounded-lg border border-slate-700 bg-slate-900 flex items-center justify-center text-slate-400 text-[10px]">VID</a>';
-                            }
-                            return '<a href="' + esc(openUrl || thumb) + '" target="_blank" rel="noopener" class="block w-14 h-14 rounded-lg border border-slate-700 overflow-hidden bg-slate-900 shrink-0">' +
-                                '<img src="' + esc(thumb) + '" alt="photo" class="w-full h-full object-cover" loading="lazy" referrerpolicy="no-referrer" />' +
-                                "</a>";
-                        }).join("") + "</div>";
+                        return (typeof socialMediaThumbsHtml === "function") ? socialMediaThumbsHtml(p) : '<span class="text-[10px] text-slate-600">No media</span>';
                     }
                     var id = p.PostID || p.postId || p.Id || "";
                     var safeId = String(id).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
@@ -9373,24 +9396,45 @@
                         if (pid === String(postId)) { idx = i; break; }
                     }
                     if (postObj) {
-                        if (idx >= 0) cache[idx] = Object.assign({}, cache[idx], postObj);
-                        else { cache.push(postObj); idx = cache.length - 1; }
+                        var merged = idx >= 0 ? Object.assign({}, cache[idx], postObj) : Object.assign({ PostID: postId }, postObj);
+                        // Always normalize MediaItems on merge
+                        if (typeof normalizeSocialMediaItems === "function") {
+                            var fromNew = normalizeSocialMediaItems(postObj);
+                            var fromOld = normalizeSocialMediaItems(idx >= 0 ? cache[idx] : {});
+                            if (fromNew.length) merged.MediaItems = fromNew;
+                            else if (fromOld.length && !merged.MediaItems) merged.MediaItems = fromOld;
+                            else merged.MediaItems = normalizeSocialMediaItems(merged);
+                        }
+                        if (idx >= 0) cache[idx] = merged;
+                        else { cache.push(merged); idx = cache.length - 1; }
                         window.__SOCIAL_CALENDAR_CACHE = cache;
                     }
                     var p = idx >= 0 ? cache[idx] : postObj;
                     if (!p) return;
-                    var card = document.querySelector('.social-post-card[data-post-id="' + String(postId).replace(/\\\\/g, '\\\\').replace(/"/g, '\\"') + '"]');
-                    var html = buildSocialPostCardHtml(p);
+                    if (typeof normalizeSocialMediaItems === "function") {
+                        p.MediaItems = normalizeSocialMediaItems(p);
+                    }
+                    var card = (typeof _socCardEl_ === "function") ? _socCardEl_(postId) : null;
+                    if (!card) {
+                        try {
+                            card = document.querySelector('.social-post-card[data-post-id="' + String(postId).replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"]');
+                        } catch (_) { }
+                    }
+                    if (!card) {
+                        card = document.getElementById("socPost_" + String(postId).replace(/[^a-zA-Z0-9_-]/g, "_"));
+                    }
+                    var html = (typeof buildSocialPostCardHtml === "function") ? buildSocialPostCardHtml(p) : "";
                     if (!html) return;
                     var tmp = document.createElement("div");
                     tmp.innerHTML = html;
                     var neu = tmp.firstElementChild;
-                    if (card && neu) card.replaceWith(neu);
-                    else if (neu && !card && typeof renderSocialCalendarPosts === "function") {
+                    if (card && neu) {
+                        card.replaceWith(neu);
+                    } else if (neu && typeof renderSocialCalendarPosts === "function") {
                         renderSocialCalendarPosts(cache);
                     }
-                    socialUpdateSelectCount();
-                } catch (e) { console.warn(e); }
+                    try { if (typeof socialUpdateSelectCount === "function") socialUpdateSelectCount(); } catch (_) { }
+                } catch (e) { console.warn("patchSocialPostRow", e); }
             };
 
             window.removeSocialPostRow = function (postId) {
@@ -9445,13 +9489,57 @@
                     var maxImg = 5 * 1024 * 1024;
                     var maxVid = 25 * 1024 * 1024;
                     var ok = 0, fail = 0, lastErr = "";
+                    var localPreviews = [];
                     try { if (typeof socialSetUploadProgress === "function") socialSetUploadProgress(postId, 2, "Preparing…"); } catch (_) { }
+
+                    function mergeLocalPreviewIntoRow() {
+                        try {
+                            var cache = window.__SOCIAL_CALENDAR_CACHE || [];
+                            var found = null;
+                            for (var i = 0; i < cache.length; i++) {
+                                if (String(cache[i].PostID || cache[i].postId || cache[i].Id || "") === String(postId)) {
+                                    found = cache[i];
+                                    break;
+                                }
+                            }
+                            var existing = (typeof normalizeSocialMediaItems === "function")
+                                ? normalizeSocialMediaItems(found || {})
+                                : [];
+                            var merged = existing.concat(localPreviews);
+                            var patch = {
+                                PostID: postId,
+                                MediaItems: merged
+                            };
+                            if (merged.length && merged[0] && !merged[0].fileId) {
+                                // keep local blob previews visible
+                                patch.ImagePreviewURL = merged[0].previewUrl || merged[0].url || "";
+                            }
+                            if (typeof patchSocialPostRow === "function") patchSocialPostRow(postId, patch);
+                        } catch (e) { console.warn("mergeLocalPreview", e); }
+                    }
+
                     for (var fi = 0; fi < files.length; fi++) {
                         var file = files[fi];
                         var mime = String(file.type || "").toLowerCase();
                         var isVid = mime.indexOf("video/") === 0;
                         if (isVid && file.size > maxVid) { fail++; lastErr = "Video too large (max 25 MB)"; continue; }
                         if (!isVid && file.size > maxImg) { fail++; lastErr = "Image too large (max 5 MB)"; continue; }
+
+                        // Instant local preview (before network)
+                        var localUrl = "";
+                        try { localUrl = URL.createObjectURL(file); } catch (_) { }
+                        if (localUrl) {
+                            localPreviews.push({
+                                url: localUrl,
+                                previewUrl: localUrl,
+                                openUrl: localUrl,
+                                fileName: file.name,
+                                assetType: isVid ? "video" : "image",
+                                _local: true
+                            });
+                            mergeLocalPreviewIntoRow();
+                        }
+
                         try {
                             var label = "File " + (fi + 1) + "/" + files.length + " · reading";
                             var b64;
@@ -9489,9 +9577,28 @@
                                 continue;
                             }
                             ok++;
-                            try { if (typeof socialSetUploadProgress === "function") socialSetUploadProgress(postId, 92, "Saving…"); } catch (_) { }
-                            if (res && (res.MediaItems || res.mediaItems || res.post)) {
-                                try { patchSocialPostRow(postId, res.post || { MediaItems: res.MediaItems || res.mediaItems }); } catch (_) { }
+                            try { if (typeof socialSetUploadProgress === "function") socialSetUploadProgress(postId, 90, "Saving…"); } catch (_) { }
+
+                            // Prefer server media; fall back to local preview
+                            var serverItems = [];
+                            if (typeof normalizeSocialMediaItems === "function") {
+                                serverItems = normalizeSocialMediaItems(res && (res.post || res) || {});
+                                if (!serverItems.length && res) {
+                                    serverItems = normalizeSocialMediaItems({
+                                        MediaItems: res.MediaItems || res.mediaItems,
+                                        ImageFileID: res.ImageFileID || res.fileId || res.FileID,
+                                        ImagePreviewURL: res.ImagePreviewURL || res.previewUrl || res.url,
+                                        ImageURL: res.ImageURL || res.url
+                                    });
+                                }
+                            }
+                            if (serverItems.length) {
+                                // Replace matching local blob for this file with server item
+                                var patchObj = res.post ? Object.assign({}, res.post) : { PostID: postId };
+                                patchObj.MediaItems = serverItems;
+                                if (typeof patchSocialPostRow === "function") patchSocialPostRow(postId, patchObj);
+                            } else {
+                                mergeLocalPreviewIntoRow();
                             }
                         } catch (oneErr) {
                             fail++;
@@ -9505,7 +9612,8 @@
                         if (ok) toast("Attached " + ok + " file(s)" + (fail ? (" · " + fail + " failed") : ""));
                         else toast(lastErr || "Upload failed", true);
                     }
-                    // Refresh this post only from server
+
+                    // Final refresh from server so Drive thumbnails replace blob URLs
                     try {
                         var res2 = await gw("clientportal", "clientPortalGetSocialCalendar", { clientId: sid(), token: tok() });
                         if (res2 && res2.success !== false) {
@@ -9513,7 +9621,10 @@
                             window.__SOCIAL_CALENDAR_CACHE = posts;
                             for (var j = 0; j < posts.length; j++) {
                                 if (String(posts[j].PostID || posts[j].postId || posts[j].Id || "") === String(postId)) {
-                                    try { patchSocialPostRow(postId, posts[j]); } catch (_) { }
+                                    if (typeof normalizeSocialMediaItems === "function") {
+                                        posts[j].MediaItems = normalizeSocialMediaItems(posts[j]);
+                                    }
+                                    if (typeof patchSocialPostRow === "function") patchSocialPostRow(postId, posts[j]);
                                     break;
                                 }
                             }
@@ -9521,7 +9632,7 @@
                     } catch (_) { }
                     setTimeout(function () {
                         try { if (typeof socialHideUploadProgress === "function") socialHideUploadProgress(postId); } catch (_) { }
-                    }, 800);
+                    }, 900);
                 } catch (e) {
                     try { if (typeof socialHideUploadProgress === "function") socialHideUploadProgress(postId); } catch (_) { }
                     console.error("clientAttachMediaToPost", e);
