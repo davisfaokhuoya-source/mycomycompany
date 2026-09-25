@@ -2927,7 +2927,8 @@
                             <p id="mailboxSelfServiceHint" class="text-[11px] text-slate-500">Self-service: connect
                                 <strong class="text-slate-300">one new email per calendar month</strong> while your plan
                                 is
-                                active. Locked if subscription expired. Extra mailboxes: contact admin or buy quota.</p>
+                                active. Locked if subscription expired. Extra mailboxes: contact admin or buy quota.
+                            </p>
                             <div id="mailboxConnectForm" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
                                 <div>
                                     <label class="text-[10px] text-slate-500">Email address</label>
@@ -7236,9 +7237,24 @@
                 else console.log("[client-dashboard]", msg);
             }
             function gw(system, action, extra) {
-                if (typeof callGateway === "function") return callGateway(system, action, extra || {});
-                if (typeof executeSecureBridgeCall === "function") return executeSecureBridgeCall(system, action, extra || {});
-                return Promise.reject(new Error("Gateway not available"));
+                async function once() {
+                    if (typeof callGateway === "function") return callGateway(system, action, extra || {});
+                    if (typeof executeSecureBridgeCall === "function") return executeSecureBridgeCall(system, action, extra || {});
+                    throw new Error("Gateway not available");
+                }
+                return once().then(function (res) {
+                    if (res && res.systemCooling) {
+                        var wait = Math.max(1500, Number(res.retryAfterSec || 3) * 1000);
+                        return new Promise(function (resolve) {
+                            setTimeout(function () {
+                                once().then(resolve).catch(function (e) {
+                                    resolve({ success: false, message: String(e && e.message || e), systemCooling: true });
+                                });
+                            }, wait);
+                        });
+                    }
+                    return res;
+                });
             }
             function sid() {
                 try {
