@@ -1130,7 +1130,7 @@
                                 class="fa-solid fa-briefcase w-4 text-center"></i> My work</button>
                         <button type="button" data-view="chat" onclick="showView('chat', this)"
                             class="nav-link w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm text-slate-300"><i
-                                class="fa-solid fa-comments w-4 text-center"></i> AI Chat</button>
+                                class="fa-solid fa-comments w-4 text-center"></i> Admin Chat</button>
                     </div>
                 </div>
 
@@ -4205,17 +4205,58 @@
                 panel.innerHTML = '<div class="p-3 text-xs text-slate-500">No notifications</div>';
                 return;
             }
-            panel.innerHTML = items.map(function (n) {
+            panel.innerHTML = items.map(function (n, idx) {
                 var title = (n.title || n.Title || n.subject || n.type || n.Type || 'Notice');
                 var body = (n.body || n.message || n.Message || n.text || '');
                 var when = (n.createdAt || n.CreatedAt || n.timestamp || '');
-                return '<div class="px-3 py-2 border-b border-slate-800 hover:bg-slate-800/50">' +
+                var unread = !(n.read === true || n.Read === true || n.Read === 'TRUE');
+                return '<button type="button" data-notif-idx="' + idx + '" onclick="handleClientNotifClick(' + idx + ')" class="w-full text-left px-3 py-2 border-b border-slate-800 hover:bg-slate-800/50 ' + (unread ? 'bg-slate-800/30' : '') + '">' +
                     '<div class="text-xs font-semibold text-white">' + (typeof escapeHtml === 'function' ? escapeHtml(String(title)) : String(title)) + '</div>' +
                     (body ? '<div class="text-[11px] text-slate-400 mt-0.5">' + (typeof escapeHtml === 'function' ? escapeHtml(String(body).slice(0, 160)) : String(body).slice(0, 160)) + '</div>' : '') +
                     (when ? '<div class="text-[10px] text-slate-600 mt-1">' + (typeof escapeHtml === 'function' ? escapeHtml(String(when)) : String(when)) + '</div>' : '') +
-                    '</div>';
+                    '</button>';
             }).join('');
         }
+
+        function handleClientNotifClick(idx) {
+            try {
+                var items = window.__clientNotifItems || [];
+                var n = items[idx];
+                if (!n) return;
+                // Mark read
+                try {
+                    var nid = n.id || n.NotificationID || n.notificationId;
+                    if (nid) {
+                        callGateway('clientportal', 'clientPortalMarkNotificationRead', { notificationId: nid }).catch(function () { });
+                        n.read = true;
+                    }
+                } catch (_) { }
+                var link = String(n.link || n.Link || '').trim().toLowerCase();
+                var type = String(n.type || n.Type || '').toLowerCase();
+                var panel = document.getElementById('clientNotifPanel');
+                if (panel) panel.classList.add('hidden');
+                // Navigate to relevant section
+                var view = null;
+                if (link.indexOf('document') >= 0 || type.indexOf('job_complete') >= 0 || type.indexOf('doc') >= 0) view = 'view-documents';
+                else if (link.indexOf('generate') >= 0 || type.indexOf('job_failed') >= 0) view = 'view-generate';
+                else if (link.indexOf('work') >= 0 || link.indexOf('job') >= 0) view = 'view-my-work';
+                else if (link.indexOf('billing') >= 0) view = 'view-billing';
+                else if (link.indexOf('lead') >= 0) view = 'view-leads-list';
+                else if (link.indexOf('social') >= 0 || link.indexOf('calendar') >= 0) view = 'view-social-calendar';
+                else if (link.indexOf('http') === 0) { window.open(n.link || n.Link, '_blank'); return; }
+                if (view && typeof showView === 'function') {
+                    showView(view);
+                    try {
+                        var nav = document.querySelector('[data-view="' + view + '"]');
+                        if (nav) nav.click();
+                    } catch (_) { }
+                }
+                loadClientNotifications();
+            } catch (e) {
+                try { console.warn('notif click', e); } catch (_) { }
+            }
+        }
+        window.handleClientNotifClick = handleClientNotifClick;
 
         function toggleClientNotifPanel() {
             var panel = document.getElementById('clientNotifPanel');
@@ -5172,7 +5213,7 @@
                     title: (SEND_DOC_META && SEND_DOC_META.title) || ''
                 }) || res;
             } catch (e) {
-                res = { success: false, message: clientFriendlyError(e && e.message ? e.message : e) };
+                res = { success: false, message: (e && e.message) ? String(e.message) : 'Send failed' };
             } finally {
                 if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send'; }
             }
@@ -5182,7 +5223,16 @@
                 notifyUser(res.message || ('Document sent to ' + to + '.'), 'success');
                 try { loadDocuments(); } catch (e) { }
             } else {
-                notifyUser(clientFriendlyError((res && res.message) || 'Send failed.'), 'error');
+                var msg = (res && res.message) ? String(res.message) : 'Send failed';
+                // Prefer actionable server text; only code-map when message is empty/generic
+                if (!msg || /something went wrong|4900|undefined/i.test(msg)) {
+                    msg = clientFriendlyError(msg || 'Send failed');
+                }
+                if (/mail|email|mailbox|recipient|attach|drive|permission|oauth/i.test(msg)) {
+                    notifyUser(msg, 'info'); // not scary red — client can fix (connect mailbox, check address)
+                } else {
+                    notifyUser(msg, 'error');
+                }
             }
         }
 
