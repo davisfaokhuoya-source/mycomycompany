@@ -259,10 +259,11 @@
                         <div class="col-md-6 col-xl-4">
                             <div onclick="showRegisterModal()" class="academic-card">
                                 <div class="display-5 mb-3">📝</div>
-                                <h3 class="h5 fw-bold">Register Now</h3>
-                                <p class="small text-muted mb-2">Create your verified professional profile</p>
+                                <h3 class="h5 fw-bold">Assessment registration</h3>
+                                <p class="small text-muted mb-2">Create your verified profile to take assessments &amp;
+                                    earn certificates</p>
                                 <span class="badge bg-light text-dark text-uppercase"
-                                    style="font-size: 0.65rem; letter-spacing: 1px;">90 Seconds</span>
+                                    style="font-size: 0.65rem; letter-spacing: 1px;">Portal account</span>
                             </div>
                         </div>
                         <div class="col-md-6 col-xl-4">
@@ -368,10 +369,17 @@
             <div class="col-12 text-center text-muted py-4">Loading courses…</div>
         </div>
         <div class="row justify-content-center">
-            <div class="col-lg-6">
-                <div class="academic-card" style="cursor: default;">
-                    <h3 class="h5 fw-bold mb-1">Register for a course</h3>
-                    <p class="small text-muted mb-4">You will be redirected to Flutterwave when payment is required.</p>
+            <div class="col-lg-7">
+                <div class="academic-card shadow-sm border"
+                    style="cursor: default; border-color: rgba(224,116,16,0.35) !important;">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge rounded-pill"
+                            style="background:rgba(224,116,16,0.12);color:var(--brand-color);">Course
+                            registration</span>
+                    </div>
+                    <h3 class="h5 fw-bold mb-1">Register for training</h3>
+                    <p class="small text-muted mb-4">Choose a course below, then complete payment on Flutterwave when
+                        required. No portal login needed.</p>
                     <form id="academy-enrol-form" onsubmit="return academySubmitEnrol(event)">
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted">Course</label>
@@ -782,11 +790,21 @@
         let loginModal, registerModal, verifyModal, testModal, messagesModal;
 
         document.addEventListener('DOMContentLoaded', function () {
-            // Initialize Modals - single initialization only
-            loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-            testModal = new bootstrap.Modal(document.getElementById('testModal'), { backdrop: 'static' });
+            // Safe modal init (never crash if a modal node is missing)
+            try {
+                if (window.bootstrap && document.getElementById('loginModal')) {
+                    loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+                }
+                if (window.bootstrap && document.getElementById('testModal')) {
+                    testModal = new bootstrap.Modal(document.getElementById('testModal'), { backdrop: 'static' });
+                }
+            } catch (eModal) { console.warn('Modal init:', eModal); }
 
-            // Single form listener attachment to prevent double submissions
+            try {
+                if (typeof academyHandlePaidReturn === 'function') academyHandlePaidReturn();
+                if (typeof academyLoadCourses === 'function') academyLoadCourses();
+            } catch (eAc) { console.warn('Academy init:', eAc); }
+
             const loginForm = document.getElementById('login-form');
             if (loginForm) {
                 loginForm.addEventListener('submit', handleLogin);
@@ -2511,7 +2529,14 @@
             window.requestCertificate = requestCertificate;
             window.applyForCourse = applyForCourse;
             window.reApplyForCourse = reApplyForCourse;
-            window.showLoginModal = () => loginModal.show();
+            window.showLoginModal = () => {
+                try {
+                    if (!loginModal && window.bootstrap && document.getElementById('loginModal')) {
+                        loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+                    }
+                    if (loginModal) loginModal.show();
+                } catch (e) { console.warn(e); }
+            };
             // Correct Register Modal Handler
             window.showRegisterModal = () => {
                 const regModal = new bootstrap.Modal(document.getElementById('registerModal'));
@@ -2557,14 +2582,66 @@
             };
     </script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="lib/wow/wow.min.js"></script>
-    <script src="lib/easing/easing.min.js"></script>
-    <script src="lib/waypoints/waypoints.min.js"></script>
-    <script src="lib/counterup/counterup.min.js"></script>
-    <script src="lib/lightbox/js/lightbox.min.js"></script>
-    <script src="lib/owlcarousel/owl.carousel.min.js"></script>
-    <script src="js/main.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Optional site libs — ignored if missing (local preview safe) -->
+    <script src="lib/wow/wow.min.js" onerror="this.remove()"></script>
+    <script src="lib/easing/easing.min.js" onerror="this.remove()"></script>
+    <script src="lib/waypoints/waypoints.min.js" onerror="this.remove()"></script>
+    <script src="lib/counterup/counterup.min.js" onerror="this.remove()"></script>
+    <script src="lib/lightbox/js/lightbox.min.js" onerror="this.remove()"></script>
+    <script src="lib/owlcarousel/owl.carousel.min.js" onerror="this.remove()"></script>
+    <script src="js/main.js" onerror="this.remove()"></script>
+
+
+
+
+
+
+    <!-- Site footer -->
+    <footer class="mt-5 pt-5 pb-4" style="background:#0f172a;color:#94a3b8;">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-md-5">
+                    <h5 class="text-white fw-bold mb-3">The Victorias Ltd</h5>
+                    <p class="small mb-2">Operations, compliance, digital services and professional training for teams
+                        in Nigeria and beyond.</p>
+                    <p class="small mb-0">Abuja, Nigeria</p>
+                </div>
+                <div class="col-6 col-md-3">
+                    <h6 class="text-white text-uppercase small fw-bold mb-3">Explore</h6>
+                    <ul class="list-unstyled small mb-0">
+                        <li class="mb-2"><a class="text-decoration-none text-secondary"
+                                href="https://thevictorias.com.ng">Home</a></li>
+                        <li class="mb-2"><a class="text-decoration-none text-secondary"
+                                href="https://thevictorias.com.ng/about">About</a></li>
+                        <li class="mb-2"><a class="text-decoration-none text-secondary"
+                                href="#academy-section">Training</a></li>
+                        <li class="mb-2"><a class="text-decoration-none text-secondary"
+                                href="#how-it-works">Assessments</a></li>
+                        <li class="mb-2"><a class="text-decoration-none text-secondary"
+                                href="https://thevictorias.com.ng/policies">Policies</a></li>
+                    </ul>
+                </div>
+                <div class="col-6 col-md-4">
+                    <h6 class="text-white text-uppercase small fw-bold mb-3">Contact</h6>
+                    <ul class="list-unstyled small mb-0">
+                        <li class="mb-2"><a class="text-decoration-none text-secondary"
+                                href="mailto:management@thevictorias.com.ng">management@thevictorias.com.ng</a></li>
+                        <li class="mb-2"><a class="text-decoration-none text-secondary"
+                                href="https://wa.me/2348055538518">WhatsApp +234 805 553 8518</a></li>
+                        <li class="mb-2"><a class="text-decoration-none text-secondary"
+                                href="https://thevictorias.com.ng/client-dashboard">Client dashboard</a></li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="border-secondary my-4 opacity-25">
+            <div class="d-flex flex-wrap justify-content-between gap-2 small">
+                <span>© 2026 The Victorias Ltd. All rights reserved.</span>
+                <span>Academy &amp; Assessment Portal</span>
+            </div>
+        </div>
+    </footer>
+
 </body>
 
 </html>
