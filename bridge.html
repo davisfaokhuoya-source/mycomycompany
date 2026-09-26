@@ -1469,13 +1469,113 @@
                                 links.</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="academyAdminLoadCourses()"
+                                class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-white">Refresh
+                                courses</button>
                             <button type="button" onclick="academyAdminRefresh()"
-                                class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-white">Refresh</button>
+                                class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-white">Refresh
+                                enrollments</button>
                             <button type="button" onclick="academyAdminEnsureSheets()"
                                 class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-slate-200">Ensure
                                 sheets</button>
                         </div>
                     </div>
+
+                    <!-- Add / edit TRAINING course (registration catalogue — not assessment questions) -->
+                    <div class="shrink-0 rounded-xl border border-slate-800 bg-slate-950/80 p-4 space-y-3">
+                        <div class="flex flex-wrap justify-between items-center gap-2">
+                            <div>
+                                <h4 class="text-sm font-bold text-white">Training courses</h4>
+                                <p class="text-[11px] text-slate-500">These appear on the public training page for
+                                    registration &amp; payment. Separate from assessment question banks.</p>
+                            </div>
+                            <button type="button" onclick="academyAdminClearCourseForm()"
+                                class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-300">Clear form</button>
+                        </div>
+                        <input type="hidden" id="academyCourseId" value="" />
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div class="lg:col-span-2">
+                                <label class="text-[10px] text-slate-500 uppercase">Course name *</label>
+                                <input id="academyCourseName" type="text"
+                                    placeholder="e.g. Business Operations Foundations"
+                                    class="block mt-1 w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white" />
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500 uppercase">Price (NGN)</label>
+                                <input id="academyCourseAmount" type="number" min="0" step="1" placeholder="0 = free"
+                                    class="block mt-1 w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white" />
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500 uppercase">Status</label>
+                                <select id="academyCourseStatus"
+                                    class="block mt-1 w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white">
+                                    <option value="Open">Open (visible)</option>
+                                    <option value="Draft">Draft (hidden)</option>
+                                    <option value="Closed">Closed (hidden)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500 uppercase">Start date</label>
+                                <input id="academyCourseStart" type="datetime-local"
+                                    class="block mt-1 w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white" />
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500 uppercase">End date</label>
+                                <input id="academyCourseEnd" type="datetime-local"
+                                    class="block mt-1 w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white" />
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500 uppercase">Seats</label>
+                                <input id="academyCourseSeats" type="number" min="0" placeholder="Optional"
+                                    class="block mt-1 w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white" />
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500 uppercase">Mode</label>
+                                <select id="academyCourseMode"
+                                    class="block mt-1 w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white">
+                                    <option value="Online">Online</option>
+                                    <option value="In-person">In-person</option>
+                                    <option value="Hybrid">Hybrid</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2 lg:col-span-4">
+                                <label class="text-[10px] text-slate-500 uppercase">Public description</label>
+                                <textarea id="academyCourseDesc" rows="2" placeholder="Shown on the training page cards"
+                                    class="block mt-1 w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white"></textarea>
+                            </div>
+                            <div class="md:col-span-2 lg:col-span-3">
+                                <label class="text-[10px] text-slate-500 uppercase">Default training link
+                                    (optional)</label>
+                                <input id="academyCourseLink" type="url" placeholder="https://meet.google.com/..."
+                                    class="block mt-1 w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white" />
+                            </div>
+                            <div class="flex items-end">
+                                <button type="button" onclick="academyAdminSaveCourse()"
+                                    class="w-full px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm text-white font-semibold">Save
+                                    course</button>
+                            </div>
+                        </div>
+                        <div class="overflow-auto rounded-lg border border-slate-800 max-h-48">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-slate-900 text-slate-400 text-[10px] uppercase sticky top-0">
+                                    <tr>
+                                        <th class="p-2">ID</th>
+                                        <th class="p-2">Name</th>
+                                        <th class="p-2">Price</th>
+                                        <th class="p-2">Start</th>
+                                        <th class="p-2">Status</th>
+                                        <th class="p-2">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="academyCoursesBody" class="text-slate-300 divide-y divide-slate-800">
+                                    <tr>
+                                        <td colspan="6" class="p-3 text-slate-500">Click Refresh courses.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <div class="flex flex-wrap gap-2 items-end shrink-0">
                         <div>
                             <label class="text-[10px] text-slate-500 uppercase">Set training link</label>
@@ -5412,8 +5512,7 @@
                             </label>
                             <p class="text-[10px] text-slate-500 md:col-span-2 self-center">Offshore clients are billed
                                 from USD list prices × the FX rate above. Local clients use NGN list prices. Save with
-                                <strong class="text-slate-300">Save tiers only</strong>.
-                            </p>
+                                <strong class="text-slate-300">Save tiers only</strong>.</p>
                         </div>
                         <div class="border border-slate-800 rounded-lg p-3 bg-slate-950/50">
                             <p class="text-[11px] font-semibold text-emerald-400 mb-2"><i
@@ -21039,6 +21138,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             throw new Error("No bridge call available");
         }
         async function academyAdminRefresh() {
+            try { academyAdminLoadCourses(); } catch (_) { }
             var body = document.getElementById("academyEnrollmentsBody");
             if (!body) return;
             body.innerHTML = '<tr><td colspan="7" class="p-4 text-slate-500">Loading…</td></tr>';
@@ -21069,6 +21169,117 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 body.innerHTML = '<tr><td colspan="7" class="p-4 text-amber-400">' + (err.message || err) + '</td></tr>';
             }
         }
+
+        function academyAdminClearCourseForm() {
+            var ids = ["academyCourseId", "academyCourseName", "academyCourseAmount", "academyCourseStart", "academyCourseEnd", "academyCourseSeats", "academyCourseDesc", "academyCourseLink"];
+            ids.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.value = "";
+            });
+            var st = document.getElementById("academyCourseStatus");
+            if (st) st.value = "Open";
+            var md = document.getElementById("academyCourseMode");
+            if (md) md.value = "Online";
+        }
+        function academyAdminEditCourse(c) {
+            if (!c) return;
+            try { c = typeof c === "string" ? JSON.parse(c) : c; } catch (_) { }
+            document.getElementById("academyCourseId").value = c.courseId || "";
+            document.getElementById("academyCourseName").value = c.courseName || "";
+            document.getElementById("academyCourseAmount").value = c.amount != null ? c.amount : "";
+            document.getElementById("academyCourseStatus").value = c.status || (c.isActive ? "Open" : "Closed");
+            document.getElementById("academyCourseMode").value = c.mode || "Online";
+            document.getElementById("academyCourseDesc").value = c.publicDescription || c.description || "";
+            document.getElementById("academyCourseLink").value = c.trainingLink || "";
+            document.getElementById("academyCourseSeats").value = c.seats != null && !isNaN(c.seats) ? c.seats : "";
+            function toLocal(v) {
+                if (!v) return "";
+                var d = new Date(v);
+                if (isNaN(d.getTime())) return "";
+                var pad = function (n) { return String(n).padStart(2, "0"); };
+                return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+            }
+            document.getElementById("academyCourseStart").value = toLocal(c.startAt);
+            document.getElementById("academyCourseEnd").value = toLocal(c.endAt);
+            try { document.getElementById("academyCourseName").focus(); } catch (_) { }
+        }
+        async function academyAdminLoadCourses() {
+            var body = document.getElementById("academyCoursesBody");
+            if (!body) return;
+            body.innerHTML = '<tr><td colspan="6" class="p-3 text-slate-500">Loading…</td></tr>';
+            try {
+                var r = await academyAdminCall("academyListCoursesAdmin", {});
+                var list = (r && r.courses) || [];
+                if (!r || !r.success) {
+                    body.innerHTML = '<tr><td colspan="6" class="p-3 text-amber-400">' + ((r && r.message) || "Failed") + '</td></tr>';
+                    return;
+                }
+                if (!list.length) {
+                    body.innerHTML = '<tr><td colspan="6" class="p-3 text-slate-500">No courses yet. Fill the form above and Save course.</td></tr>';
+                    return;
+                }
+                body.innerHTML = list.map(function (c) {
+                    var id = (c.courseId || "").replace(/'/g, "");
+                    var payload = encodeURIComponent(JSON.stringify(c));
+                    return '<tr>' +
+                        '<td class="p-2 font-mono text-[10px]">' + id + '</td>' +
+                        '<td class="p-2">' + (c.courseName || "") + '</td>' +
+                        '<td class="p-2">' + (c.amount != null ? ("₦" + Number(c.amount).toLocaleString()) : "—") + '</td>' +
+                        '<td class="p-2 text-xs">' + (c.startAt ? new Date(c.startAt).toLocaleString() : "—") + '</td>' +
+                        '<td class="p-2">' + (c.status || (c.isActive ? "Open" : "Closed")) + '</td>' +
+                        '<td class="p-2 space-x-1">' +
+                        '<button type="button" class="text-[10px] px-2 py-1 rounded bg-slate-800" data-course="' + payload + '" onclick="academyAdminEditCourse(JSON.parse(decodeURIComponent(this.getAttribute(\'data-course\'))))">Edit</button>' +
+                        (c.isActive
+                            ? '<button type="button" class="text-[10px] px-2 py-1 rounded bg-slate-800 text-amber-300" onclick="academyAdminToggleCourse(\'' + id + '\', false)">Close</button>'
+                            : '<button type="button" class="text-[10px] px-2 py-1 rounded bg-emerald-900 text-emerald-200" onclick="academyAdminToggleCourse(\'' + id + '\', true)">Open</button>') +
+                        '</td></tr>';
+                }).join("");
+            } catch (err) {
+                body.innerHTML = '<tr><td colspan="6" class="p-3 text-amber-400">' + (err.message || err) + '</td></tr>';
+            }
+        }
+        async function academyAdminSaveCourse() {
+            var name = ((document.getElementById("academyCourseName") || {}).value || "").trim();
+            if (!name) { alert("Course name is required."); return; }
+            var amount = parseFloat((document.getElementById("academyCourseAmount") || {}).value);
+            if (isNaN(amount) || amount < 0) amount = 0;
+            var startVal = (document.getElementById("academyCourseStart") || {}).value || "";
+            var endVal = (document.getElementById("academyCourseEnd") || {}).value || "";
+            var payload = {
+                courseId: ((document.getElementById("academyCourseId") || {}).value || "").trim(),
+                courseName: name,
+                amount: amount,
+                status: (document.getElementById("academyCourseStatus") || {}).value || "Open",
+                mode: (document.getElementById("academyCourseMode") || {}).value || "Online",
+                publicDescription: ((document.getElementById("academyCourseDesc") || {}).value || "").trim(),
+                description: ((document.getElementById("academyCourseDesc") || {}).value || "").trim(),
+                trainingLink: ((document.getElementById("academyCourseLink") || {}).value || "").trim(),
+                seats: ((document.getElementById("academyCourseSeats") || {}).value || "").trim(),
+                startAt: startVal ? new Date(startVal).toISOString() : "",
+                endAt: endVal ? new Date(endVal).toISOString() : ""
+            };
+            try {
+                var r = await academyAdminCall("academyUpsertCourse", payload);
+                if (!r || !r.success) {
+                    alert((r && r.message) || "Save failed");
+                    return;
+                }
+                alert(r.message || "Saved");
+                academyAdminClearCourseForm();
+                academyAdminLoadCourses();
+            } catch (e) {
+                alert(e.message || e);
+            }
+        }
+        async function academyAdminToggleCourse(courseId, active) {
+            if (!courseId) return;
+            try {
+                var r = await academyAdminCall("academySetCourseActive", { courseId: courseId, isActive: !!active });
+                if (!r || !r.success) alert((r && r.message) || "Update failed");
+                academyAdminLoadCourses();
+            } catch (e) { alert(e.message || e); }
+        }
+
         async function academyAdminEnsureSheets() {
             try {
                 var r = await academyAdminCall("academyEnsureSheets", {});
