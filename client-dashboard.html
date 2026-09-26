@@ -1130,7 +1130,7 @@
                                 class="fa-solid fa-briefcase w-4 text-center"></i> My work</button>
                         <button type="button" data-view="chat" onclick="showView('chat', this)"
                             class="nav-link w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm text-slate-300"><i
-                                class="fa-solid fa-comments w-4 text-center"></i> Admin Chat</button>
+                                class="fa-solid fa-comments w-4 text-center"></i> AI Chat</button>
                     </div>
                 </div>
 
@@ -2927,8 +2927,7 @@
                             <p id="mailboxSelfServiceHint" class="text-[11px] text-slate-500">Self-service: connect
                                 <strong class="text-slate-300">one new email per calendar month</strong> while your plan
                                 is
-                                active. Locked if subscription expired. Extra mailboxes: contact admin or buy quota.
-                            </p>
+                                active. Locked if subscription expired. Extra mailboxes: contact admin or buy quota.</p>
                             <div id="mailboxConnectForm" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
                                 <div>
                                     <label class="text-[10px] text-slate-500">Email address</label>
@@ -5195,6 +5194,57 @@
         function closeSendDocumentModal() {
             document.getElementById('modalSendDocument').classList.add('hidden');
             SEND_DOC_TARGET = null;
+            SEND_DOC_META = { docUrl: '', fileId: '', title: '' };
+        }
+
+        /**
+         * Delete a client document row (self-generated or delivered).
+         * Wired from My Documents trash button — must exist or click throws immediately.
+         */
+        async function deleteClientDocument(docId, recordId, btn) {
+            docId = String(docId || '').trim();
+            recordId = String(recordId || docId || '').trim();
+            if (!docId && !recordId) {
+                notifyUser('Nothing to delete.', 'info');
+                return;
+            }
+            if (!confirm('Remove this document from My Documents? This does not delete the file from Drive if it was shared with you.')) {
+                return;
+            }
+            if (btn) {
+                try {
+                    btn.disabled = true;
+                    if (typeof setButtonLoading === 'function') setButtonLoading(btn, true);
+                } catch (_) { }
+            }
+            let res = { success: false, message: 'Delete failed' };
+            try {
+                res = await callGateway('clientportal', 'clientPortalDeleteDocument', {
+                    docId: docId,
+                    recordId: recordId,
+                    documentId: docId
+                }) || res;
+            } catch (e) {
+                res = { success: false, message: (e && e.message) ? String(e.message) : 'Delete failed' };
+            } finally {
+                if (btn) {
+                    try {
+                        btn.disabled = false;
+                        if (typeof setButtonLoading === 'function') setButtonLoading(btn, false);
+                    } catch (_) { }
+                }
+            }
+            if (res && res.success) {
+                notifyUser(res.message || 'Document removed.', 'success');
+                try { await loadDocuments(); } catch (_) { }
+            } else {
+                var msg = (res && (res._rawMessage || res.message)) || 'Could not delete';
+                // Prefer human text over bare 4900
+                if (!msg || /something went wrong|4900|undefined/i.test(String(msg))) {
+                    msg = 'Could not delete this document. Refresh and try again.';
+                }
+                notifyUser(msg, 'info');
+            }
         }
         async function submitSendDocument() {
             const to = document.getElementById('sendDocTo').value.trim();
@@ -5224,16 +5274,14 @@
                 notifyUser(res.message || ('Document sent to ' + to + '.'), 'success');
                 try { loadDocuments(); } catch (e) { }
             } else {
-                var msg = (res && res.message) ? String(res.message) : 'Send failed';
-                // Prefer actionable server text; only code-map when message is empty/generic
-                if (!msg || /something went wrong|4900|undefined/i.test(msg)) {
-                    msg = clientFriendlyError(msg || 'Send failed');
+                // Prefer real server text over generic 4900 wrapper
+                var msg = (res && (res._rawMessage || res.message)) ? String(res._rawMessage || res.message) : 'Send failed';
+                msg = msg.replace(/\s*·\s*code\s*\d{4}\s*$/i, '').trim();
+                if (!msg || /something went wrong|4900|^undefined$/i.test(msg)) {
+                    msg = 'Could not send right now. Check recipient email, or reconnect Email under Integrations, then try again.';
                 }
-                if (/mail|email|mailbox|recipient|attach|drive|permission|oauth/i.test(msg)) {
-                    notifyUser(msg, 'info'); // not scary red — client can fix (connect mailbox, check address)
-                } else {
-                    notifyUser(msg, 'error');
-                }
+                // Never scare with red for recoverable send issues
+                notifyUser(msg, 'info');
             }
         }
 
