@@ -754,134 +754,8 @@
         </div>
     </div>
     <div id="dynamic-modals"></div>
-    <!-- ========== ACADEMY: Enrol + Pay (paste into assessment portal before closing body) ========== -->
-    <section id="academy-enrol" class="container py-5">
-        <div class="text-center mb-4">
-            <h2 class="fw-bold">Upcoming courses</h2>
-            <p class="text-muted">Choose a course, register, and pay securely online.</p>
-        </div>
-        <div class="row g-4 mb-4" id="academy-course-cards">
-            <div class="col-12 text-center text-muted">Loading courses…</div>
-        </div>
-        <div class="card shadow-sm border-0 rounded-4 p-4 mx-auto" style="max-width:560px">
-            <h3 class="h5 fw-bold mb-3">Register for a course</h3>
-            <form id="academy-enrol-form" onsubmit="return academySubmitEnrol(event)">
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Course</label>
-                    <select id="academy-course-select" class="form-control" required>
-                        <option value="">Select a course…</option>
-                    </select>
-                    <input type="text" id="academy-course-search" class="form-control mt-2"
-                        placeholder="Or type course name to search">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Full name</label>
-                    <input type="text" id="academy-name" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Email</label>
-                    <input type="email" id="academy-email" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Phone</label>
-                    <input type="tel" id="academy-phone" class="form-control" required>
-                </div>
-                <button type="submit" class="btn btn-brand w-100 py-3" id="academy-pay-btn">Continue to payment</button>
-                <p id="academy-enrol-msg" class="small text-center mt-3 text-muted"></p>
-            </form>
-        </div>
-    </section>
-    <script>
-        (function () {
-            var ACADEMY_API = window.ACADEMY_API_URL || window.ASSESSMENT_API_URL || "";
-            async function academyCall(action, data) {
-                if (typeof callAPI === "function") return callAPI(action, data || {});
-                if (!ACADEMY_API) throw new Error("API URL not configured");
-                var res = await fetch(ACADEMY_API, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ action: action, data: data || {} })
-                });
-                return res.json();
-            }
-            window.academyLoadCourses = async function () {
-                var cards = document.getElementById("academy-course-cards");
-                var sel = document.getElementById("academy-course-select");
-                try {
-                    var r = await academyCall("academyListCourses", { upcoming: true });
-                    var list = (r && r.courses) || [];
-                    if (!list.length) {
-                        if (cards) cards.innerHTML = '<div class="col-12 text-center text-muted">No upcoming courses yet. Check back soon.</div>';
-                        return;
-                    }
-                    if (cards) {
-                        cards.innerHTML = list.map(function (c) {
-                            var when = c.startAt ? new Date(c.startAt).toLocaleString() : "Date TBA";
-                            var price = c.amount > 0 ? ("₦" + Number(c.amount).toLocaleString()) : "Free";
-                            return '<div class="col-md-6 col-lg-4"><div class="academic-card h-100" onclick="document.getElementById(\'academy-course-select\').value=\'' +
-                                String(c.courseId).replace(/'/g, "") + '\';document.getElementById(\'academy-enrol\').scrollIntoView({behavior:\'smooth\'})">' +
-                                '<h3 class="h6 fw-bold">' + (c.courseName || "") + '</h3>' +
-                                '<p class="small text-muted">' + (c.description || "").slice(0, 120) + '</p>' +
-                                '<div class="d-flex justify-content-between small"><span>' + when + '</span><strong class="text-brand">' + price + '</strong></div></div></div>';
-                        }).join("");
-                    }
-                    if (sel) {
-                        sel.innerHTML = '<option value="">Select a course…</option>' + list.map(function (c) {
-                            return '<option value="' + String(c.courseId).replace(/"/g, "") + '">' + (c.courseName || c.courseId) +
-                                (c.amount ? (" — ₦" + Number(c.amount).toLocaleString()) : " — Free") + "</option>";
-                        }).join("");
-                    }
-                } catch (e) {
-                    if (cards) cards.innerHTML = '<div class="col-12 text-danger text-center">Could not load courses.</div>';
-                }
-            };
-            window.academySubmitEnrol = async function (ev) {
-                ev.preventDefault();
-                var msg = document.getElementById("academy-enrol-msg");
-                var btn = document.getElementById("academy-pay-btn");
-                var courseId = document.getElementById("academy-course-select").value;
-                var courseName = document.getElementById("academy-course-search").value.trim();
-                if (!courseId && !courseName) {
-                    if (msg) msg.textContent = "Select or type a course name.";
-                    return false;
-                }
-                if (btn) { btn.disabled = true; btn.textContent = "Please wait…"; }
-                try {
-                    var r = await academyCall("academyEnrollAndPay", {
-                        courseId: courseId,
-                        courseName: courseName,
-                        fullName: document.getElementById("academy-name").value.trim(),
-                        email: document.getElementById("academy-email").value.trim(),
-                        phone: document.getElementById("academy-phone").value.trim()
-                    });
-                    if (!r || !r.success) {
-                        if (msg) msg.textContent = (r && r.message) || "Enrollment failed.";
-                        return false;
-                    }
-                    if (r.paymentLink) {
-                        if (msg) msg.textContent = "Redirecting to secure payment…";
-                        window.location.href = r.paymentLink;
-                        return false;
-                    }
-                    if (msg) msg.textContent = r.message || "Enrolled successfully.";
-                    alert(r.message || "Enrolled successfully.");
-                } catch (e) {
-                    if (msg) msg.textContent = e.message || "Network error";
-                } finally {
-                    if (btn) { btn.disabled = false; btn.textContent = "Continue to payment"; }
-                }
-                return false;
-            };
-            document.addEventListener("DOMContentLoaded", function () {
-                if (document.getElementById("academy-course-cards")) window.academyLoadCourses();
-            });
-        })();
-    </script>
-    <!-- ========== END ACADEMY ========== -->
-
-
     <!-- Footer -->
-    <div class="addfooter"></div>
+
 
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -945,13 +819,22 @@
             try {
                 showLoader();
 
+                // Keep action authoritative; put the rest under data for the bridge
+                const data = Object.assign({}, payload || {});
+                delete data.system;
+                delete data.action;
+                delete data.bridgeSecret;
                 const response = await fetch(API_BASE_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({
                         system: "assessment",
                         action: action,
-                        ...payload   // No bridgeSecret here — bridge injects it server-side
+                        data: data,
+                        // top-level copies for older gateway shapes
+                        token: data.token || undefined,
+                        email: data.email || undefined,
+                        clientId: data.clientId || undefined
                     })
                 });
 
@@ -1827,7 +1710,7 @@
             renderCourses(filtered);
         }
 
-        async function reApplyForCourse(courseId, courseName) {
+        async async function reApplyForCourse(courseId, courseName) {
             if (!confirm(`Submit a new application for "${courseName}"?\n\nThis will replace your previous application and give you 4 new attempts once approved.`)) {
                 return;
             }
@@ -1916,7 +1799,7 @@
 
 
 
-        async function applyForCourse(courseId, courseName) {
+        async async function applyForCourse(courseId, courseName) {
             if (!confirm(`Apply for assessment: "${courseName}"?\n\nAdmin will review and send payment details if required.`)) {
                 return;
             }
@@ -2538,135 +2421,140 @@
                         }).join("");
                 }
             } catch (e) {
-                cards.innerHTML = '<div class="col-12 text-center text-danger py-4">' + academyEsc(e.message || e) + '</div>';
+                var em = String(e.message || e || '');
+                if (/access denied|ingress token|unauthorized/i.test(em)) {
+                    em = 'Training catalogue could not load (server auth). Please try Refresh in a moment, or contact support.';
+                }
+                cards.innerHTML = '<div class="col-12 text-center text-danger py-4">' + academyEsc(em) + '</div>';
             }
         }
 
         function academyPickCourse(id) {
-            const sel = document.getElementById("academy-course-select");
-            if (sel) sel.value = id;
-            const search = document.getElementById("academy-course-search");
-            if (search) search.value = "";
-            const form = document.getElementById("academy-enrol-form");
-            if (form) form.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
+            function academyPickCourse(id) {
+                const sel = document.getElementById("academy-course-select");
+                if (sel) sel.value = id;
+                const search = document.getElementById("academy-course-search");
+                if (search) search.value = "";
+                const form = document.getElementById("academy-enrol-form");
+                if (form) form.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
 
-        async function academySubmitEnrol(ev) {
-            if (ev && ev.preventDefault) ev.preventDefault();
-            const msg = document.getElementById("academy-enrol-msg");
-            const btn = document.getElementById("academy-pay-btn");
-            const courseId = (document.getElementById("academy-course-select") || {}).value || "";
-            const courseName = ((document.getElementById("academy-course-search") || {}).value || "").trim();
-            if (!courseId && !courseName) {
-                if (msg) msg.textContent = "Select a course or type the course name.";
+            async function academySubmitEnrol(ev) {
+                if (ev && ev.preventDefault) ev.preventDefault();
+                const msg = document.getElementById("academy-enrol-msg");
+                const btn = document.getElementById("academy-pay-btn");
+                const courseId = (document.getElementById("academy-course-select") || {}).value || "";
+                const courseName = ((document.getElementById("academy-course-search") || {}).value || "").trim();
+                if (!courseId && !courseName) {
+                    if (msg) msg.textContent = "Select a course or type the course name.";
+                    return false;
+                }
+                if (btn) { btn.disabled = true; btn.textContent = "Please wait…"; }
+                if (msg) msg.textContent = "";
+                try {
+                    const result = await callAPI("academyEnrollAndPay", {
+                        courseId: courseId,
+                        courseName: courseName,
+                        fullName: ((document.getElementById("academy-name") || {}).value || "").trim(),
+                        email: ((document.getElementById("academy-email") || {}).value || "").trim(),
+                        phone: ((document.getElementById("academy-phone") || {}).value || "").trim()
+                    });
+                    if (!result || !result.success) {
+                        if (msg) msg.textContent = (result && result.message) || "Enrollment failed.";
+                        return false;
+                    }
+                    if (result.enrollmentId) {
+                        try { sessionStorage.setItem("academy_enr", result.enrollmentId); } catch (_) { }
+                    }
+                    if (result.paymentLink) {
+                        if (msg) msg.textContent = "Redirecting to secure payment…";
+                        window.location.href = result.paymentLink;
+                        return false;
+                    }
+                    if (msg) {
+                        msg.textContent = (result.message || "Enrolled successfully.") +
+                            (result.enrollmentId ? (" ID: " + result.enrollmentId) : "");
+                    }
+                } catch (e) {
+                    if (msg) msg.textContent = e.message || "Network error";
+                } finally {
+                    if (btn) { btn.disabled = false; btn.textContent = "Continue to payment"; }
+                }
                 return false;
             }
-            if (btn) { btn.disabled = true; btn.textContent = "Please wait…"; }
-            if (msg) msg.textContent = "";
-            try {
-                const result = await callAPI("academyEnrollAndPay", {
-                    courseId: courseId,
-                    courseName: courseName,
-                    fullName: ((document.getElementById("academy-name") || {}).value || "").trim(),
-                    email: ((document.getElementById("academy-email") || {}).value || "").trim(),
-                    phone: ((document.getElementById("academy-phone") || {}).value || "").trim()
-                });
-                if (!result || !result.success) {
-                    if (msg) msg.textContent = (result && result.message) || "Enrollment failed.";
-                    return false;
-                }
-                if (result.enrollmentId) {
-                    try { sessionStorage.setItem("academy_enr", result.enrollmentId); } catch (_) { }
-                }
-                if (result.paymentLink) {
-                    if (msg) msg.textContent = "Redirecting to secure payment…";
-                    window.location.href = result.paymentLink;
-                    return false;
-                }
-                if (msg) {
-                    msg.textContent = (result.message || "Enrolled successfully.") +
-                        (result.enrollmentId ? (" ID: " + result.enrollmentId) : "");
-                }
-            } catch (e) {
-                if (msg) msg.textContent = e.message || "Network error";
-            } finally {
-                if (btn) { btn.disabled = false; btn.textContent = "Continue to payment"; }
+
+            function academyHandlePaidReturn() {
+                try {
+                    const params = new URLSearchParams(location.search);
+                    if (params.get("paid") !== "1") return;
+                    const banner = document.getElementById("academy-paid-banner");
+                    if (banner) banner.classList.remove("d-none");
+                    let enr = params.get("enr") || "";
+                    try { if (!enr) enr = sessionStorage.getItem("academy_enr") || ""; } catch (_) { }
+                    const line = document.getElementById("academy-enr-line");
+                    if (line && enr) line.textContent = "Enrollment ID: " + enr;
+                    if (enr) {
+                        callAPI("academyConfirmPayment", { enrollmentId: enr }).catch(function () { });
+                    }
+                    scrollToAcademy();
+                } catch (_) { }
             }
-            return false;
-        }
-
-        function academyHandlePaidReturn() {
-            try {
-                const params = new URLSearchParams(location.search);
-                if (params.get("paid") !== "1") return;
-                const banner = document.getElementById("academy-paid-banner");
-                if (banner) banner.classList.remove("d-none");
-                let enr = params.get("enr") || "";
-                try { if (!enr) enr = sessionStorage.getItem("academy_enr") || ""; } catch (_) { }
-                const line = document.getElementById("academy-enr-line");
-                if (line && enr) line.textContent = "Enrollment ID: " + enr;
-                if (enr) {
-                    callAPI("academyConfirmPayment", { enrollmentId: enr }).catch(function () { });
-                }
-                scrollToAcademy();
-            } catch (_) { }
-        }
 
 
-        // ==================== GLOBAL WINDOW EXPORTS FOR ONCLICK HANDLERS ====================
-        window.scrollToAcademy = scrollToAcademy;
-        window.academyLoadCourses = academyLoadCourses;
-        window.academyPickCourse = academyPickCourse;
-        window.academySubmitEnrol = academySubmitEnrol;
-        window.applyForCertificateClient = applyForCertificateClient;
-        window.applyForAssessmentClient = applyForAssessmentClient;
-        window.requestCertificate = requestCertificate;
-        window.applyForCourse = applyForCourse;
-        window.reApplyForCourse = reApplyForCourse;
-        window.showLoginModal = () => loginModal.show();
-        // Correct Register Modal Handler
-        window.showRegisterModal = () => {
-            const regModal = new bootstrap.Modal(document.getElementById('registerModal'));
-            regModal.show();
-        };
-        window.showVerifyCertificateModal = () => {
-            const verifyModal = new bootstrap.Modal(document.getElementById('verifyCertModal'));
-            document.getElementById('certIdModal').value = '';
-            document.getElementById('verifyResultModal').innerHTML = '';
-            verifyModal.show();
-        };
-
-        // FIXED: Show Register from Login
-        window.showRegisterFromLogin = () => {
-            if (loginModal) loginModal.hide();
-
-            setTimeout(() => {
+            // ==================== GLOBAL WINDOW EXPORTS FOR ONCLICK HANDLERS ====================
+            window.scrollToAcademy = scrollToAcademy;
+            window.academyLoadCourses = academyLoadCourses;
+            window.academyPickCourse = academyPickCourse;
+            window.academySubmitEnrol = academySubmitEnrol;
+            window.applyForCertificateClient = applyForCertificateClient;
+            window.applyForAssessmentClient = applyForAssessmentClient;
+            window.requestCertificate = requestCertificate;
+            window.applyForCourse = applyForCourse;
+            window.reApplyForCourse = reApplyForCourse;
+            window.showLoginModal = () => loginModal.show();
+            // Correct Register Modal Handler
+            window.showRegisterModal = () => {
                 const regModal = new bootstrap.Modal(document.getElementById('registerModal'));
                 regModal.show();
-            }, 300);
-        };
+            };
+            window.showVerifyCertificateModal = () => {
+                const verifyModal = new bootstrap.Modal(document.getElementById('verifyCertModal'));
+                document.getElementById('certIdModal').value = '';
+                document.getElementById('verifyResultModal').innerHTML = '';
+                verifyModal.show();
+            };
 
-        // Show Login Modal from Register Modal (when user clicks "Already have an account? Login")
+            // FIXED: Show Register from Login
+            window.showRegisterFromLogin = () => {
+                if (loginModal) loginModal.hide();
 
-        window.logout = logout;
-        window.switchTab = switchTab;
-        window.startTest = startTest;
-        window.nextQuestion = nextQuestion;
-        window.prevQuestion = prevQuestion;
-        window.submitTestEarly = submitTestEarly;
-        window.selectAnswer = selectAnswer;
-        window.saveNote = saveNote;
-        window.showMessagesModal = showMessagesModal;
-        window.showProfileModal = showProfileModal;
-        window.saveProfile = saveProfile;
-        window.viewReview = viewReview;
-        window.handleRegister = handleRegister;
-        window.completeRegistration = completeRegistration;
-        window.handleLogin = handleLogin;
-        window.showRegisterModal = () => {
-            const regModal = new bootstrap.Modal(document.getElementById('registerModal'));
-            regModal.show();
-        };
+                setTimeout(() => {
+                    const regModal = new bootstrap.Modal(document.getElementById('registerModal'));
+                    regModal.show();
+                }, 300);
+            };
+
+            // Show Login Modal from Register Modal (when user clicks "Already have an account? Login")
+
+            window.logout = logout;
+            window.switchTab = switchTab;
+            window.startTest = startTest;
+            window.nextQuestion = nextQuestion;
+            window.prevQuestion = prevQuestion;
+            window.submitTestEarly = submitTestEarly;
+            window.selectAnswer = selectAnswer;
+            window.saveNote = saveNote;
+            window.showMessagesModal = showMessagesModal;
+            window.showProfileModal = showProfileModal;
+            window.saveProfile = saveProfile;
+            window.viewReview = viewReview;
+            window.handleRegister = handleRegister;
+            window.completeRegistration = completeRegistration;
+            window.handleLogin = handleLogin;
+            window.showRegisterModal = () => {
+                const regModal = new bootstrap.Modal(document.getElementById('registerModal'));
+                regModal.show();
+            };
     </script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -2677,11 +2565,6 @@
     <script src="lib/lightbox/js/lightbox.min.js"></script>
     <script src="lib/owlcarousel/owl.carousel.min.js"></script>
     <script src="js/main.js"></script>
-    <script type="module" src="js/social.js"></script>
-    <script type="module" src="js/policies.js"></script>
-    <script type="module" src="js/footer.js"></script>
-
-
 </body>
 
 </html>
