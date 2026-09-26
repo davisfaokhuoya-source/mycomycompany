@@ -285,7 +285,7 @@
                             </div>
                         </div>
                         <div class="col-md-6 col-xl-4">
-                            <div onclick="scrollToAcademy()" class="academic-card">
+                            <div onclick="showEnrolModal()" class="academic-card">
                                 <div class="display-5 mb-3">🎓</div>
                                 <h3 class="h5 fw-bold">Training Courses</h3>
                                 <p class="small text-muted mb-2">Register and pay for live training</p>
@@ -369,47 +369,15 @@
             <div class="col-12 text-center text-muted py-4">Loading courses…</div>
         </div>
         <div class="row justify-content-center">
-            <div class="col-lg-7">
-                <div class="academic-card shadow-sm border"
-                    style="cursor: default; border-color: rgba(224,116,16,0.35) !important;">
-                    <div class="d-flex align-items-center gap-2 mb-2">
-                        <span class="badge rounded-pill"
-                            style="background:rgba(224,116,16,0.12);color:var(--brand-color);">Course
-                            registration</span>
-                    </div>
-                    <h3 class="h5 fw-bold mb-1">Register for training</h3>
-                    <p class="small text-muted mb-4">Choose a course below, then complete payment on Flutterwave when
-                        required. No portal login needed.</p>
-                    <form id="academy-enrol-form" onsubmit="return academySubmitEnrol(event)">
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Course</label>
-                            <select id="academy-course-select" class="form-control" required>
-                                <option value="">Select a course…</option>
-                            </select>
-                            <input type="text" id="academy-course-search" class="form-control mt-2"
-                                placeholder="Or type the course name">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Full name</label>
-                            <input type="text" id="academy-name" class="form-control" required autocomplete="name">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Email</label>
-                            <input type="email" id="academy-email" class="form-control" required autocomplete="email">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Phone (WhatsApp preferred)</label>
-                            <input type="tel" id="academy-phone" class="form-control" required autocomplete="tel"
-                                placeholder="+234…">
-                        </div>
-                        <button type="submit" class="btn btn-brand w-100 py-3" id="academy-pay-btn">Continue to
-                            payment</button>
-                        <p class="small text-muted text-center mt-3 mb-0" id="academy-enrol-msg"></p>
-                    </form>
-                    <div id="academy-paid-banner" class="alert alert-success mt-3 d-none">
-                        <strong>Thank you.</strong> If you completed payment, we will confirm by email shortly.
-                        <span id="academy-enr-line" class="d-block mt-1 small"></span>
-                    </div>
+            <div class="col-lg-6 text-center">
+                <p class="text-muted small mb-3">Tap a course above or open registration when you are ready. The form
+                    only appears when you ask for it.</p>
+                <button type="button" class="btn btn-brand px-5 py-3 fw-bold" onclick="showEnrolModal()">
+                    Register for a course
+                </button>
+                <div id="academy-paid-banner" class="alert alert-success mt-3 d-none text-start">
+                    <strong>Thank you.</strong> If you completed payment, we will confirm by email shortly.
+                    <span id="academy-enr-line" class="d-block mt-1 small"></span>
                 </div>
             </div>
         </div>
@@ -555,6 +523,49 @@
         </div>
     </div>
 
+
+
+    <!-- Course registration modal (same pattern as Login) -->
+    <div class="modal fade" id="enrolModal" tabindex="-1" aria-labelledby="enrolModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header border-0">
+                    <h2 class="fw-bold h4 mb-0" id="enrolModalTitle">Course registration</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-4">
+                    <p class="small text-muted mb-3">Choose a course, then complete payment on Flutterwave when
+                        required. No portal login needed.</p>
+                    <form id="academy-enrol-form" onsubmit="return academySubmitEnrol(event)">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Course</label>
+                            <select id="academy-course-select" class="form-control" required>
+                                <option value="">Select a course…</option>
+                            </select>
+                            <input type="text" id="academy-course-search" class="form-control mt-2"
+                                placeholder="Or type the course name">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Full name</label>
+                            <input type="text" id="academy-name" class="form-control" required autocomplete="name">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Email</label>
+                            <input type="email" id="academy-email" class="form-control" required autocomplete="email">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Phone (WhatsApp preferred)</label>
+                            <input type="tel" id="academy-phone" class="form-control" required autocomplete="tel"
+                                placeholder="+234…">
+                        </div>
+                        <button type="submit" class="btn btn-brand w-100 py-3" id="academy-pay-btn">Continue to
+                            payment</button>
+                        <p class="small text-muted text-center mt-3 mb-0" id="academy-enrol-msg"></p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="modal fade" id="loginModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
@@ -1728,7 +1739,7 @@
             renderCourses(filtered);
         }
 
-        async async function reApplyForCourse(courseId, courseName) {
+        async function reApplyForCourse(courseId, courseName) {
             if (!confirm(`Submit a new application for "${courseName}"?\n\nThis will replace your previous application and give you 4 new attempts once approved.`)) {
                 return;
             }
@@ -1817,7 +1828,7 @@
 
 
 
-        async async function applyForCourse(courseId, courseName) {
+        async function applyForCourse(courseId, courseName) {
             if (!confirm(`Apply for assessment: "${courseName}"?\n\nAdmin will review and send payment details if required.`)) {
                 return;
             }
@@ -2447,198 +2458,78 @@
             }
         }
 
+
+        let enrolModalInst = null;
+        window.showEnrolModal = function () {
+            try {
+                if (typeof academyLoadCourses === "function") {
+                    try { academyLoadCourses(); } catch (_) { }
+                }
+                var el = document.getElementById("enrolModal");
+                if (!el) {
+                    try { scrollToAcademy(); } catch (_) { }
+                    return;
+                }
+                if (window.bootstrap && bootstrap.Modal) {
+                    enrolModalInst = bootstrap.Modal.getOrCreateInstance(el);
+                    enrolModalInst.show();
+                } else {
+                    el.style.display = "block";
+                    el.classList.add("show");
+                }
+            } catch (e) { console.warn("showEnrolModal", e); }
+        };
+
+        window.showLoginModal = function () {
+            try {
+                var el = document.getElementById("loginModal");
+                if (!el || !window.bootstrap) return;
+                bootstrap.Modal.getOrCreateInstance(el).show();
+            } catch (e) { console.warn(e); }
+        };
+
+        window.showRegisterModal = function () {
+            try {
+                var el = document.getElementById("registerModal");
+                if (!el || !window.bootstrap) return;
+                bootstrap.Modal.getOrCreateInstance(el).show();
+            } catch (e) { console.warn(e); }
+        };
+
+        window.showVerifyCertificateModal = function () {
+            try {
+                var el = document.getElementById("verifyCertModal");
+                if (!el || !window.bootstrap) return;
+                var idEl = document.getElementById("certIdModal");
+                var resEl = document.getElementById("verifyResultModal");
+                if (idEl) idEl.value = "";
+                if (resEl) resEl.innerHTML = "";
+                bootstrap.Modal.getOrCreateInstance(el).show();
+            } catch (e) { console.warn(e); }
+        };
+
         function academyPickCourse(id) {
-            function academyPickCourse(id) {
-                const sel = document.getElementById("academy-course-select");
-                if (sel) sel.value = id;
-                const search = document.getElementById("academy-course-search");
-                if (search) search.value = "";
-                const form = document.getElementById("academy-enrol-form");
-                if (form) form.scrollIntoView({ behavior: "smooth", block: "center" });
-            }
-
-            async function academySubmitEnrol(ev) {
-                if (ev && ev.preventDefault) ev.preventDefault();
-                const msg = document.getElementById("academy-enrol-msg");
-                const btn = document.getElementById("academy-pay-btn");
-                const courseId = (document.getElementById("academy-course-select") || {}).value || "";
-                const courseName = ((document.getElementById("academy-course-search") || {}).value || "").trim();
-                if (!courseId && !courseName) {
-                    if (msg) msg.textContent = "Select a course or type the course name.";
-                    return false;
-                }
-                if (btn) { btn.disabled = true; btn.textContent = "Please wait…"; }
-                if (msg) msg.textContent = "";
-                try {
-                    const result = await callAPI("academyEnrollAndPay", {
-                        courseId: courseId,
-                        courseName: courseName,
-                        fullName: ((document.getElementById("academy-name") || {}).value || "").trim(),
-                        email: ((document.getElementById("academy-email") || {}).value || "").trim(),
-                        phone: ((document.getElementById("academy-phone") || {}).value || "").trim()
-                    });
-                    if (!result || !result.success) {
-                        if (msg) msg.textContent = (result && result.message) || "Enrollment failed.";
-                        return false;
-                    }
-                    if (result.enrollmentId) {
-                        try { sessionStorage.setItem("academy_enr", result.enrollmentId); } catch (_) { }
-                    }
-                    if (result.paymentLink) {
-                        if (msg) msg.textContent = "Redirecting to secure payment…";
-                        window.location.href = result.paymentLink;
-                        return false;
-                    }
-                    if (msg) {
-                        msg.textContent = (result.message || "Enrolled successfully.") +
-                            (result.enrollmentId ? (" ID: " + result.enrollmentId) : "");
-                    }
-                } catch (e) {
-                    if (msg) msg.textContent = e.message || "Network error";
-                } finally {
-                    if (btn) { btn.disabled = false; btn.textContent = "Continue to payment"; }
-                }
-                return false;
-            }
-
-            function academyHandlePaidReturn() {
-                try {
-                    const params = new URLSearchParams(location.search);
-                    if (params.get("paid") !== "1") return;
-                    const banner = document.getElementById("academy-paid-banner");
-                    if (banner) banner.classList.remove("d-none");
-                    let enr = params.get("enr") || "";
-                    try { if (!enr) enr = sessionStorage.getItem("academy_enr") || ""; } catch (_) { }
-                    const line = document.getElementById("academy-enr-line");
-                    if (line && enr) line.textContent = "Enrollment ID: " + enr;
-                    if (enr) {
-                        callAPI("academyConfirmPayment", { enrollmentId: enr }).catch(function () { });
-                    }
-                    scrollToAcademy();
-                } catch (_) { }
-            }
-
-
-            // ==================== GLOBAL WINDOW EXPORTS FOR ONCLICK HANDLERS ====================
-            window.scrollToAcademy = scrollToAcademy;
-            window.academyLoadCourses = academyLoadCourses;
-            window.academyPickCourse = academyPickCourse;
-            window.academySubmitEnrol = academySubmitEnrol;
-            window.applyForCertificateClient = applyForCertificateClient;
-            window.applyForAssessmentClient = applyForAssessmentClient;
-            window.requestCertificate = requestCertificate;
-            window.applyForCourse = applyForCourse;
-            window.reApplyForCourse = reApplyForCourse;
-            window.showLoginModal = () => {
-                try {
-                    if (!loginModal && window.bootstrap && document.getElementById('loginModal')) {
-                        loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-                    }
-                    if (loginModal) loginModal.show();
-                } catch (e) { console.warn(e); }
-            };
-            // Correct Register Modal Handler
-            window.showRegisterModal = () => {
-                const regModal = new bootstrap.Modal(document.getElementById('registerModal'));
-                regModal.show();
-            };
-            window.showVerifyCertificateModal = () => {
-                const verifyModal = new bootstrap.Modal(document.getElementById('verifyCertModal'));
-                document.getElementById('certIdModal').value = '';
-                document.getElementById('verifyResultModal').innerHTML = '';
-                verifyModal.show();
-            };
-
-            // FIXED: Show Register from Login
-            window.showRegisterFromLogin = () => {
-                if (loginModal) loginModal.hide();
-
-                setTimeout(() => {
-                    const regModal = new bootstrap.Modal(document.getElementById('registerModal'));
-                    regModal.show();
-                }, 300);
-            };
-
-            // Show Login Modal from Register Modal (when user clicks "Already have an account? Login")
-
-            window.logout = logout;
-            window.switchTab = switchTab;
-            window.startTest = startTest;
-            window.nextQuestion = nextQuestion;
-            window.prevQuestion = prevQuestion;
-            window.submitTestEarly = submitTestEarly;
-            window.selectAnswer = selectAnswer;
-            window.saveNote = saveNote;
-            window.showMessagesModal = showMessagesModal;
-            window.showProfileModal = showProfileModal;
-            window.saveProfile = saveProfile;
-            window.viewReview = viewReview;
-            window.handleRegister = handleRegister;
-            window.completeRegistration = completeRegistration;
-            window.handleLogin = handleLogin;
-            window.showRegisterModal = () => {
-                const regModal = new bootstrap.Modal(document.getElementById('registerModal'));
-                regModal.show();
-            };
+            const sel = document.getElementById("academy-course-select");
+            if (sel) sel.value = id;
+            const search = document.getElementById("academy-course-search");
+            if (search) search.value = "";
+            try { if (typeof showEnrolModal === "function") showEnrolModal(); } catch (_) { }
+        }
     </script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Optional site libs — ignored if missing (local preview safe) -->
-    <script src="lib/wow/wow.min.js" onerror="this.remove()"></script>
-    <script src="lib/easing/easing.min.js" onerror="this.remove()"></script>
-    <script src="lib/waypoints/waypoints.min.js" onerror="this.remove()"></script>
-    <script src="lib/counterup/counterup.min.js" onerror="this.remove()"></script>
-    <script src="lib/lightbox/js/lightbox.min.js" onerror="this.remove()"></script>
-    <script src="lib/owlcarousel/owl.carousel.min.js" onerror="this.remove()"></script>
-    <script src="js/main.js" onerror="this.remove()"></script>
 
-
-
-
-
-
-    <!-- Site footer -->
-    <footer class="mt-5 pt-5 pb-4" style="background:#0f172a;color:#94a3b8;">
+    <footer class="mt-5 pt-4 pb-4" style="background:#0f172a;color:#94a3b8;">
         <div class="container">
-            <div class="row g-4">
-                <div class="col-md-5">
-                    <h5 class="text-white fw-bold mb-3">The Victorias Ltd</h5>
-                    <p class="small mb-2">Operations, compliance, digital services and professional training for teams
-                        in Nigeria and beyond.</p>
-                    <p class="small mb-0">Abuja, Nigeria</p>
-                </div>
-                <div class="col-6 col-md-3">
-                    <h6 class="text-white text-uppercase small fw-bold mb-3">Explore</h6>
-                    <ul class="list-unstyled small mb-0">
-                        <li class="mb-2"><a class="text-decoration-none text-secondary"
-                                href="https://thevictorias.com.ng">Home</a></li>
-                        <li class="mb-2"><a class="text-decoration-none text-secondary"
-                                href="https://thevictorias.com.ng/about">About</a></li>
-                        <li class="mb-2"><a class="text-decoration-none text-secondary"
-                                href="#academy-section">Training</a></li>
-                        <li class="mb-2"><a class="text-decoration-none text-secondary"
-                                href="#how-it-works">Assessments</a></li>
-                        <li class="mb-2"><a class="text-decoration-none text-secondary"
-                                href="https://thevictorias.com.ng/policies">Policies</a></li>
-                    </ul>
-                </div>
-                <div class="col-6 col-md-4">
-                    <h6 class="text-white text-uppercase small fw-bold mb-3">Contact</h6>
-                    <ul class="list-unstyled small mb-0">
-                        <li class="mb-2"><a class="text-decoration-none text-secondary"
-                                href="mailto:management@thevictorias.com.ng">management@thevictorias.com.ng</a></li>
-                        <li class="mb-2"><a class="text-decoration-none text-secondary"
-                                href="https://wa.me/2348055538518">WhatsApp +234 805 553 8518</a></li>
-                        <li class="mb-2"><a class="text-decoration-none text-secondary"
-                                href="https://thevictorias.com.ng/client-dashboard">Client dashboard</a></li>
-                    </ul>
-                </div>
+            <div class="d-flex flex-wrap justify-content-center gap-3 gap-md-4 small">
+                <a href="#" class="text-decoration-none text-secondary"
+                    onclick="showRegisterModal(); return false;">Assessment registration</a>
+                <a href="#" class="text-decoration-none text-secondary" onclick="showLoginModal(); return false;">Login
+                    to Portal</a>
+                <a href="#" class="text-decoration-none text-secondary"
+                    onclick="showVerifyCertificateModal(); return false;">Verify Certificate</a>
+                <a href="#academy-section" class="text-decoration-none text-secondary"
+                    onclick="showEnrolModal(); return false;">Training Courses</a>
             </div>
-            <hr class="border-secondary my-4 opacity-25">
-            <div class="d-flex flex-wrap justify-content-between gap-2 small">
-                <span>© 2026 The Victorias Ltd. All rights reserved.</span>
-                <span>Academy &amp; Assessment Portal</span>
-            </div>
+            <p class="text-center text-secondary small mt-3 mb-0">The Victorias Academy</p>
         </div>
     </footer>
 

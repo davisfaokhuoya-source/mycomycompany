@@ -2924,10 +2924,10 @@
                                     Connect email
                                 </button>
                             </div>
-                            <p id="mailboxSelfServiceHint" class="text-[11px] text-slate-500">Self-service: connect
-                                <strong class="text-slate-300">one new email per calendar month</strong> while your plan
-                                is
-                                active. Locked if subscription expired. Extra mailboxes: contact admin or buy quota.</p>
+                            <p id="mailboxSelfServiceHint" class="text-[11px] text-slate-500">Connect any Gmail or
+                                Microsoft inbox while your plan is active. Use <strong class="text-slate-300">Change
+                                    email</strong> on a mailbox to switch the address (reconnect OAuth). No monthly
+                                connect limit.</p>
                             <div id="mailboxConnectForm" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
                                 <div>
                                     <label class="text-[10px] text-slate-500">Email address</label>
@@ -10045,18 +10045,7 @@
                         try { if (typeof goBillingUpgrade === "function") { /* soft hint */ } } catch (_) { }
                         return;
                     }
-                    // Once per calendar month (client-side guard; server should enforce too)
-                    var key = "vic_mailbox_self_connect_" + (sid() || "x");
-                    var last = "";
-                    try { last = localStorage.getItem(key) || ""; } catch (_) { }
-                    if (last) {
-                        var d = new Date(last);
-                        var now = new Date();
-                        if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) {
-                            toast("Self-service email connect is limited to once per calendar month. Contact admin for extra mailboxes.", true);
-                            return;
-                        }
-                    }
+                    // // Monthly connect limit removed — clients may add/change freely.
                     var form = document.getElementById("mailboxConnectForm");
                     if (form) form.classList.remove("hidden");
                 } catch (e) {
@@ -10086,9 +10075,7 @@
                         });
                     }
                     if (res && res.success === false) throw new Error(res.message || "Connect failed");
-                    try {
-                        localStorage.setItem("vic_mailbox_self_connect_" + (sid() || "x"), new Date().toISOString());
-                    } catch (_) { }
+                    // (no monthly connect stamp)
                     var url = res && (res.authUrl || res.url || res.oauthUrl);
                     if (url) {
                         toast(res.message || "Complete sign-in in the popup to finish connecting.");
@@ -10107,6 +10094,30 @@
             };
 
 
+
+            window.clientChangeMailboxEmail = async function (mailboxId, currentEmail, provider) {
+                var form = document.getElementById("mailboxConnectForm");
+                if (form) form.classList.remove("hidden");
+                var em = document.getElementById("mailboxConnectEmail");
+                if (em) {
+                    em.value = "";
+                    em.placeholder = currentEmail ? ("New address (was " + currentEmail + ")") : "you@company.com";
+                    try { em.focus(); } catch (_) { }
+                }
+                var prov = document.getElementById("mailboxConnectProvider");
+                if (prov && provider) {
+                    var p = String(provider).toLowerCase();
+                    if (p.indexOf("micro") >= 0 || p.indexOf("outlook") >= 0) prov.value = "microsoft";
+                    else if (p.indexOf("custom") >= 0 || p.indexOf("imap") >= 0) prov.value = "custom";
+                    else prov.value = "gmail";
+                }
+                // Changing email = new connect (or reconnect). Prefer reconnect if same mailboxId after user submits new email via connect form.
+                try {
+                    sessionStorage.setItem("vic_change_mailbox_id", mailboxId || "");
+                } catch (_) { }
+                if (typeof toast === "function") toast("Enter the new email, then Connect. We will open sign-in for that account.");
+                else if (typeof notifyUser === "function") notifyUser("Enter the new email, then Connect.", "info");
+            };
 
             window.clientReconnectMailbox = async function (mailboxId, email) {
                 try {
@@ -10447,19 +10458,22 @@
             // Mailboxes
             if (mbList) {
                 if (!data.mailboxes.length) {
-                    mbList.innerHTML = '<p class="text-slate-600">No mailboxes connected yet. Use Connect email (1× per month on an active plan).</p>';
+                    mbList.innerHTML = '<p class="text-slate-600">No mailboxes connected yet. Use Connect email to link Gmail or Outlook.</p>';
                 } else {
                     mbList.innerHTML = data.mailboxes.map(function (m) {
-                        var email = m.email || m.EmailAddress || m.address || "";
-                        var label = m.label || m.Label || email;
+                        var email = m.emailAddress || m.email || m.EmailAddress || m.address || "";
+                        var label = m.label || m.Label || email || "Mailbox";
                         var status = m.status || m.Status || "Connected";
                         var id = m.mailboxId || m.MailboxID || m.id || "";
+                        var prov = m.provider || m.Provider || "";
                         return row(
                             '<span class="text-slate-200 font-medium">' + esc(label) + '</span>' +
-                            '<span class="text-slate-500 ml-2 text-[11px]">' + esc(email) + '</span>' +
-                            '<span class="text-[10px] text-emerald-400/80 ml-2">' + esc(status) + '</span>',
+                            (prov ? '<span class="text-[10px] text-slate-500 ml-2">' + esc(prov) + '</span>' : '') +
+                            '<span class="text-[10px] text-emerald-400/80 ml-2">' + esc(status) + '</span>' +
+                            (email ? ('<div class="text-sky-300/90 text-[11px] font-mono mt-0.5">' + esc(email) + '</div>') : '<div class="text-amber-400 text-[11px] mt-0.5">No email on file — use Change email</div>'),
+                            '<button type="button" class="text-[10px] px-2 py-1 bg-sky-900/80 hover:bg-sky-800 rounded text-sky-100" onclick="clientChangeMailboxEmail(\'' + esc(id) + '\',\'' + esc(email) + '\',\'' + esc(prov) + '\')">Change email</button>' +
                             '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-300" onclick="clientReconnectMailbox(\'' + esc(id) + '\',\'' + esc(email) + '\')">Reconnect</button>' +
-                            '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientRequestMailboxDisconnect(\'' + esc(id) + '\')">Remove</button>'
+                            '<button type="button" class="text-[10px] px-2 py-1 bg-slate-800 rounded text-slate-400" onclick="clientDisconnectMailbox(\'' + esc(id) + '\')">Remove</button>'
                         );
                     }).join("");
                 }

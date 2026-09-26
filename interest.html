@@ -430,7 +430,7 @@
     <div class="topbar">
         <a class="brand" href="https://www.thevictorias.com.ng" style="text-decoration:none;color:#fff;">THE VICTORIAS
             <span>LTD</span></a>
-        <a href="https://www.thevictorias.com.ng" rel="noopener">← Back to homepage</a>
+        <a href="client-dashboard.html" rel="noopener">Already a client? Sign in</a>
     </div>
 
     <div class="wrap">
@@ -525,6 +525,38 @@
                         </div>
                     </div>
                     <div class="field full">
+                        <label>Choose packages (optional — you can pay now or join the list)</label>
+                        <div class="grid" style="margin-top:8px">
+                            <div>
+                                <label>Ops suite</label>
+                                <select name="opsTier" id="opsTier">
+                                    <option value="">— None yet —</option>
+                                    <option value="ops_lite">Ops Lite</option>
+                                    <option value="ops_grow">Ops Grow</option>
+                                    <option value="ops_firm">Ops Firm</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Digital suite</label>
+                                <select name="digitalTier" id="digitalTier">
+                                    <option value="">— None yet —</option>
+                                    <option value="digital_start">Digital Start</option>
+                                    <option value="digital_steady">Digital Steady</option>
+                                    <option value="digital_push">Digital Push</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="services" style="margin-top:12px">
+                            <label class="chip"><input type="radio" name="intent" value="waitlist" checked /> Join
+                                waitlist only</label>
+                            <label class="chip"><input type="radio" name="intent" value="pay" /> Select packages &amp;
+                                proceed to payment</label>
+                        </div>
+                        <p class="note" style="margin-top:8px">Payment opens a secure Flutterwave checkout when
+                            available. If checkout is not ready, we still save your selection and contact you within 48
+                            hours.</p>
+                    </div>
+                    <div class="field full">
                         <label>What do you need help with?</label>
                         <textarea name="message"
                             placeholder="Briefly describe your priorities, timelines, or pain points."></textarea>
@@ -558,7 +590,8 @@
 
                 <div class="actions">
                     <button type="submit" class="submit" id="submitBtn">Submit interest</button>
-                    <p class="note">We’ll only use this to respond about The Victorias services. No spam.</p>
+                    <p class="note">We’ll only use this to respond about The Victorias services. No spam. Prefer to
+                        start paid? Choose “proceed to payment” above, pick Ops/Digital, then submit.</p>
                 </div>
                 <div class="msg" id="formMsg" role="status"></div>
             </form>
@@ -567,18 +600,24 @@
                 <h2>Thank you — you’re on our list</h2>
                 <p id="successDetail">We’ve received your interest. Our team reviews applications regularly and will
                     contact you when we’re ready to onboard the next companies.</p>
-                <p style="margin-top:20px;">
-                    <a href="https://www.thevictorias.com.ng"
+                <p style="margin-top:20px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
+                    <a href="client-dashboard.html"
                         style="display:inline-block;background:var(--primary);color:#fff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px;">
-                        Go to homepage
+                        Go to client sign in
+                    </a>
+                    <a href="https://www.thevictorias.com.ng"
+                        style="display:inline-block;background:transparent;color:var(--dark);border:1px solid var(--border);text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px;">
+                        Homepage
                     </a>
                 </p>
             </div>
         </div>
 
         <p class="foot">
-            <a href="https://www.thevictorias.com.ng"
-                style="color:var(--primary);text-decoration:none;font-weight:600;">← Back to homepage</a>
+            <a href="client-dashboard.html" style="color:var(--primary);text-decoration:none;font-weight:600;">Already a
+                client? Sign in to the portal</a>
+            <br /><br />
+            <a href="https://www.thevictorias.com.ng" style="color:var(--muted);text-decoration:none;">← Homepage</a>
             <br /><br />
             The Victorias Ltd · Business registration · Compliance · Growth
         </p>
@@ -586,7 +625,7 @@
 
     <script>
         // Point this at your Cloudflare Worker (same origin as the rest of the API).
-        const API_URL = "https://app.thevictorias.com.ng";
+        const API_URL = "https://api.thevictorias.com.ng";
 
         const form = document.getElementById("interestForm");
         const msg = document.getElementById("formMsg");
@@ -607,6 +646,14 @@
             }
 
             const services = fd.getAll("services");
+            const intent = (fd.get("intent") || "waitlist").trim();
+            const opsTier = (fd.get("opsTier") || "").trim();
+            const digitalTier = (fd.get("digitalTier") || "").trim();
+            if (intent === "pay" && !opsTier && !digitalTier) {
+                msg.className = "msg err";
+                msg.textContent = "Pick at least one Ops or Digital package to proceed to payment, or choose Join waitlist only.";
+                return;
+            }
             const payload = {
                 system: "agent",
                 action: "agent-submit-interest-application",
@@ -622,7 +669,11 @@
                 servicesInterest: services,
                 message: (fd.get("message") || "").trim(),
                 source: (fd.get("source") || "").trim(),
-                preferredContact: (fd.get("preferredContact") || "").trim()
+                preferredContact: (fd.get("preferredContact") || "").trim(),
+                intent: intent,
+                payNow: intent === "pay",
+                opsTier: opsTier,
+                digitalTier: digitalTier
             };
 
             if (!payload.companyName || !payload.contactName || !payload.contactEmail || !payload.phone || !payload.country) {
@@ -632,7 +683,7 @@
             }
 
             btn.disabled = true;
-            btn.textContent = "Submitting…";
+            btn.textContent = intent === "pay" ? "Starting payment…" : "Submitting…";
             try {
                 const res = await fetch(API_URL, {
                     method: "POST",
@@ -641,10 +692,20 @@
                 });
                 const data = await res.json().catch(function () { return {}; });
                 if (data && data.success) {
+                    if (data.paymentLink) {
+                        msg.className = "msg";
+                        msg.textContent = "Redirecting to secure payment…";
+                        window.location.href = data.paymentLink;
+                        return;
+                    }
                     form.style.display = "none";
                     success.classList.add("show");
-                    if (data.reference) {
-                        document.getElementById("successDetail").textContent =
+                    var detail = document.getElementById("successDetail");
+                    if (data.payNow && !data.paymentLink) {
+                        detail.textContent = (data.reference ? ("Reference " + data.reference + ". ") : "") +
+                            "We saved your package selection. Our team will send a payment link within 48 hours if checkout did not open.";
+                    } else if (data.reference) {
+                        detail.textContent =
                             "Reference " + data.reference + ". We’ve received your interest and will be in touch when capacity opens.";
                     }
                 } else {
