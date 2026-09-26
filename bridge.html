@@ -1122,6 +1122,8 @@
                         Desks</button>
                     <button class="assessment-subview-link" data-target-view="assessment-applications">Applications
                         Portal</button>
+                    <button class="assessment-subview-link" data-target-view="assessment-academy">Academy Enrollments
+                        &amp; Training</button>
                 </div>
 
                 <!-- Assessment Views Container -->
@@ -1457,7 +1459,66 @@
             <!-- ================================================================
            HUB: CLIENT SERVICE CENTER
       ================================================================= -->
-            <section id="hub-client" class="hidden flex-1 flex overflow-hidden">
+            <section <!-- VIEW: Academy Enrollments -->
+                <div id="view-assessment-academy"
+                    class="assessment-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                    <div class="flex flex-wrap justify-between items-center gap-3 shrink-0">
+                        <div>
+                            <h3 class="text-lg font-bold text-white">Academy Enrollments</h3>
+                            <p class="text-xs text-slate-400">Training registrations, payment status, and training
+                                links.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="academyAdminRefresh()"
+                                class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-white">Refresh</button>
+                            <button type="button" onclick="academyAdminEnsureSheets()"
+                                class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-slate-200">Ensure
+                                sheets</button>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2 items-end shrink-0">
+                        <div>
+                            <label class="text-[10px] text-slate-500 uppercase">Set training link</label>
+                            <input id="academyTrainingLink" type="url" placeholder="https://meet.google.com/..."
+                                class="block mt-1 px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white w-72" />
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-slate-500 uppercase">Course ID (optional)</label>
+                            <input id="academyLinkCourseId" type="text" placeholder="CRS-..."
+                                class="block mt-1 px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white w-40" />
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-slate-500 uppercase">Enrollment ID (optional)</label>
+                            <input id="academyLinkEnrId" type="text" placeholder="ENR-..."
+                                class="block mt-1 px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white w-40" />
+                        </div>
+                        <button type="button" onclick="academyAdminSetLink()"
+                            class="px-3 py-2 rounded-lg bg-amber-700 hover:bg-amber-600 text-sm text-white">Save link
+                            &amp; notify</button>
+                    </div>
+                    <div class="flex-1 overflow-auto rounded-xl border border-slate-800">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-900 text-slate-400 text-xs uppercase sticky top-0">
+                                <tr>
+                                    <th class="p-3">Enrollment</th>
+                                    <th class="p-3">Course</th>
+                                    <th class="p-3">Student</th>
+                                    <th class="p-3">Status</th>
+                                    <th class="p-3">Amount</th>
+                                    <th class="p-3">Link</th>
+                                    <th class="p-3">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="academyEnrollmentsBody" class="text-slate-300 divide-y divide-slate-800">
+                                <tr>
+                                    <td colspan="7" class="p-4 text-slate-500">Open this tab and click Refresh.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                id="hub-client" class="hidden flex-1 flex overflow-hidden">
                 <div
                     class="w-56 bg-slate-950/40 border-r border-slate-800/60 flex flex-col shrink-0 px-2 py-4 space-y-1">
                     <span
@@ -5351,7 +5412,8 @@
                             </label>
                             <p class="text-[10px] text-slate-500 md:col-span-2 self-center">Offshore clients are billed
                                 from USD list prices × the FX rate above. Local clients use NGN list prices. Save with
-                                <strong class="text-slate-300">Save tiers only</strong>.</p>
+                                <strong class="text-slate-300">Save tiers only</strong>.
+                            </p>
                         </div>
                         <div class="border border-slate-800 rounded-lg p-3 bg-slate-950/50">
                             <p class="text-[11px] font-semibold text-emerald-400 mb-2"><i
@@ -20963,6 +21025,87 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         })();
     </script>
 
+    <script>
+
+        // ===== Academy admin (training enrollments) =====
+        async function academyAdminCall(action, data) {
+            data = data || {};
+            if (typeof executeSecureBridgeCall === "function") {
+                return executeSecureBridgeCall("assessment", action, data);
+            }
+            if (typeof callGateway === "function") {
+                return callGateway("assessment", action, data);
+            }
+            throw new Error("No bridge call available");
+        }
+        async function academyAdminRefresh() {
+            var body = document.getElementById("academyEnrollmentsBody");
+            if (!body) return;
+            body.innerHTML = '<tr><td colspan="7" class="p-4 text-slate-500">Loading…</td></tr>';
+            try {
+                var r = await academyAdminCall("academyListEnrollments", {});
+                var list = (r && r.enrollments) || [];
+                if (!r || !r.success) {
+                    body.innerHTML = '<tr><td colspan="7" class="p-4 text-amber-400">' + (r && r.message ? r.message : "Failed") + '</td></tr>';
+                    return;
+                }
+                if (!list.length) {
+                    body.innerHTML = '<tr><td colspan="7" class="p-4 text-slate-500">No enrollments yet.</td></tr>';
+                    return;
+                }
+                body.innerHTML = list.map(function (e) {
+                    var id = e.enrollmentId || "";
+                    return '<tr>' +
+                        '<td class="p-3 font-mono text-xs">' + id + '</td>' +
+                        '<td class="p-3">' + (e.courseName || e.courseId || "") + '</td>' +
+                        '<td class="p-3">' + (e.name || "") + '<br><span class="text-xs text-slate-500">' + (e.email || "") + '</span></td>' +
+                        '<td class="p-3">' + (e.status || "") + '</td>' +
+                        '<td class="p-3">' + (e.amount != null ? e.amount : "") + '</td>' +
+                        '<td class="p-3 text-xs max-w-[140px] truncate">' + (e.trainingLink || "—") + '</td>' +
+                        '<td class="p-3"><button type="button" class="text-xs px-2 py-1 rounded bg-slate-800" onclick="academyAdminConfirmPay(\'' + id.replace(/'/g, "") + '\')">Mark paid</button></td>' +
+                        '</tr>';
+                }).join("");
+            } catch (err) {
+                body.innerHTML = '<tr><td colspan="7" class="p-4 text-amber-400">' + (err.message || err) + '</td></tr>';
+            }
+        }
+        async function academyAdminEnsureSheets() {
+            try {
+                var r = await academyAdminCall("academyEnsureSheets", {});
+                alert((r && r.message) || JSON.stringify(r));
+            } catch (e) { alert(e.message || e); }
+        }
+        async function academyAdminSetLink() {
+            var link = (document.getElementById("academyTrainingLink") || {}).value || "";
+            var courseId = (document.getElementById("academyLinkCourseId") || {}).value || "";
+            var enrollmentId = (document.getElementById("academyLinkEnrId") || {}).value || "";
+            if (!link) return alert("Training link required");
+            try {
+                var r = await academyAdminCall("academySetTrainingLink", {
+                    trainingLink: link, courseId: courseId, enrollmentId: enrollmentId, notify: true
+                });
+                alert((r && r.message) || JSON.stringify(r));
+                academyAdminRefresh();
+            } catch (e) { alert(e.message || e); }
+        }
+        async function academyAdminConfirmPay(enrollmentId) {
+            if (!enrollmentId) return;
+            try {
+                var r = await academyAdminCall("academyConfirmPayment", { enrollmentId: enrollmentId });
+                alert((r && r.message) || JSON.stringify(r));
+                academyAdminRefresh();
+            } catch (e) { alert(e.message || e); }
+        }
+        // Wire subview switch to load academy
+        document.addEventListener("click", function (ev) {
+            var btn = ev.target.closest && ev.target.closest(".assessment-subview-link");
+            if (!btn) return;
+            if (btn.getAttribute("data-target-view") === "assessment-academy") {
+                setTimeout(academyAdminRefresh, 50);
+            }
+        });
+
+    </script>
 </body>
 
 </html>

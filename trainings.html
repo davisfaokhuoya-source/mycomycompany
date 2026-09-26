@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2026 Professional Assessment Portal</title>
+    <title>The Victorias Academy &amp; Assessment Portal</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="shortcut icon" type="image/x-icon" href="/img/The Victorias Logo.ico">
@@ -205,7 +205,10 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarCollapse"></div>
         <div class="collapse navbar-collapse" id="navbarCollapse">
-            <ul class="navbar-nav ms-auto">
+            <ul class="navbar-nav ms-auto align-items-lg-center">
+                <li class="nav-item me-2">
+                    <a class="nav-link" href="#academy-section" onclick="scrollToAcademy(); return false;">Training</a>
+                </li>
                 <li class="nav-item">
                     <button onclick="toggleDarkMode()" class="btn btn-sm btn-outline-secondary me-3">
                         <i class="fa-solid fa-moon"></i>
@@ -280,6 +283,15 @@
                                     style="font-size: 0.65rem; letter-spacing: 1px;">Instant Check</span>
                             </div>
                         </div>
+                        <div class="col-md-6 col-xl-4">
+                            <div onclick="scrollToAcademy()" class="academic-card">
+                                <div class="display-5 mb-3">🎓</div>
+                                <h3 class="h5 fw-bold">Training Courses</h3>
+                                <p class="small text-muted mb-2">Register and pay for live training</p>
+                                <span class="badge bg-light text-dark text-uppercase"
+                                    style="font-size: 0.65rem; letter-spacing: 1px;">Enroll &amp; Pay</span>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mt-5 d-flex flex-wrap gap-4 text-muted small">
@@ -334,6 +346,66 @@
             </div>
         </div>
     </div>
+
+
+    <!-- ==================== ACADEMY / TRAINING (public enroll + pay) ==================== -->
+    <section id="academy-section" class="container py-5">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+            <div>
+                <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill mb-2"
+                    style="background: rgba(224, 116, 16, 0.1); color: var(--brand-color); font-weight: 600; font-size: 0.8rem;">
+                    <i class="fa-solid fa-chalkboard-teacher"></i> THE VICTORIAS ACADEMY
+                </div>
+                <h2 class="fw-bold mb-1">Upcoming &amp; open training</h2>
+                <p class="text-muted mb-0">Select a course, register, and pay securely. No portal login required for
+                    enrollment.</p>
+            </div>
+            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill" onclick="academyLoadCourses()">
+                <i class="fa-solid fa-rotate"></i> Refresh
+            </button>
+        </div>
+        <div class="row g-4 mb-5" id="academy-course-cards">
+            <div class="col-12 text-center text-muted py-4">Loading courses…</div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="academic-card" style="cursor: default;">
+                    <h3 class="h5 fw-bold mb-1">Register for a course</h3>
+                    <p class="small text-muted mb-4">You will be redirected to Flutterwave when payment is required.</p>
+                    <form id="academy-enrol-form" onsubmit="return academySubmitEnrol(event)">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Course</label>
+                            <select id="academy-course-select" class="form-control" required>
+                                <option value="">Select a course…</option>
+                            </select>
+                            <input type="text" id="academy-course-search" class="form-control mt-2"
+                                placeholder="Or type the course name">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Full name</label>
+                            <input type="text" id="academy-name" class="form-control" required autocomplete="name">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Email</label>
+                            <input type="email" id="academy-email" class="form-control" required autocomplete="email">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Phone (WhatsApp preferred)</label>
+                            <input type="tel" id="academy-phone" class="form-control" required autocomplete="tel"
+                                placeholder="+234…">
+                        </div>
+                        <button type="submit" class="btn btn-brand w-100 py-3" id="academy-pay-btn">Continue to
+                            payment</button>
+                        <p class="small text-muted text-center mt-3 mb-0" id="academy-enrol-msg"></p>
+                    </form>
+                    <div id="academy-paid-banner" class="alert alert-success mt-3 d-none">
+                        <strong>Thank you.</strong> If you completed payment, we will confirm by email shortly.
+                        <span id="academy-enr-line" class="d-block mt-1 small"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <div id="dashboard-view" class="d-none min-vh-100 bg-white">
         <div class="container py-5">
@@ -682,6 +754,131 @@
         </div>
     </div>
     <div id="dynamic-modals"></div>
+    <!-- ========== ACADEMY: Enrol + Pay (paste into assessment portal before closing body) ========== -->
+    <section id="academy-enrol" class="container py-5">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold">Upcoming courses</h2>
+            <p class="text-muted">Choose a course, register, and pay securely online.</p>
+        </div>
+        <div class="row g-4 mb-4" id="academy-course-cards">
+            <div class="col-12 text-center text-muted">Loading courses…</div>
+        </div>
+        <div class="card shadow-sm border-0 rounded-4 p-4 mx-auto" style="max-width:560px">
+            <h3 class="h5 fw-bold mb-3">Register for a course</h3>
+            <form id="academy-enrol-form" onsubmit="return academySubmitEnrol(event)">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Course</label>
+                    <select id="academy-course-select" class="form-control" required>
+                        <option value="">Select a course…</option>
+                    </select>
+                    <input type="text" id="academy-course-search" class="form-control mt-2"
+                        placeholder="Or type course name to search">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Full name</label>
+                    <input type="text" id="academy-name" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Email</label>
+                    <input type="email" id="academy-email" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Phone</label>
+                    <input type="tel" id="academy-phone" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-brand w-100 py-3" id="academy-pay-btn">Continue to payment</button>
+                <p id="academy-enrol-msg" class="small text-center mt-3 text-muted"></p>
+            </form>
+        </div>
+    </section>
+    <script>
+        (function () {
+            var ACADEMY_API = window.ACADEMY_API_URL || window.ASSESSMENT_API_URL || "";
+            async function academyCall(action, data) {
+                if (typeof callAPI === "function") return callAPI(action, data || {});
+                if (!ACADEMY_API) throw new Error("API URL not configured");
+                var res = await fetch(ACADEMY_API, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: action, data: data || {} })
+                });
+                return res.json();
+            }
+            window.academyLoadCourses = async function () {
+                var cards = document.getElementById("academy-course-cards");
+                var sel = document.getElementById("academy-course-select");
+                try {
+                    var r = await academyCall("academyListCourses", { upcoming: true });
+                    var list = (r && r.courses) || [];
+                    if (!list.length) {
+                        if (cards) cards.innerHTML = '<div class="col-12 text-center text-muted">No upcoming courses yet. Check back soon.</div>';
+                        return;
+                    }
+                    if (cards) {
+                        cards.innerHTML = list.map(function (c) {
+                            var when = c.startAt ? new Date(c.startAt).toLocaleString() : "Date TBA";
+                            var price = c.amount > 0 ? ("₦" + Number(c.amount).toLocaleString()) : "Free";
+                            return '<div class="col-md-6 col-lg-4"><div class="academic-card h-100" onclick="document.getElementById(\'academy-course-select\').value=\'' +
+                                String(c.courseId).replace(/'/g, "") + '\';document.getElementById(\'academy-enrol\').scrollIntoView({behavior:\'smooth\'})">' +
+                                '<h3 class="h6 fw-bold">' + (c.courseName || "") + '</h3>' +
+                                '<p class="small text-muted">' + (c.description || "").slice(0, 120) + '</p>' +
+                                '<div class="d-flex justify-content-between small"><span>' + when + '</span><strong class="text-brand">' + price + '</strong></div></div></div>';
+                        }).join("");
+                    }
+                    if (sel) {
+                        sel.innerHTML = '<option value="">Select a course…</option>' + list.map(function (c) {
+                            return '<option value="' + String(c.courseId).replace(/"/g, "") + '">' + (c.courseName || c.courseId) +
+                                (c.amount ? (" — ₦" + Number(c.amount).toLocaleString()) : " — Free") + "</option>";
+                        }).join("");
+                    }
+                } catch (e) {
+                    if (cards) cards.innerHTML = '<div class="col-12 text-danger text-center">Could not load courses.</div>';
+                }
+            };
+            window.academySubmitEnrol = async function (ev) {
+                ev.preventDefault();
+                var msg = document.getElementById("academy-enrol-msg");
+                var btn = document.getElementById("academy-pay-btn");
+                var courseId = document.getElementById("academy-course-select").value;
+                var courseName = document.getElementById("academy-course-search").value.trim();
+                if (!courseId && !courseName) {
+                    if (msg) msg.textContent = "Select or type a course name.";
+                    return false;
+                }
+                if (btn) { btn.disabled = true; btn.textContent = "Please wait…"; }
+                try {
+                    var r = await academyCall("academyEnrollAndPay", {
+                        courseId: courseId,
+                        courseName: courseName,
+                        fullName: document.getElementById("academy-name").value.trim(),
+                        email: document.getElementById("academy-email").value.trim(),
+                        phone: document.getElementById("academy-phone").value.trim()
+                    });
+                    if (!r || !r.success) {
+                        if (msg) msg.textContent = (r && r.message) || "Enrollment failed.";
+                        return false;
+                    }
+                    if (r.paymentLink) {
+                        if (msg) msg.textContent = "Redirecting to secure payment…";
+                        window.location.href = r.paymentLink;
+                        return false;
+                    }
+                    if (msg) msg.textContent = r.message || "Enrolled successfully.";
+                    alert(r.message || "Enrolled successfully.");
+                } catch (e) {
+                    if (msg) msg.textContent = e.message || "Network error";
+                } finally {
+                    if (btn) { btn.disabled = false; btn.textContent = "Continue to payment"; }
+                }
+                return false;
+            };
+            document.addEventListener("DOMContentLoaded", function () {
+                if (document.getElementById("academy-course-cards")) window.academyLoadCourses();
+            });
+        })();
+    </script>
+    <!-- ========== END ACADEMY ========== -->
+
 
     <!-- Footer -->
     <div class="addfooter"></div>
@@ -691,7 +888,7 @@
     <script>
         // ==================== CONFIG & GLOBAL VARIABLES ====================
         // Use this single constant to manage your URL
-        const API_BASE_URL = "https://api.thevictorias.com.ng";
+        const API_BASE_URL = "https://app.thevictorias.com.ng";
 
         let currentToken = localStorage.getItem("authToken") || null;
         let currentUser = null;
@@ -1720,7 +1917,7 @@
 
 
         async function applyForCourse(courseId, courseName) {
-            if (!confirm(`Submit re-application for "${courseName}"?\n\nThis will give you 4 new attempts once approved.`)) {
+            if (!confirm(`Apply for assessment: "${courseName}"?\n\nAdmin will review and send payment details if required.`)) {
                 return;
             }
 
@@ -1742,53 +1939,22 @@
             }
         }
 
-        function applyForAssessment(d) {
-            const email = validateToken(d.token);
-            if (!email) return createErrorResponse("Session expired");
-
-            const { courseId } = d;
-            const courseName = getCourseName(courseId);
-
-            if (!courseId || !courseName) return createErrorResponse("Invalid course");
-
-            const appSheet = getSheet("Applications");
-            const apps = appSheet.getDataRange().getValues();
-
-            for (let i = 1; i < apps.length; i++) {
-                if (String(apps[i][2]).toLowerCase() === email.toLowerCase() &&
-                    apps[i][3] === courseId) {
-
-                    const status = String(apps[i][5] || "").toLowerCase();
-                    if (status === "pending" || status === "approved" || status === "active") {
-                        return createErrorResponse(`You have already applied for "${courseName}". Check your Applications tab.`);
-                    }
-                }
+        async function applyForAssessmentClient(courseId, courseName) {
+            if (!currentToken) return alert("Please login first.");
+            if (!courseId) return alert("Course is required.");
+            const result = await callAPI("applyForAssessment", {
+                token: currentToken,
+                courseId: courseId,
+                courseName: courseName || ""
+            });
+            if (result && result.success) {
+                alert(result.message || "Application submitted.");
+                if (typeof loadMyApplications === "function") loadMyApplications();
+                if (typeof switchTab === "function") switchTab(4);
+            } else {
+                alert((result && result.message) || "Could not apply.");
             }
-
-            const appID = generateUniqueID("APP");
-
-            appSheet.appendRow([
-                new Date(),
-                appID,
-                email,
-                courseId,
-                courseName,
-                "Pending",
-                "New application",
-                new Date(),
-                "",
-                false,
-                "",
-                ""
-            ]);
-
-            logActivity("ASSESSMENT_APPLIED", email, { appID, courseId, courseName });
-
-            return {
-                success: true,
-                message: `Application for "${courseName}" submitted successfully!`,
-                applicationID: appID
-            };
+            return result;
         }
 
         // Check if user has reached 4 attempts for a course
@@ -1838,72 +2004,20 @@
             }
         }
 
-        // Apply for Certificate after passing
-        function applyForCertificate(d) {
-            const email = validateToken(d.token);
-            if (!email) return createErrorResponse("Session expired");
-
-            const { testId } = d;
-            if (!testId) return createErrorResponse("Test ID is required");
-
-            const testsSheet = getSheet("Tests");
-            const testValues = testsSheet.getDataRange().getValues();
-
-            let testRow = null;
-            let testRowIndex = -1;
-            for (let i = 1; i < testValues.length; i++) {
-                if (testValues[i][1] === testId && testValues[i][2] === email) {
-                    testRow = testValues[i];
-                    testRowIndex = i + 1;
-                    break;
-                }
+        // Apply for Certificate after passing (client → AssessmentLib)
+        async function applyForCertificateClient(testId) {
+            if (!currentToken) return alert("Please login first.");
+            if (!testId) return alert("Test ID is required.");
+            const result = await callAPI("applyForCertificate", {
+                token: currentToken,
+                testId: testId
+            });
+            if (result.success) {
+                alert(result.message || "Certificate application submitted.");
+                if (typeof loadDashboard === "function") loadDashboard();
+            } else {
+                alert(result.message || "Could not apply for certificate.");
             }
-
-            if (!testRow || testRow[8] !== "Passed") {
-                return createErrorResponse("You can only apply for a certificate on a passed test.");
-            }
-
-            const courseId = testRow[3];
-            const scorePercent = parseFloat(testRow[7]) || 0;
-            const courseName = getCourseName(courseId);
-
-            // Check if already applied
-            const certSheet = getSheet("Certificates");
-            const certValues = certSheet.getDataRange().getValues();
-            for (let i = 1; i < certValues.length; i++) {
-                if (certValues[i][2] === email && certValues[i][3] === courseId) {
-                    return createErrorResponse("You have already applied for a certificate for this course.");
-                }
-            }
-
-            const certCode = generateUniqueID("CERT");
-
-            certSheet.appendRow([
-                new Date(),
-                certCode,
-                email,
-                courseId,
-                courseName,
-                scorePercent,
-                new Date(),
-                getUserNameByEmail(email) || "Student",
-                "",                     // VerificationLink / DownloadLink (empty until approved)
-                new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Expiry
-                "Pending"               // Column K: Status
-            ]);
-
-            // Notify Admin
-            sendCustomZeptoEmail(ADMIN_EMAIL, "Admin",
-                `New Certificate Request - ${courseName}`,
-                `<p>Student: ${email}<br>Course: ${courseName}<br>Score: ${scorePercent}%<br>Cert Code: ${certCode}</p>`);
-
-            logActivity("CERTIFICATE_APPLIED", email, { certCode, courseId, score: scorePercent });
-
-            return {
-                success: true,
-                message: "Certificate application submitted successfully. Admin will review it shortly.",
-                certCode: certCode
-            };
         }
 
         // Download Certificate (called from email link or button)
@@ -2014,19 +2128,23 @@
             document.getElementById('result-container').innerHTML = resultHTML;
         }
 
-        function requestCertificate() {
+        async function requestCertificate() {
             const btn = document.getElementById('claim-btn');
-            btn.disabled = true;
-            btn.innerText = "Processing...";
-
-            google.script.run.withSuccessHandler(res => {
-                alert(res.message);
-                btn.innerText = "Request Sent";
-            }).requestCertificateInternal({
-                courseId: currentCourseId,
-                courseName: currentCourseName,
-                score: finalScore
-            });
+            if (btn) { btn.disabled = true; btn.innerText = "Processing..."; }
+            try {
+                const testId = (typeof currentTest !== "undefined" && currentTest && (currentTest.testId || currentTest.id)) || window.lastPassedTestId || "";
+                const result = await callAPI("applyForCertificate", {
+                    token: currentToken,
+                    testId: testId,
+                    courseId: typeof currentCourseId !== "undefined" ? currentCourseId : undefined,
+                    courseName: typeof currentCourseName !== "undefined" ? currentCourseName : undefined
+                });
+                alert((result && result.message) || (result && result.success ? "Request sent" : "Failed"));
+                if (btn) btn.innerText = result && result.success ? "Request Sent" : "Try again";
+            } catch (e) {
+                alert(e.message || "Request failed");
+                if (btn) { btn.disabled = false; btn.innerText = "Claim Certificate"; }
+            }
         }
 
         function showProfileModal() {
@@ -2334,7 +2452,177 @@
             alert(result.success ? `Score: ${result.score}%` : result.message);
         }
 
+
+        // ==================== ACADEMY / TRAINING ====================
+        function toggleDarkMode() { document.body.classList.toggle("bg-dark"); }
+        function scrollToAcademy() {
+            const el = document.getElementById("academy-section");
+            if (el) el.scrollIntoView({ behavior: "smooth" });
+        }
+
+        function academyFmtMoney(n) {
+            n = Number(n) || 0;
+            if (n <= 0) return "Free";
+            return "₦" + n.toLocaleString("en-NG");
+        }
+
+        function academyFmtWhen(d) {
+            if (!d) return "Date TBA";
+            try {
+                return new Date(d).toLocaleString("en-GB", {
+                    day: "numeric", month: "short", year: "numeric",
+                    hour: "2-digit", minute: "2-digit"
+                });
+            } catch (e) { return String(d); }
+        }
+
+        function academyEsc(s) {
+            return String(s || "")
+                .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+
+        function academyEscAttr(s) {
+            return String(s || "").replace(/'/g, "").replace(/"/g, "");
+        }
+
+        var academyCourseCache = [];
+
+        async function academyLoadCourses() {
+            const cards = document.getElementById("academy-course-cards");
+            const sel = document.getElementById("academy-course-select");
+            if (!cards) return;
+            cards.innerHTML = '<div class="col-12 text-center text-muted py-4">Loading…</div>';
+            try {
+                let result = await callAPI("academyListCourses", { upcoming: true });
+                academyCourseCache = (result && result.courses) || [];
+                if ((!result || !result.success || !academyCourseCache.length)) {
+                    result = await callAPI("academyListCourses", { upcoming: false });
+                    academyCourseCache = (result && result.courses) || [];
+                }
+                if (!result || !result.success) {
+                    throw new Error((result && result.message) || "Failed to load courses");
+                }
+                if (!academyCourseCache.length) {
+                    cards.innerHTML = '<div class="col-12 text-center text-muted py-4">No open courses yet. Check back soon.</div>';
+                    if (sel) sel.innerHTML = '<option value="">No courses available</option>';
+                    return;
+                }
+                cards.innerHTML = academyCourseCache.map(function (c) {
+                    const full = c.seats != null && Number(c.seats) <= 0;
+                    return (
+                        '<div class="col-md-6 col-lg-4">' +
+                        '<div class="academic-card' + (full ? ' opacity-75' : '') + '" ' +
+                        (full ? '' : 'onclick="academyPickCourse(\'' + academyEscAttr(c.courseId) + '\')"') + '>' +
+                        '<div class="d-flex justify-content-between mb-2">' +
+                        '<span class="badge bg-light text-dark text-uppercase" style="font-size:0.65rem">' +
+                        academyEsc(c.mode || "Online") + '</span>' +
+                        '<strong class="text-brand">' + (full ? "Full" : academyFmtMoney(c.amount)) + '</strong></div>' +
+                        '<h3 class="h6 fw-bold">' + academyEsc(c.courseName) + '</h3>' +
+                        '<p class="small text-muted mb-3">' + academyEsc((c.description || "").slice(0, 140)) +
+                        (c.description && c.description.length > 140 ? "…" : "") + '</p>' +
+                        '<div class="small text-muted"><i class="fa-regular fa-calendar me-1"></i>' +
+                        academyEsc(academyFmtWhen(c.startAt)) + '</div>' +
+                        (c.seats != null ? '<div class="small text-muted mt-1"><i class="fa-solid fa-users me-1"></i> ' +
+                            c.seats + ' seats</div>' : '') +
+                        '</div></div>'
+                    );
+                }).join("");
+                if (sel) {
+                    sel.innerHTML = '<option value="">Select a course…</option>' +
+                        academyCourseCache.map(function (c) {
+                            const full = c.seats != null && Number(c.seats) <= 0;
+                            return '<option value="' + academyEscAttr(c.courseId) + '"' +
+                                (full ? " disabled" : "") + ">" + academyEsc(c.courseName) +
+                                " — " + (full ? "Full" : academyFmtMoney(c.amount)) + "</option>";
+                        }).join("");
+                }
+            } catch (e) {
+                cards.innerHTML = '<div class="col-12 text-center text-danger py-4">' + academyEsc(e.message || e) + '</div>';
+            }
+        }
+
+        function academyPickCourse(id) {
+            const sel = document.getElementById("academy-course-select");
+            if (sel) sel.value = id;
+            const search = document.getElementById("academy-course-search");
+            if (search) search.value = "";
+            const form = document.getElementById("academy-enrol-form");
+            if (form) form.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+
+        async function academySubmitEnrol(ev) {
+            if (ev && ev.preventDefault) ev.preventDefault();
+            const msg = document.getElementById("academy-enrol-msg");
+            const btn = document.getElementById("academy-pay-btn");
+            const courseId = (document.getElementById("academy-course-select") || {}).value || "";
+            const courseName = ((document.getElementById("academy-course-search") || {}).value || "").trim();
+            if (!courseId && !courseName) {
+                if (msg) msg.textContent = "Select a course or type the course name.";
+                return false;
+            }
+            if (btn) { btn.disabled = true; btn.textContent = "Please wait…"; }
+            if (msg) msg.textContent = "";
+            try {
+                const result = await callAPI("academyEnrollAndPay", {
+                    courseId: courseId,
+                    courseName: courseName,
+                    fullName: ((document.getElementById("academy-name") || {}).value || "").trim(),
+                    email: ((document.getElementById("academy-email") || {}).value || "").trim(),
+                    phone: ((document.getElementById("academy-phone") || {}).value || "").trim()
+                });
+                if (!result || !result.success) {
+                    if (msg) msg.textContent = (result && result.message) || "Enrollment failed.";
+                    return false;
+                }
+                if (result.enrollmentId) {
+                    try { sessionStorage.setItem("academy_enr", result.enrollmentId); } catch (_) { }
+                }
+                if (result.paymentLink) {
+                    if (msg) msg.textContent = "Redirecting to secure payment…";
+                    window.location.href = result.paymentLink;
+                    return false;
+                }
+                if (msg) {
+                    msg.textContent = (result.message || "Enrolled successfully.") +
+                        (result.enrollmentId ? (" ID: " + result.enrollmentId) : "");
+                }
+            } catch (e) {
+                if (msg) msg.textContent = e.message || "Network error";
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = "Continue to payment"; }
+            }
+            return false;
+        }
+
+        function academyHandlePaidReturn() {
+            try {
+                const params = new URLSearchParams(location.search);
+                if (params.get("paid") !== "1") return;
+                const banner = document.getElementById("academy-paid-banner");
+                if (banner) banner.classList.remove("d-none");
+                let enr = params.get("enr") || "";
+                try { if (!enr) enr = sessionStorage.getItem("academy_enr") || ""; } catch (_) { }
+                const line = document.getElementById("academy-enr-line");
+                if (line && enr) line.textContent = "Enrollment ID: " + enr;
+                if (enr) {
+                    callAPI("academyConfirmPayment", { enrollmentId: enr }).catch(function () { });
+                }
+                scrollToAcademy();
+            } catch (_) { }
+        }
+
+
         // ==================== GLOBAL WINDOW EXPORTS FOR ONCLICK HANDLERS ====================
+        window.scrollToAcademy = scrollToAcademy;
+        window.academyLoadCourses = academyLoadCourses;
+        window.academyPickCourse = academyPickCourse;
+        window.academySubmitEnrol = academySubmitEnrol;
+        window.applyForCertificateClient = applyForCertificateClient;
+        window.applyForAssessmentClient = applyForAssessmentClient;
+        window.requestCertificate = requestCertificate;
+        window.applyForCourse = applyForCourse;
+        window.reApplyForCourse = reApplyForCourse;
         window.showLoginModal = () => loginModal.show();
         // Correct Register Modal Handler
         window.showRegisterModal = () => {

@@ -3764,6 +3764,9 @@
             // Script / unexpected
             if (/referenceerror|typeerror|syntaxerror|at object\.|\.gs:|stack/i.test(m)) return '4901';
 
+            if (/document not found|already be deleted|not on your list/i.test(m)) return '4303';
+            if (/could not send email|mailbox|recipient email|send failed/i.test(m)) return '4501';
+            if (/not on your list|still be processing|document not found/i.test(m)) return '4303';
             return '4900'; // generic
         }
 
@@ -5079,11 +5082,11 @@
                            <i class="fa-solid fa-paper-plane"></i> Approve &amp; Send (1 email)
                        </button>`
                     : `<div class="flex gap-1 justify-start">
-                        <button onclick="downloadDocument('${escapeHtml(d.docId)}')"
+                        <button onclick="openClientDoc('${escapeHtml(d.docId || '')}','${escapeHtml(String(d.docUrl || d.url || d.link || d.downloadUrl || '').replace(/'/g, ''))}','${escapeHtml(String(d.fileId || '').replace(/'/g, ''))}')"
                            class="text-xs px-2 py-1 bg-emerald-900 hover:bg-emerald-800 rounded text-emerald-200">
                            <i class="fa-solid fa-download"></i> Open
                        </button>
-                        <button onclick="openSendDocumentModal('${escapeHtml(d.docId)}','${escapeHtml((d.title || d.type || '').replace(/'/g, "\\'"))}')"
+                        <button onclick="openSendDocumentModal('${escapeHtml(d.docId || '')}','${escapeHtml(String(d.title || d.type || '').replace(/'/g, ''))}','${escapeHtml(String(d.docUrl || d.url || '').replace(/'/g, ''))}','${escapeHtml(String(d.fileId || '').replace(/'/g, ''))}')"
                            class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-200">
                            <i class="fa-solid fa-share"></i> Send
                        </button>
@@ -5123,9 +5126,24 @@
          *  they choose, with their own subject and message — separate from the
          *  Approve & Send flow above, which only fires reference docs to the client's
          *  own saved contact. Opens a small compose modal. */
+
+        function openClientDoc(docId, docUrl, fileId) {
+            var url = (docUrl || '').trim();
+            if (!url && fileId) url = 'https://drive.google.com/file/d/' + fileId + '/view';
+            if (url) {
+                try { window.open(url, '_blank'); return; } catch (_) { }
+            }
+            if (typeof window.downloadDocument === 'function') {
+                return window.downloadDocument(docId);
+            }
+            notifyUser('No link for this document yet. Refresh and try again.', 'info');
+        }
+
         let SEND_DOC_TARGET = null;
-        function openSendDocumentModal(docId, title) {
+        let SEND_DOC_META = { docUrl: '', fileId: '', title: '' };
+        function openSendDocumentModal(docId, title, docUrl, fileId) {
             SEND_DOC_TARGET = docId;
+            SEND_DOC_META = { docUrl: docUrl || '', fileId: fileId || '', title: title || '' };
             document.getElementById('sendDocTitle').textContent = title || 'this document';
             document.getElementById('sendDocTo').value = '';
             document.getElementById('sendDocSubject').value = title ? `${title}` : 'Document from The Victorias Ltd';
@@ -5148,7 +5166,10 @@
             let res = { success: false, message: 'Send failed.' };
             try {
                 res = await callGateway('clientportal', 'clientPortalSendDocument', {
-                    docId: SEND_DOC_TARGET, to, subject, body
+                    docId: SEND_DOC_TARGET, to, subject, body,
+                    docUrl: (SEND_DOC_META && SEND_DOC_META.docUrl) || '',
+                    fileId: (SEND_DOC_META && SEND_DOC_META.fileId) || '',
+                    title: (SEND_DOC_META && SEND_DOC_META.title) || ''
                 }) || res;
             } catch (e) {
                 res = { success: false, message: clientFriendlyError(e && e.message ? e.message : e) };
