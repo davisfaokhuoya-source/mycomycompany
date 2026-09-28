@@ -740,7 +740,604 @@
         }).observe(document.getElementById('dashboard-view'), { attributes: true, attributeFilter: ['class'] });
     </script>
 
-    <!-- ▼▼ PASTE YOUR ORIGINAL <script> BLOCK (API_BASE_URL … academyPickCourse) DIRECTLY BELOW THIS LINE ▼▼ -->
+    <script>
+        // ==================== CONFIG & STATE ====================
+        const API_BASE_URL = "https://app.thevictorias.com.ng";
+        let currentToken = localStorage.getItem("authToken") || null;
+        let currentUser = null, currentTest = null, currentQuestions = [], currentQuestionIndex = 0;
+        let timerInterval = null, userAnswers = {}, questionNotes = {};
+        let allCourses = [], attemptCounts = {}, allMessages = [], msgPage = 0;
+        const MSGS_PER_PAGE = 6;
+        let academyCourseCacheAll = [], academyActiveFilter = "upcoming";
+
+        const $ = id => document.getElementById(id);
+        const esc = s => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        const jsq = s => String(s == null ? "" : s).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+        const fmtDate = d => { try { return new Date(d).toLocaleDateString("en-GB"); } catch (e) { return ""; } };
+
+        // ==================== API ====================
+        async function callAPI(action, payload = {}) {
+            try {
+                const data = Object.assign({}, payload);
+                delete data.system; delete data.action;
+                const res = await fetch(API_BASE_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        system: "assessment", action, data,
+                        token: data.token || undefined, email: data.email || undefined
+                    })
+                });
+                const text = await res.text();
+                const i = text.indexOf("{");
+                return JSON.parse(i !== -1 ? text.substring(i) : text);
+            } catch (e) {
+                console.error("API error:", e);
+                return { success: false, message: "Connection error. Please try again." };
+            }
+        }
+
+        // ==================== MODALS / SHELL ====================
+        function _modal(id) {
+            const el = $(id);
+            return el && window.bootstrap ? bootstrap.Modal.getOrCreateInstance(el) : null;
+        }
+        function showLoginModal() { const m = _modal("loginModal"); if (m) m.show(); }
+        function showEnrolModal() { academyLoadCourses(); const m = _modal("enrolModal"); if (m) m.show(); }
+        function showVerifyCertificateModal() { const m = _modal("verifyCertModal"); if (m) m.show(); }
+        function scrollToAcademy() { const el = $("academy-section"); if (el) el.scrollIntoView({ behavior: "smooth" }); }
+
+        function applyLoggedInShell(email) {
+            const hero = $("publicMarketingHero"); if (hero) hero.style.display = "none";
+            const nav = document.querySelector("nav.navbar"); if (nav) nav.style.display = "none";
+            const bar = $("studentSessionBar"); if (bar) bar.style.display = "block";
+            const em = $("studentSessionEmail"); if (em) em.textContent = email ? "· " + email : "";
+        }
+        function applyLoggedOutShell() {
+            const hero = $("publicMarketingHero"); if (hero) hero.style.display = "";
+            const nav = document.querySelector("nav.navbar"); if (nav) nav.style.display = "";
+            const bar = $("studentSessionBar"); if (bar) bar.style.display = "none";
+        }
+        function logout() { localStorage.removeItem("authToken"); location.reload(); }
+
+        // ==================== AUTH ====================
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = $("login-email").value.trim().toLowerCase();
+            const password = $("login-password").value.trim();
+            if (!email || !password) return alert("Email and password are required");
+            const btn = e.target.querySelector('button[type="submit"]');
+            const label = btn.textContent;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Signing in...';
+            try {
+                const r = await callAPI("loginUser", { email, password });
+                if (r.success) {
+                    localStorage.setItem("authToken", r.token);
+                    currentToken = r.token; currentUser = r.user;
+                    applyLoggedInShell((currentUser && (currentUser.email || currentUser.Email)) || email);
+                    const m = _modal("loginModal"); if (m) m.hide();
+                    loadDashboard();
+                } else alert(r.message || "Login failed");
+            } catch (err) { alert("Login error. Please try again."); }
+            finally { btn.disabled = false; btn.textContent = label; }
+        }
+
+        async function checkAuthAndLoadDashboard() {
+            const r = await callAPI("getDashboard", { token: currentToken });
+            if (r.success) {
+                currentUser = r.user;
+                applyLoggedInShell((currentUser && (currentUser.email || currentUser.Email)) || "");
+                loadDashboard();
+            } else {
+                localStorage.removeItem("authToken"); currentToken = null; applyLoggedOutShell();
+            }
+        }
+
+        // ==================== DASHBOARD ====================
+        async function loadDashboard() {
+            $("landing-view").classList.add("d-none");
+            $("dashboard-view").classList.remove("d-none");
+            window.scrollTo({ top: 0 });
+            $("welcome-name").textContent = (currentUser && currentUser.fullName) ? currentUser.fullName.split(" ")[0] : "User";
+            await Promise.all([loadCourses(), loadTestHistory(), loadCertificates(), loadProgressChart(), loadUnreadCount(), loadUserStats()]);
+            showNewMessageToast(await loadUnreadCount());
+        }
+
+        function switchTab(n) {
+            document.querySelectorAll("#main-tabs .nav-link").forEach(b => b.classList.remove("active"));
+            const t = $("tab-" + n); if (t) t.classList.add("active");
+            document.querySelectorAll(".tab-pane").forEach(p => { p.classList.add("d-none"); p.classList.remove("active"); });
+            const pane = $("tab-content-" + n);
+            if (pane) { pane.classList.remove("d-none"); pane.classList.add("active"); }
+            if (n === 4) setTimeout(loadMyApplications, 100);
+            const dv = $("dashboard-view"); if (dv) dv.scrollIntoView({ behavior: "smooth" });
+        }
+
+        async function loadUserStats() {
+            const r = await callAPI("getUserStats", { token: currentToken });
+            if (!r.success) return;
+            $("stat-tests").textContent = r.testsDone || 0;
+            $("stat-certs").textContent = r.certsEarned || 0;
+            $("stat-score").textContent = (r.avgScore || 0) + "%";
+            const b = $("score-benchmark");
+            if ((r.avgScore || 0) >= 70) { b.className = "small text-success"; b.innerHTML = '<i class="fa-solid fa-check-circle"></i> Above benchmark'; }
+            else { b.className = "small text-warning"; b.textContent = "Below benchmark"; }
+        }
+
+        async function loadProgressChart() {
+            const box = $("progress-chart-container");
+            if (!box) return;
+            const r = await callAPI("getProgressAnalytics", { token: currentToken });
+            if (!r.success || !r.recentScores || !r.recentScores.length) {
+                box.innerHTML = '<div class="text-center text-muted py-5"><i class="fa-solid fa-chart-line fa-3x mb-3 opacity-50"></i><br>No test data yet.<br><small>Take your first assessment to see your progress</small></div>';
+                return;
+            }
+            const avg = Math.round(r.recentScores.reduce((a, b) => a + Number(b || 0), 0) / r.recentScores.length);
+            if ($("avg-score")) $("avg-score").textContent = avg;
+            if (!$("progressChart")) box.innerHTML = '<canvas id="progressChart"></canvas>';
+            if (window.progressChartInstance) window.progressChartInstance.destroy();
+            window.progressChartInstance = new Chart($("progressChart"), {
+                type: "line",
+                data: {
+                    labels: r.courseNames && r.courseNames.length ? r.courseNames : r.recentScores.map((_, i) => "Test " + (i + 1)),
+                    datasets: [{
+                        label: "Score (%)", data: r.recentScores, borderColor: "#E07410", backgroundColor: "rgba(224,116,16,.15)",
+                        borderWidth: 3, tension: .4, fill: true, pointBackgroundColor: "#fff", pointBorderColor: "#E07410", pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                    scales: { y: { min: 0, max: 100 } }
+                }
+            });
+        }
+
+        // ==================== COURSES (assessment programmes) ====================
+        async function loadCourses() {
+            const c = $("courses-grid"); if (!c) return;
+            c.innerHTML = '<div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm text-brand"></span><p class="mt-3">Loading courses...</p></div>';
+            const [r, h] = await Promise.all([callAPI("getCourses", { token: currentToken }), callAPI("getMyTestHistory", { token: currentToken })]);
+            if (!r.success || !r.courses) { c.innerHTML = '<div class="alert alert-danger text-center">Failed to load courses.</div>'; return; }
+            attemptCounts = {};
+            ((h && h.history) || []).forEach(t => { attemptCounts[t.courseId] = (attemptCounts[t.courseId] || 0) + 1; });
+            allCourses = r.courses;
+            renderCourses(allCourses);
+        }
+
+        function renderCourses(courses) {
+            const c = $("courses-grid"); if (!c) return;
+            if (!courses.length) {
+                c.innerHTML = '<div class="col-12 text-center py-5 text-muted"><i class="fa-solid fa-search fa-3x mb-3 opacity-50"></i><h5>No courses found</h5><p>Try different keywords</p></div>';
+                return;
+            }
+            c.innerHTML = courses.map(course => {
+                const full = (course.description || "No description available.").trim();
+                const short = full.length > 95 ? full.substring(0, 95) + "..." : full;
+                const maxed = (attemptCounts[course.courseId] || 0) >= 4;
+                const id = jsq(course.courseId), name = jsq(course.courseName);
+                return `<div class="col-md-6 col-lg-4"><div class="academic-card d-flex flex-column" style="cursor:default">
+      <h5 class="fw-bold mb-3">${esc(course.courseName)}</h5>
+      <p class="small text-muted flex-grow-1" id="desc-${esc(course.courseId)}" data-full="${esc(full)}" data-short="${esc(short)}" data-expanded="false">${esc(short)}
+        ${full.length > 95 ? `<span onclick="toggleDescription('${id}')" class="text-brand fw-bold ms-1" style="cursor:pointer">Read more</span>` : ""}</p>
+      ${maxed
+                        ? `<button onclick="applyForCourse('${id}','${name}')" class="btn btn-warning w-100 mb-2 fw-bold"><i class="fa-solid fa-redo me-2"></i>Re-apply for this course</button>`
+                        : `<button onclick="applyForCourse('${id}','${name}')" class="btn btn-brand w-100 mb-2">${course.isFree ? "Start free assessment" : "Register now"}</button>`}
+      <small class="text-muted d-block text-center">Max 4 attempts • ${course.isFree ? '<strong class="text-success">FREE</strong>' : esc(course.amountFormatted || "₦12,500")}</small>
+    </div></div>`;
+            }).join("");
+        }
+
+        function filterCourses() {
+            const q = $("course-search").value.toLowerCase().trim();
+            if (!q) return renderCourses(allCourses);
+            renderCourses(allCourses.filter(c =>
+                (c.courseName || "").toLowerCase().includes(q) ||
+                (c.description || "").toLowerCase().includes(q) ||
+                (c.category || "").toLowerCase().includes(q)));
+        }
+
+        function toggleDescription(id) {
+            const el = $("desc-" + id); if (!el) return;
+            const open = el.getAttribute("data-expanded") === "true";
+            const text = esc(el.getAttribute(open ? "data-short" : "data-full"));
+            el.innerHTML = text + ` <span onclick="toggleDescription('${jsq(id)}')" class="text-brand fw-bold ms-1" style="cursor:pointer">${open ? "Read more" : "(less)"}</span>`;
+            el.setAttribute("data-expanded", open ? "false" : "true");
+        }
+
+        async function applyForCourse(courseId, courseName) {
+            if (!confirm(`Register for "${courseName}"?`)) return;
+            const r = await callAPI("academyEnrollAndPay", {
+                token: currentToken, courseId, courseName,
+                email: currentUser && (currentUser.email || currentUser.Email), fullName: currentUser && currentUser.fullName
+            });
+            if (r.success) {
+                if (r.paymentLink && !r.free) { window.location.href = r.paymentLink; return; }
+                alert(r.message || "Application submitted.");
+                switchTab(4); loadMyApplications();
+            } else alert(r.message || "Could not submit application.");
+        }
+
+        // ==================== TEST ENGINE ====================
+        async function startTest(courseId, courseName) {
+            const r = await callAPI("startTest", { token: currentToken, courseId });
+            if (r.success) {
+                currentTest = r; currentQuestions = r.questions || []; currentQuestionIndex = 0;
+                userAnswers = {}; questionNotes = {};
+                $("test-course-name").textContent = courseName;
+                $("attempt-badge").textContent = `Attempt ${r.attemptNumber || 1} of 4`;
+                _modal("testModal").show();
+                renderCurrentQuestion();
+                startTimer((r.timeLimitMinutes || 120) * 60);
+            } else if (r.requiresReapply === true) {
+                alert(`Maximum attempts reached for "${r.courseName || courseName}".\n\nGo to the Courses tab and click "Re-apply for this course".`);
+                switchTab(0);
+            } else alert(r.message || "Cannot start the test at this time.");
+        }
+
+        function renderCurrentQuestion() {
+            const q = currentQuestions[currentQuestionIndex]; if (!q) return;
+            $("test-body").innerHTML = `
+    <h5 class="mb-4">${currentQuestionIndex + 1}. ${esc(q.text)}</h5>
+    <div class="d-grid gap-3">${["a", "b", "c", "d"].map(o => `
+      <button onclick="selectAnswer('${jsq(q.qid)}','${o}')" id="opt-${esc(q.qid)}-${o}"
+        class="btn btn-outline-secondary text-start py-3 answer-btn ${userAnswers[q.qid] === o ? "btn-brand text-white" : ""}">
+        <strong>${o.toUpperCase()}.</strong> ${esc(q[o])}</button>`).join("")}</div>
+    <div class="mt-4"><textarea class="form-control" placeholder="Add private note (optional)..."
+      onblur="saveNote('${jsq(q.qid)}',this.value)">${esc(questionNotes[q.qid] || "")}</textarea></div>`;
+            $("current-q").textContent = currentQuestionIndex + 1;
+            $("total-q").textContent = currentQuestions.length;
+            const last = currentQuestionIndex === currentQuestions.length - 1;
+            $("next-btn").style.display = last ? "none" : "inline-block";
+            $("finish-btn").style.display = last ? "inline-block" : "none";
+        }
+        function selectAnswer(qid, a) {
+            userAnswers[qid] = a;
+            document.querySelectorAll(".answer-btn").forEach(b => b.classList.remove("btn-brand", "text-white"));
+            const b = $(`opt-${qid}-${a}`); if (b) b.classList.add("btn-brand", "text-white");
+        }
+        function nextQuestion() { if (currentQuestionIndex < currentQuestions.length - 1) { currentQuestionIndex++; renderCurrentQuestion(); } }
+        function prevQuestion() { if (currentQuestionIndex > 0) { currentQuestionIndex--; renderCurrentQuestion(); } }
+        function saveNote(qid, note) { questionNotes[qid] = note; }
+        function finishTest() { if (confirm("Submit your test? You cannot change answers after submission.")) submitTest(); }
+        function submitTestEarly() { if (confirm("Submit test now?")) submitTest(); }
+
+        function startTimer(seconds) {
+            if (timerInterval) clearInterval(timerInterval);
+            let left = seconds;
+            const d = $("timer-display");
+            timerInterval = setInterval(() => {
+                const m = Math.floor(left / 60), s = left % 60;
+                d.textContent = `${m}:${s < 10 ? "0" : ""}${s}`;
+                if (--left < 0) { clearInterval(timerInterval); alert("⏰ Time's up! Submitting automatically."); submitTest(); }
+            }, 1000);
+        }
+
+        async function submitTest() {
+            if (timerInterval) clearInterval(timerInterval);
+            _modal("testModal").hide();
+            const r = await callAPI("submitTest", { token: currentToken, testId: currentTest.testId, answers: userAnswers });
+            if (r.success) { alert(r.message || `Test submitted! Your score: ${r.score}%`); await loadDashboard(); }
+            else alert("Submission failed: " + (r.message || "Unknown error"));
+        }
+
+        // ==================== HISTORY / CERTIFICATES ====================
+        async function loadTestHistory() {
+            const c = $("history-table"); if (!c) return;
+            c.innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm"></span> Loading history...</div>';
+            const r = await callAPI("getMyTestHistory", { token: currentToken });
+            if (!r.success) { c.innerHTML = '<div class="alert alert-danger text-center m-3">Failed to load test history.</div>'; return; }
+            if (!r.history || !r.history.length) {
+                c.innerHTML = '<div class="text-center py-5 text-muted"><i class="fa-solid fa-clipboard-list fa-4x mb-3 opacity-50"></i><h5>No test history yet</h5><p>Go to the Courses tab to start your first assessment.</p><button onclick="switchTab(0)" class="btn btn-brand btn-sm">Browse courses</button></div>';
+                return;
+            }
+            const rows = r.history.map(t => {
+                let badge = `<span class="badge bg-secondary">${esc(t.status)}</span>`, action = "";
+                if (t.status === "InProgress") { badge = '<span class="badge bg-warning">In progress</span>'; action = '<small class="text-muted">Still in progress</small>'; }
+                else if (t.status === "Passed") { badge = '<span class="badge bg-success">Passed</span>'; action = `<button onclick="applyForCertificateFromHistory('${jsq(t.testId)}')" class="btn btn-success btn-sm">Apply for certificate</button>`; }
+                else if (t.status === "Failed") { badge = '<span class="badge bg-danger">Failed</span>'; action = '<small class="text-muted">You can re-apply if needed</small>'; }
+                const score = t.score > 0 ? `<strong class="${t.score >= 70 ? "text-success" : "text-danger"}">${t.score}%</strong>` : "-";
+                return `<tr><td><strong>${esc(t.courseId)}</strong></td><td>${t.attemptNumber}</td><td>${score}</td><td>${fmtDate(t.submitTime || t.startTime)}</td><td>${badge}</td><td>${action}</td></tr>`;
+            }).join("");
+            c.innerHTML = `<table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Course</th><th>Attempt</th><th>Score</th><th>Date</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table>`;
+        }
+
+        async function applyForCertificateFromHistory(testId) {
+            if (!confirm("Apply for an official certificate for this passed test?")) return;
+            const r = await callAPI("applyForCertificate", { token: currentToken, testId });
+            alert(r.message || (r.success ? "Certificate request sent! Admin will review shortly." : "Failed to apply."));
+            if (r.success) { loadTestHistory(); loadCertificates(); }
+        }
+
+        async function loadCertificates() {
+            const c = $("certificates-grid"); if (!c) return;
+            const r = await callAPI("getMyCertificates", { token: currentToken });
+            if (!r.success || !r.certificates || !r.certificates.length) {
+                c.innerHTML = '<div class="col-12 text-center py-5 text-muted"><i class="fa-solid fa-certificate fa-3x mb-3 opacity-50"></i><br>No certificates yet.<br><small>Pass an assessment and apply for a certificate</small></div>';
+                return;
+            }
+            c.innerHTML = r.certificates.map(cert => {
+                const ready = cert.verificationLink && cert.verificationLink.includes("drive.google.com");
+                return `<div class="col-md-6 col-lg-4"><div class="academic-card text-center" style="cursor:default">
+      <h4 class="mb-2">${ready ? "🏆" : "🥈"}</h4><h6 class="fw-bold">${esc(cert.courseName)}</h6>
+      <p class="fw-bold text-success mb-1">${esc(cert.score)}%</p>
+      ${ready
+                        ? `<small class="text-muted d-block mb-3">Issued: ${fmtDate(cert.issueDate)}</small><a href="${esc(cert.verificationLink)}" target="_blank" rel="noopener" class="btn btn-brand btn-sm w-100"><i class="fa-solid fa-download me-2"></i>Download certificate</a>`
+                        : '<span class="text-muted small">Pending admin approval</span>'}
+    </div></div>`;
+            }).join("");
+        }
+
+        async function verifyCertificatePublicModal() {
+            const code = $("certIdModal").value.trim().toUpperCase();
+            const out = $("verifyResultModal");
+            if (!code) { out.innerHTML = '<div class="alert alert-warning text-center">Please enter a Certificate ID (e.g. CERT-ABC123)</div>'; return; }
+            out.innerHTML = '<div class="alert alert-info text-center"><span class="spinner-border spinner-border-sm me-2"></span>Verifying...</div>';
+            const r = await callAPI("verifyCertificate", { certCode: code });
+            if (r.success && r.valid === true) {
+                const exp = r.expiryDate ? "Expires: " + fmtDate(r.expiryDate) : '<span class="text-success">Lifetime certificate (no expiry)</span>';
+                out.innerHTML = `<div class="alert alert-success p-4"><h5 class="text-center mb-3">✅ Certificate verified</h5>
+      <div class="border rounded-4 p-3 bg-white"><div class="row g-3">
+        <div class="col-6"><strong>Recipient</strong><br><span class="text-muted">${esc(r.studentName || "Professional")}</span></div>
+        <div class="col-6"><strong>Score</strong><br><span class="fw-bold text-success">${esc(r.score)}%</span></div>
+        <div class="col-12"><strong>Course</strong><br>${esc(r.courseName)}</div>
+        <div class="col-6"><strong>Issued</strong><br>${r.issueDate ? fmtDate(r.issueDate) : "N/A"}</div>
+        <div class="col-6"><strong>Validity</strong><br>${exp}</div>
+      </div></div></div>`;
+            } else {
+                out.innerHTML = `<div class="alert alert-danger text-center p-4"><h5>❌ Invalid or expired certificate</h5><p class="mb-0">${esc(r.message || "The certificate code could not be found.")}</p></div>`;
+            }
+        }
+
+        // ==================== APPLICATIONS & PAYMENT ====================
+        async function loadMyApplications() {
+            const c = $("applications-list"); if (!c) return;
+            const r = await callAPI("getMyApplications", { token: currentToken });
+            if (!r.success || !r.applications || !r.applications.length) {
+                c.innerHTML = '<div class="alert alert-info text-center py-5"><i class="fa-solid fa-file-contract fa-3x mb-3 text-muted"></i><br><strong>No applications yet</strong><br><small>Register for a course from the Courses tab</small></div>';
+                return;
+            }
+            c.innerHTML = r.applications.map(a => {
+                let badge = `<span class="badge bg-secondary">${esc(a.status)}</span>`, action = "";
+                if (a.status === "Active") { badge = '<span class="badge bg-success">Active – ready</span>'; action = `<button onclick="startTest('${jsq(a.courseId)}','${jsq(a.courseName)}')" class="btn btn-brand btn-sm mt-1">Start test now</button>`; }
+                else if (a.status === "Approved") { badge = '<span class="badge bg-warning text-dark">Approved – pay now</span>'; action = '<small class="text-muted d-block">Check your messages and email for the payment link.</small>'; }
+                else if (a.status === "Payment Submitted") { badge = '<span class="badge bg-info">Payment submitted</span>'; action = '<small class="text-muted d-block">Admin is verifying payment…</small>'; }
+                return `<div class="list-group-item d-flex justify-content-between align-items-center">
+      <div><strong>${esc(a.courseName)}</strong><br><small class="text-muted">ID: ${esc(a.applicationID)}</small></div>
+      <div class="text-end">${badge}<br>${action}<small class="d-block mt-1 text-muted">${fmtDate(a.appliedAt)}</small></div></div>`;
+            }).join("");
+        }
+
+        async function markPaymentDone() {
+            const appID = prompt("Enter your Application ID (e.g. APP-XXXXXX):"); if (!appID) return;
+            const ref = prompt("Enter Payment Reference / Transaction ID:"); if (!ref) return;
+            const r = await callAPI("markPaymentAsDone", { token: currentToken, appID: appID.trim(), paymentReference: ref.trim() });
+            if (r.success) { alert("✅ Payment marked.\n\nAdmin will verify shortly."); loadMyApplications(); }
+            else alert("Error: " + (r.message || "Failed to mark payment"));
+        }
+
+        // ==================== MESSAGES ====================
+        async function loadUnreadCount() {
+            try {
+                const r = await callAPI("getUnreadCount", { token: currentToken });
+                if (!r.success) return 0;
+                const n = parseInt(r.unreadCount || 0);
+                const b = $("unread-badge");
+                if (b) { b.textContent = n > 99 ? "99+" : n; b.style.display = n > 0 ? "inline-block" : "none"; }
+                if ($("stat-messages")) $("stat-messages").textContent = n;
+                return n;
+            } catch (e) { return 0; }
+        }
+
+        async function showMessagesModal() {
+            switchTab(3);
+            const c = $("messages-list"); if (!c) return;
+            c.innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm"></span></div>';
+            const r = await callAPI("getMyMessages", { token: currentToken });
+            if (!r.success || !r.messages || !r.messages.length) {
+                c.innerHTML = '<div class="alert alert-info text-center py-5"><i class="fa-solid fa-inbox fa-3x mb-3 text-muted"></i><br><strong>No messages yet</strong></div>';
+                return;
+            }
+            allMessages = r.messages.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            msgPage = 0; renderMessages();
+            await callAPI("markAllMessagesAsRead", { token: currentToken });
+            localStorage.setItem("lastSeenMessageCount", await loadUnreadCount());
+        }
+
+        function renderMessages() {
+            const c = $("messages-list");
+            const pages = Math.ceil(allMessages.length / MSGS_PER_PAGE);
+            let html = allMessages.slice(msgPage * MSGS_PER_PAGE, (msgPage + 1) * MSGS_PER_PAGE).map(m => `
+    <div class="list-group-item"><div class="d-flex justify-content-between"><strong>${esc(m.subject || "No subject")}</strong>
+    <small class="text-muted">${fmtDate(m.timestamp)}</small></div>
+    <p class="mb-1 message-body">${linkify(m.message || "")}</p></div>`).join("");
+            if (pages > 1) html += `<div class="d-flex justify-content-between align-items-center p-3 border-top">
+    <button onclick="msgPage--;renderMessages()" class="btn btn-outline-secondary btn-sm" ${msgPage === 0 ? "disabled" : ""}>Previous</button>
+    <span class="text-muted small">Page ${msgPage + 1} of ${pages}</span>
+    <button onclick="msgPage++;renderMessages()" class="btn btn-outline-secondary btn-sm" ${msgPage >= pages - 1 ? "disabled" : ""}>Next</button></div>`;
+            c.innerHTML = html;
+        }
+
+        // Escape first, then turn URLs into links (message links are the school's own payment/certificate links)
+        function linkify(text) {
+            return esc(text).replace(/(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi, u => {
+                const href = u.startsWith("http") ? u : "https://" + u;
+                return `<a href="${href}" target="_blank" rel="noopener noreferrer">${u}</a>`;
+            });
+        }
+
+        function showNewMessageToast(total) {
+            const seen = parseInt(localStorage.getItem("lastSeenMessageCount") || "0");
+            if (total <= 0 || total <= seen) return;
+            const n = total - seen;
+            const old = $("message-toast"); if (old) old.remove();
+            document.body.insertAdjacentHTML("beforeend", `<div id="message-toast" class="position-fixed bottom-0 end-0 p-3" style="z-index:1100">
+    <div class="toast show bg-brand text-white"><div class="toast-header bg-brand text-white border-0">
+    <i class="fa-solid fa-envelope me-2"></i><strong class="me-auto">New message${n > 1 ? "s" : ""}</strong>
+    <button type="button" class="btn-close btn-close-white" onclick="this.closest('#message-toast').remove()"></button></div>
+    <div class="toast-body">You have <strong>${n}</strong> new message${n > 1 ? "s" : ""}.</div></div></div>`);
+            setTimeout(() => { const t = $("message-toast"); if (t) t.remove(); }, 6000);
+            localStorage.setItem("lastSeenMessageCount", total);
+        }
+
+        // ==================== PROFILE ====================
+        function showProfileModal() {
+            $("dynamic-modals").innerHTML = `<div class="modal fade" id="profileModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header border-0"><h5 class="modal-title fw-bold">Update profile</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body"><input id="prof-name" type="text" class="form-control" placeholder="Full name" value="${esc((currentUser && currentUser.fullName) || "")}"></div>
+    <div class="modal-footer border-0"><button onclick="saveProfile()" class="btn btn-brand">Save changes</button></div></div></div></div>`;
+            new bootstrap.Modal($("profileModal")).show();
+        }
+        async function saveProfile() {
+            const name = $("prof-name").value.trim(); if (!name) return;
+            const r = await callAPI("updateProfile", { token: currentToken, fullName: name });
+            if (r.success) {
+                currentUser.fullName = name; $("welcome-name").textContent = name.split(" ")[0];
+                bootstrap.Modal.getInstance($("profileModal")).hide(); alert("Profile updated!");
+            } else alert(r.message || "Could not update profile.");
+        }
+
+        // ==================== ACADEMY (public catalogue + enrol & pay) ====================
+        const academyFmtMoney = n => (Number(n) || 0) <= 0 ? "Free" : "₦" + Number(n).toLocaleString("en-NG");
+        function academyFmtWhen(d) {
+            if (!d) return "Date TBA";
+            try { return new Date(d).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
+            catch (e) { return String(d); }
+        }
+        const courseKind = c => { let t = String(c.courseType || "scheduled").toLowerCase(); return (t === "self-paced" || t === "selfpaced") ? "self_paced" : t; };
+
+        async function academyLoadCourses() {
+            const cards = $("academy-course-cards"), sel = $("academy-course-select");
+            if (!cards) return;
+            cards.innerHTML = '<div class="col-12 text-center text-muted py-4">Loading courses…</div>';
+            try {
+                let r = await callAPI("academyListCourses", { upcoming: false });
+                if (!r || r.success === false) r = await callAPI("listAcademyCourses", { upcoming: false });
+                if (!r || r.success === false) throw new Error("load failed");
+                academyCourseCacheAll = r.courses || [];
+                if (!academyCourseCacheAll.length) {
+                    cards.innerHTML = '<div class="col-12 text-center text-muted py-4">No course yet. Check back later.</div>';
+                    if (sel) sel.innerHTML = '<option value="">No courses available</option>';
+                    return;
+                }
+                academyRenderCourses();
+            } catch (e) {
+                academyCourseCacheAll = [];
+                cards.innerHTML = '<div class="col-12 text-center text-muted py-5"><div style="font-size:2rem">📚</div><p class="fw-semibold mb-1">No course yet</p><p class="small mb-0">New programmes will appear here when published.</p></div>';
+                if (sel) sel.innerHTML = '<option value="">No courses available yet</option>';
+            }
+        }
+
+        function academySetFilter(f, btn) {
+            academyActiveFilter = f || "upcoming";
+            document.querySelectorAll(".academy-filter-btn").forEach(b => { b.classList.remove("active", "btn-brand"); b.classList.add("btn-outline-secondary"); });
+            if (btn) { btn.classList.add("active", "btn-brand"); btn.classList.remove("btn-outline-secondary"); }
+            const hints = {
+                upcoming: "Showing upcoming & open programmes.", all: "Showing all open courses.",
+                self_paced: "Self-paced: study the materials, then take the assessment.", scheduled: "Scheduled: virtual or physical training, assessment after admin approval."
+            };
+            if ($("academy-filter-hint")) $("academy-filter-hint").textContent = hints[academyActiveFilter] || "";
+            academyRenderCourses();
+        }
+
+        function academyFilterList(list) {
+            const now = Date.now(), f = academyActiveFilter;
+            return (list || []).filter(c => {
+                const k = courseKind(c);
+                if (f === "all") return true;
+                if (f === "self_paced") return k === "self_paced";
+                if (f === "scheduled") return k !== "self_paced";
+                if (k === "self_paced") return true;
+                const s = c.startAt ? new Date(c.startAt).getTime() : null;
+                return !s || isNaN(s) || s >= now - 864e5;
+            });
+        }
+
+        function academyRenderCourses() {
+            const cards = $("academy-course-cards"), sel = $("academy-course-select");
+            if (!cards) return;
+            const list = academyFilterList(academyCourseCacheAll);
+            if (!list.length) { cards.innerHTML = '<div class="col-12 text-center text-muted py-4">No course for this filter. Try “All courses”.</div>'; return; }
+            cards.innerHTML = list.map(c => {
+                const full = c.seats != null && Number(c.seats) <= 0, k = courseKind(c);
+                const badge = k === "self_paced" ? "Self-paced" : (c.mode || "Scheduled");
+                const path = c.pathLabel || (k === "self_paced" ? "Materials → assessment after study" : "Live/virtual training → assessment after admin approval");
+                const when = k === "self_paced" ? "Start anytime (self-paced)" : academyFmtWhen(c.startAt);
+                const desc = c.description || "";
+                return `<div class="col-md-6 col-lg-4"><div class="academic-card${full ? " opacity-75" : ""}" ${full ? "" : `onclick="academyPickCourse('${jsq(c.courseId)}')"`}>
+      <div class="d-flex justify-content-between mb-2"><span class="badge bg-light text-dark text-uppercase" style="font-size:.65rem">${esc(badge)}</span>
+      <strong class="text-brand">${full ? "Full" : academyFmtMoney(c.amount)}</strong></div>
+      <h3 class="h6 fw-bold">${esc(c.courseName)}</h3>
+      <p class="small text-muted mb-2">${esc(desc.slice(0, 140))}${desc.length > 140 ? "…" : ""}</p>
+      <p class="text-muted mb-2" style="font-size:.72rem"><i class="fa-solid fa-route me-1"></i>${esc(path)}</p>
+      <div class="small text-muted"><i class="fa-regular fa-calendar me-1"></i>${esc(when)}</div>
+      <button type="button" class="btn btn-sm ${full ? "btn-secondary" : "btn-brand"} w-100 mt-3" ${full ? "disabled" : ""}>${full ? "Full" : "Register now"}</button>
+    </div></div>`;
+            }).join("");
+            if (sel) sel.innerHTML = '<option value="">Select a course…</option>' + list.map(c => {
+                const full = c.seats != null && Number(c.seats) <= 0;
+                return `<option value="${esc(c.courseId)}"${full ? " disabled" : ""}>${esc(c.courseName)} [${courseKind(c) === "self_paced" ? "Self-paced" : "Scheduled"}] — ${full ? "Full" : academyFmtMoney(c.amount)}</option>`;
+            }).join("");
+        }
+
+        function academyPickCourse(id) {
+            showEnrolModal();
+            setTimeout(() => {
+                const sel = $("academy-course-select"); if (sel) sel.value = id;
+                const s = $("academy-course-search"); if (s) s.value = "";
+            }, 400);
+        }
+
+        async function academySubmitEnrol(event) {
+            if (event && event.preventDefault) event.preventDefault();
+            const msg = $("academy-enrol-msg"), btn = $("academy-pay-btn");
+            const say = (t, err) => { msg.textContent = t || ""; msg.className = "small text-center mt-3 mb-0 " + (err ? "text-danger" : "text-success"); };
+            const courseId = $("academy-course-select").value || "";
+            const courseName = $("academy-course-search").value.trim();
+            const fullName = $("academy-name").value.trim();
+            const email = $("academy-email").value.trim();
+            const phone = $("academy-phone").value.trim();
+            if (!courseId && !courseName) return say("Select a course from the list. Payment is for that course only.", true), false;
+            if (!fullName) return say("Full name is required.", true), false;
+            if (email.indexOf("@") < 0) return say("A valid email is required.", true), false;
+
+            btn.disabled = true; btn.textContent = "Creating payment…";
+            say("Creating your enrollment and payment link…");
+            try {
+                const r = await callAPI("academyEnrollAndPay", { email, fullName, phone, courseId, courseName });
+                if (!r || r.success === false) say((r && r.message) || "Could not start enrollment. Try again.", true);
+                else if (r.free || r.amount === 0) {
+                    say(r.message || "Enrolled. Check your email for next steps.");
+                    setTimeout(() => { const m = _modal("enrolModal"); if (m) m.hide(); }, 2000);
+                } else if (r.paymentLink) {
+                    say("Redirecting to secure payment. Your place activates after payment.");
+                    window.location.href = r.paymentLink;
+                } else say(r.message || "Enrollment saved as pending payment, but no payment link was returned. Contact us with your email.", true);
+            } catch (err) { say((err && err.message) || "Network error. Please try again.", true); }
+            finally { btn.disabled = false; btn.textContent = "Pay to activate enrollment"; }
+            return false;
+        }
+
+        // Show a thank-you banner when the payment gateway sends the student back with a status in the URL
+        function academyHandlePaidReturn() {
+            const p = new URLSearchParams(location.search);
+            const status = (p.get("status") || p.get("payment") || "").toLowerCase();
+            const ref = p.get("reference") || p.get("trxref") || p.get("enr") || "";
+            if (!ref && !["success", "successful", "paid", "completed"].includes(status)) return;
+            const b = $("academy-paid-banner"); if (!b) return;
+            b.classList.remove("d-none");
+            if ($("academy-enr-line") && ref) $("academy-enr-line").textContent = "Reference: " + ref;
+            b.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+
+        // ==================== INIT ====================
+        document.addEventListener("DOMContentLoaded", function () {
+            const lf = $("login-form"); if (lf) lf.addEventListener("submit", handleLogin);
+            academyHandlePaidReturn();
+            academyLoadCourses();
+            if (currentToken) checkAuthAndLoadDashboard();
+        });
+    </script>
 
 </body>
 
