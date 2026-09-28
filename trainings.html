@@ -358,8 +358,9 @@
                     <i class="fa-solid fa-chalkboard-teacher"></i> THE VICTORIAS ACADEMY
                 </div>
                 <h2 class="fw-bold mb-1">Upcoming &amp; open training</h2>
-                <p class="text-muted mb-0">Select a course, register, and pay securely. No portal login required for
-                    enrollment.</p>
+                <p class="text-muted mb-0">One registration for every course: choose self-paced materials or a scheduled
+                    (virtual/physical) programme, pay securely, then follow the path to assessment. No portal login
+                    required to enroll.</p>
             </div>
             <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill" onclick="academyLoadCourses()">
                 <i class="fa-solid fa-rotate"></i> Refresh
@@ -2422,21 +2423,34 @@
                 }
                 cards.innerHTML = academyCourseCache.map(function (c) {
                     const full = c.seats != null && Number(c.seats) <= 0;
+                    const ctype = String(c.courseType || "scheduled").toLowerCase();
+                    const typeBadge = ctype === "self_paced"
+                        ? "Self-paced"
+                        : (c.mode || "Scheduled");
+                    const pathHint = c.pathLabel || (ctype === "self_paced"
+                        ? "Materials → assessment after study"
+                        : "Live/virtual training → assessment after admin approval");
+                    const whenLine = ctype === "self_paced"
+                        ? "Start anytime (self-paced)"
+                        : academyFmtWhen(c.startAt);
                     return (
                         '<div class="col-md-6 col-lg-4">' +
                         '<div class="academic-card' + (full ? ' opacity-75' : '') + '" ' +
                         (full ? '' : 'onclick="academyPickCourse(\'' + academyEscAttr(c.courseId) + '\')"') + '>' +
                         '<div class="d-flex justify-content-between mb-2">' +
                         '<span class="badge bg-light text-dark text-uppercase" style="font-size:0.65rem">' +
-                        academyEsc(c.mode || "Online") + '</span>' +
+                        academyEsc(typeBadge) + '</span>' +
                         '<strong class="text-brand">' + (full ? "Full" : academyFmtMoney(c.amount)) + '</strong></div>' +
                         '<h3 class="h6 fw-bold">' + academyEsc(c.courseName) + '</h3>' +
-                        '<p class="small text-muted mb-3">' + academyEsc((c.description || "").slice(0, 140)) +
+                        '<p class="small text-muted mb-2">' + academyEsc((c.description || "").slice(0, 140)) +
                         (c.description && c.description.length > 140 ? "…" : "") + '</p>' +
+                        '<p class="small text-muted mb-2" style="font-size:0.7rem"><i class="fa-solid fa-route me-1"></i>' +
+                        academyEsc(pathHint) + '</p>' +
                         '<div class="small text-muted"><i class="fa-regular fa-calendar me-1"></i>' +
-                        academyEsc(academyFmtWhen(c.startAt)) + '</div>' +
-                        (c.seats != null ? '<div class="small text-muted mt-1"><i class="fa-solid fa-users me-1"></i> ' +
-                            c.seats + ' seats</div>' : '') +
+                        academyEsc(whenLine) + '</div>' +
+                        (full
+                            ? '<button type="button" class="btn btn-sm btn-secondary w-100 mt-3" disabled>Full</button>'
+                            : '<button type="button" class="btn btn-sm btn-brand w-100 mt-3">Register &amp; pay</button>') +
                         '</div></div>'
                     );
                 }).join("");
@@ -2444,9 +2458,10 @@
                     sel.innerHTML = '<option value="">Select a course…</option>' +
                         academyCourseCache.map(function (c) {
                             const full = c.seats != null && Number(c.seats) <= 0;
+                            var tlab = String(c.courseType || "").toLowerCase() === "self_paced" ? "Self-paced" : "Scheduled";
                             return '<option value="' + academyEscAttr(c.courseId) + '"' +
                                 (full ? " disabled" : "") + ">" + academyEsc(c.courseName) +
-                                " — " + (full ? "Full" : academyFmtMoney(c.amount)) + "</option>";
+                                " [" + tlab + "] — " + (full ? "Full" : academyFmtMoney(c.amount)) + "</option>";
                         }).join("");
                 }
             } catch (e) {

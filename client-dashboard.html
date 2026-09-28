@@ -1286,7 +1286,7 @@
                         class="relative h-11 w-11 flex items-center justify-center rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
                         aria-label="Notifications">
                         <i class="fa-solid fa-bell text-sm"></i>
-                        <span id="clientNotifBadge"
+                        <span id="clientNotifBadgeMobile"
                             class="hidden absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">0</span>
                     </button>
                     <div id="clientNotifPanel"
@@ -1318,6 +1318,8 @@
                             class="relative h-8 w-8 flex items-center justify-center rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
                             aria-label="Notifications">
                             <i class="fa-solid fa-bell text-sm"></i>
+                            <span id="clientNotifBadgeDesktop"
+                                class="hidden absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">0</span>
                         </button>
                     </div>
                     <div class="flex items-center gap-2 text-[10px] font-mono text-emerald-400">
@@ -1861,12 +1863,26 @@
                         <div id="chatThread" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2 text-xs">
                             <p class="text-slate-600 text-center mt-8">Say hello 👋</p>
                         </div>
-                        <div class="border-t border-slate-800 p-3 flex gap-2 shrink-0">
-                            <input id="chatInput" type="text" placeholder="Type a message…"
-                                onkeydown="if(event.key==='Enter') sendChatMessage();"
-                                class="flex-1 bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
-                            <button onclick="sendChatMessage()"
-                                class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-4 py-2 rounded">Send</button>
+                        <div class="border-t border-slate-800 p-3 space-y-2 shrink-0">
+                            <div id="chatAttachPreview"
+                                class="hidden text-[10px] text-slate-400 flex items-center gap-2"></div>
+                            <div class="flex gap-2 items-center">
+                                <label
+                                    class="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg bg-slate-900 border border-slate-700 text-slate-300 cursor-pointer hover:bg-slate-800"
+                                    title="Attach image or document">
+                                    <i class="fa-solid fa-paperclip text-sm"></i>
+                                    <input type="file" id="chatAttachInput" class="hidden"
+                                        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                                        onchange="clientChatPickFile(event)" />
+                                </label>
+                                <input id="chatInput" type="text" placeholder="Type a message…"
+                                    onkeydown="if(event.key==='Enter') sendChatMessage();"
+                                    class="flex-1 bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                                <button type="button" onclick="sendChatMessage()"
+                                    class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-4 py-2 rounded">Send</button>
+                            </div>
+                            <p class="text-[9px] text-slate-600">You can attach images or documents for your account
+                                team (max ~8 MB).</p>
                         </div>
                     </div>
                 </section>
@@ -2302,6 +2318,83 @@
                             </div>
                         </div>
                     </div>
+
+                    <h3 class="text-xs font-semibold text-white mt-2">Add / edit lead</h3>
+                    <div id="clientLeadForm"
+                        class="hidden bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                        <input type="hidden" id="leadEditId" value="" />
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input id="leadName" placeholder="Contact name"
+                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                            <input id="leadCompany" placeholder="Company"
+                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                            <input id="leadEmail" placeholder="Email"
+                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                            <input id="leadPhone" placeholder="Phone"
+                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                            <input id="leadWhatsApp" placeholder="WhatsApp"
+                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                            <input id="leadRole" placeholder="Role / title"
+                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                            <input id="leadIndustry" placeholder="Industry"
+                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                            <input id="leadCity" placeholder="City"
+                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                            <select id="leadStage"
+                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white">
+                                <option value="New">New</option>
+                                <option value="Contacted">Contacted</option>
+                                <option value="Interested">Interested</option>
+                                <option value="Proposal">Proposal</option>
+                                <option value="Customer">Customer / Won</option>
+                                <option value="Lost">Lost</option>
+                            </select>
+                            <div class="flex flex-col gap-1 min-w-[140px] flex-1">
+                                <input id="leadTags" placeholder="Tags (pick or type)" list="leadTagPresets"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                                <datalist id="leadTagPresets">
+                                    <option value="hot"></option>
+                                    <option value="warm"></option>
+                                    <option value="cold"></option>
+                                    <option value="vip"></option>
+                                    <option value="decision-maker"></option>
+                                    <option value="referral"></option>
+                                    <option value="partner"></option>
+                                    <option value="newsletter"></option>
+                                    <option value="event"></option>
+                                    <option value="whatsapp"></option>
+                                    <option value="email-only"></option>
+                                    <option value="upsell"></option>
+                                    <option value="renewal"></option>
+                                    <option value="cac"></option>
+                                    <option value="compliance"></option>
+                                    <option value="digital"></option>
+                                    <option value="ops"></option>
+                                </datalist>
+                                <p class="text-[9px] text-slate-600">Suggested: hot, warm, cold, vip, decision-maker,
+                                    referral, partner, newsletter, event, upsell, renewal, cac, compliance, digital, ops
+                                </p>
+                            </div>
+                            <input id="leadValue" placeholder="Est. value (optional, tracking only)"
+                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                            <input id="leadSourceCampaign" placeholder="Source campaign / post id"
+                                class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+                        </div>
+                        <textarea id="leadNotes" rows="2" placeholder="Notes / interest"
+                            class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"></textarea>
+                        <div class="flex flex-wrap gap-3 text-[10px] text-slate-400">
+                            <label class="flex items-center gap-1"><input type="checkbox" id="leadEmailOK" checked />
+                                Email OK</label>
+                            <label class="flex items-center gap-1"><input type="checkbox" id="leadWaOK" checked />
+                                WhatsApp OK</label>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="clientSaveLead()"
+                                class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 text-white">Save lead</button>
+                            <button type="button" onclick="clientLeadsHideForm()"
+                                class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300">Cancel</button>
+                        </div>
+                    </div>
                 </section>
                 <section id="view-leads-catalog" class="view hidden space-y-4 p-1">
                     <div class="flex flex-wrap justify-between items-center gap-2 shrink-0">
@@ -2348,101 +2441,9 @@
                             <p class="text-xs font-semibold text-white">Suggested next actions</p>
                             <div id="leadSuggestionsList" class="space-y-2 text-[11px] text-slate-300"></div>
                         </div>
-                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
-                            <p class="text-xs font-semibold text-white">Follow-up task</p>
-                            <div class="flex flex-wrap gap-2">
-                                <select id="taskLeadSelect"
-                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white min-w-[140px]">
-                                    <option value="">Lead…</option>
-                                </select>
-                                <input id="taskTitle" placeholder="e.g. Call back"
-                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white flex-1 min-w-[120px]" />
-                                <input id="taskDueDays" type="number" min="0" value="3"
-                                    class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white"
-                                    title="Days from now" />
-                                <button type="button" onclick="clientSaveLeadTask()"
-                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 text-white">Add
-                                    task</button>
-                            </div>
-                            <ul id="leadTasksList" class="text-[11px] text-slate-400 space-y-1"></ul>
-                        </div>
 
-                        <div id="clientLeadForm"
-                            class="hidden bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
-                            <input type="hidden" id="leadEditId" value="" />
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <input id="leadName" placeholder="Contact name"
-                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                                <input id="leadCompany" placeholder="Company"
-                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                                <input id="leadEmail" placeholder="Email"
-                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                                <input id="leadPhone" placeholder="Phone"
-                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                                <input id="leadWhatsApp" placeholder="WhatsApp"
-                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                                <input id="leadRole" placeholder="Role / title"
-                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                                <input id="leadIndustry" placeholder="Industry"
-                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                                <input id="leadCity" placeholder="City"
-                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                                <select id="leadStage"
-                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white">
-                                    <option value="New">New</option>
-                                    <option value="Contacted">Contacted</option>
-                                    <option value="Interested">Interested</option>
-                                    <option value="Proposal">Proposal</option>
-                                    <option value="Customer">Customer / Won</option>
-                                    <option value="Lost">Lost</option>
-                                </select>
-                                <div class="flex flex-col gap-1 min-w-[140px] flex-1">
-                                    <input id="leadTags" placeholder="Tags (pick or type)" list="leadTagPresets"
-                                        class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                                    <datalist id="leadTagPresets">
-                                        <option value="hot"></option>
-                                        <option value="warm"></option>
-                                        <option value="cold"></option>
-                                        <option value="vip"></option>
-                                        <option value="decision-maker"></option>
-                                        <option value="referral"></option>
-                                        <option value="partner"></option>
-                                        <option value="newsletter"></option>
-                                        <option value="event"></option>
-                                        <option value="whatsapp"></option>
-                                        <option value="email-only"></option>
-                                        <option value="upsell"></option>
-                                        <option value="renewal"></option>
-                                        <option value="cac"></option>
-                                        <option value="compliance"></option>
-                                        <option value="digital"></option>
-                                        <option value="ops"></option>
-                                    </datalist>
-                                    <p class="text-[9px] text-slate-600">Suggested: hot, warm, cold, vip,
-                                        decision-maker, referral, partner, newsletter, event, upsell, renewal, cac,
-                                        compliance, digital, ops</p>
-                                </div>
-                                <input id="leadValue" placeholder="Est. value (optional, tracking only)"
-                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                                <input id="leadSourceCampaign" placeholder="Source campaign / post id"
-                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
-                            </div>
-                            <textarea id="leadNotes" rows="2" placeholder="Notes / interest"
-                                class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"></textarea>
-                            <div class="flex flex-wrap gap-3 text-[10px] text-slate-400">
-                                <label class="flex items-center gap-1"><input type="checkbox" id="leadEmailOK"
-                                        checked /> Email OK</label>
-                                <label class="flex items-center gap-1"><input type="checkbox" id="leadWaOK" checked />
-                                    WhatsApp OK</label>
-                            </div>
-                            <div class="flex gap-2">
-                                <button type="button" onclick="clientSaveLead()"
-                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 text-white">Save
-                                    lead</button>
-                                <button type="button" onclick="clientLeadsHideForm()"
-                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300">Cancel</button>
-                            </div>
-                        </div>
+
+
 
                         <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
                             <h3 class="text-xs font-bold text-white flex items-center gap-1.5">Contact cadence
@@ -2627,9 +2628,29 @@
                         </button>
                     </div>
                     <div class="space-y-4">
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
+                            <p class="text-xs font-semibold text-white">Follow-up task</p>
+                            <div class="flex flex-wrap gap-2">
+                                <select id="taskLeadSelect"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white min-w-[140px]">
+                                    <option value="">Lead…</option>
+                                </select>
+                                <input id="taskTitle" placeholder="e.g. Call back"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white flex-1 min-w-[120px]" />
+                                <input id="taskDueDays" type="number" min="0" value="3"
+                                    class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white"
+                                    title="Days from now" />
+                                <button type="button" onclick="clientSaveLeadTask()"
+                                    class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 text-white">Add
+                                    task</button>
+                            </div>
+                            <ul id="leadTasksList" class="text-[11px] text-slate-400 space-y-1"></ul>
+                        </div>
                         <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
-                            <h3 class="text-xs font-bold text-white">Follow-ups</h3>
-                            <div id="leadTasksList_1" class="text-xs text-slate-300">Open this tab to load.</div>
+                            <h3 class="text-xs font-bold text-white mb-2">All open follow-ups</h3>
+                            <div id="leadTasksList_1" class="text-xs text-slate-300 hidden"></div>
+                            <p class="text-[10px] text-slate-500 mt-2">Tasks with a due date also appear under
+                                Appointments / calendar reminders.</p>
                         </div>
                     </div>
                 </section>
@@ -4178,15 +4199,20 @@
                         return true;
                     }).length;
                 }
-                var badge = document.getElementById('clientNotifBadge');
-                if (badge) {
+                function setNotifBadge(id) {
+                    var badge = document.getElementById(id);
+                    if (!badge) return;
                     if (unread > 0) {
                         badge.textContent = unread > 99 ? '99+' : String(unread);
                         badge.classList.remove('hidden');
                     } else {
                         badge.classList.add('hidden');
+                        badge.textContent = '0';
                     }
                 }
+                setNotifBadge('clientNotifBadgeMobile');
+                setNotifBadge('clientNotifBadgeDesktop');
+                setNotifBadge('clientNotifBadge');
                 var panel = document.getElementById('clientNotifPanel');
                 if (panel && !panel.classList.contains('hidden')) {
                     renderClientNotifPanel(items);
@@ -4205,7 +4231,10 @@
                 panel.innerHTML = '<div class="p-3 text-xs text-slate-500">No notifications</div>';
                 return;
             }
-            panel.innerHTML = items.map(function (n, idx) {
+            var head = '<div class="px-3 py-2 border-b border-slate-800 flex justify-between items-center sticky top-0 bg-slate-950 z-10">' +
+                '<span class="text-[10px] text-slate-400 uppercase">Notifications</span>' +
+                '<button type="button" class="text-[10px] text-emerald-400 hover:underline" onclick="clientMarkAllNotifsRead()">Mark all read</button></div>';
+            panel.innerHTML = head + items.map(function (n, idx) {
                 var title = (n.title || n.Title || n.subject || n.type || n.Type || 'Notice');
                 var body = (n.body || n.message || n.Message || n.text || '');
                 var when = (n.createdAt || n.CreatedAt || n.timestamp || '');
@@ -4227,8 +4256,22 @@
                 try {
                     var nid = n.id || n.NotificationID || n.notificationId;
                     if (nid) {
-                        callGateway('clientportal', 'clientPortalMarkNotificationRead', { notificationId: nid }).catch(function () { });
+                        callGateway('clientportal', 'clientPortalMarkNotificationRead', { notificationId: nid })
+                            .then(function () { try { loadClientNotifications(); } catch (_) { } })
+                            .catch(function () { });
                         n.read = true;
+                        window.__clientNotifItems = items;
+                        try { renderClientNotifPanel(items); } catch (_) { }
+                        // Clear badge if no unread left
+                        var left = items.filter(function (x) {
+                            return x && !(x.read === true || x.Read === true || x.Read === 'TRUE');
+                        }).length;
+                        ['clientNotifBadgeMobile', 'clientNotifBadgeDesktop', 'clientNotifBadge'].forEach(function (id) {
+                            var b = document.getElementById(id);
+                            if (!b) return;
+                            if (left > 0) { b.textContent = String(left); b.classList.remove('hidden'); }
+                            else { b.classList.add('hidden'); b.textContent = '0'; }
+                        });
                     }
                 } catch (_) { }
                 var link = String(n.link || n.Link || '').trim().toLowerCase();
@@ -6190,8 +6233,16 @@
 
         window.__clientLeads = [];
         function clientLeadsShowForm(lead) {
+            try {
+                if (typeof showView === 'function') {
+                    showView('leads-list', document.querySelector('.nav-link[data-view="leads-list"]'));
+                }
+            } catch (_) { }
             var f = document.getElementById('clientLeadForm');
-            if (f) f.classList.remove('hidden');
+            if (f) {
+                f.classList.remove('hidden');
+                try { f.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_) { }
+            }
             document.getElementById('leadEditId').value = (lead && lead.LeadID) || '';
             document.getElementById('leadName').value = (lead && lead.ContactName) || '';
             document.getElementById('leadCompany').value = (lead && lead.Company) || '';
@@ -8930,11 +8981,19 @@
             window.sendChatMessage = async function () {
                 var input = document.getElementById("chatInput");
                 var text = input ? String(input.value || "").trim() : "";
-                if (!text) return;
+                var att = window.__chatAttach || null;
+                if (!text && !att) return;
                 try {
-                    var res = await gw("clientportal", "clientPortalChatSend", { clientId: sid(), token: tok(), text: text, message: text });
+                    var payload = { clientId: sid(), token: tok(), text: text || (att ? ("Attached: " + (att.name || "file")) : ""), message: text };
+                    if (att && att.base64) {
+                        payload.attachmentBase64 = att.base64;
+                        payload.attachmentName = att.name || "file";
+                        payload.attachmentMime = att.mime || "application/octet-stream";
+                    }
+                    var res = await gw("clientportal", "clientPortalChatSend", payload);
                     if (res && res.success === false) throw new Error(res.message || "Failed");
                     if (input) input.value = "";
+                    try { if (typeof clientChatClearAttach === "function") clientChatClearAttach(); } catch (_) { }
                     if (typeof loadChat === "function") loadChat();
                 } catch (e) { toast(e.message || "Chat failed", true); }
             };
@@ -10001,10 +10060,16 @@
                             : "bg-slate-800 border-slate-700 text-slate-200";
                         var text = m.text || m.Text || m.message || "";
                         var ts = m.ts || m.Timestamp || m.time || "";
+                        var att = m.attachmentUrl || m.AttachmentUrl || "";
+                        var attName = m.attachmentName || m.AttachmentName || "Open file";
+                        var bodyHtml = esc(text).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" class="text-emerald-400 underline break-all">$1</a>');
+                        if (att && text.indexOf(att) < 0) {
+                            bodyHtml += '<p class="mt-1"><a href="' + esc(att) + '" target="_blank" rel="noopener" class="text-emerald-400 underline text-[10px]">📎 ' + esc(attName) + '</a></p>';
+                        }
                         return (
                             '<div class="flex flex-col ' + align + '">' +
                             '<div class="max-w-[85%] rounded-lg border px-3 py-2 ' + bubble + '">' +
-                            '<p class="whitespace-pre-wrap">' + esc(text) + '</p>' +
+                            '<p class="whitespace-pre-wrap">' + bodyHtml + '</p>' +
                             (ts ? ('<p class="text-[9px] opacity-60 mt-1">' + esc(String(ts).slice(0, 19)) + '</p>') : '') +
                             '</div></div>'
                         );
@@ -11020,6 +11085,53 @@
         })();
     </script>
 
+    <script>
+        window.__chatAttach = null;
+        function clientChatPickFile(ev) {
+            var f = ev && ev.target && ev.target.files && ev.target.files[0];
+            if (!f) return;
+            if (f.size > 8 * 1024 * 1024) {
+                if (typeof notifyUser === "function") notifyUser("File too large (max 8 MB).", "info");
+                else if (typeof toast === "function") toast("File too large (max 8 MB).", true);
+                ev.target.value = "";
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function () {
+                var dataUrl = String(reader.result || "");
+                var b64 = dataUrl.indexOf(",") >= 0 ? dataUrl.split(",")[1] : dataUrl;
+                window.__chatAttach = { name: f.name, mime: f.type || "application/octet-stream", base64: b64, size: f.size };
+                var prev = document.getElementById("chatAttachPreview");
+                if (prev) {
+                    prev.classList.remove("hidden");
+                    prev.innerHTML = "<span class=\"truncate\">Attached: " + (f.name || "file") + "</span> " +
+                        "<button type=\"button\" class=\"text-amber-400 underline\" onclick=\"clientChatClearAttach()\">Remove</button>";
+                }
+            };
+            reader.readAsDataURL(f);
+        }
+        function clientChatClearAttach() {
+            window.__chatAttach = null;
+            var inp = document.getElementById("chatAttachInput");
+            if (inp) inp.value = "";
+            var prev = document.getElementById("chatAttachPreview");
+            if (prev) { prev.classList.add("hidden"); prev.innerHTML = ""; }
+        }
+        async function clientMarkAllNotifsRead() {
+            try { await callGateway("clientportal", "clientPortalMarkAllNotificationsRead", {}); } catch (_) { }
+            try {
+                var items = window.__clientNotifItems || [];
+                items.forEach(function (n) { if (n) n.read = true; });
+                window.__clientNotifItems = items;
+                if (typeof renderClientNotifPanel === "function") renderClientNotifPanel(items);
+            } catch (_) { }
+            ["clientNotifBadgeMobile", "clientNotifBadgeDesktop", "clientNotifBadge"].forEach(function (id) {
+                var b = document.getElementById(id);
+                if (b) { b.classList.add("hidden"); b.textContent = "0"; }
+            });
+            try { loadClientNotifications(); } catch (_) { }
+        }
+    </script>
 </body>
 
 </html>

@@ -21162,8 +21162,9 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                         '<td class="p-3">' + (e.status || "") + '</td>' +
                         '<td class="p-3">' + (e.amount != null ? e.amount : "") + '</td>' +
                         '<td class="p-3 text-xs max-w-[140px] truncate">' + (e.trainingLink || "—") + '</td>' +
-                        '<td class="p-3"><button type="button" class="text-xs px-2 py-1 rounded bg-slate-800" onclick="academyAdminConfirmPay(\'' + id.replace(/'/g, "") + '\')">Mark paid</button></td>' +
-                        '</tr>';
+                        '<td class="p-3 space-x-1"><button type="button" class="text-[10px] px-2 py-1 rounded bg-slate-800" onclick="academyAdminConfirmPay(\'' + id.replace(/'/g, "") + '\')">Mark paid</button> ' +
+                        ((String(e.assessmentApproved || '').toLowerCase() === 'yes') ? '<span class="text-[10px] text-emerald-400">Assessment OK</span>' : '<button type="button" class="text-[10px] px-2 py-1 rounded bg-emerald-800 text-emerald-100" onclick="academyAdminApproveAssessment(\'' + id.replace(/'/g, "") + '\')">Approve assessment</button>') +
+                        '</td></tr>';
                 }).join("");
             } catch (err) {
                 body.innerHTML = '<tr><td colspan="7" class="p-4 text-amber-400">' + (err.message || err) + '</td></tr>';
@@ -21189,6 +21190,12 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             document.getElementById("academyCourseAmount").value = c.amount != null ? c.amount : "";
             document.getElementById("academyCourseStatus").value = c.status || (c.isActive ? "Open" : "Closed");
             document.getElementById("academyCourseMode").value = c.mode || "Online";
+            try {
+                var _ct = document.getElementById("academyCourseType");
+                if (_ct) _ct.value = c.courseType || "scheduled";
+                var _mu = document.getElementById("academyCourseMaterials");
+                if (_mu) _mu.value = c.materialsUrl || "";
+            } catch (_e) { }
             document.getElementById("academyCourseDesc").value = c.publicDescription || c.description || "";
             document.getElementById("academyCourseLink").value = c.trainingLink || "";
             document.getElementById("academyCourseSeats").value = c.seats != null && !isNaN(c.seats) ? c.seats : "";
@@ -21223,7 +21230,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                     var payload = encodeURIComponent(JSON.stringify(c));
                     return '<tr>' +
                         '<td class="p-2 font-mono text-[10px]">' + id + '</td>' +
-                        '<td class="p-2">' + (c.courseName || "") + '</td>' +
+                        '<td class="p-2">' + (c.courseName || "") + '<br><span class="text-[10px] text-slate-500">' + (c.courseType || "") + '</span></td>' +
                         '<td class="p-2">' + (c.amount != null ? ("₦" + Number(c.amount).toLocaleString()) : "—") + '</td>' +
                         '<td class="p-2 text-xs">' + (c.startAt ? new Date(c.startAt).toLocaleString() : "—") + '</td>' +
                         '<td class="p-2">' + (c.status || (c.isActive ? "Open" : "Closed")) + '</td>' +
@@ -21251,6 +21258,8 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 amount: amount,
                 status: (document.getElementById("academyCourseStatus") || {}).value || "Open",
                 mode: (document.getElementById("academyCourseMode") || {}).value || "Online",
+                courseType: (document.getElementById("academyCourseType") || {}).value || "scheduled",
+                materialsUrl: ((document.getElementById("academyCourseMaterials") || {}).value || "").trim(),
                 publicDescription: ((document.getElementById("academyCourseDesc") || {}).value || "").trim(),
                 description: ((document.getElementById("academyCourseDesc") || {}).value || "").trim(),
                 trainingLink: ((document.getElementById("academyCourseLink") || {}).value || "").trim(),
@@ -21297,6 +21306,15 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 });
                 alert((r && r.message) || JSON.stringify(r));
                 academyAdminRefresh();
+            } catch (e) { alert(e.message || e); }
+        }
+
+        async function academyAdminApproveAssessment(enrollmentId) {
+            if (!enrollmentId) return;
+            try {
+                var r = await academyAdminCall("academyApproveForAssessment", { enrollmentId: enrollmentId });
+                alert((r && r.message) || JSON.stringify(r));
+                try { academyAdminRefresh(); } catch (_) { }
             } catch (e) { alert(e.message || e); }
         }
         async function academyAdminConfirmPay(enrollmentId) {
