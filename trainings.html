@@ -199,9 +199,12 @@
     <div id="loaderOverlay" class="loader-overlay" style="display:none !important" aria-hidden="true"></div>
 
     <nav class="navbar navbar-expand-lg navbar-light px-4 px-lg-5 py-3 py-lg-0">
-        <a href="" class="navbar-brand p-0">
-            <h1 class="text-primary"><i class="fas fa-search-dollar me-3"></i>The Victorias</h1>
+        <a href="https://thevictorias.com.ng" class="navbar-brand p-0 d-flex align-items-center gap-2">
+            <img src="img/thevictoriaslogo.png" alt="Logo" style="height:42px;width:auto"
+                onerror="this.style.display='none'" />
         </a>
+        <span class="dealyo navbar-text fw-semibold text-dark ms-1 me-auto"
+            style="font-size: 22px; line-height: 1.2;">The Victorias Ltd.</span>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
             <span class="fa fa-bars"></span>
         </button>
@@ -351,7 +354,7 @@
                     style="background: rgba(224, 116, 16, 0.1); color: var(--brand-color); font-weight: 600; font-size: 0.8rem;">
                     <i class="fa-solid fa-chalkboard-teacher"></i> THE VICTORIAS ACADEMY
                 </div>
-                <h2 class="fw-bold mb-1">Upcoming &amp; open training</h2>
+                <h2 class="fw-bold mb-1">Training courses</h2>
                 <p class="text-muted mb-0">One registration for every course: choose self-paced materials or a scheduled
                     (virtual/physical) programme, pay securely, then follow the path to assessment. No portal login
                     required to enroll.</p>
@@ -380,7 +383,7 @@
                 <p class="text-muted small mb-3">Tap a course above or open registration when you are ready. The form
                     only appears when you ask for it.</p>
                 <button type="button" class="btn btn-brand px-5 py-3 fw-bold" onclick="showEnrolModal()">
-                    Register for a course
+                    Register now
                 </button>
                 <div id="academy-paid-banner" class="alert alert-success mt-3 d-none text-start">
                     <strong>Thank you.</strong> If you completed payment, we will confirm by email shortly.
@@ -2431,20 +2434,21 @@
                     throw new Error((result && result.message) || "Failed to load courses");
                 }
                 if (!academyCourseCacheAll.length) {
-                    cards.innerHTML = '<div class="col-12 text-center text-muted py-4">No open courses yet. Check back soon.</div>';
+                    cards.innerHTML = '<div class="col-12 text-center text-muted py-4">No course yet. Check back later.</div>';
                     if (sel) sel.innerHTML = '<option value="">No courses available</option>';
                     return;
                 }
                 academyRenderCourses();
             } catch (err) {
-                var em = (err && err.message) || String(err || "");
-                if (/access denied|ingress token|unauthorized/i.test(em)) {
-                    em = "Training catalogue could not load (auth). Please refresh in a moment.";
-                }
-                if (/unknown action/i.test(em)) {
-                    em = "Training catalogue is updating. Please hard-refresh this page in a minute (Ctrl+Shift+R).";
-                }
-                cards.innerHTML = '<div class="col-12 text-center text-danger py-4">' + academyEsc(em) + "</div>";
+                // No catalogue yet or temporary API issue — calm empty state (not a red crash)
+                cards.innerHTML = '<div class="col-12 text-center text-muted py-5">' +
+                    '<div class="mb-2" style="font-size:2rem">📚</div>' +
+                    '<p class="fw-semibold mb-1 text-dark">No course yet</p>' +
+                    '<p class="small mb-0">Check back later. New programmes will appear here when they are published.</p>' +
+                    '</div>';
+                if (sel) sel.innerHTML = '<option value="">No courses available yet</option>';
+                academyCourseCacheAll = [];
+                academyCourseCache = [];
             }
         }
 
@@ -2493,7 +2497,7 @@
             var filtered = academyFilterList(academyCourseCacheAll);
             academyCourseCache = filtered;
             if (!filtered.length) {
-                cards.innerHTML = '<div class="col-12 text-center text-muted py-4">No courses match this filter.</div>';
+                cards.innerHTML = '<div class="col-12 text-center text-muted py-4">No course yet for this filter. Try “All courses” or check back later.</div>';
                 return;
             }
             cards.innerHTML = filtered.map(function (c) {

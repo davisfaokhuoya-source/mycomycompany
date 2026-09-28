@@ -1733,7 +1733,7 @@
 
                     <!-- VIEW: Interest applications (companies requesting service access) -->
                     <div id="view-client-interest"
-                        class="client-view hidden flex-1 flex flex-col overflow-hidden space-y-4" style="display:none;">
+                        class="client-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
                         <div class="flex flex-wrap justify-between items-center gap-2 shrink-0">
                             <div>
                                 <h3 class="text-lg font-bold text-white">Interest applications</h3>
@@ -1764,10 +1764,11 @@
                             <table class="w-full text-left text-xs">
                                 <thead class="bg-slate-900/80 text-slate-500 sticky top-0">
                                     <tr>
-                                        <th class="p-2 font-medium">When</th>
+                                        <th class="p-2 font-medium whitespace-nowrap">When</th>
                                         <th class="p-2 font-medium">Company</th>
                                         <th class="p-2 font-medium">Contact</th>
-                                        <th class="p-2 font-medium">Services</th>
+                                        <th class="p-2 font-medium">Services / packages</th>
+                                        <th class="p-2 font-medium">Region</th>
                                         <th class="p-2 font-medium">Status</th>
                                         <th class="p-2 font-medium">Actions</th>
                                     </tr>
@@ -10513,56 +10514,116 @@
         async function loadInterestApplications() {
             const body = document.getElementById('interestApplicationsBody');
             if (!body) return;
-            body.innerHTML = '<tr><td colspan="6" class="p-4 text-slate-500"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr>';
+            body.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading interest applications…</td></tr>';
             const status = (document.getElementById('interestStatusFilter') || {}).value || '';
+            const esc = (typeof escapeHtml === 'function') ? escapeHtml : function (s) {
+                return String(s == null ? '' : s)
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            };
             try {
-                const res = await executeSecureBridgeCall('agent', 'agent-list-interest-applications', {
-                    status: status || undefined,
-                    limit: 200
-                });
+                const res = await Promise.race([
+                    executeSecureBridgeCall('agent', 'agent-list-interest-applications', {
+                        status: status || undefined,
+                        limit: 200
+                    }),
+                    new Promise(function (resolve) {
+                        setTimeout(function () {
+                            resolve({ success: false, message: 'Request timed out. Check gateway / AgentLib and try Refresh.' });
+                        }, 25000);
+                    })
+                ]);
                 if (!res || !res.success) {
-                    body.innerHTML = '<tr><td colspan="6" class="p-4 text-red-400">' +
-                        ((res && res.message) || 'Could not load applications.') + '</td></tr>';
+                    body.innerHTML = '<tr><td colspan="7" class="p-4 text-slate-400">' +
+                        esc((res && res.message) || 'Could not load applications.') +
+                        ' <button type="button" class="underline text-emerald-400 ml-2" onclick="loadInterestApplications()">Retry</button></td></tr>';
                     return;
                 }
-                const rows = res.applications || [];
+                const rows = res.applications || res.rows || res.items || [];
                 if (!rows.length) {
-                    body.innerHTML = '<tr><td colspan="6" class="p-4 text-slate-600">No interest applications yet.</td></tr>';
+                    body.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-500">' +
+                        '<div class="text-2xl mb-2">📋</div>' +
+                        '<div class="font-medium text-slate-300 mb-1">No interest applications yet</div>' +
+                        '<div class="text-[11px]">When someone submits the public interest form, they appear here.</div>' +
+                        '<a href="/interest-form.html" target="_blank" class="inline-block mt-3 text-emerald-400 text-xs underline">Open public form</a>' +
+                        '</td></tr>';
                     return;
                 }
                 const statuses = ['New', 'Contacted', 'Qualified', 'Onboarding', 'Converted', 'Declined'];
-                const esc = (typeof escapeHtml === 'function') ? escapeHtml : function (s) {
-                    return String(s == null ? '' : s)
-                        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-                        .replace(/"/g, '&quot;');
-                };
                 body.innerHTML = rows.map(function (r) {
-                    const when = r.SubmittedAt ? String(r.SubmittedAt).slice(0, 16).replace('T', ' ') : '—';
-                    const company = esc(r.CompanyName || '');
-                    const contact = esc((r.ContactName || '') + ' · ' + (r.ContactEmail || '') +
-                        (r.Phone ? ' · ' + r.Phone : ''));
-                    const services = esc(r.ServicesInterest || '—');
-                    const id = esc(r.ApplicationID || '');
-                    const st = r.Status || 'New';
+                    const when = r.SubmittedAt || r.submittedAt || r.CreatedAt || r.when || '';
+                    const whenShow = when ? String(when).slice(0, 16).replace('T', ' ') : '—';
+                    const company = esc(r.CompanyName || r.companyName || '');
+                    const contact = esc((r.ContactName || r.contactName || '') +
+                        (r.ContactEmail || r.contactEmail ? ' · ' + (r.ContactEmail || r.contactEmail) : '') +
+                        (r.Phone || r.phone ? ' · ' + (r.Phone || r.phone) : ''));
+                    const services = esc(r.ServicesInterest || r.servicesInterest || '—');
+                    const ops = r.OpsTier || r.opsTier || '';
+                    const dig = r.DigitalTier || r.digitalTier || '';
+                    const months = r.PackageMonths || r.packageMonths || '';
+                    const addons = r.Addons || r.addons || '';
+                    const pkgLine = [ops, dig].filter(Boolean).join(' + ') +
+                        (months ? ' · ' + months + ' mo' : '') +
+                        (addons ? ' · addons: ' + (typeof addons === 'string' ? addons : JSON.stringify(addons).slice(0, 80)) : '');
+                    const region = esc(r.BillingRegion || r.billingRegion || r.Country || r.country || '—');
+                    const currency = r.Currency || r.currency || '';
+                    const id = esc(r.ApplicationID || r.applicationId || r.id || '');
+                    const st = r.Status || r.status || 'New';
                     const opts = statuses.map(function (s) {
                         return '<option value="' + s + '"' + (s === st ? ' selected' : '') + '>' + s + '</option>';
                     }).join('');
-                    const meta = esc([r.City, r.Country, r.Industry].filter(Boolean).join(' · '));
-                    return '<tr class="hover:bg-slate-900/40" data-app-id="' + id + '">' +
-                        '<td class="p-2 text-slate-500 whitespace-nowrap">' + esc(when) +
-                        '<div class="text-[10px] text-slate-600">' + id + '</div></td>' +
-                        '<td class="p-2"><div class="font-medium text-white">' + company + '</div>' +
+                    const meta = esc([r.City || r.city, r.Country || r.country, r.Industry || r.industry].filter(Boolean).join(' · '));
+                    return '<tr class="hover:bg-slate-900/40 border-b border-slate-800/50" data-app-id="' + id + '">' +
+                        '<td class="p-2 text-slate-500 whitespace-nowrap align-top">' + esc(whenShow) +
+                        '<div class="text-[10px] text-slate-600 font-mono">' + id + '</div></td>' +
+                        '<td class="p-2 align-top"><div class="font-medium text-white">' + company + '</div>' +
                         '<div class="text-[10px] text-slate-500">' + meta + '</div></td>' +
-                        '<td class="p-2 text-[11px]">' + contact + '</td>' +
-                        '<td class="p-2 text-[11px] text-slate-400 max-w-[140px]">' + services + '</td>' +
-                        '<td class="p-2"><select class="interest-status bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-[11px]" data-id="' + id + '">' + opts + '</select></td>' +
-                        '<td class="p-2"><button type="button" class="text-[10px] text-emerald-400 hover:text-emerald-300" onclick="saveInterestRow(this)">Save</button></td>' +
-                        '</tr>';
+                        '<td class="p-2 text-[11px] text-slate-300 align-top">' + contact + '</td>' +
+                        '<td class="p-2 text-[11px] text-slate-400 align-top max-w-[200px]">' +
+                        '<div>' + services + '</div>' +
+                        (pkgLine ? '<div class="text-[10px] text-slate-500 mt-1">' + esc(pkgLine) + '</div>' : '') +
+                        '</td>' +
+                        '<td class="p-2 text-[11px] text-slate-400 align-top whitespace-nowrap">' + region +
+                        (currency ? '<div class="text-[10px]">' + esc(currency) + '</div>' : '') + '</td>' +
+                        '<td class="p-2 align-top"><select class="interest-status bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-[11px] text-white" data-id="' + id + '" onchange="updateInterestStatus(this)">' +
+                        opts + '</select></td>' +
+                        '<td class="p-2 align-top whitespace-nowrap">' +
+                        '<button type="button" class="text-[10px] text-emerald-400 hover:underline mr-2" onclick="viewInterestDetail(\'' + id.replace(/'/g, '') + '\')">View</button>' +
+                        '<button type="button" class="text-[10px] text-slate-400 hover:underline" onclick="loadInterestApplications()">↻</button>' +
+                        '</td></tr>';
                 }).join('');
             } catch (e) {
-                body.innerHTML = '<tr><td colspan="6" class="p-4 text-red-400">Error loading applications.</td></tr>';
+                body.innerHTML = '<tr><td colspan="7" class="p-4 text-slate-400">' +
+                    esc((e && e.message) || String(e)) +
+                    ' <button type="button" class="underline text-emerald-400 ml-2" onclick="loadInterestApplications()">Retry</button></td></tr>';
             }
         }
+
+        function viewInterestDetail(id) {
+            if (!id) return;
+            alert('Application ' + id + '\\nOpen the row status to update pipeline. Full detail panel can expand from AgentLib notes.');
+        }
+
+        async function updateInterestStatus(sel) {
+            if (!sel) return;
+            const id = sel.getAttribute('data-id') || '';
+            const status = sel.value;
+            if (!id) return;
+            try {
+                const res = await executeSecureBridgeCall('agent', 'agent-update-interest-application', {
+                    applicationId: id,
+                    status: status
+                });
+                if (!res || !res.success) {
+                    alert((res && res.message) || 'Status update failed');
+                    loadInterestApplications();
+                }
+            } catch (e) {
+                alert(e.message || e);
+                loadInterestApplications();
+            }
+        }
+
 
         async function saveInterestRow(btn) {
             const tr = btn && btn.closest('tr');
