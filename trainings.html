@@ -259,13 +259,13 @@
 
                     <div class="row g-3">
                         <div class="col-md-6 col-xl-4">
-                            <div onclick="showRegisterModal()" class="academic-card">
+                            <div onclick="showEnrolModal()" class="academic-card">
                                 <div class="display-5 mb-3">📝</div>
-                                <h3 class="h5 fw-bold">Assessment registration</h3>
-                                <p class="small text-muted mb-2">Create your verified profile to take assessments &amp;
-                                    earn certificates</p>
+                                <h3 class="h5 fw-bold">Register now</h3>
+                                <p class="small text-muted mb-2">Choose a course (self-paced or scheduled), pay
+                                    securely, then follow the path to assessment</p>
                                 <span class="badge bg-light text-dark text-uppercase"
-                                    style="font-size: 0.65rem; letter-spacing: 1px;">Portal account</span>
+                                    style="font-size: 0.65rem; letter-spacing: 1px;">Enroll &amp; pay</span>
                             </div>
                         </div>
                         <div class="col-md-6 col-xl-4">
@@ -286,15 +286,7 @@
                                     style="font-size: 0.65rem; letter-spacing: 1px;">Instant Check</span>
                             </div>
                         </div>
-                        <div class="col-md-6 col-xl-4">
-                            <div onclick="showEnrolModal()" class="academic-card">
-                                <div class="display-5 mb-3">🎓</div>
-                                <h3 class="h5 fw-bold">Training Courses</h3>
-                                <p class="small text-muted mb-2">Register and pay for live training</p>
-                                <span class="badge bg-light text-dark text-uppercase"
-                                    style="font-size: 0.65rem; letter-spacing: 1px;">Enroll &amp; Pay</span>
-                            </div>
-                        </div>
+
                     </div>
 
                     <div class="mt-5 d-flex flex-wrap gap-4 text-muted small">
@@ -1749,7 +1741,7 @@
             renderCourses(filtered);
         }
 
-        async async function reApplyForCourse(courseId, courseName) {
+        async function reApplyForCourse(courseId, courseName) {
             if (!confirm(`Submit a new application for "${courseName}"?\n\nThis will replace your previous application and give you 4 new attempts once approved.`)) {
                 return;
             }
@@ -1845,7 +1837,7 @@
 
 
 
-        async async function applyForCourse(courseId, courseName) {
+        async function applyForCourse(courseId, courseName) {
             if (!confirm(`Apply for assessment: "${courseName}"?\n\nAdmin will review and send payment details if required.`)) {
                 return;
             }
@@ -2517,34 +2509,34 @@
                 return (
                     '<div class="col-md-6 col-lg-4">' +
                     '<div class="academic-card' + (full ? ' opacity-75' : '') + '" ' +
-                    (full ? '' : 'onclick="academyPickCourse(\\'' + academyEscAttr(c.courseId) + '\\')"') + '>' +
-                '<div class="d-flex justify-content-between mb-2">' +
-                '<span class="badge bg-light text-dark text-uppercase" style="font-size:0.65rem">' +
-                academyEsc(typeBadge) + '</span>' +
-                '<strong class="text-brand">' + (full ? "Full" : academyFmtMoney(c.amount)) + '</strong></div>' +
-                '<h3 class="h6 fw-bold">' + academyEsc(c.courseName) + '</h3>' +
-                '<p class="small text-muted mb-2">' + academyEsc((c.description || "").slice(0, 140)) +
-                (c.description && c.description.length > 140 ? "…" : "") + '</p>' +
-                '<p class="small text-muted mb-2" style="font-size:0.7rem"><i class="fa-solid fa-route me-1"></i>' +
-                academyEsc(pathHint) + '</p>' +
-                '<div class="small text-muted"><i class="fa-regular fa-calendar me-1"></i>' +
-                academyEsc(whenLine) + '</div>' +
-                (full
-                    ? '<button type="button" class="btn btn-sm btn-secondary w-100 mt-3" disabled>Full</button>'
-                    : '<button type="button" class="btn btn-sm btn-brand w-100 mt-3">Register now</button>') +
-                '</div></div>'
+                    (full ? '' : ('onclick="academyPickCourse(\'' + academyEscAttr(c.courseId) + '\')"')) + '>' +
+                    '<div class="d-flex justify-content-between mb-2">' +
+                    '<span class="badge bg-light text-dark text-uppercase" style="font-size:0.65rem">' +
+                    academyEsc(typeBadge) + '</span>' +
+                    '<strong class="text-brand">' + (full ? "Full" : academyFmtMoney(c.amount)) + '</strong></div>' +
+                    '<h3 class="h6 fw-bold">' + academyEsc(c.courseName) + '</h3>' +
+                    '<p class="small text-muted mb-2">' + academyEsc((c.description || "").slice(0, 140)) +
+                    (c.description && c.description.length > 140 ? "…" : "") + '</p>' +
+                    '<p class="small text-muted mb-2" style="font-size:0.7rem"><i class="fa-solid fa-route me-1"></i>' +
+                    academyEsc(pathHint) + '</p>' +
+                    '<div class="small text-muted"><i class="fa-regular fa-calendar me-1"></i>' +
+                    academyEsc(whenLine) + '</div>' +
+                    (full
+                        ? '<button type="button" class="btn btn-sm btn-secondary w-100 mt-3" disabled>Full</button>'
+                        : '<button type="button" class="btn btn-sm btn-brand w-100 mt-3">Register now</button>') +
+                    '</div></div>'
                 );
-        }).join("");
-        if (sel) {
-            sel.innerHTML = '<option value="">Select a course…</option>' +
-                filtered.map(function (c) {
-                    const full = c.seats != null && Number(c.seats) <= 0;
-                    var tlab = String(c.courseType || "").toLowerCase() === "self_paced" ? "Self-paced" : "Scheduled";
-                    return '<option value="' + academyEscAttr(c.courseId) + '"' +
-                        (full ? " disabled" : "") + ">" + academyEsc(c.courseName) +
-                        " [" + tlab + "] — " + (full ? "Full" : academyFmtMoney(c.amount)) + "</option>";
-                }).join("");
-        }
+            }).join("");
+            if (sel) {
+                sel.innerHTML = '<option value="">Select a course…</option>' +
+                    filtered.map(function (c) {
+                        const full = c.seats != null && Number(c.seats) <= 0;
+                        var tlab = String(c.courseType || "").toLowerCase() === "self_paced" ? "Self-paced" : "Scheduled";
+                        return '<option value="' + academyEscAttr(c.courseId) + '"' +
+                            (full ? " disabled" : "") + ">" + academyEsc(c.courseName) +
+                            " [" + tlab + "] — " + (full ? "Full" : academyFmtMoney(c.amount)) + "</option>";
+                    }).join("");
+            }
         }
 
 
@@ -2561,13 +2553,13 @@
         <div class="container">
             <div class="d-flex flex-wrap justify-content-center gap-3 gap-md-4 small">
                 <a href="#" class="text-decoration-none text-secondary"
-                    onclick="showRegisterModal(); return false;">Assessment registration</a>
+                    onclick="showEnrolModal(); return false;">Register now</a>
                 <a href="#" class="text-decoration-none text-secondary" onclick="showLoginModal(); return false;">Login
                     to Portal</a>
                 <a href="#" class="text-decoration-none text-secondary"
                     onclick="showVerifyCertificateModal(); return false;">Verify Certificate</a>
                 <a href="#academy-section" class="text-decoration-none text-secondary"
-                    onclick="showEnrolModal(); return false;">Training Courses</a>
+                    onclick="showEnrolModal(); return false;">Register now</a>
             </div>
             <p class="text-center text-secondary small mt-3 mb-0">The Victorias Academy</p>
         </div>
