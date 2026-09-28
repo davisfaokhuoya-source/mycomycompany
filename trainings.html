@@ -191,6 +191,18 @@
                 transform: rotate(360deg);
             }
         }
+
+        .course-desc-clamp {
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            max-height: 6.5em;
+        }
+
+        #studentSessionBar a.btn {
+            text-decoration: none;
+        }
     </style>
 </head>
 
@@ -223,8 +235,31 @@
         </div>
     </nav>
 
+    <!-- Logged-in student session (hidden until login) -->
+    <div id="studentSessionBar" class="border-bottom bg-white sticky-top shadow-sm" style="display:none;z-index:1040;">
+        <div class="container py-2 d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <img src="img/thevictoriaslogo.png" alt="" style="height:28px" onerror="this.style.display='none'" />
+                <strong class="small">Academy session</strong>
+                <span id="studentSessionEmail" class="small text-muted"></span>
+            </div>
+            <nav class="d-flex flex-wrap gap-2 small">
+                <a href="#academy-section" class="btn btn-sm btn-outline-secondary"
+                    onclick="studentGo('training');return false;">Training catalog</a>
+                <a href="#student-my-learning" class="btn btn-sm btn-outline-secondary"
+                    onclick="studentGo('learning');return false;">My learning</a>
+                <a href="#student-assessments" class="btn btn-sm btn-outline-secondary"
+                    onclick="studentGo('assessments');return false;">Assessments</a>
+                <a href="#student-history" class="btn btn-sm btn-outline-secondary"
+                    onclick="studentGo('history');return false;">History</a>
+                <button type="button" class="btn btn-sm btn-dark" onclick="logout()">Log out</button>
+            </nav>
+        </div>
+    </div>
+
+
     <!-- Hero -->
-    <div class="hero-bg text-white">
+    <div id="publicMarketingHero" class="hero-bg text-white">
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-lg-7">
@@ -355,10 +390,10 @@
                     <i class="fa-solid fa-chalkboard-teacher"></i> THE VICTORIAS ACADEMY
                 </div>
                 <h2 class="fw-bold mb-1">Training courses</h2>
-                <p class="text-muted mb-0">Live enrollment: choose a course, register with your details, and pay to
-                    activate. Self-paced courses unlock materials after payment; scheduled programmes get your seat and
-                    training details after payment. Assessment follows the course rules. No waitlist — payment confirms
-                    your place.</p>
+                <p class="text-muted mb-0">Register and pay for a training course to unlock materials (always available
+                    after payment). When you finish the materials, take the assessment — one free retry if you fail;
+                    after that, pay a retake fee. Expired certificates require a paid assessment to renew. You must be
+                    enrolled in the course before you can sit its exam.</p>
             </div>
             <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill" onclick="academyLoadCourses()">
                 <i class="fa-solid fa-rotate"></i> Refresh
@@ -496,7 +531,11 @@
             <!-- TAB CONTENTS - CLEANED (No Duplicates) -->
             <div id="tab-content-0" class="tab-pane active">
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
-                    <h2 class="h4 fw-bold mb-3 mb-md-0">Available Courses</h2>
+                    <div class="w-100 mb-3">
+                        <h2 class="h4 fw-bold mb-1">Assessment programmes</h2>
+                        <p class="small text-muted mb-0">Exam and certificate tracks (after training enrollment /
+                            approval). Separate from <strong>Training courses</strong> used to register and pay.</p>
+                    </div>
 
                     <!-- Search Bar -->
                     <div class="col-md-5 col-lg-4">
@@ -844,6 +883,55 @@
             }
         }
 
+
+        function applyLoggedInShell(email) {
+            try {
+                var hero = document.getElementById("publicMarketingHero");
+                if (hero) hero.style.display = "none";
+                var nav = document.querySelector("nav.navbar");
+                if (nav) nav.style.display = "none";
+                var bar = document.getElementById("studentSessionBar");
+                if (bar) {
+                    bar.style.display = "block";
+                    var em = document.getElementById("studentSessionEmail");
+                    if (em) em.textContent = email ? ("· " + email) : "";
+                }
+                var ws = document.getElementById("studentWorkspace");
+                if (ws) ws.style.display = "block";
+                // Assessment grid is for logged-in exam catalogue
+                var assessWrap = document.getElementById("courses-grid");
+                if (assessWrap && assessWrap.closest) {
+                    var sec = assessWrap.closest(".container, section, .py-5");
+                }
+            } catch (e) { console.warn(e); }
+        }
+
+        function applyLoggedOutShell() {
+            try {
+                var hero = document.getElementById("publicMarketingHero");
+                if (hero) hero.style.display = "";
+                var nav = document.querySelector("nav.navbar");
+                if (nav) nav.style.display = "";
+                var bar = document.getElementById("studentSessionBar");
+                if (bar) bar.style.display = "none";
+                var ws = document.getElementById("studentWorkspace");
+                if (ws) ws.style.display = "none";
+            } catch (e) { console.warn(e); }
+        }
+
+        function studentGo(which) {
+            var map = {
+                training: "academy-section",
+                learning: "student-my-learning",
+                assessments: "student-assessments",
+                history: "student-history"
+            };
+            var id = map[which] || "academy-section";
+            var el = document.getElementById(id);
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+
+
         function showLoginModal() {
             try {
                 loginModal = _getModal("loginModal");
@@ -1087,6 +1175,10 @@
                     localStorage.setItem("authToken", result.token);
                     currentToken = result.token;
                     currentUser = result.user;
+                    try {
+                        applyLoggedInShell((currentUser && (currentUser.email || currentUser.Email)) || email);
+                        if (typeof loadCourses === "function") loadCourses();
+                    } catch (eShell) { console.warn(eShell); }
                     loginModal.hide();
                     loadDashboard();
                 } else {
@@ -1227,10 +1319,15 @@
                 const result = await callAPI('getDashboard', { token: currentToken });
                 if (result.success) {
                     currentUser = result.user;
+                    try {
+                        applyLoggedInShell((currentUser && (currentUser.email || currentUser.Email)) || "");
+                    } catch (_) { }
                     loadDashboard();
+                    try { if (typeof loadCourses === "function") loadCourses(); } catch (_) { }
                 } else {
                     localStorage.removeItem("authToken");
                     currentToken = null;
+                    try { applyLoggedOutShell(); } catch (_) { }
                 }
             } catch (e) {
                 localStorage.removeItem("authToken");
@@ -2724,6 +2821,27 @@
             try { if (typeof showEnrolModal === "function") showEnrolModal(); } catch (_) { }
         }
     </script>
+
+
+    <div id="studentWorkspace" class="container py-4" style="display:none;">
+        <div id="student-my-learning" class="card border-0 shadow-sm mb-4 p-4">
+            <h2 class="h5 fw-bold">My learning</h2>
+            <p class="small text-muted">Paid enrollments, materials links, and scheduled training access.</p>
+            <div id="studentLearningBody" class="small text-muted">Sign in to see enrollments linked to your email.
+            </div>
+        </div>
+        <div id="student-assessments" class="card border-0 shadow-sm mb-4 p-4">
+            <h2 class="h5 fw-bold">Assessments</h2>
+            <p class="small text-muted">Exam attempts for programmes you are approved to take. Separate from buying a
+                training seat.</p>
+            <div id="studentAssessBody" class="small text-muted">Load after login.</div>
+        </div>
+        <div id="student-history" class="card border-0 shadow-sm mb-4 p-4">
+            <h2 class="h5 fw-bold">History</h2>
+            <p class="small text-muted">Past attempts, certificates, and payment references.</p>
+            <div id="studentHistoryBody" class="small text-muted">Load after login.</div>
+        </div>
+    </div>
 
     <footer class="mt-5 pt-4 pb-4" style="background:#0f172a;color:#94a3b8;">
         <div class="container">
