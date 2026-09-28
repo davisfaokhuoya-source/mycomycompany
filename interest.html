@@ -927,7 +927,7 @@
                 var pricing = updateSummary();
                 var payload = {
                     system: "agent",
-                    action: "agent-public-interest",
+                    action: "agent-submit-interest-application",
                     companyName: (fd.get("companyName") || "").trim(),
                     contactName: (fd.get("contactName") || "").trim(),
                     contactEmail: (fd.get("contactEmail") || "").trim(),
@@ -992,6 +992,9 @@
                     } else {
                         msg.className = "msg err";
                         msg.textContent = (data && data.message) || "Something went wrong. Please try again or email us.";
+                        if (data && /handshake|denied|not permitted/i.test(String(data.message || ""))) {
+                            msg.textContent = "Could not reach the server securely. Please try again in a moment or email us.";
+                        }
                         btn.disabled = false;
                         btn.textContent = "Submit";
                     }
