@@ -165,6 +165,10 @@
             z-index: 99999;
         }
 
+        .loader-overlay {
+            display: none !important;
+        }
+
         .loader-overlay.active {
             display: flex;
         }
@@ -191,10 +195,8 @@
 </head>
 
 <body>
-    <!-- Loading Overlay -->
-    <div id="loaderOverlay" class="loader-overlay">
-        <div class="spinner"></div>
-    </div>
+    <!-- Full-page preloader disabled -->
+    <div id="loaderOverlay" class="loader-overlay" style="display:none !important" aria-hidden="true"></div>
 
     <nav class="navbar navbar-expand-lg navbar-light px-4 px-lg-5 py-3 py-lg-0">
         <a href="" class="navbar-brand p-0">
@@ -366,6 +368,18 @@
                 <i class="fa-solid fa-rotate"></i> Refresh
             </button>
         </div>
+        <div class="d-flex flex-wrap gap-2 mb-3" id="academy-course-filters">
+            <button type="button" class="btn btn-sm btn-brand academy-filter-btn active" data-filter="upcoming"
+                onclick="academySetFilter('upcoming', this)">Upcoming</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary academy-filter-btn" data-filter="all"
+                onclick="academySetFilter('all', this)">All courses</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary academy-filter-btn" data-filter="self_paced"
+                onclick="academySetFilter('self_paced', this)">Self-paced</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary academy-filter-btn" data-filter="scheduled"
+                onclick="academySetFilter('scheduled', this)">Scheduled (virtual/physical)</button>
+        </div>
+        <p class="small text-muted mb-3" id="academy-filter-hint">Showing upcoming &amp; open programmes. Use filters to
+            see all courses.</p>
         <div class="row g-4 mb-5" id="academy-course-cards">
             <div class="col-12 text-center text-muted py-4">Loading courses…</div>
         </div>
@@ -834,13 +848,8 @@
         });
 
         // ==================== LOADING SPINNER ====================
-        function showLoader() {
-            document.getElementById("loaderOverlay").classList.add("active");
-        }
-
-        function hideLoader() {
-            document.getElementById("loaderOverlay").classList.remove("active");
-        }
+        function showLoader() { /* full-page preloader disabled */ }
+        function hideLoader() { /* full-page preloader disabled */ }
 
         // Ensure you define the token matching your Google Apps Script Properties configuration
         const BRIDGE_SECRET_KEY = "YOUR_SECRET_KEY_HERE"; // Update this with your actual key!
@@ -1704,7 +1713,7 @@
                         :
                         `<button onclick="applyForCourse('${course.courseId}', '${course.courseName.replace(/'/g, "\\'")}')" 
                                      class="btn btn-brand w-100 mb-2">
-                                ${course.isFree ? '🚀 Start Free Assessment' : 'Apply for Assessment'}
+                                ${course.isFree ? '🚀 Start Free Assessment' : 'Register now'}
                              </button>`
                     }
                         
@@ -1740,12 +1749,19 @@
             renderCourses(filtered);
         }
 
-        async function reApplyForCourse(courseId, courseName) {
+        async async function reApplyForCourse(courseId, courseName) {
             if (!confirm(`Submit a new application for "${courseName}"?\n\nThis will replace your previous application and give you 4 new attempts once approved.`)) {
                 return;
             }
 
             try {
+                // Single registration path: open public Register now form with this course selected
+                try {
+                    if (typeof academyPickCourse === "function") academyPickCourse(courseId);
+                    else if (typeof showEnrolModal === "function") showEnrolModal();
+                    hideLoader();
+                    return;
+                } catch (_) { }
                 const result = await callAPI('applyForAssessment', {
                     token: currentToken,
                     courseId: courseId
@@ -1829,13 +1845,13 @@
 
 
 
-        async function applyForCourse(courseId, courseName) {
+        async async function applyForCourse(courseId, courseName) {
             if (!confirm(`Apply for assessment: "${courseName}"?\n\nAdmin will review and send payment details if required.`)) {
                 return;
             }
 
             try {
-                const result = await callAPI('applyForAssessment', {
+                const result = await callAPI('academyEnrollAndPay', /* merged: was applyForAssessment */ {
                     token: currentToken,
                     courseId: courseId
                 });
@@ -2401,127 +2417,136 @@
 
         var academyCourseCache = [];
 
+
+        var academyCourseCacheAll = [];
+        var academyActiveFilter = "upcoming";
+
         async function academyLoadCourses() {
             const cards = document.getElementById("academy-course-cards");
             const sel = document.getElementById("academy-course-select");
             if (!cards) return;
-            cards.innerHTML = '<div class="col-12 text-center text-muted py-4">Loading…</div>';
+            cards.innerHTML = '<div class="col-12 text-center text-muted py-4">Loading courses…</div>';
             try {
-                let result = await callAPI("academyListCourses", { upcoming: true });
-                academyCourseCache = (result && result.courses) || [];
-                if ((!result || !result.success || !academyCourseCache.length)) {
-                    result = await callAPI("academyListCourses", { upcoming: false });
-                    academyCourseCache = (result && result.courses) || [];
+                // Always load ALL open courses from API (gateway + AssessmentLib academyListCourses)
+                let result = await callAPI("academyListCourses", { upcoming: false });
+                if (!result || result.success === false) {
+                    // Alias fallback
+                    result = await callAPI("listAcademyCourses", { upcoming: false });
                 }
-                if (!result || !result.success) {
+                academyCourseCacheAll = (result && result.courses) || [];
+                academyCourseCache = academyCourseCacheAll.slice();
+                if (!result || result.success === false) {
                     throw new Error((result && result.message) || "Failed to load courses");
                 }
-                if (!academyCourseCache.length) {
+                if (!academyCourseCacheAll.length) {
                     cards.innerHTML = '<div class="col-12 text-center text-muted py-4">No open courses yet. Check back soon.</div>';
                     if (sel) sel.innerHTML = '<option value="">No courses available</option>';
                     return;
                 }
-                cards.innerHTML = academyCourseCache.map(function (c) {
-                    const full = c.seats != null && Number(c.seats) <= 0;
-                    const ctype = String(c.courseType || "scheduled").toLowerCase();
-                    const typeBadge = ctype === "self_paced"
-                        ? "Self-paced"
-                        : (c.mode || "Scheduled");
-                    const pathHint = c.pathLabel || (ctype === "self_paced"
-                        ? "Materials → assessment after study"
-                        : "Live/virtual training → assessment after admin approval");
-                    const whenLine = ctype === "self_paced"
-                        ? "Start anytime (self-paced)"
-                        : academyFmtWhen(c.startAt);
-                    return (
-                        '<div class="col-md-6 col-lg-4">' +
-                        '<div class="academic-card' + (full ? ' opacity-75' : '') + '" ' +
-                        (full ? '' : 'onclick="academyPickCourse(\'' + academyEscAttr(c.courseId) + '\')"') + '>' +
-                        '<div class="d-flex justify-content-between mb-2">' +
-                        '<span class="badge bg-light text-dark text-uppercase" style="font-size:0.65rem">' +
-                        academyEsc(typeBadge) + '</span>' +
-                        '<strong class="text-brand">' + (full ? "Full" : academyFmtMoney(c.amount)) + '</strong></div>' +
-                        '<h3 class="h6 fw-bold">' + academyEsc(c.courseName) + '</h3>' +
-                        '<p class="small text-muted mb-2">' + academyEsc((c.description || "").slice(0, 140)) +
-                        (c.description && c.description.length > 140 ? "…" : "") + '</p>' +
-                        '<p class="small text-muted mb-2" style="font-size:0.7rem"><i class="fa-solid fa-route me-1"></i>' +
-                        academyEsc(pathHint) + '</p>' +
-                        '<div class="small text-muted"><i class="fa-regular fa-calendar me-1"></i>' +
-                        academyEsc(whenLine) + '</div>' +
-                        (full
-                            ? '<button type="button" class="btn btn-sm btn-secondary w-100 mt-3" disabled>Full</button>'
-                            : '<button type="button" class="btn btn-sm btn-brand w-100 mt-3">Register &amp; pay</button>') +
-                        '</div></div>'
-                    );
-                }).join("");
-                if (sel) {
-                    sel.innerHTML = '<option value="">Select a course…</option>' +
-                        academyCourseCache.map(function (c) {
-                            const full = c.seats != null && Number(c.seats) <= 0;
-                            var tlab = String(c.courseType || "").toLowerCase() === "self_paced" ? "Self-paced" : "Scheduled";
-                            return '<option value="' + academyEscAttr(c.courseId) + '"' +
-                                (full ? " disabled" : "") + ">" + academyEsc(c.courseName) +
-                                " [" + tlab + "] — " + (full ? "Full" : academyFmtMoney(c.amount)) + "</option>";
-                        }).join("");
-                }
-            } catch (e) {
-                var em = String(e.message || e || '');
+                academyRenderCourses();
+            } catch (err) {
+                var em = (err && err.message) || String(err || "");
                 if (/access denied|ingress token|unauthorized/i.test(em)) {
-                    em = 'Training catalogue could not load (server auth). Please try Refresh in a moment, or contact support.';
+                    em = "Training catalogue could not load (auth). Please refresh in a moment.";
                 }
-                cards.innerHTML = '<div class="col-12 text-center text-danger py-4">' + academyEsc(em) + '</div>';
+                if (/unknown action/i.test(em)) {
+                    em = "Training catalogue is updating. Please hard-refresh this page in a minute (Ctrl+Shift+R).";
+                }
+                cards.innerHTML = '<div class="col-12 text-center text-danger py-4">' + academyEsc(em) + "</div>";
             }
         }
 
+        function academySetFilter(filter, btn) {
+            academyActiveFilter = filter || "upcoming";
+            document.querySelectorAll(".academy-filter-btn").forEach(function (b) {
+                b.classList.remove("active", "btn-brand");
+                b.classList.add("btn-outline-secondary");
+            });
+            if (btn) {
+                btn.classList.add("active", "btn-brand");
+                btn.classList.remove("btn-outline-secondary");
+            }
+            var hint = document.getElementById("academy-filter-hint");
+            if (hint) {
+                if (academyActiveFilter === "upcoming") hint.textContent = "Showing upcoming & open programmes. Switch filter to see all courses.";
+                else if (academyActiveFilter === "all") hint.textContent = "Showing all open courses.";
+                else if (academyActiveFilter === "self_paced") hint.textContent = "Self-paced: materials then assessment after study.";
+                else hint.textContent = "Scheduled: virtual or physical training — assessment after admin approval.";
+            }
+            academyRenderCourses();
+        }
 
-        let enrolModalInst = null;
-        window.showEnrolModal = function () {
-            try {
-                if (typeof academyLoadCourses === "function") {
-                    try { academyLoadCourses(); } catch (_) { }
-                }
-                var el = document.getElementById("enrolModal");
-                if (!el) {
-                    try { scrollToAcademy(); } catch (_) { }
-                    return;
-                }
-                if (window.bootstrap && bootstrap.Modal) {
-                    enrolModalInst = bootstrap.Modal.getOrCreateInstance(el);
-                    enrolModalInst.show();
-                } else {
-                    el.style.display = "block";
-                    el.classList.add("show");
-                }
-            } catch (e) { console.warn("showEnrolModal", e); }
-        };
+        function academyFilterList(list) {
+            list = list || [];
+            var now = Date.now();
+            var f = academyActiveFilter || "upcoming";
+            return list.filter(function (c) {
+                var ctype = String(c.courseType || "scheduled").toLowerCase();
+                if (ctype === "self-paced" || ctype === "selfpaced") ctype = "self_paced";
+                if (f === "all") return true;
+                if (f === "self_paced") return ctype === "self_paced";
+                if (f === "scheduled") return ctype !== "self_paced";
+                // upcoming: self-paced always; scheduled with start in future or no start
+                if (ctype === "self_paced") return true;
+                var start = c.startAt ? new Date(c.startAt).getTime() : null;
+                if (!start || isNaN(start)) return true;
+                return start >= now - 24 * 3600 * 1000;
+            });
+        }
 
-        window.showLoginModal = function () {
-            try {
-                var el = document.getElementById("loginModal");
-                if (!el || !window.bootstrap) return;
-                bootstrap.Modal.getOrCreateInstance(el).show();
-            } catch (e) { console.warn(e); }
-        };
+        function academyRenderCourses() {
+            const cards = document.getElementById("academy-course-cards");
+            const sel = document.getElementById("academy-course-select");
+            if (!cards) return;
+            var filtered = academyFilterList(academyCourseCacheAll);
+            academyCourseCache = filtered;
+            if (!filtered.length) {
+                cards.innerHTML = '<div class="col-12 text-center text-muted py-4">No courses match this filter.</div>';
+                return;
+            }
+            cards.innerHTML = filtered.map(function (c) {
+                const full = c.seats != null && Number(c.seats) <= 0;
+                const ctype = String(c.courseType || "scheduled").toLowerCase();
+                const typeBadge = ctype === "self_paced" ? "Self-paced" : (c.mode || "Scheduled");
+                const pathHint = c.pathLabel || (ctype === "self_paced"
+                    ? "Materials → assessment after study"
+                    : "Live/virtual training → assessment after admin approval");
+                const whenLine = ctype === "self_paced"
+                    ? "Start anytime (self-paced)"
+                    : academyFmtWhen(c.startAt);
+                return (
+                    '<div class="col-md-6 col-lg-4">' +
+                    '<div class="academic-card' + (full ? ' opacity-75' : '') + '" ' +
+                    (full ? '' : 'onclick="academyPickCourse(\\'' + academyEscAttr(c.courseId) + '\\')"') + '>' +
+                '<div class="d-flex justify-content-between mb-2">' +
+                '<span class="badge bg-light text-dark text-uppercase" style="font-size:0.65rem">' +
+                academyEsc(typeBadge) + '</span>' +
+                '<strong class="text-brand">' + (full ? "Full" : academyFmtMoney(c.amount)) + '</strong></div>' +
+                '<h3 class="h6 fw-bold">' + academyEsc(c.courseName) + '</h3>' +
+                '<p class="small text-muted mb-2">' + academyEsc((c.description || "").slice(0, 140)) +
+                (c.description && c.description.length > 140 ? "…" : "") + '</p>' +
+                '<p class="small text-muted mb-2" style="font-size:0.7rem"><i class="fa-solid fa-route me-1"></i>' +
+                academyEsc(pathHint) + '</p>' +
+                '<div class="small text-muted"><i class="fa-regular fa-calendar me-1"></i>' +
+                academyEsc(whenLine) + '</div>' +
+                (full
+                    ? '<button type="button" class="btn btn-sm btn-secondary w-100 mt-3" disabled>Full</button>'
+                    : '<button type="button" class="btn btn-sm btn-brand w-100 mt-3">Register now</button>') +
+                '</div></div>'
+                );
+        }).join("");
+        if (sel) {
+            sel.innerHTML = '<option value="">Select a course…</option>' +
+                filtered.map(function (c) {
+                    const full = c.seats != null && Number(c.seats) <= 0;
+                    var tlab = String(c.courseType || "").toLowerCase() === "self_paced" ? "Self-paced" : "Scheduled";
+                    return '<option value="' + academyEscAttr(c.courseId) + '"' +
+                        (full ? " disabled" : "") + ">" + academyEsc(c.courseName) +
+                        " [" + tlab + "] — " + (full ? "Full" : academyFmtMoney(c.amount)) + "</option>";
+                }).join("");
+        }
+        }
 
-        window.showRegisterModal = function () {
-            try {
-                var el = document.getElementById("registerModal");
-                if (!el || !window.bootstrap) return;
-                bootstrap.Modal.getOrCreateInstance(el).show();
-            } catch (e) { console.warn(e); }
-        };
-
-        window.showVerifyCertificateModal = function () {
-            try {
-                var el = document.getElementById("verifyCertModal");
-                if (!el || !window.bootstrap) return;
-                var idEl = document.getElementById("certIdModal");
-                var resEl = document.getElementById("verifyResultModal");
-                if (idEl) idEl.value = "";
-                if (resEl) resEl.innerHTML = "";
-                bootstrap.Modal.getOrCreateInstance(el).show();
-            } catch (e) { console.warn(e); }
-        };
 
         function academyPickCourse(id) {
             const sel = document.getElementById("academy-course-select");
