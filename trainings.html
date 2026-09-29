@@ -544,7 +544,8 @@
                         receive official certificates. Track your progress with real-time analytics and performance
                         reports designed for the modern professional.</p>
                     <a href="#how-it-works" class="btn btn-light btn-lg px-5 py-3 me-3 fw-bold">How It Works</a>
-                    <a href="appointment.html" class="btn btn-outline-light btn-lg px-5 py-3">Partner With Us</a>
+                    <a href="#academy-section" class="btn btn-outline-light btn-lg px-5 py-3"
+                        onclick="scrollToAcademy();return false;">Browse courses</a>
                 </div>
             </div>
         </div>
@@ -1281,9 +1282,12 @@
                 }
 
                 // Paid — must pay to activate (no waitlist)
-                if (result.paymentLink) {
+                var payUrl = result.paymentLink || result.link
+                    || (result.data && (result.data.paymentLink || result.data.link))
+                    || "";
+                if (payUrl) {
                     setMsg("Redirecting to secure payment. Your place activates after payment.", false);
-                    window.location.href = result.paymentLink;
+                    window.location.assign(payUrl);
                     return false;
                 }
 
@@ -1393,7 +1397,25 @@
 
                 const text = await response.text();
                 const jsonStart = text.indexOf('{');
-                const result = JSON.parse(jsonStart !== -1 ? text.substring(jsonStart) : text);
+                const jsonEnd = text.lastIndexOf('}');
+                let result = {};
+                try {
+                    result = JSON.parse(jsonStart !== -1 && jsonEnd > jsonStart ? text.substring(jsonStart, jsonEnd + 1) : text);
+                } catch (parseErr) {
+                    hideLoader();
+                    return { success: false, message: "Invalid server response. Please try again." };
+                }
+                // Gateway sometimes nests the real payload under data / result / body
+                if (result && result.data && typeof result.data === "object") {
+                    if (result.data.paymentLink || result.data.success !== undefined) {
+                        result = Object.assign({}, result, result.data);
+                    }
+                }
+                if (result && result.result && typeof result.result === "object") {
+                    if (result.result.paymentLink || result.result.success !== undefined) {
+                        result = Object.assign({}, result, result.result);
+                    }
+                }
                 hideLoader();
                 return result;
 
@@ -3030,8 +3052,9 @@
             }
             cards.innerHTML = filtered.map(function (c) {
                 const full = c.seats != null && Number(c.seats) <= 0;
+                const locked = c.locked === true || String(c.status || "").toLowerCase() === "locked";
                 const ctype = String(c.courseType || "scheduled").toLowerCase();
-                const typeBadge = ctype === "self_paced" ? "Self-paced" : (c.mode || "Scheduled");
+                const typeBadge = locked ? "Locked" : (ctype === "self_paced" ? "Self-paced" : (c.mode || "Scheduled"));
                 const pathHint = c.pathLabel || (ctype === "self_paced"
                     ? "Materials → assessment after study"
                     : "Live/virtual training → assessment after admin approval");
@@ -3040,8 +3063,8 @@
                     : academyFmtWhen(c.startAt);
                 return (
                     '<div class="col-md-6 col-lg-4">' +
-                    '<div class="academic-card' + (full ? ' opacity-75' : '') + '" ' +
-                    (full ? '' : ('onclick="academyPickCourse(\'' + academyEscAttr(c.courseId) + '\')"')) + '>' +
+                    '<div class="academic-card' + ((full || locked) ? ' opacity-75' : '') + '" ' +
+                    ((full || locked) ? '' : ('onclick="academyPickCourse(\'' + academyEscAttr(c.courseId) + '\')"')) + '>' +
                     '<div class="d-flex justify-content-between mb-2">' +
                     '<span class="badge bg-light text-dark text-uppercase" style="font-size:0.65rem">' +
                     academyEsc(typeBadge) + '</span>' +
@@ -3053,9 +3076,11 @@
                     academyEsc(pathHint) + '</p>' +
                     '<div class="small text-muted"><i class="fa-regular fa-calendar me-1"></i>' +
                     academyEsc(whenLine) + '</div>' +
-                    (full
-                        ? '<button type="button" class="btn btn-sm btn-secondary w-100 mt-3" disabled>Full</button>'
-                        : '<button type="button" class="btn btn-sm btn-brand w-100 mt-3">Register now</button>') +
+                    ((locked)
+                        ? '<button type="button" class="btn btn-sm btn-secondary w-100 mt-3" disabled>Locked — registration closed</button>'
+                        : full
+                            ? '<button type="button" class="btn btn-sm btn-secondary w-100 mt-3" disabled>Full</button>'
+                            : '<button type="button" class="btn btn-sm btn-brand w-100 mt-3">Register now</button>') +
                     '</div></div>'
                 );
             }).join("");
@@ -3063,10 +3088,11 @@
                 sel.innerHTML = '<option value="">Select a course…</option>' +
                     filtered.map(function (c) {
                         const full = c.seats != null && Number(c.seats) <= 0;
-                        var tlab = String(c.courseType || "").toLowerCase() === "self_paced" ? "Self-paced" : "Scheduled";
+                        const locked = c.locked === true || String(c.status || "").toLowerCase() === "locked";
+                        var tlab = locked ? "Locked" : (String(c.courseType || "").toLowerCase() === "self_paced" ? "Self-paced" : "Scheduled");
                         return '<option value="' + academyEscAttr(c.courseId) + '"' +
-                            (full ? " disabled" : "") + ">" + academyEsc(c.courseName) +
-                            " [" + tlab + "] — " + (full ? "Full" : academyFmtMoney(c.amount)) + "</option>";
+                            ((full || locked) ? " disabled" : "") + ">" + academyEsc(c.courseName) +
+                            " [" + tlab + "] — " + (locked ? "Locked" : full ? "Full" : academyFmtMoney(c.amount)) + "</option>";
                     }).join("");
             }
         }
