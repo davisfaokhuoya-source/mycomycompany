@@ -2470,7 +2470,7 @@
                                 <i class="fa-solid fa-redo me-2"></i> Re-apply for this Course
                              </button>`
                         :
-                        `<button onclick="applyForCourse('${course.courseId}', '${course.courseName.replace(/'/g, "\\'")}')" 
+                        `<button onclick="event.preventDefault();registerForTrainingCourse('${course.courseId}', '${course.courseName.replace(/'/g, "\\'")}')" 
                                      class="btn btn-brand w-100 mb-2">
                                 ${course.isFree ? '🚀 Start Free Assessment' : 'Register now'}
                              </button>`
@@ -2605,26 +2605,7 @@
 
 
         async function applyForCourse(courseId, courseName) {
-            if (!confirm(`Apply for assessment: "${courseName}"?\n\nAdmin will review and send payment details if required.`)) {
-                return;
-            }
-
-            try {
-                const result = await callAPI('academyEnrollAndPay', /* merged: was applyForAssessment */ {
-                    token: currentToken,
-                    courseId: courseId
-                });
-
-                if (result.success) {
-                    alert(result.message);
-                    switchTab(4);        // Switch to Applications tab
-                    loadDashboard();     // Refresh everything
-                } else {
-                    alert(result.message || "Failed to submit re-application.");
-                }
-            } catch (e) {
-                alert("Connection error. Please try again later.");
-            }
+            registerForTrainingCourse(courseId, courseName);
         }
 
         async function applyForAssessmentClient(courseId, courseName) {
@@ -3318,6 +3299,8 @@
             }
         }
 
+
+
         function openCourseOverlay(courseId) {
             var list = academyCourseCacheAll && academyCourseCacheAll.length
                 ? academyCourseCacheAll
@@ -3374,12 +3357,92 @@
         });
 
 
+
+        /**
+         * Register now (public): open enroll modal OR collect details and open Flutterwave.
+         */
+        function registerForTrainingCourse(courseId, courseName) {
+            courseId = String(courseId || "").trim();
+            courseName = String(courseName || "").trim();
+            try {
+                var sel = document.getElementById("academy-course-select");
+                if (sel) {
+                    // ensure option exists
+                    var found = false;
+                    for (var i = 0; i < sel.options.length; i++) {
+                        if (sel.options[i].value === courseId) { found = true; break; }
+                    }
+                    if (!found && courseId) {
+                        var opt = document.createElement("option");
+                        opt.value = courseId;
+                        opt.textContent = courseName || courseId;
+                        sel.appendChild(opt);
+                    }
+                    sel.value = courseId;
+                }
+                var search = document.getElementById("academy-course-search");
+                if (search) search.value = "";
+            } catch (_) { }
+
+            // Prefer modal if present
+            var modalEl = document.getElementById("enrolModal");
+            if (modalEl && typeof showEnrolModal === "function") {
+                try {
+                    showEnrolModal();
+                    return;
+                } catch (e) {
+                    console.warn("showEnrolModal failed", e);
+                }
+            }
+
+            // No modal: prompt + direct enroll (same API that worked in F12)
+            var fullName = window.prompt("Your full name for registration:", "");
+            if (!fullName || !String(fullName).trim()) return;
+            var email = window.prompt("Email for payment receipt:", "");
+            if (!email || String(email).indexOf("@") < 0) {
+                alert("A valid email is required.");
+                return;
+            }
+            var phone = window.prompt("Phone (optional):", "") || "";
+            registerForTrainingCourseDirect_(courseId, courseName, fullName, email, phone);
+        }
+
+        async function registerForTrainingCourseDirect_(courseId, courseName, fullName, email, phone) {
+            try {
+                if (typeof showLoader === "function") showLoader();
+                var result = await callAPI("academyEnrollAndPay", {
+                    email: String(email).trim(),
+                    fullName: String(fullName).trim(),
+                    phone: String(phone || "").trim(),
+                    courseId: courseId,
+                    courseName: courseName || ""
+                });
+                if (typeof hideLoader === "function") hideLoader();
+                if (!result || result.success === false) {
+                    alert((result && result.message) || "Could not start enrollment.");
+                    return;
+                }
+                var payUrl = result.paymentLink || result.link ||
+                    (result.data && (result.data.paymentLink || result.data.link)) || "";
+                if (payUrl) {
+                    window.location.href = payUrl;
+                    return;
+                }
+                if (result.free) {
+                    alert(result.message || "Enrolled successfully.");
+                    return;
+                }
+                alert((result && result.message) || "No payment link returned.");
+            } catch (e) {
+                try { if (typeof hideLoader === "function") hideLoader(); } catch (_) { }
+                console.error(e);
+                alert(e.message || String(e));
+            }
+        }
+
+
         function academyPickCourse(id) {
-            const sel = document.getElementById("academy-course-select");
-            if (sel) sel.value = id;
-            const search = document.getElementById("academy-course-search");
-            if (search) search.value = "";
-            try { if (typeof showEnrolModal === "function") showEnrolModal(); } catch (_) { }
+            registerForTrainingCourse(id, "");
         }
 
         async function applyForCourse(courseId, courseName) {
