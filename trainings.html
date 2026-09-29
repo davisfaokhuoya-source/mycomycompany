@@ -1073,19 +1073,23 @@
                             <input type="text" id="academy-course-search" class="form-control mt-2"
                                 placeholder="Or type the course name">
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Full name</label>
-                            <input type="text" id="academy-name" class="form-control" required autocomplete="name">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Email</label>
-                            <input type="email" id="academy-email" class="form-control" required autocomplete="email">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Phone (WhatsApp preferred)</label>
-                            <input type="tel" id="academy-phone" class="form-control" required autocomplete="tel"
-                                placeholder="+234…">
-                        </div>
+                        <p id="academy-enrol-session-hint" class="small text-success d-none mb-3"></p>
+                        <div id="academy-enrol-identity">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted">Full name</label>
+                                <input type="text" id="academy-name" class="form-control" required autocomplete="name">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted">Email</label>
+                                <input type="email" id="academy-email" class="form-control" required
+                                    autocomplete="email">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted">Phone (WhatsApp preferred)</label>
+                                <input type="tel" id="academy-phone" class="form-control" autocomplete="tel"
+                                    placeholder="+234…">
+                            </div>
+                        </div><!-- /academy-enrol-identity -->
                         <button type="submit" class="btn btn-brand w-100 py-3" id="academy-pay-btn">Pay to activate
                             enrollment</button>
                         <p class="small text-muted text-center mt-3 mb-0" id="academy-enrol-msg"></p>
@@ -1416,6 +1420,7 @@
                 if (typeof academyLoadCourses === "function") {
                     try { academyLoadCourses(); } catch (_) { }
                 }
+                applyEnrolFormSessionMode();
                 enrolModal = _getModal("enrolModal");
                 if (enrolModal) enrolModal.show();
             } catch (e) { console.error(e); alert("Could not open registration form."); }
@@ -1453,16 +1458,29 @@
             var email = (document.getElementById("academy-email") || {}).value || "";
             var phone = (document.getElementById("academy-phone") || {}).value || "";
 
+            // Logged-in student: never require re-entry of identity
+            if (isStudentLoggedIn()) {
+                var profile = getSessionStudentProfile();
+                if (!String(fullName).trim()) fullName = profile.fullName || "Student";
+                if (!String(email).trim() || email.indexOf("@") < 0) email = profile.email || "";
+                if (!String(phone).trim() && profile.phone) phone = profile.phone;
+            }
+
             if (!courseId && !String(courseName).trim()) {
                 setMsg("Select a course from the list (required). Payment is for that course only.", true);
                 return false;
             }
-            if (!fullName || !String(fullName).trim()) {
-                setMsg("Full name is required.", true);
-                return false;
-            }
-            if (!email || email.indexOf("@") < 0) {
-                setMsg("A valid email is required.", true);
+            if (!isStudentLoggedIn()) {
+                if (!fullName || !String(fullName).trim()) {
+                    setMsg("Full name is required.", true);
+                    return false;
+                }
+                if (!email || email.indexOf("@") < 0) {
+                    setMsg("A valid email is required.", true);
+                    return false;
+                }
+            } else if (!email || email.indexOf("@") < 0) {
+                setMsg("Your session has no email. Sign out and sign in again.", true);
                 return false;
             }
 
@@ -3361,6 +3379,61 @@
         /**
          * Register now (public): open enroll modal OR collect details and open Flutterwave.
          */
+
+        function isStudentLoggedIn() {
+            return !!(currentToken && String(currentToken).length > 8);
+        }
+
+        function getSessionStudentProfile() {
+            var u = currentUser || {};
+            return {
+                email: String(u.email || u.Email || u.userEmail || "").trim(),
+                fullName: String(u.fullName || u.FullName || u.name || u.Name || "").trim(),
+                phone: String(u.phone || u.Phone || "").trim()
+            };
+        }
+
+        /** Prefill / hide identity fields when already logged in */
+        function applyEnrolFormSessionMode() {
+            var loggedIn = isStudentLoggedIn();
+            var profile = getSessionStudentProfile();
+            var nameEl = document.getElementById("academy-name");
+            var emailEl = document.getElementById("academy-email");
+            var phoneEl = document.getElementById("academy-phone");
+            var hint = document.getElementById("academy-enrol-session-hint");
+            var identityWrap = document.getElementById("academy-enrol-identity");
+
+            if (hint) {
+                if (loggedIn) {
+                    hint.classList.remove("d-none");
+                    hint.innerHTML = "Signed in as <strong>" +
+                        (profile.email || "your account") +
+                        "</strong>. Payment will be linked to this account — you do not need to re-enter name/email.";
+                } else {
+                    hint.classList.add("d-none");
+                    hint.textContent = "";
+                }
+            }
+            if (identityWrap) {
+                identityWrap.style.display = loggedIn ? "none" : "";
+            }
+            if (loggedIn) {
+                if (nameEl) {
+                    nameEl.value = profile.fullName || nameEl.value || "Student";
+                    nameEl.removeAttribute("required");
+                }
+                if (emailEl) {
+                    emailEl.value = profile.email || emailEl.value || "";
+                    emailEl.removeAttribute("required");
+                }
+                if (phoneEl && profile.phone) phoneEl.value = profile.phone;
+            } else {
+                if (nameEl) nameEl.setAttribute("required", "required");
+                if (emailEl) emailEl.setAttribute("required", "required");
+            }
+        }
+
+
         function registerForTrainingCourse(courseId, courseName) {
             courseId = String(courseId || "").trim();
             courseName = String(courseName || "").trim();
@@ -3395,15 +3468,23 @@
                 }
             }
 
-            // No modal: prompt + direct enroll (same API that worked in F12)
-            var fullName = window.prompt("Your full name for registration:", "");
-            if (!fullName || !String(fullName).trim()) return;
-            var email = window.prompt("Email for payment receipt:", "");
-            if (!email || String(email).indexOf("@") < 0) {
-                alert("A valid email is required.");
-                return;
+            // No modal: use session if logged in, otherwise prompt
+            var profile = getSessionStudentProfile();
+            var fullName, email, phone;
+            if (isStudentLoggedIn() && profile.email) {
+                fullName = profile.fullName || "Student";
+                email = profile.email;
+                phone = profile.phone || "";
+            } else {
+                fullName = window.prompt("Your full name for registration:", "") || "";
+                if (!String(fullName).trim()) return;
+                email = window.prompt("Email for payment receipt:", "") || "";
+                if (!email || String(email).indexOf("@") < 0) {
+                    alert("A valid email is required.");
+                    return;
+                }
+                phone = window.prompt("Phone (optional):", "") || "";
             }
-            var phone = window.prompt("Phone (optional):", "") || "";
             registerForTrainingCourseDirect_(courseId, courseName, fullName, email, phone);
         }
 
