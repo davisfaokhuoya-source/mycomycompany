@@ -2483,22 +2483,24 @@
 
                     <div class="mt-auto">
                         ${hasMaxAttempts ?
-                        `<button onclick="reApplyForCourse('${course.courseId}', '${course.courseName.replace(/'/g, "\\'")}')" 
+                        `<button onclick="reApplyForCourse('${course.courseId}', '${course.courseName.replace(/'/g, "\'")}')" 
                                      class="btn btn-warning w-100 mb-2 fw-bold">
                                 <i class="fa-solid fa-redo me-2"></i> Re-apply for this Course
                              </button>`
-                        :
-                        `<button onclick="event.preventDefault();registerForTrainingCourse('${course.courseId}', '${course.courseName.replace(/'/g, "\\'")}')" 
+                        : (course.registrationOpen === false || course.registrationPhase === 'closed' || course.locked
+                            ? `<button type="button" class="btn btn-secondary w-100 mb-2" disabled>${course.locked ? 'Locked' : 'Registration closed'}</button>`
+                            : `<button onclick="event.preventDefault();registerForTrainingCourse('${course.courseId}', '${course.courseName.replace(/'/g, "\'")}')" 
                                      class="btn btn-brand w-100 mb-2">
-                                ${course.isFree ? '🚀 Start Free Assessment' : 'Register now'}
-                             </button>`
+                                ${course.isFree || Number(course.amount) === 0 ? '🚀 Start Free Assessment' : 'Register now'}
+                             </button>`)}
                     }
                         
                         <small class="text-muted d-block text-center">
-                            Max 4 attempts • 
-                            ${course.isFree ?
+                            ${course.registrationPhase === 'early' ? 'Early bird • ' : (course.registrationOpen === false ? 'Closed • ' : '')}
+                            ${course.isFree || Number(course.amount) === 0 ?
                         '<strong class="text-success">FREE</strong>' :
-                        (course.amountFormatted || '₦12,500')}
+                        ('₦' + Number(course.amount || course.fullAmount || 0).toLocaleString())}
+                            ${course.registrationPhase === 'early' && course.fullAmount ? ' <span class="text-decoration-line-through">₦' + Number(course.fullAmount).toLocaleString() + '</span>' : ''}
                         </small>
                     </div>
                 </div>
@@ -3266,8 +3268,9 @@
             cards.innerHTML = filtered.map(function (c) {
                 const full = c.seats != null && Number(c.seats) <= 0;
                 const locked = c.locked === true || String(c.status || "").toLowerCase() === "locked";
+                const regClosed = c.registrationOpen === false || c.registrationPhase === "closed";
                 const ctype = String(c.courseType || "scheduled").toLowerCase();
-                const typeBadge = locked ? "Locked" : (ctype === "self_paced" ? "Self-paced" : (c.mode || "Scheduled"));
+                const typeBadge = regClosed ? "Closed" : (locked ? "Locked" : (ctype === "self_paced" ? "Self-paced" : (c.mode || "Scheduled")));
                 const pathHint = c.pathLabel || (ctype === "self_paced"
                     ? "Materials → assessment after study"
                     : "Live/virtual training → assessment after admin approval");
@@ -3277,16 +3280,36 @@
                 const descFull = String(c.description || c.publicDescription || "Professional training programme.");
                 const descShort = descFull.length > 110 ? (descFull.slice(0, 110) + "…") : descFull;
                 const idSafe = academyEscAttr(c.courseId);
-                const canReg = !full && !locked;
+                const canReg = !full && !locked && !regClosed;
+                const priceHtml = (function () {
+                    if (regClosed) return "Closed";
+                    if (locked) return "Locked";
+                    if (full) return "Full";
+                    var pay = academyFmtMoney(c.amount);
+                    if (c.registrationPhase === "early" && c.fullAmount != null && Number(c.fullAmount) > Number(c.amount)) {
+                        pay += ' <span class="text-muted text-decoration-line-through small">' + academyFmtMoney(c.fullAmount) + '</span>';
+                        pay += ' <span class="badge bg-success-subtle text-success" style="font-size:0.6rem">Early bird</span>';
+                    } else if (c.registrationPhase === "full" && c.earlyBirdUntil) {
+                        pay += ' <span class="text-muted small">Standard</span>';
+                    }
+                    return pay;
+                })();
+                const deadlineHint = (function () {
+                    if (regClosed && c.registrationCloseAt) return '<p class="small text-danger mb-1">Registration closed ' + academyEsc(academyFmtWhen(c.registrationCloseAt)) + '</p>';
+                    if (c.registrationPhase === "early" && c.earlyBirdUntil) return '<p class="small text-success mb-1">Early bird until ' + academyEsc(academyFmtWhen(c.earlyBirdUntil)) + '</p>';
+                    if (c.registrationCloseAt) return '<p class="small text-muted mb-1">Register by ' + academyEsc(academyFmtWhen(c.registrationCloseAt)) + '</p>';
+                    return "";
+                })();
                 return (
                     '<div class="col-12 col-sm-6 col-lg-4">' +
-                    '<div class="academic-card' + ((full || locked) ? ' opacity-75' : '') + '">' +
+                    '<div class="academic-card' + ((full || locked || regClosed) ? ' opacity-75' : '') + '">' +
                     '<div class="d-flex justify-content-between mb-2">' +
                     '<span class="badge bg-light text-dark text-uppercase" style="font-size:0.65rem">' +
                     academyEsc(typeBadge) + '</span>' +
-                    '<strong class="text-brand">' + (locked ? "Locked" : full ? "Full" : academyFmtMoney(c.amount)) + '</strong></div>' +
+                    '<strong class="text-brand">' + priceHtml + '</strong></div>' +
                     '<h3 class="h6 fw-bold text-dark">' + academyEsc(c.courseName) + '</h3>' +
                     '<p class="small text-muted mb-1">' + academyEsc(descShort) + '</p>' +
+                    deadlineHint +
                     (descFull.length > 110
                         ? '<button type="button" class="btn btn-link btn-sm p-0 mb-2 text-brand fw-semibold" onclick="event.stopPropagation();openCourseOverlay(\'' + idSafe + '\')">More</button>'
                         : '') +

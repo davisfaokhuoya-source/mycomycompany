@@ -21380,7 +21380,8 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             try { c = typeof c === "string" ? JSON.parse(c) : c; } catch (_) { }
             document.getElementById("academyCourseId").value = c.courseId || "";
             document.getElementById("academyCourseName").value = c.courseName || "";
-            document.getElementById("academyCourseAmount").value = c.amount != null ? c.amount : "";
+            document.getElementById("academyCourseAmount").value =
+                (c.fullAmount != null ? c.fullAmount : c.amount) != null ? (c.fullAmount != null ? c.fullAmount : c.amount) : "";
             document.getElementById("academyCourseStatus").value = c.status || (c.isActive ? "Open" : "Closed");
             document.getElementById("academyCourseMode").value = c.mode || "Online";
             try {
@@ -21401,6 +21402,16 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             }
             document.getElementById("academyCourseStart").value = toLocal(c.startAt);
             document.getElementById("academyCourseEnd").value = toLocal(c.endAt);
+            try {
+                var ea = document.getElementById("academyCourseEarlyAmount");
+                if (ea) ea.value = c.earlyBirdAmount != null && c.earlyBirdAmount !== "" ? c.earlyBirdAmount : "";
+                var ep = document.getElementById("academyCourseEarlyPct");
+                if (ep) ep.value = c.earlyBirdPercent != null && c.earlyBirdPercent !== "" ? c.earlyBirdPercent : "";
+                var eu = document.getElementById("academyCourseEarlyUntil");
+                if (eu) eu.value = toLocal(c.earlyBirdUntil);
+                var rc = document.getElementById("academyCourseRegClose");
+                if (rc) rc.value = toLocal(c.registrationCloseAt);
+            } catch (_) { }
             try { document.getElementById("academyCourseName").focus(); } catch (_) { }
         }
         async function academyAdminLoadCourses() {
@@ -21424,8 +21435,18 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                     return '<tr>' +
                         '<td class="p-2 font-mono text-[10px]">' + id + '</td>' +
                         '<td class="p-2">' + (c.courseName || "") + '<br><span class="text-[10px] text-slate-500">' + (c.courseType || "") + '</span></td>' +
-                        '<td class="p-2">' + (c.amount != null ? ("₦" + Number(c.amount).toLocaleString()) : "—") + '</td>' +
-                        '<td class="p-2 text-xs">' + (c.startAt ? new Date(c.startAt).toLocaleString() : "—") + '</td>' +
+                        '<td class="p-2 text-xs">' +
+                        (function () {
+                            var full = c.fullAmount != null ? Number(c.fullAmount) : Number(c.amount);
+                            var early = c.earlyBirdAmount != null ? Number(c.earlyBirdAmount) : null;
+                            var s = "₦" + (isNaN(full) ? "0" : full.toLocaleString());
+                            if (early != null && !isNaN(early)) s += '<br><span class="text-emerald-400">Early ₦' + early.toLocaleString() + '</span>';
+                            if (c.registrationPhase) s += '<br><span class="text-slate-500">' + c.registrationPhase + '</span>';
+                            return s;
+                        })() + '</td>' +
+                        '<td class="p-2 text-xs">' +
+                        (c.registrationCloseAt ? ("Closes " + new Date(c.registrationCloseAt).toLocaleString()) : (c.startAt ? new Date(c.startAt).toLocaleString() : "—")) +
+                        '</td>' +
                         '<td class="p-2">' + (c.status || (c.isActive ? "Open" : "Closed")) + '</td>' +
                         '<td class="p-2 space-x-1">' +
                         '<button type="button" class="text-[10px] px-2 py-1 rounded bg-slate-800" data-course="' + payload + '" onclick="academyAdminEditCourse(JSON.parse(decodeURIComponent(this.getAttribute(\'data-course\'))))">Edit</button>' +
