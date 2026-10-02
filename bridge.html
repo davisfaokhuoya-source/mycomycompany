@@ -3186,6 +3186,53 @@
                     </div>
 
                     <!-- COMPLIANCE LOGS -->
+
+                    <div id="view-agent-client-followups"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div class="flex flex-wrap justify-between items-center gap-2 shrink-0">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Client follow-ups (VA hours)</h3>
+                                <p class="text-xs text-slate-400">Open tasks clients assigned to VA / ops. Complete them
+                                    under admin hours; add a short done note.</p>
+                            </div>
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <select id="vaFollowupAssigneeFilter"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"
+                                    onchange="loadAgentClientFollowups()">
+                                    <option value="va">VA / ops / either</option>
+                                    <option value="all">All assignees</option>
+                                    <option value="client">Client-owned only</option>
+                                </select>
+                                <input id="vaFollowupClientFilter" list="adminClientDatalist"
+                                    placeholder="Client ID (optional)"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white w-44" />
+                                <button type="button" onclick="loadAgentClientFollowups()"
+                                    class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700">
+                                    <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div
+                            class="flex-1 overflow-y-auto custom-scrollbar border border-slate-800 rounded-xl bg-slate-950/50">
+                            <table class="w-full text-left text-xs">
+                                <thead class="text-[10px] uppercase text-slate-500 bg-slate-900/80 sticky top-0">
+                                    <tr>
+                                        <th class="px-3 py-2">Client</th>
+                                        <th class="px-3 py-2">Task</th>
+                                        <th class="px-3 py-2">Due</th>
+                                        <th class="px-3 py-2">Assignee</th>
+                                        <th class="px-3 py-2">Lead</th>
+                                        <th class="px-3 py-2">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="agentClientFollowupsBody" class="text-slate-300">
+                                    <tr>
+                                        <td colspan="6" class="p-4 text-slate-500">Click Refresh to load.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                     <div id="view-agent-compliance"
                         class="agent-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
                         <div class="flex justify-between items-center shrink-0">
@@ -14994,14 +15041,38 @@
                 executeSecureBridgeCall('agent', 'agent-mark-notification-read', { notificationId }, { silent: true }).then(() => pollAdminNotifications());
             }
             document.getElementById('adminNotifPanel')?.classList.remove('open');
+            // Normalise link aliases → real subviews / hubs
+            var map = {
+                'leads-tasks': 'agent-client-followups',
+                'lead_task': 'agent-client-followups',
+                'lead_task_va': 'agent-client-followups',
+                'agent-client-followups': 'agent-client-followups',
+                'client-followups': 'agent-client-followups',
+                'documents': 'agent-docs',
+                'approvals': 'agent-approvals',
+                'chat': 'agent-livechat',
+                'schedule': 'agent-scheduling'
+            };
+            if (link && map[link]) link = map[link];
             if (link) {
-                const btn = document.querySelector(`.career-subview-link[data-target-view="${link}"]`)
-                    || document.querySelector(`.agent-subview-link[data-target-view="${link}"]`)
-                    || document.querySelector(`[data-target-view="${link}"]`);
-                if (btn) {
-                    switchMasterHub(source === 'career' ? 'career' : 'agent');
-                    setTimeout(() => btn.click(), 150);
-                }
+                var hub = 'agent';
+                if (source === 'career' || String(link).indexOf('career') === 0) hub = 'career';
+                else if (String(link).indexOf('assessment') === 0) hub = 'assessment';
+                else if (String(link).indexOf('client') === 0 && String(link).indexOf('agent-client') !== 0) hub = 'client';
+                else if (String(link).indexOf('v5') === 0) hub = 'v5';
+                else if (String(link).indexOf('publish') === 0) hub = 'publish';
+                else if (String(link).indexOf('monitor') === 0) hub = 'monitor';
+                try { switchMasterHub(hub); } catch (_) { }
+                setTimeout(function () {
+                    var btn = document.querySelector('.career-subview-link[data-target-view="' + link + '"]')
+                        || document.querySelector('.agent-subview-link[data-target-view="' + link + '"]')
+                        || document.querySelector('.client-subview-link[data-target-view="' + link + '"]')
+                        || document.querySelector('[data-target-view="' + link + '"]');
+                    if (btn) btn.click();
+                    else if (link === 'agent-client-followups') {
+                        try { showAgentClientFollowups(); } catch (_) { }
+                    }
+                }, 180);
             }
         }
 
@@ -21641,6 +21712,81 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         });
 
     </script>
+
+    <script>
+        async function loadAgentClientFollowups() {
+            var body = document.getElementById('agentClientFollowupsBody');
+            if (!body) return;
+            body.innerHTML = '<tr><td colspan="6" class="p-4 text-slate-500">Loading…</td></tr>';
+            var asg = (document.getElementById('vaFollowupAssigneeFilter') || {}).value || 'va';
+            var clientId = ((document.getElementById('vaFollowupClientFilter') || {}).value || '').trim();
+            try {
+                var res = await executeSecureBridgeCall('agent', 'agent-list-client-lead-tasks', {
+                    status: 'open',
+                    assignee: asg === 'va' ? 'va' : asg,
+                    clientId: clientId || undefined
+                });
+                var list = (res && res.tasks) || [];
+                if (!res || res.success === false) {
+                    body.innerHTML = '<tr><td colspan="6" class="p-4 text-amber-400">' + ((res && res.message) || 'Failed — deploy AgentLib patch for agent-list-client-lead-tasks') + '</td></tr>';
+                    return;
+                }
+                if (!list.length) {
+                    body.innerHTML = '<tr><td colspan="6" class="p-4 text-slate-500">No open follow-ups for this filter.</td></tr>';
+                    return;
+                }
+                body.innerHTML = list.map(function (t) {
+                    var id = String(t.TaskID || '').replace(/'/g, '');
+                    var cid = String(t.ClientID || '').replace(/'/g, '');
+                    return '<tr class="border-t border-slate-800">' +
+                        '<td class="px-3 py-2 font-mono text-[10px]">' + cid + '</td>' +
+                        '<td class="px-3 py-2 text-white">' + String(t.Title || '').replace(/</g, '') + '</td>' +
+                        '<td class="px-3 py-2">' + String(t.DueAt || '').slice(0, 16) + '</td>' +
+                        '<td class="px-3 py-2">' + String(t.Assignee || 'client') + '</td>' +
+                        '<td class="px-3 py-2 font-mono text-[10px]">' + String(t.LeadID || '') + '</td>' +
+                        '<td class="px-3 py-2 space-x-1">' +
+                        '<input id="vaNote_' + id + '" placeholder="Done note" class="bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-[10px] w-28" />' +
+                        '<button type="button" class="text-emerald-400 text-[10px]" onclick="adminCompleteClientFollowup(\'' + cid + '\',\'' + id + '\')">Done</button>' +
+                        '</td></tr>';
+                }).join('');
+            } catch (e) {
+                body.innerHTML = '<tr><td colspan="6" class="p-4 text-amber-400">' + (e.message || e) + '</td></tr>';
+            }
+        }
+        function showAgentClientFollowups() {
+            try { switchMasterHub('agent'); } catch (_) { }
+            document.querySelectorAll('.agent-view').forEach(function (el) { el.classList.add('hidden'); });
+            var v = document.getElementById('view-agent-client-followups');
+            if (v) v.classList.remove('hidden');
+            document.querySelectorAll('.agent-subview-link').forEach(function (a) {
+                a.classList.toggle('active', a.getAttribute('data-target-view') === 'agent-client-followups');
+            });
+            loadAgentClientFollowups();
+        }
+        async function adminCompleteClientFollowup(clientId, taskId) {
+            var note = ((document.getElementById('vaNote_' + taskId) || {}).value || '');
+            try {
+                var res = await executeSecureBridgeCall('agent', 'agent-complete-client-lead-task', {
+                    clientId: clientId,
+                    taskId: taskId,
+                    note: note,
+                    completedBy: 'va_admin'
+                });
+                if (typeof showToast === 'function') showToast((res && res.message) || 'Done', res && res.success === false ? 'error' : 'success');
+                loadAgentClientFollowups();
+            } catch (e) {
+                if (typeof showToast === 'function') showToast(e.message || String(e), 'error');
+            }
+        }
+        document.addEventListener('click', function (ev) {
+            var a = ev.target.closest && ev.target.closest('.agent-subview-link');
+            if (!a) return;
+            if (a.getAttribute('data-target-view') === 'agent-client-followups') {
+                setTimeout(function () { loadAgentClientFollowups(); }, 120);
+            }
+        });
+    </script>
+
 </body>
 
 </html>

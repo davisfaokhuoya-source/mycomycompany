@@ -2617,10 +2617,14 @@
                 <section id="view-leads-tasks" class="view hidden space-y-4 p-1">
                     <div class="flex flex-wrap justify-between items-center gap-2 shrink-0">
                         <div>
-                            <h2 class="text-lg font-bold text-white flex items-center gap-2">Follow-ups
+                            <h2 class="text-lg font-bold text-white flex items-center gap-2">Follow-ups / Tasks
                                 <button type="button" class="vic-info"
-                                    data-tip="Reminders and next actions for your leads." aria-label="Info">i</button>
+                                    data-tip="Create next actions on leads. You can do them yourself, or assign to The Victorias VA (uses ops hours). Mark Done with a short note so the record is clear."
+                                    aria-label="Info">i</button>
                             </h2>
+                            <p class="text-[11px] text-slate-500 mt-0.5">Who does the work: <b
+                                    class="text-slate-300">You</b> or <b class="text-slate-300">VA (our team)</b>. AI
+                                can draft a message for text/email tasks.</p>
                         </div>
                         <button type="button" data-section-refresh="leads-tasks"
                             class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-white inline-flex items-center gap-1.5">
@@ -2629,31 +2633,47 @@
                     </div>
                     <div class="space-y-4">
                         <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
-                            <p class="text-xs font-semibold text-white">Follow-up task</p>
+                            <p class="text-xs font-semibold text-white">New follow-up task</p>
                             <div class="flex flex-wrap gap-2">
                                 <select id="taskLeadSelect"
                                     class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white min-w-[140px]">
                                     <option value="">Lead…</option>
                                 </select>
-                                <input id="taskTitle" placeholder="e.g. Call back"
+                                <input id="taskTitle" placeholder="e.g. Call back / Send quote"
                                     class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white flex-1 min-w-[120px]" />
                                 <input id="taskDueDays" type="number" min="0" value="3"
                                     class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white"
                                     title="Days from now" />
+                                <select id="taskAssignee"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white"
+                                    title="Who should do this?">
+                                    <option value="client">I will do it</option>
+                                    <option value="va">VA / The Victorias (ops hours)</option>
+                                    <option value="either">Either</option>
+                                </select>
+                                <select id="taskChannel"
+                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white">
+                                    <option value="">Channel…</option>
+                                    <option value="call">Call</option>
+                                    <option value="email">Email</option>
+                                    <option value="whatsapp">WhatsApp</option>
+                                    <option value="other">Other</option>
+                                </select>
                                 <button type="button" onclick="clientSaveLeadTask()"
                                     class="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-700 text-white">Add
                                     task</button>
                             </div>
-                            <ul id="leadTasksList" class="text-[11px] text-slate-400 space-y-1"></ul>
                         </div>
                         <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
-                            <h3 class="text-xs font-bold text-white mb-2">All open follow-ups</h3>
-                            <div id="leadTasksList_1" class="text-xs text-slate-300 hidden"></div>
-                            <p class="text-[10px] text-slate-500 mt-2">Tasks with a due date also appear under
-                                Appointments / calendar reminders.</p>
+                            <h3 class="text-xs font-bold text-white mb-2">Open follow-ups</h3>
+                            <ul id="leadTasksList" class="text-[11px] text-slate-300 space-y-2"></ul>
+                            <p class="text-[10px] text-slate-500 mt-3">Tasks with a due date also appear under
+                                Appointments / calendar. When VA is assigned, our team sees them in Admin → Client
+                                follow-ups.</p>
                         </div>
                     </div>
                 </section>
+
                 <section id="view-leads-queue" class="view hidden space-y-4 p-1">
                     <div class="flex flex-wrap justify-between items-center gap-2 shrink-0">
                         <div>
@@ -6384,45 +6404,121 @@
 
         async function clientLoadLeadTasks() {
             try {
+                // Fill lead dropdown if empty
+                try {
+                    var sel = document.getElementById('taskLeadSelect');
+                    if (sel && sel.options.length <= 1 && typeof clientLoadLeads === 'function') {
+                        /* leads may already be cached */
+                    }
+                    if (sel && window.__LEADS_CACHE && window.__LEADS_CACHE.length) {
+                        var cur = sel.value;
+                        sel.innerHTML = '<option value="">Lead…</option>' + window.__LEADS_CACHE.map(function (r) {
+                            var id = r.leadId || r.LeadId || r.LeadID || r.id || '';
+                            var name = r.name || r.Name || id;
+                            return '<option value="' + String(id).replace(/"/g, '') + '">' + String(name).replace(/</g, '') + '</option>';
+                        }).join('');
+                        if (cur) sel.value = cur;
+                    }
+                } catch (_) { }
+
                 var res = await callGateway('clientportal', 'clientPortalListLeadTasks', { status: 'open' });
                 var tasks = (res && res.tasks) || [];
-                var ul = document.getElementById('leadTasksList') || document.getElementById('leadTasksList_1');
+                var ul = document.getElementById('leadTasksList');
                 if (!ul) return;
                 if (!tasks.length) {
                     ul.innerHTML = '<li class="text-slate-600">No open follow-ups.</li>';
                     return;
                 }
-                var esc = typeof escapeHtml === 'function' ? escapeHtml : function (x) { return String(x || ''); };
+                var esc = typeof escapeHtml === 'function' ? escapeHtml : function (x) { return String(x || '').replace(/</g, '&lt;'); };
                 ul.innerHTML = tasks.map(function (t) {
-                    return '<li class="flex justify-between gap-2"><span>' + esc(t.Title) +
-                        ' <span class="text-slate-600">due ' + esc(String(t.DueAt || '').slice(0, 10)) + '</span></span>' +
-                        '<button type="button" class="text-emerald-400" onclick="clientCompleteLeadTask(\'' + esc(t.TaskID) + '\')">Done</button></li>';
+                    var id = esc(t.TaskID || t.taskId || '');
+                    var title = esc(t.Title || t.title || '');
+                    var due = esc(String(t.DueAt || '').slice(0, 10));
+                    var asg = String(t.Assignee || t.assignee || 'client').toLowerCase();
+                    var asgLabel = asg === 'va' || asg === 'ops' ? 'VA' : (asg === 'either' ? 'Either' : 'You');
+                    var ch = esc(t.Channel || '');
+                    var lead = esc(t.LeadID || t.leadId || '');
+                    return '<li class="border border-slate-800 rounded-lg p-2 space-y-1">' +
+                        '<div class="flex flex-wrap justify-between gap-2">' +
+                        '<span class="text-white font-medium">' + title + '</span>' +
+                        '<span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">' + asgLabel + '</span></div>' +
+                        '<div class="text-slate-500 text-[10px]">Due ' + due + (ch ? ' · ' + ch : '') + (lead ? ' · lead ' + lead : '') + '</div>' +
+                        '<div class="flex flex-wrap gap-2 items-center">' +
+                        '<input type="text" id="taskNote_' + id + '" placeholder="Done note (optional)" class="flex-1 min-w-[100px] bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[10px] text-white" />' +
+                        '<button type="button" class="text-emerald-400 text-[11px]" onclick="clientCompleteLeadTask(\'' + id + '\')">Done</button>' +
+                        ((ch === 'email' || ch === 'whatsapp' || /text|email|whatsapp|message/i.test(title))
+                            ? '<button type="button" class="text-sky-400 text-[11px]" onclick="clientAiDraftForTask(\'' + id + '\',\'' + lead + '\',\'' + title.replace(/'/g, '') + '\')">AI draft</button>'
+                            : '') +
+                        '</div></li>';
                 }).join('');
-            } catch (_) { }
+            } catch (e) {
+                try {
+                    var ul2 = document.getElementById('leadTasksList');
+                    if (ul2) ul2.innerHTML = '<li class="text-amber-400">' + (e.message || e) + '</li>';
+                } catch (_) { }
+            }
         }
 
         async function clientSaveLeadTask() {
             var leadId = (document.getElementById('taskLeadSelect') || {}).value;
             var title = (document.getElementById('taskTitle') || {}).value;
             var days = parseInt((document.getElementById('taskDueDays') || {}).value, 10);
+            var assignee = (document.getElementById('taskAssignee') || {}).value || 'client';
+            var channel = (document.getElementById('taskChannel') || {}).value || '';
             if (!title) {
                 if (typeof notifyUser === 'function') notifyUser('Enter a task title', 'info');
+                else if (typeof clientFeedback === 'function') clientFeedback('Enter a task title', true);
                 return;
             }
             var res = await callGateway('clientportal', 'clientPortalUpsertLeadTask', {
                 leadId: leadId,
                 title: title,
-                dueInDays: isNaN(days) ? 3 : days
+                dueInDays: isNaN(days) ? 3 : days,
+                assignee: assignee,
+                channel: channel,
+                createdBy: 'client'
             });
-            if (typeof notifyUser === 'function') notifyUser((res && res.message) || 'Saved', res && res.success ? 'success' : 'info');
+            if (typeof notifyUser === 'function') notifyUser((res && res.message) || 'Saved', res && res.success !== false ? 'success' : 'info');
+            else if (typeof clientFeedback === 'function') clientFeedback((res && res.message) || 'Saved', res && res.success === false);
             if (document.getElementById('taskTitle')) document.getElementById('taskTitle').value = '';
             clientLoadLeadTasks();
         }
 
         async function clientCompleteLeadTask(taskId) {
-            var res = await callGateway('clientportal', 'clientPortalCompleteLeadTask', { taskId: taskId });
+            var noteEl = document.getElementById('taskNote_' + taskId);
+            var note = noteEl ? noteEl.value : '';
+            var res = await callGateway('clientportal', 'clientPortalCompleteLeadTask', {
+                taskId: taskId,
+                note: note,
+                completedBy: 'client'
+            });
             if (typeof notifyUser === 'function') notifyUser((res && res.message) || 'Done', 'success');
+            else if (typeof clientFeedback === 'function') clientFeedback((res && res.message) || 'Done');
             clientLoadLeadTasks();
+        }
+
+        async function clientAiDraftForTask(taskId, leadId, title) {
+            try {
+                if (typeof notifyUser === 'function') notifyUser('Opening Message leads with a draft hint…', 'info');
+                // Navigate to message leads; prefill subject/body if fields exist
+                if (typeof showView === 'function') showView('leads-message');
+                var body = document.getElementById('leadMsgBody') || document.getElementById('adminLeadMsgBody');
+                var sub = document.getElementById('leadMsgSubject');
+                var hint = 'Follow-up: ' + (title || '') + (leadId ? ' (lead ' + leadId + ')' : '') +
+                    '. Write a short professional message.';
+                if (body && !body.value) body.value = hint;
+                if (sub && !sub.value) sub.value = title || 'Following up';
+                // Optional AI suggestion endpoint
+                try {
+                    var res = await callGateway('clientportal', 'clientPortalSuggestLeadNextActions', { useAi: true, leadId: leadId || undefined });
+                    var sug = (res && res.suggestions) || [];
+                    if (sug.length && body) {
+                        body.value = String(sug[0].message || sug[0].text || sug[0] || body.value);
+                    }
+                } catch (_) { }
+            } catch (e) {
+                if (typeof clientFeedback === 'function') clientFeedback(e.message || String(e), true);
+            }
         }
 
         async function clientLoadLeadSuggestions() {
