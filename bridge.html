@@ -5473,6 +5473,16 @@
                             <p class="text-[11px] text-slate-500">Set <strong class="text-slate-300">capacity
                                     limits</strong> granted when this add-on is purchased or assigned. Use 0 if not
                                 applicable.</p>
+                            <div class="mb-3">
+                                <label class="text-slate-400 text-xs block">Choose add-on to edit
+                                    <select id="pae_pickAddon" onchange="if(this.value){pricingEditAddon(this.value);}"
+                                        class="mt-1 w-full px-2 py-2 rounded bg-slate-950 border border-slate-700 text-white text-sm">
+                                        <option value="">— Select from full catalog —</option>
+                                    </select>
+                                </label>
+                                <p class="text-[10px] text-slate-500 mt-1">Every catalog add-on appears here. Or use
+                                    <b>Edit</b> on any table row.</p>
+                            </div>
                             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                                 <label class="text-slate-400">Item key<input id="pae_key"
                                         class="mt-1 w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700 text-white font-mono" /></label>
@@ -19965,6 +19975,36 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                             };
                         });
                     }
+
+                    if (Array.isArray(billCat.payg) && billCat.payg.length) {
+                        var existingKeys = {};
+                        (window.PRICING_STATE.addons || []).forEach(function (x) { existingKeys[x.key] = true; });
+                        billCat.payg.forEach(function (a) {
+                            var k = a.id || a.key;
+                            if (!k || existingKeys[k]) return;
+                            window.PRICING_STATE.addons.push({
+                                key: k, label: a.label || k,
+                                priceNgn: Number(a.priceLocalNgn) || 0,
+                                priceUsd: Number(a.priceOffshoreUsd) || 0,
+                                unit: a.unit || 'mo', active: a.active !== false,
+                                grantsHumanMinutes: Number(a.grantsHumanMinutes) || 0,
+                                grantsDocuments: Number(a.grantsDocuments) || 0,
+                                grantsProposals: Number(a.grantsProposals) || 0,
+                                grantsMailboxes: Number(a.grantsMailboxes) || 0,
+                                grantsSocialPosts: Number(a.grantsSocialPosts) || 0,
+                                grantsCalendars: Number(a.grantsCalendars) || 0,
+                                grantsWhatsappReplies: Number(a.grantsWhatsappReplies) || 0,
+                                grantsDocTrainingTypes: Number(a.grantsDocTrainingTypes) || 0,
+                                grantsLeads: Number(a.grantsLeads) || 0,
+                                grantsCompliance: Number(a.grantsCompliance) || 0,
+                                grantsVideoPosts: Number(a.grantsVideoPosts) || 0,
+                                grantsSocialAssets: Number(a.grantsSocialAssets) || 0,
+                                grantsCrmConnections: Number(a.grantsCrmConnections) || 0,
+                                addonOnly: true, payg: true
+                            });
+                        });
+                    }
+                    try { pricingFillAddonPicker(''); } catch (_) { }
                     if (!(window.PRICING_STATE.tiers || []).length) {
                         var mirrored = [];
                         (billCat.opsTiers || []).forEach(function (t) {
@@ -20273,6 +20313,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             var tbody = document.getElementById('pricingAddonTableBody');
             if (!tbody) return;
             var addons = (window.PRICING_STATE && window.PRICING_STATE.addons) || [];
+            try { pricingFillAddonPicker((document.getElementById('pae_key') || {}).value || ''); } catch (_) { }
             function limitsSummary(a) {
                 var bits = [];
                 function push(label, v) {
@@ -20350,8 +20391,47 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             return false;
         }
 
+        function pricingFindAddon(key) {
+            var list = (window.PRICING_STATE && window.PRICING_STATE.addons) || [];
+            key = String(key || '').trim();
+            for (var i = 0; i < list.length; i++) {
+                var x = list[i];
+                var k = String(x.key || x.id || '').trim();
+                if (k === key) return x;
+            }
+            return null;
+        }
+
+        function pricingFillAddonPicker(selectedKey) {
+            var sel = document.getElementById('pae_pickAddon');
+            if (!sel) return;
+            var list = (window.PRICING_STATE && window.PRICING_STATE.addons) || [];
+            var cur = selectedKey || sel.value || '';
+            sel.innerHTML = '<option value="">— Select from full catalog (' + list.length + ') —</option>' +
+                list.map(function (a) {
+                    var k = String(a.key || a.id || '');
+                    var lab = (a.label || k) + ' (' + k + ')';
+                    return '<option value="' + k.replace(/"/g, '') + '">' + lab.replace(/</g, '') + '</option>';
+                }).join('');
+            if (cur) sel.value = cur;
+        }
+
+        function pricingClearAddonGrantFields() {
+            ['pae_humanMin', 'pae_docs', 'pae_proposals', 'pae_mailboxes', 'pae_posts', 'pae_calendars', 'pae_wa', 'pae_training', 'pae_video', 'pae_assets', 'pae_crm', 'pae_leads', 'pae_compliance'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+        }
+
         function pricingEditAddon(key) {
-            var a = (window.PRICING_STATE.addons || []).find(function (x) { return x.key === key; }) || { key: key, label: key, priceNgn: 0, active: true };
+            key = String(key || '').trim();
+            var a = pricingFindAddon(key);
+            if (!a) {
+                a = { key: key, label: key, priceNgn: 0, active: true };
+                if (typeof showToast === 'function') showToast('Add-on not in loaded catalog: ' + key + ' — click Refresh on Pricing.', 'error');
+            } else {
+                a = Object.assign({}, a);
+            }
             if (!pricingAddonHasAnyGrant(a)) {
                 var def = pricingAddonDefaultGrants(a.key || key);
                 Object.keys(def).forEach(function (k) { a[k] = def[k]; });
@@ -20361,20 +20441,21 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 ed.classList.remove('hidden');
                 try { ed.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) { }
             }
-            document.getElementById('pae_key').value = a.key || '';
-            document.getElementById('pae_key').readOnly = !!key;
+            pricingFillAddonPicker(a.key || key);
+            pricingClearAddonGrantFields();
+            document.getElementById('pae_key').value = a.key || a.id || key || '';
+            document.getElementById('pae_key').readOnly = !!(a.key || key);
             document.getElementById('pae_label').value = a.label || '';
-            document.getElementById('pae_ngn').value = a.priceNgn || 0;
+            document.getElementById('pae_ngn').value = a.priceNgn != null ? a.priceNgn : (a.priceLocalNgn || 0);
             var usdEl = document.getElementById('pae_usd');
-            if (usdEl) usdEl.value = a.priceUsd != null ? a.priceUsd : '';
+            if (usdEl) usdEl.value = a.priceUsd != null ? a.priceUsd : (a.priceOffshoreUsd != null ? a.priceOffshoreUsd : '');
             var unitEl = document.getElementById('pae_unit');
             if (unitEl) unitEl.value = a.unit || 'mo';
             document.getElementById('pae_active').checked = a.active !== false;
             function setN(id, v) {
                 var el = document.getElementById(id);
                 if (!el) return;
-                if (v == null || v === '') el.value = '';
-                else el.value = v;
+                el.value = (v == null || v === '') ? '' : v;
             }
             setN('pae_humanMin', a.grantsHumanMinutes);
             setN('pae_docs', a.grantsDocuments);
@@ -20392,13 +20473,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             var ao = document.getElementById('pae_addonOnly');
             if (ao) ao.checked = !!a.addonOnly;
             var hint = document.getElementById('pae_limitsHint');
-            if (hint) {
-                if (a.addonOnly && !pricingAddonHasAnyGrant(a)) {
-                    hint.textContent = 'Feature add-on: no monthly units required unless you want a quantity cap.';
-                } else {
-                    hint.textContent = 'Adjust numbers below, then Save add-on. Limits show in the table after save + refresh.';
-                }
-            }
+            if (hint) hint.textContent = 'Editing: ' + (a.key || key) + ' — set units, then Save add-on.';
         }
 
         function pricingNewAddon() {
