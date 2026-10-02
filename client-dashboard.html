@@ -2667,6 +2667,8 @@
                         <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
                             <h3 class="text-xs font-bold text-white mb-2">Open follow-ups</h3>
                             <ul id="leadTasksList" class="text-[11px] text-slate-300 space-y-2"></ul>
+                            <div id="leadTasksPager" class="flex flex-wrap gap-2 items-center mt-3 text-[10px]"></div>
+                            <input type="hidden" id="taskEditId" value="" />
                             <p class="text-[10px] text-slate-500 mt-3">Tasks with a due date also appear under
                                 Appointments / calendar. When VA is assigned, our team sees them in Admin → Client
                                 follow-ups.</p>
@@ -6402,61 +6404,136 @@
             }
         }
 
+        async function clientFillTaskLeadSelect(preserve) {
+            var sel = document.getElementById('taskLeadSelect');
+            if (!sel) return;
+            var cur = preserve != null ? preserve : sel.value;
+            var leads = window.__clientLeads || window.__LEADS_CACHE || [];
+            if (!leads.length) {
+                try {
+                    var res = await callGateway('clientportal', 'clientPortalListLeads', {});
+                    leads = (res && res.leads) || [];
+                    window.__clientLeads = leads;
+                    window.__LEADS_CACHE = leads;
+                } catch (_) { leads = []; }
+            }
+            function leadLabel(r) {
+                var id = r.LeadID || r.leadId || r.LeadId || r.id || '';
+                var name = r.ContactName || r.contactName || r.Name || r.name || '';
+                var co = r.Company || r.company || '';
+                var em = r.Email || r.email || '';
+                var parts = [];
+                if (name) parts.push(name);
+                if (co) parts.push(co);
+                if (!parts.length && em) parts.push(em);
+                if (!parts.length) parts.push(id || 'Lead');
+                var label = parts.join(' — ');
+                if (id && name) label = name + (co ? ' (' + co + ')' : '');
+                return { id: String(id), label: String(label) };
+            }
+            sel.innerHTML = '<option value="">Select lead…</option>' + leads.map(function (r) {
+                var x = leadLabel(r);
+                return '<option value="' + x.id.replace(/"/g, '') + '">' + x.label.replace(/</g, '') + '</option>';
+            }).join('');
+            if (cur) sel.value = cur;
+        }
+
+        window.__TASKS_CACHE = window.__TASKS_CACHE || [];
+        window.__TASKS_PAGE = 1;
+        window.TASKS_PAGE_SIZE = 20;
+
+        function clientTaskLeadName(leadId) {
+            leadId = String(leadId || '');
+            var leads = window.__clientLeads || window.__LEADS_CACHE || [];
+            for (var i = 0; i < leads.length; i++) {
+                var r = leads[i];
+                var id = String(r.LeadID || r.leadId || r.LeadId || r.id || '');
+                if (id === leadId) {
+                    return r.ContactName || r.contactName || r.Name || r.name || r.Company || leadId;
+                }
+            }
+            return leadId || '—';
+        }
+
         async function clientLoadLeadTasks() {
             try {
-                // Fill lead dropdown if empty
-                try {
-                    var sel = document.getElementById('taskLeadSelect');
-                    if (sel && sel.options.length <= 1 && typeof clientLoadLeads === 'function') {
-                        /* leads may already be cached */
-                    }
-                    if (sel && window.__LEADS_CACHE && window.__LEADS_CACHE.length) {
-                        var cur = sel.value;
-                        sel.innerHTML = '<option value="">Lead…</option>' + window.__LEADS_CACHE.map(function (r) {
-                            var id = r.leadId || r.LeadId || r.LeadID || r.id || '';
-                            var name = r.name || r.Name || id;
-                            return '<option value="' + String(id).replace(/"/g, '') + '">' + String(name).replace(/</g, '') + '</option>';
-                        }).join('');
-                        if (cur) sel.value = cur;
-                    }
-                } catch (_) { }
-
+                await clientFillTaskLeadSelect();
                 var res = await callGateway('clientportal', 'clientPortalListLeadTasks', { status: 'open' });
                 var tasks = (res && res.tasks) || [];
-                var ul = document.getElementById('leadTasksList');
-                if (!ul) return;
-                if (!tasks.length) {
-                    ul.innerHTML = '<li class="text-slate-600">No open follow-ups.</li>';
-                    return;
-                }
-                var esc = typeof escapeHtml === 'function' ? escapeHtml : function (x) { return String(x || '').replace(/</g, '&lt;'); };
-                ul.innerHTML = tasks.map(function (t) {
-                    var id = esc(t.TaskID || t.taskId || '');
-                    var title = esc(t.Title || t.title || '');
-                    var due = esc(String(t.DueAt || '').slice(0, 10));
-                    var asg = String(t.Assignee || t.assignee || 'client').toLowerCase();
-                    var asgLabel = asg === 'va' || asg === 'ops' ? 'VA' : (asg === 'either' ? 'Either' : 'You');
-                    var ch = esc(t.Channel || '');
-                    var lead = esc(t.LeadID || t.leadId || '');
-                    return '<li class="border border-slate-800 rounded-lg p-2 space-y-1">' +
-                        '<div class="flex flex-wrap justify-between gap-2">' +
-                        '<span class="text-white font-medium">' + title + '</span>' +
-                        '<span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">' + asgLabel + '</span></div>' +
-                        '<div class="text-slate-500 text-[10px]">Due ' + due + (ch ? ' · ' + ch : '') + (lead ? ' · lead ' + lead : '') + '</div>' +
-                        '<div class="flex flex-wrap gap-2 items-center">' +
-                        '<input type="text" id="taskNote_' + id + '" placeholder="Done note (optional)" class="flex-1 min-w-[100px] bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[10px] text-white" />' +
-                        '<button type="button" class="text-emerald-400 text-[11px]" onclick="clientCompleteLeadTask(\'' + id + '\')">Done</button>' +
-                        ((ch === 'email' || ch === 'whatsapp' || /text|email|whatsapp|message/i.test(title))
-                            ? '<button type="button" class="text-sky-400 text-[11px]" onclick="clientAiDraftForTask(\'' + id + '\',\'' + lead + '\',\'' + title.replace(/'/g, '') + '\')">AI draft</button>'
-                            : '') +
-                        '</div></li>';
-                }).join('');
+                window.__TASKS_CACHE = tasks;
+                window.__TASKS_PAGE = 1;
+                clientRenderTasksPage();
             } catch (e) {
-                try {
-                    var ul2 = document.getElementById('leadTasksList');
-                    if (ul2) ul2.innerHTML = '<li class="text-amber-400">' + (e.message || e) + '</li>';
-                } catch (_) { }
+                var ul = document.getElementById('leadTasksList');
+                if (ul) ul.innerHTML = '<li class="text-amber-400">' + (e.message || e) + '</li>';
             }
+        }
+
+        function clientTasksNextPage() {
+            var size = window.TASKS_PAGE_SIZE || 20;
+            var max = Math.max(1, Math.ceil((window.__TASKS_CACHE || []).length / size));
+            window.__TASKS_PAGE = Math.min(max, (window.__TASKS_PAGE || 1) + 1);
+            clientRenderTasksPage();
+        }
+        function clientTasksPrevPage() {
+            window.__TASKS_PAGE = Math.max(1, (window.__TASKS_PAGE || 1) - 1);
+            clientRenderTasksPage();
+        }
+
+        function clientRenderTasksPage() {
+            var ul = document.getElementById('leadTasksList');
+            var pager = document.getElementById('leadTasksPager');
+            if (!ul) return;
+            var tasks = window.__TASKS_CACHE || [];
+            var size = window.TASKS_PAGE_SIZE || 20;
+            var page = window.__TASKS_PAGE || 1;
+            var pages = Math.max(1, Math.ceil(tasks.length / size));
+            if (page > pages) page = pages;
+            window.__TASKS_PAGE = page;
+            var slice = tasks.slice((page - 1) * size, page * size);
+            if (pager) {
+                if (!tasks.length) pager.innerHTML = '';
+                else pager.innerHTML = '<span class="text-slate-500">Showing ' +
+                    (tasks.length ? ((page - 1) * size + 1) : 0) + '–' + Math.min(tasks.length, page * size) +
+                    ' of ' + tasks.length + '</span>' +
+                    '<button type="button" class="px-2 py-1 rounded bg-slate-800 text-white text-[10px] ' + (page <= 1 ? 'opacity-40' : '') + '" ' +
+                    (page <= 1 ? 'disabled' : '') + ' onclick="clientTasksPrevPage()">Previous</button>' +
+                    '<span class="text-slate-500">Page ' + page + ' / ' + pages + '</span>' +
+                    '<button type="button" class="px-2 py-1 rounded bg-slate-800 text-white text-[10px] ' + (page >= pages ? 'opacity-40' : '') + '" ' +
+                    (page >= pages ? 'disabled' : '') + ' onclick="clientTasksNextPage()">Next</button>';
+            }
+            if (!slice.length) {
+                ul.innerHTML = '<li class="text-slate-600">No open follow-ups.</li>';
+                return;
+            }
+            var esc = typeof escapeHtml === 'function' ? escapeHtml : function (x) { return String(x || '').replace(/</g, '&lt;'); };
+            ul.innerHTML = slice.map(function (t) {
+                var id = String(t.TaskID || t.taskId || '');
+                var title = esc(t.Title || t.title || '');
+                var due = esc(String(t.DueAt || '').slice(0, 10));
+                var asg = String(t.Assignee || t.assignee || 'client').toLowerCase();
+                var asgLabel = asg === 'va' || asg === 'ops' ? 'VA' : (asg === 'either' ? 'Either' : 'You');
+                var ch = esc(t.Channel || '');
+                var leadId = String(t.LeadID || t.leadId || '');
+                var leadName = esc(clientTaskLeadName(leadId));
+                var idEsc = id.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                return '<li class="border border-slate-800 rounded-lg p-2 space-y-1" data-task-id="' + esc(id) + '">' +
+                    '<div class="flex flex-wrap justify-between gap-2">' +
+                    '<span class="text-white font-medium">' + title + '</span>' +
+                    '<span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">' + asgLabel + '</span></div>' +
+                    '<div class="text-slate-500 text-[10px]">Due ' + due +
+                    (leadName && leadName !== '—' ? ' · <span class="text-slate-300">' + leadName + '</span>' : '') +
+                    (ch ? ' · ' + ch : '') + '</div>' +
+                    '<div class="flex flex-wrap gap-2 items-center">' +
+                    '<input type="text" id="taskNote_' + esc(id) + '" placeholder="Done note (optional)" class="flex-1 min-w-[100px] bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[10px] text-white" />' +
+                    '<button type="button" class="text-sky-400 text-[11px]" onclick="clientEditLeadTask(\'' + idEsc + '\')">Edit</button>' +
+                    '<button type="button" class="text-emerald-400 text-[11px]" onclick="clientCompleteLeadTask(\'' + idEsc + '\')">Done</button>' +
+                    '<button type="button" class="text-red-300 text-[11px]" onclick="clientDeleteLeadTask(\'' + idEsc + '\')">Delete</button>' +
+                    ((ch === 'email' || ch === 'whatsapp' || /text|email|whatsapp|message/i.test(String(t.Title || '')))
+                        ? '<button type="button" class="text-sky-300 text-[11px]" onclick="clientAiDraftForTask(\'' + idEsc + '\',\'' + leadId.replace(/'/g, '') + '\',\'' + String(t.Title || '').replace(/'/g, '') + '\')">AI draft</button>'
+                        : '') +
+                    '</div></li>';
+            }).join('');
         }
 
         async function clientSaveLeadTask() {
@@ -6465,23 +6542,70 @@
             var days = parseInt((document.getElementById('taskDueDays') || {}).value, 10);
             var assignee = (document.getElementById('taskAssignee') || {}).value || 'client';
             var channel = (document.getElementById('taskChannel') || {}).value || '';
+            var editId = (document.getElementById('taskEditId') || {}).value || '';
             if (!title) {
                 if (typeof notifyUser === 'function') notifyUser('Enter a task title', 'info');
                 else if (typeof clientFeedback === 'function') clientFeedback('Enter a task title', true);
                 return;
             }
-            var res = await callGateway('clientportal', 'clientPortalUpsertLeadTask', {
+            var payload = {
                 leadId: leadId,
                 title: title,
                 dueInDays: isNaN(days) ? 3 : days,
                 assignee: assignee,
                 channel: channel,
                 createdBy: 'client'
-            });
+            };
+            if (editId) payload.taskId = editId;
+            var res = await callGateway('clientportal', 'clientPortalUpsertLeadTask', payload);
             if (typeof notifyUser === 'function') notifyUser((res && res.message) || 'Saved', res && res.success !== false ? 'success' : 'info');
             else if (typeof clientFeedback === 'function') clientFeedback((res && res.message) || 'Saved', res && res.success === false);
             if (document.getElementById('taskTitle')) document.getElementById('taskTitle').value = '';
+            if (document.getElementById('taskEditId')) document.getElementById('taskEditId').value = '';
+            var btn = document.querySelector('#view-leads-tasks button[onclick="clientSaveLeadTask()"]');
+            if (btn) btn.textContent = 'Add task';
             clientLoadLeadTasks();
+        }
+
+        function clientEditLeadTask(taskId) {
+            var tasks = window.__TASKS_CACHE || [];
+            var t = null;
+            for (var i = 0; i < tasks.length; i++) {
+                if (String(tasks[i].TaskID || tasks[i].taskId) === String(taskId)) { t = tasks[i]; break; }
+            }
+            if (!t) {
+                if (typeof notifyUser === 'function') notifyUser('Task not found in list — Refresh.', 'info');
+                return;
+            }
+            var editEl = document.getElementById('taskEditId');
+            if (!editEl) {
+                editEl = document.createElement('input');
+                editEl.type = 'hidden';
+                editEl.id = 'taskEditId';
+                var host = document.getElementById('taskTitle');
+                if (host && host.parentNode) host.parentNode.appendChild(editEl);
+            }
+            editEl.value = taskId;
+            document.getElementById('taskTitle').value = t.Title || t.title || '';
+            var leadSel = document.getElementById('taskLeadSelect');
+            if (leadSel) leadSel.value = t.LeadID || t.leadId || '';
+            var asg = document.getElementById('taskAssignee');
+            if (asg) asg.value = (t.Assignee || 'client').toLowerCase();
+            var ch = document.getElementById('taskChannel');
+            if (ch) ch.value = t.Channel || '';
+            // due days from DueAt roughly
+            try {
+                var due = new Date(t.DueAt);
+                var days = Math.max(0, Math.round((due - new Date()) / 86400000));
+                var dEl = document.getElementById('taskDueDays');
+                if (dEl && !isNaN(days)) dEl.value = days;
+            } catch (_) { }
+            var btn = document.querySelector('#view-leads-tasks button[onclick="clientSaveLeadTask()"]');
+            if (btn) btn.textContent = 'Save changes';
+            try {
+                document.getElementById('taskTitle').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                document.getElementById('taskTitle').focus();
+            } catch (_) { }
         }
 
         async function clientCompleteLeadTask(taskId) {
@@ -6497,24 +6621,32 @@
             clientLoadLeadTasks();
         }
 
+        async function clientDeleteLeadTask(taskId) {
+            if (!taskId) return;
+            if (!confirm('Delete this follow-up task?')) return;
+            try {
+                var res = await callGateway('clientportal', 'clientPortalDeleteLeadTask', { taskId: taskId });
+                if (typeof notifyUser === 'function') notifyUser((res && res.message) || 'Deleted', res && res.success === false ? 'info' : 'success');
+                else if (typeof clientFeedback === 'function') clientFeedback((res && res.message) || 'Deleted', res && res.success === false);
+                clientLoadLeadTasks();
+            } catch (e) {
+                if (typeof clientFeedback === 'function') clientFeedback(e.message || String(e), true);
+            }
+        }
+
         async function clientAiDraftForTask(taskId, leadId, title) {
             try {
-                if (typeof notifyUser === 'function') notifyUser('Opening Message leads with a draft hint…', 'info');
-                // Navigate to message leads; prefill subject/body if fields exist
+                if (typeof notifyUser === 'function') notifyUser('Opening Message leads…', 'info');
                 if (typeof showView === 'function') showView('leads-message');
                 var body = document.getElementById('leadMsgBody') || document.getElementById('adminLeadMsgBody');
                 var sub = document.getElementById('leadMsgSubject');
-                var hint = 'Follow-up: ' + (title || '') + (leadId ? ' (lead ' + leadId + ')' : '') +
-                    '. Write a short professional message.';
+                var hint = 'Follow-up: ' + (title || '') + (leadId ? ' (lead ' + leadId + ')' : '') + '. Write a short professional message.';
                 if (body && !body.value) body.value = hint;
                 if (sub && !sub.value) sub.value = title || 'Following up';
-                // Optional AI suggestion endpoint
                 try {
                     var res = await callGateway('clientportal', 'clientPortalSuggestLeadNextActions', { useAi: true, leadId: leadId || undefined });
                     var sug = (res && res.suggestions) || [];
-                    if (sug.length && body) {
-                        body.value = String(sug[0].message || sug[0].text || sug[0] || body.value);
-                    }
+                    if (sug.length && body) body.value = String(sug[0].message || sug[0].text || sug[0] || body.value);
                 } catch (_) { }
             } catch (e) {
                 if (typeof clientFeedback === 'function') clientFeedback(e.message || String(e), true);
@@ -6600,6 +6732,7 @@
                 var res = await callGateway('clientportal', 'clientPortalListLeads', {});
                 var leads = (res && res.leads) || [];
                 window.__clientLeads = leads;
+                window.__LEADS_CACHE = leads;
                 try { clientRenderLeadsTable(); return; } catch (_r) { }
                 if (!leads.length) {
                     if (!tb) return;
