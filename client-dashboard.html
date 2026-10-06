@@ -7331,12 +7331,19 @@
                 var res = await callGateway('clientportal', 'clientPortalGetCommentSettings', {});
                 var sel = document.getElementById('commentAiModeSelect');
                 var hint = document.getElementById('commentAiModeHint');
-                if (!sel) return res;
+                var panel = document.getElementById('clientCommentAiPanel') || document.getElementById('integAiCommentPanel');
+
                 if (!res || res.success === false) {
-                    sel.value = 'off';
+                    if (sel) sel.value = 'off';
                     if (hint) hint.textContent = (res && res.message) || 'Could not load AI reply setting';
+                    if (panel) {
+                        panel.innerHTML = '<p class="text-amber-300/90 text-sm">' +
+                            String((res && res.message) || 'Could not load settings. Try Refresh or sign in again.') +
+                            '</p>';
+                    }
                     return res;
                 }
+
                 var on = !!(res.anyEnabled);
                 if (!on && res.platforms) {
                     on = !!(res.platforms.tiktok_business || res.platforms.tiktok ||
@@ -7344,17 +7351,86 @@
                         res.platforms.threads || res.platforms.linkedin || res.platforms.x);
                 }
                 if (!on && res.hasAddon && String(res.tikTokMode || '').toLowerCase() === 'business') on = true;
-                sel.value = on ? 'on' : 'off';
+                if (sel) sel.value = on ? 'on' : 'off';
                 if (hint) {
                     if (!res.hasAddon) hint.textContent = 'Comment Reply add-on required';
                     else if (on) hint.textContent = 'Saved: ON';
                     else hint.textContent = 'Saved: OFF';
                 }
                 window.__commentAiSettings = res;
+
+                // Fill AI comment settings page (integ-ai) — was empty before
+                if (panel) {
+                    var html = '';
+                    if (!res.hasAddon) {
+                        html += '<div class="rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm text-amber-100">' +
+                            '<p class="font-semibold mb-1">Comment Reply add-on not active</p>' +
+                            '<p class="text-[11px] text-amber-200/80">This is not a system error. Ask admin to enable the <strong>comment_reply</strong> add-on for your account, then connect social accounts under Integrations.</p>' +
+                            '</div>';
+                    } else {
+                        html += '<div class="rounded-lg border border-emerald-800/50 bg-emerald-950/20 p-3 text-sm text-emerald-100 mb-2">' +
+                            '<p class="font-semibold">Add-on active</p>' +
+                            '<p class="text-[11px] text-slate-400 mt-1">' + String(res.message || 'AI can reply when platforms are ON and accounts are connected.') + '</p>' +
+                            (res.hasSpamDeleteAddon ? '<p class="text-[11px] text-slate-400 mt-1">Spam / hide add-on: active</p>' : '') +
+                            '<p class="text-[11px] text-slate-500 mt-1">TikTok mode: <span class="text-slate-300">' + String(res.tikTokMode || 'not set') + '</span></p>' +
+                            '</div>';
+                    }
+                    var plats = res.platforms || {};
+                    var labels = {
+                        facebook: 'Facebook', instagram: 'Instagram', threads: 'Threads',
+                        linkedin: 'LinkedIn', x: 'X (Twitter)', tiktok: 'TikTok (standard)',
+                        tiktok_business: 'TikTok Business'
+                    };
+                    html += '<div class="space-y-2 mt-2">';
+                    Object.keys(labels).forEach(function (key) {
+                        var enabled = !!plats[key];
+                        var disabled = !res.hasAddon;
+                        html += '<label class="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-900/50 px-3 py-2 ' +
+                            (disabled ? 'opacity-50' : '') + '">' +
+                            '<span class="text-sm text-slate-200">' + labels[key] + '</span>' +
+                            '<span class="flex items-center gap-2">' +
+                            '<span class="text-[10px] ' + (enabled ? 'text-emerald-400' : 'text-slate-500') + '">' + (enabled ? 'ON' : 'OFF') + '</span>' +
+                            '<input type="checkbox" data-ai-platform="' + key + '" ' + (enabled ? 'checked' : '') + ' ' + (disabled ? 'disabled' : '') +
+                            ' onchange="clientToggleCommentPlatform(this)" class="rounded border-slate-600" />' +
+                            '</span></label>';
+                    });
+                    html += '</div>';
+                    if (res.hasAddon) {
+                        html += '<p class="text-[10px] text-slate-500 mt-2">Toggle a platform and it saves immediately. TikTok Business needs mode = business for AI replies.</p>';
+                    }
+                    panel.innerHTML = html;
+                    var panel2 = document.getElementById('integAiCommentPanel');
+                    if (panel2 && panel2 !== panel) panel2.innerHTML = '';
+                }
                 return res;
             } catch (e) {
                 console.warn('comment AI mode refresh', e);
+                var panel = document.getElementById('clientCommentAiPanel') || document.getElementById('integAiCommentPanel');
+                if (panel) panel.innerHTML = '<p class="text-slate-400 text-sm">Could not load: ' + String(e.message || e) + '</p>';
                 return null;
+            }
+        }
+
+        async function clientToggleCommentPlatform(el) {
+            if (!el) return;
+            var platform = el.getAttribute('data-ai-platform') || '';
+            var enabled = !!el.checked;
+            try {
+                var res = await callGateway('clientportal', 'clientPortalSetCommentReply', {
+                    platform: platform,
+                    postId: '*',
+                    enabled: enabled
+                });
+                if (!res || !res.success) {
+                    el.checked = !enabled;
+                    if (typeof clientFeedback === 'function') clientFeedback((res && res.message) || 'Could not save', true);
+                    return;
+                }
+                if (typeof clientFeedback === 'function') clientFeedback((platform || 'Platform') + (enabled ? ' ON' : ' OFF'));
+                try { await clientRefreshCommentAiToggle(); } catch (_) { }
+            } catch (e) {
+                el.checked = !enabled;
+                if (typeof clientFeedback === 'function') clientFeedback(e.message || String(e), true);
             }
         }
 
