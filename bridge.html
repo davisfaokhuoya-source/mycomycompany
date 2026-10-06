@@ -1905,7 +1905,14 @@
                             <div class="flex flex-wrap gap-2 items-center">
                                 <button onclick="openLeadCreationModalFormPanel()"
                                     class="bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium py-1.5 px-3 rounded transition-colors shadow flex items-center gap-1">
-                                    <i class="fa-solid fa-user-plus"></i> Inject Manual Lead Profile
+                                    <i class="fa-solid fa-user-plus"></i> Inject Manual Lead Profile</button> <button
+                                    type="button" onclick="vicOpenStaffAdmin()"
+                                    class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-200 border border-slate-700">Staff
+                                    admins</button> <button type="button" onclick="vicOpenLeadEmail()"
+                                    class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-200 border border-slate-700">Email
+                                    lead</button> <button type="button" onclick="vicRunSystemAiHealth()"
+                                    class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-200 border border-slate-700">System
+                                    AI tips</button>
                                 </button>
                                 <button type="button" onclick="openLeadAiOutreachPanel()"
                                     class="bg-blue-600 hover:bg-blue-500 text-xs text-white font-medium py-1.5 px-3 rounded shadow flex items-center gap-1">
@@ -5528,7 +5535,8 @@
                                     </select>
                                 </label>
                                 <p class="text-[10px] text-slate-500 mt-1">Every catalog add-on appears here. Or use
-                                    <b>Edit</b> on any table row.</p>
+                                    <b>Edit</b> on any table row.
+                                </p>
                             </div>
                             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                                 <label class="text-slate-400">Item key<input id="pae_key"
@@ -11252,8 +11260,24 @@
 
             if (btn) { btn.disabled = false; btn.textContent = "Commit Lead Profile Record Into CRM Ledger Matrix"; }
 
-            showToast(res.success ? `Lead ${name} created successfully.` : (res.error || "Creation failed."), res.success ? "success" : "error");
-            if (res.success) { closeLeadCreationModalFormPanel(); loadLeadsMatrix(); }
+            showToast(res.success ? `Lead ${name} created successfully.` : (res.error || res.message || "Creation failed."), res.success ? "success" : "error");
+            if (res.success) {
+                closeLeadCreationModalFormPanel();
+                loadLeadsMatrix();
+                try {
+                    var r2 = res.research;
+                    if (!r2) {
+                        r2 = await executeSecureBridgeCall("agent", "agent-research-lead", { name: name, email: email, notes: notes });
+                    }
+                    if (r2 && (r2.success || r2.recommendations)) {
+                        var recs = (r2.recommendations || []).map(function (x) {
+                            return "• " + (x.service || "") + " — " + (x.reason || "");
+                        }).join("\n");
+                        var findings = (r2.findings || []).join("\n");
+                        alert("AI lead study\n\nCharacter: " + (r2.character || "—") + "\n\nFindings:\n" + findings + "\n\nRecommendations:\n" + recs);
+                    }
+                } catch (eResearch) { console.warn(eResearch); }
+            }
         }
 
         async function loadBroadcastQueue() {
@@ -21785,6 +21809,119 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 setTimeout(function () { loadAgentClientFollowups(); }, 120);
             }
         });
+    </script>
+
+
+    <!-- VIC: Staff admins, lead email pipeline, system AI tips -->
+    <div id="staffAdminPanelVic" class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-700 rounded-xl max-w-lg w-full p-5 space-y-3 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center">
+                <h3 class="text-white font-bold text-sm">Staff admins (roles on/off)</h3>
+                <button type="button" onclick="document.getElementById('staffAdminPanelVic').classList.add('hidden')"
+                    class="text-slate-400">&times;</button>
+            </div>
+            <input id="staffName" placeholder="Name"
+                class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+            <input id="staffEmail" placeholder="Email"
+                class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+            <input id="staffPassword" type="password" placeholder="Password (min 8)"
+                class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+            <div class="flex flex-wrap gap-3 text-[11px] text-slate-300">
+                <label><input type="checkbox" id="role_admin" /> admin</label>
+                <label><input type="checkbox" id="role_calls" /> calls</label>
+                <label><input type="checkbox" id="role_leads" checked /> leads</label>
+                <label><input type="checkbox" id="role_billing" /> billing</label>
+                <label><input type="checkbox" id="role_content" /> content</label>
+            </div>
+            <button type="button" onclick="vicCreateStaffAdmin()"
+                class="w-full bg-emerald-600 text-white text-xs font-semibold py-2 rounded">Create staff admin</button>
+            <div id="staffListVic" class="text-[11px] text-slate-400 space-y-1"></div>
+        </div>
+    </div>
+    <div id="leadEmailPanelVic" class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl max-w-lg w-full p-5 space-y-3">
+            <div class="flex justify-between">
+                <h3 class="text-white font-bold text-sm">Email selected lead (HTML template)</h3>
+                <button type="button" onclick="document.getElementById('leadEmailPanelVic').classList.add('hidden')"
+                    class="text-slate-400">&times;</button>
+            </div>
+            <input id="leadMailTo" placeholder="Lead email"
+                class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+            <input id="leadMailName" placeholder="Lead name"
+                class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+            <input id="leadMailSubject" placeholder="Subject"
+                class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white" />
+            <textarea id="leadMailBody" rows="6" placeholder="Message body"
+                class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"></textarea>
+            <button type="button" onclick="vicSendLeadEmail()"
+                class="w-full bg-indigo-600 text-white text-xs font-semibold py-2 rounded">Send (pipeline: queued →
+                sent)</button>
+            <div id="leadMailPipelineVic" class="text-[10px] text-slate-500 max-h-32 overflow-y-auto"></div>
+        </div>
+    </div>
+    <script>
+        async function vicCreateStaffAdmin() {
+            var res = await executeSecureBridgeCall("agent", "agent-create-staff-admin", {
+                name: document.getElementById("staffName").value,
+                email: document.getElementById("staffEmail").value,
+                password: document.getElementById("staffPassword").value,
+                roles: {
+                    admin: document.getElementById("role_admin").checked,
+                    calls: document.getElementById("role_calls").checked,
+                    leads: document.getElementById("role_leads").checked,
+                    billing: document.getElementById("role_billing").checked,
+                    content: document.getElementById("role_content").checked
+                }
+            });
+            showToast(res.success ? "Staff created" : (res.message || "Failed"), res.success ? "success" : "error");
+            if (res.success) vicLoadStaffAdmins();
+        }
+        async function vicLoadStaffAdmins() {
+            var res = await executeSecureBridgeCall("agent", "agent-list-staff-admins", {});
+            var el = document.getElementById("staffListVic");
+            if (!el) return;
+            if (!res.success) { el.textContent = res.message || "Failed"; return; }
+            el.innerHTML = (res.staff || []).map(function (s) {
+                var roles = Object.keys(s.roles || {}).filter(function (k) { return s.roles[k]; }).join(", ");
+                return '<div class="border-b border-slate-800 py-1">' + (s.name || "") + " · " + (s.email || "") +
+                    " · <span class=\"text-emerald-400\">" + roles + "</span> · " + (s.active ? "active" : "off") + "</div>";
+            }).join("") || "No staff yet";
+        }
+        async function vicSendLeadEmail() {
+            var res = await executeSecureBridgeCall("agent", "agent-send-lead-email", {
+                to: document.getElementById("leadMailTo").value,
+                name: document.getElementById("leadMailName").value,
+                subject: document.getElementById("leadMailSubject").value,
+                body: document.getElementById("leadMailBody").value
+            });
+            showToast(res.success ? "Sent" : (res.message || "Failed"), res.success ? "success" : "error");
+            vicLoadLeadMailPipeline();
+        }
+        async function vicLoadLeadMailPipeline() {
+            var res = await executeSecureBridgeCall("agent", "agent-list-lead-mail-pipeline", { limit: 20 });
+            var el = document.getElementById("leadMailPipelineVic");
+            if (!el) return;
+            el.innerHTML = (res.items || []).map(function (m) {
+                return '<div>' + (m.status || "") + " · " + (m.leadEmail || "") + " · " + (m.subject || "") + "</div>";
+            }).join("") || "Pipeline empty";
+        }
+        async function vicRunSystemAiHealth() {
+            var res = await executeSecureBridgeCall("agent", "agent-system-ai-health", {});
+            if (!res.success) { showToast(res.message || "Scan failed", "error"); return; }
+            var lines = (res.tips || []).map(function (t) {
+                return "[" + t.severity + "] " + t.title + "\n→ " + t.recommendation;
+            }).join("\n\n");
+            alert("System AI health (" + (res.count || 0) + " tips)\n\n" + (lines || "No issues"));
+        }
+        window.vicOpenStaffAdmin = function () {
+            document.getElementById("staffAdminPanelVic").classList.remove("hidden");
+            vicLoadStaffAdmins();
+        };
+        window.vicOpenLeadEmail = function () {
+            document.getElementById("leadEmailPanelVic").classList.remove("hidden");
+            vicLoadLeadMailPipeline();
+        };
     </script>
 
 </body>
