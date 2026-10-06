@@ -5535,8 +5535,7 @@
                                     </select>
                                 </label>
                                 <p class="text-[10px] text-slate-500 mt-1">Every catalog add-on appears here. Or use
-                                    <b>Edit</b> on any table row.
-                                </p>
+                                    <b>Edit</b> on any table row.</p>
                             </div>
                             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                                 <label class="text-slate-400">Item key<input id="pae_key"
@@ -6232,6 +6231,18 @@
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
+                        <label class="block text-xs text-slate-400 mb-1">Company / Organisation</label>
+                        <input type="text" id="leadFormCompany" required placeholder="e.g. Unipesa / Yusuf Holdings"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Position / Title</label>
+                        <input type="text" id="leadFormPosition" required placeholder="e.g. Executive Director, CEO"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
                         <label class="block text-xs text-slate-400 mb-1">Corporate Contact Email</label>
                         <input type="email" id="leadFormEmail" required placeholder="musa@yusufholdings.com"
                             class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500" />
@@ -6241,6 +6252,23 @@
                         <input type="tel" id="leadFormPhone" placeholder="+234 803 000 0000"
                             class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500" />
                     </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Website (optional)</label>
+                        <input type="url" id="leadFormWebsite" placeholder="https://company.com"
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">LinkedIn URL (optional)</label>
+                        <input type="url" id="leadFormLinkedIn" placeholder="https://linkedin.com/in/..."
+                            class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Industry / sector (optional)</label>
+                    <input type="text" id="leadFormIndustry" placeholder="e.g. Payments, Fintech, Real estate"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -11245,18 +11273,24 @@
         async function submitCrmManualLeadEntry(event) {
             event.preventDefault();
             const name = document.getElementById("leadFormFullName")?.value?.trim();
+            const company = document.getElementById("leadFormCompany")?.value?.trim() || "";
+            const position = document.getElementById("leadFormPosition")?.value?.trim() || "";
             const email = document.getElementById("leadFormEmail")?.value?.trim();
             const phone = document.getElementById("leadFormPhone")?.value?.trim();
+            const website = document.getElementById("leadFormWebsite")?.value?.trim() || "";
+            const linkedIn = document.getElementById("leadFormLinkedIn")?.value?.trim() || "";
+            const industry = document.getElementById("leadFormIndustry")?.value?.trim() || "";
             const source = document.getElementById("leadFormSource")?.value?.trim();
             const stage = document.getElementById("leadFormStage")?.value;
             const notes = document.getElementById("leadFormNotes")?.value?.trim();
 
             if (!name || !email) { showToast("Name and email are required.", "error"); return; }
+            if (!company || !position) { showToast("Company and position are required.", "error"); return; }
 
             const btn = event.target.querySelector("button[type=submit]");
             if (btn) { btn.disabled = true; btn.textContent = "Committing…"; }
 
-            const res = await executeSecureBridgeCall("leads", "manual-lead-create", { Name: name, Email: email, Phone: phone, Source: source, Stage: stage, Notes: notes });
+            const res = await executeSecureBridgeCall("leads", "manual-lead-create", { Name: name, Company: company, Position: position, Title: position, Email: email, Phone: phone, Website: website, LinkedIn: linkedIn, Industry: industry, Source: source, Stage: stage, Notes: notes });
 
             if (btn) { btn.disabled = false; btn.textContent = "Commit Lead Profile Record Into CRM Ledger Matrix"; }
 
@@ -11267,7 +11301,7 @@
                 try {
                     var r2 = res.research;
                     if (!r2) {
-                        r2 = await executeSecureBridgeCall("agent", "agent-research-lead", { name: name, email: email, notes: notes });
+                        r2 = await executeSecureBridgeCall("agent", "agent-research-lead", { name: name, email: email, company: company, notes: notes, industry: industry });
                     }
                     if (r2 && (r2.success || r2.recommendations)) {
                         var recs = (r2.recommendations || []).map(function (x) {
