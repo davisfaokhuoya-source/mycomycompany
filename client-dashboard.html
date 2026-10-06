@@ -3204,7 +3204,8 @@
                                     class="text-[11px] px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white border border-slate-700">Apply</button>
                             </div>
                             <div>
-                                <label class="text-[9px] text-slate-500 block mb-1">Posts AI replied to or hid</label>
+                                <label class="text-[9px] text-slate-500 block mb-1">Posts (AI log + live discover).
+                                    Count = AI replies logged, not total Facebook comments</label>
                                 <select id="commentActivitySelect"
                                     class="w-full bg-slate-900 border border-slate-700 rounded-lg text-[11px] text-white px-2 py-2"
                                     onchange="clientPickActivityPost()">
@@ -7161,7 +7162,7 @@
                 res = null;
             }
             if (!res || res.success === false) {
-                sel.innerHTML = '<option value="">No AI replies logged yet — try All platforms or widen dates</option>';
+                sel.innerHTML = '<option value="">Could not load post list — try All platforms, widen dates, or check connection</option>';
                 return;
             }
             var posts = (res.posts || []).slice();
@@ -7182,19 +7183,44 @@
             });
 
             // Do NOT reset platform dropdown to "All" — keep user selection.
-            // If empty for this platform, try live discover for that platform only.
-            if (!posts.length && platform) {
+            // Always merge live discover for the selected platform so posts that HAVE
+            // real comments but no AI log yet still appear (not only when list is empty).
+            if (platform) {
                 try {
                     var res3 = await callGateway('clientportal', 'clientPortalDiscoverCommentPosts', {
                         platform: platform,
-                        limit: 10
+                        limit: 12
                     });
                     var ids = (res3 && (res3.postIds || [])) || [];
-                    if (ids.length) {
-                        posts = ids.map(function (pid) {
-                            return { platform: platform, postId: String(pid), replies: 0, deleted: 0, lastAt: new Date().toISOString(), samples: [], replyItems: [], source: 'live_discover' };
+                    var seen = {};
+                    posts.forEach(function (p) { seen[String(p.platform) + '|' + String(p.postId)] = true; });
+                    ids.forEach(function (pid) {
+                        var key = platform + '|' + String(pid);
+                        if (seen[key]) return;
+                        seen[key] = true;
+                        posts.push({
+                            platform: platform,
+                            postId: String(pid),
+                            replies: 0,
+                            deleted: 0,
+                            lastAt: new Date().toISOString(),
+                            samples: [],
+                            replyItems: [],
+                            source: 'live_discover'
                         });
-                    }
+                    });
+                } catch (_) { }
+            } else if (!posts.length) {
+                // All platforms + empty AI log: still try facebook discover as a fallback
+                try {
+                    var resFb = await callGateway('clientportal', 'clientPortalDiscoverCommentPosts', {
+                        platform: 'facebook',
+                        limit: 8
+                    });
+                    var idsFb = (resFb && (resFb.postIds || [])) || [];
+                    posts = idsFb.map(function (pid) {
+                        return { platform: 'facebook', postId: String(pid), replies: 0, deleted: 0, lastAt: new Date().toISOString(), samples: [], replyItems: [], source: 'live_discover' };
+                    });
                 } catch (_) { }
             }
             window.__commentActivityPosts = posts;
@@ -7202,18 +7228,55 @@
                 sel.innerHTML = '<option value="">No posts for this platform / date range</option>';
                 return;
             }
-            sel.innerHTML = '<option value="">Select a post (' + posts.length + ')</option>' +
-                posts.map(function (p, i) {
-                    var sample = '';
-                    if (p.replyItems && p.replyItems[0] && p.replyItems[0].replyText) {
-                        sample = ' — ' + String(p.replyItems[0].replyText).slice(0, 40);
-                    } else if (p.samples && p.samples[0] && p.samples[0].preview) {
-                        sample = ' — ' + String(p.samples[0].preview).slice(0, 40);
+
+            function formatCommentPostOption(p, i) {
+                var sample = '';
+                if (p.replyItems && p.replyItems[0] && p.replyItems[0].replyText) {
+                    sample = ' — ' + String(p.replyItems[0].replyText).slice(0, 36);
+                } else if (p.samples && p.samples[0] && p.samples[0].preview) {
+                    sample = ' — ' + String(p.samples[0].preview).slice(0, 36);
+                }
+                var aiN = Number(p.replies) || 0;
+                var liveN = (p.liveComments != null && p.liveComments !== '') ? Number(p.liveComments) : null;
+                var counts = 'AI ' + aiN;
+                if (liveN != null && !isNaN(liveN)) counts += ' · comments ' + liveN;
+                var label = (p.platform || '') + ' · ' + String(p.postId || '').slice(0, 28) + ' · ' + counts + sample;
+                return '<option value="' + i + '">' + (typeof escapeHtml === 'function' ? escapeHtml(label) : label) + '</option>';
+            }
+
+            function paintCommentPostSelect() {
+                sel.innerHTML = '<option value="">Select a post (' + posts.length + ')</option>' +
+                    posts.map(formatCommentPostOption).join('');
+            }
+            paintCommentPostSelect();
+
+            // Enrich with LIVE comment counts (Graph/API) — was stuck at 0 for discover rows
+            (async function enrichLiveCommentCounts() {
+                var max = Math.min(posts.length, 8);
+                for (var i = 0; i < max; i++) {
+                    var p = posts[i];
+                    if (!p || !p.postId) continue;
+                    if (p.liveComments != null) continue;
+                    try {
+                        var lc = await callGateway('clientportal', 'clientPortalListPostComments', {
+                            platform: p.platform || platform || 'facebook',
+                            postId: p.postId,
+                            maxComments: 30
+                        });
+                        if (lc && lc.success) {
+                            var n = Array.isArray(lc.comments) ? lc.comments.length : (Number(lc.count) || 0);
+                            p.liveComments = n;
+                            if (lc.hasMore) p.liveCommentsLabel = n + '+';
+                        } else {
+                            p.liveComments = 0;
+                        }
+                    } catch (_) {
+                        p.liveComments = null;
                     }
-                    var label = (p.platform || '') + ' · ' + String(p.postId || '').slice(0, 22) +
-                        ' · replies ' + (p.replies || 0) + sample;
-                    return '<option value="' + i + '">' + (typeof escapeHtml === 'function' ? escapeHtml(label) : label) + '</option>';
-                }).join('');
+                    window.__commentActivityPosts = posts;
+                    paintCommentPostSelect();
+                }
+            })();
         }
 
         function clientPickActivityPost() {
