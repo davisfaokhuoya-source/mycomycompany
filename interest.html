@@ -429,6 +429,21 @@
             font-size: 12px;
             color: var(--muted);
         }
+
+        .prefill-banner {
+            display: none;
+            background: #fff7ed;
+            border: 1px solid #fdba74;
+            color: #9a3412;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        .prefill-banner.show {
+            display: block;
+        }
     </style>
 </head>
 
@@ -445,6 +460,10 @@
                 Tell us about your company, choose packages and add-ons, and how many months you want.
                 <strong>20% off</strong> applies to all payments until <strong>16 November 2026</strong>.
             </p>
+        </div>
+
+        <div class="prefill-banner" id="prefillBanner">
+            Your selection from the homepage has been applied. Review packages below and continue to payment when ready.
         </div>
 
         <div class="countdown-banner" id="countdownBanner">
@@ -765,7 +784,7 @@
                         '<div class="addon-row" data-addon="' + a.id + '">' +
                         '<label class="check">' +
                         '<input type="checkbox" name="addon" value="' + a.id + '" data-price="' + a.price + '" />' +
-                        '<span><strong>' + a.label + '</strong><div class="meta">' + a.meta + " · from " + fmt(a.price) + "/mo</div></span>" +
+                        '<span><strong>' + a.label + '</strong><div class="meta">' + a.meta + " · from " + fmt(addonUnitPrice(a)) + "/mo</div></span>" +
                         "</label>" +
                         '<select class="months" name="addonMonths_' + a.id + '" disabled title="Months for this add-on">' +
                         monthsOptionsHtml() +
@@ -901,6 +920,98 @@
                 document.getElementById("cdS").textContent = String(s).padStart(2, "0");
             }
 
+            /**
+             * Prefill from homepage CTAs, e.g.:
+             * interest.html?intent=pay&ops=ops_grow&digital=digital_start&months=3&service=Document%20automation&source=homepage
+             * interest.html?intent=pay&addon=comment_reply,mailbox_agent
+             */
+            function applyUrlPrefill() {
+                var params = new URLSearchParams(window.location.search || "");
+                if (![...params.keys()].length) return;
+
+                var banner = document.getElementById("prefillBanner");
+                if (banner) banner.classList.add("show");
+
+                var setVal = function (name, val) {
+                    if (val == null || val === "") return;
+                    var el = form.elements.namedItem(name);
+                    if (el && el.tagName) el.value = val;
+                };
+
+                setVal("companyName", params.get("company") || params.get("companyName"));
+                setVal("contactName", params.get("name") || params.get("contactName"));
+                setVal("contactEmail", params.get("email") || params.get("contactEmail"));
+                setVal("phone", params.get("phone"));
+                setVal("website", params.get("website"));
+                setVal("country", params.get("country"));
+                setVal("city", params.get("city"));
+                setVal("industry", params.get("industry"));
+                setVal("companySize", params.get("companySize"));
+                setVal("message", params.get("message"));
+                setVal("source", params.get("source") || "Homepage");
+
+                var ops = params.get("ops") || params.get("opsTier");
+                var dig = params.get("digital") || params.get("digitalTier");
+                var months = params.get("months") || params.get("packageMonths");
+                if (ops) {
+                    var o = document.getElementById("opsTier");
+                    if (o) o.value = ops;
+                }
+                if (dig) {
+                    var d = document.getElementById("digitalTier");
+                    if (d) d.value = dig;
+                }
+                if (months) {
+                    var m = document.getElementById("packageMonths");
+                    if (m) m.value = String(months);
+                }
+
+                // services=Document automation,CRM & client pipeline  OR service=...
+                var svcRaw = params.get("services") || params.get("service") || "";
+                if (svcRaw) {
+                    svcRaw.split(",").map(function (s) { return s.trim(); }).filter(Boolean).forEach(function (s) {
+                        form.querySelectorAll('input[name="services"]').forEach(function (cb) {
+                            if (cb.value.toLowerCase() === s.toLowerCase() || cb.value.toLowerCase().indexOf(s.toLowerCase()) >= 0) {
+                                cb.checked = true;
+                            }
+                        });
+                    });
+                }
+
+                // addon=comment_reply,mailbox_agent
+                var addonRaw = params.get("addon") || params.get("addons") || "";
+                if (addonRaw) {
+                    addonRaw.split(",").map(function (s) { return s.trim(); }).filter(Boolean).forEach(function (id) {
+                        var cb = form.querySelector('input[name="addon"][value="' + id + '"]');
+                        if (cb) {
+                            cb.checked = true;
+                            var row = cb.closest(".addon-row");
+                            if (row) {
+                                row.classList.add("active");
+                                var sel = row.querySelector("select.months");
+                                if (sel) {
+                                    sel.disabled = false;
+                                    var am = params.get("addonMonths_" + id) || params.get("addonMonths");
+                                    if (am) sel.value = String(am);
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // intent=pay | waitlist
+                var intent = (params.get("intent") || params.get("pay") || "").toLowerCase();
+                if (intent === "pay" || intent === "1" || intent === "true" || params.get("checkout") === "1") {
+                    var payRadio = document.querySelector('input[name="intent"][value="pay"]');
+                    if (payRadio) payRadio.checked = true;
+                } else if (intent === "waitlist") {
+                    var w = document.querySelector('input[name="intent"][value="waitlist"]');
+                    if (w) w.checked = true;
+                }
+
+                updateSummary();
+            }
+
             var countryEl = document.getElementById("countrySelect");
             if (countryEl) countryEl.addEventListener("change", function () {
                 renderAddons();
@@ -914,6 +1025,7 @@
 
             renderAddons();
             applyLaunchMode();
+            applyUrlPrefill();
             tickCountdown();
             setInterval(tickCountdown, 1000);
 
@@ -944,7 +1056,7 @@
                     companySize: (fd.get("companySize") || "").trim(),
                     servicesInterest: services,
                     message: (fd.get("message") || "").trim(),
-                    source: (fd.get("source") || "").trim(),
+                    source: (fd.get("source") || "").trim() || "Interest form",
                     preferredContact: (fd.get("preferredContact") || "").trim(),
                     intent: intent,
                     payNow: intent === "pay",
