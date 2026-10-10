@@ -621,11 +621,11 @@
                                 <select name="opsTier" id="opsTier">
                                     <option value="">— None —</option>
                                     <option value="ops_lite" data-price-local="150000" data-price-offshore="99">Ops Lite
-                                    </option>
+                                        — ₦150,000 / $99 /mo</option>
                                     <option value="ops_grow" data-price-local="280000" data-price-offshore="199">Ops
-                                        Grow</option>
+                                        Grow — ₦280,000 / $199 /mo</option>
                                     <option value="ops_firm" data-price-local="450000" data-price-offshore="349">Ops
-                                        Firm</option>
+                                        Firm — ₦450,000 / $349 /mo</option>
                                 </select>
                             </div>
                             <div>
@@ -633,11 +633,11 @@
                                 <select name="digitalTier" id="digitalTier">
                                     <option value="">— None —</option>
                                     <option value="digital_start" data-price-local="120000" data-price-offshore="79">
-                                        Digital Start</option>
+                                        Digital Start — ₦120,000 / $79 /mo</option>
                                     <option value="digital_steady" data-price-local="220000" data-price-offshore="149">
-                                        Digital Steady</option>
+                                        Digital Steady — ₦220,000 / $149 /mo</option>
                                     <option value="digital_push" data-price-local="380000" data-price-offshore="279">
-                                        Digital Push</option>
+                                        Digital Push — ₦380,000 / $279 /mo</option>
                                 </select>
                             </div>
                         </div>
@@ -650,7 +650,8 @@
                                 <option value="12">12 months</option>
                             </select>
                             <p class="note" style="text-align:left;margin-top:6px">Billing is monthly rate × months.
-                                Nigeria = ₦ local; other countries = $ offshore. 20% off before 16 Nov 2026.</p>
+                                Prices shown in <strong>₦ and $</strong>. Checkout uses ₦ if country is Nigeria,
+                                otherwise $. 20% off before 16 Nov 2026.</p>
                         </div>
                     </div>
 
@@ -672,13 +673,13 @@
 
                     <div class="field full">
                         <div class="summary-box" id="priceSummary">
-                            <div class="line"><span>Pricing region</span><span id="sumRegion">Local (₦)</span></div>
-                            <div class="line"><span>Packages</span><span id="sumPkg">₦0</span></div>
-                            <div class="line"><span>Add-ons</span><span id="sumAdd">₦0</span></div>
-                            <div class="line"><span>Subtotal</span><span id="sumSub">₦0</span></div>
+                            <div class="line"><span>Pricing region</span><span id="sumRegion">₦ and $ shown</span></div>
+                            <div class="line"><span>Packages</span><span id="sumPkg">₦0 · $0</span></div>
+                            <div class="line"><span>Add-ons</span><span id="sumAdd">₦0 · $0</span></div>
+                            <div class="line"><span>Subtotal</span><span id="sumSub">₦0 · $0</span></div>
                             <div class="line save" id="sumDiscLine" style="display:none"><span>Pre-launch 20%
-                                    off</span><span id="sumDisc">−₦0</span></div>
-                            <div class="line total"><span>Estimated total</span><span id="sumTotal">₦0</span></div>
+                                    off</span><span id="sumDisc">−₦0 · $0</span></div>
+                            <div class="line total"><span>Estimated total</span><span id="sumTotal">₦0 · $0</span></div>
                             <p class="note" style="color:#94a3b8;margin-top:8px;text-align:left">Estimate for planning.
                                 Final amount confirmed at checkout or by our team.</p>
                         </div>
@@ -754,20 +755,52 @@
                 return String(c).trim().toLowerCase() === "nigeria";
             }
 
-            function fmt(n) {
+            function fmtNgn(n) {
                 n = Math.round(Number(n) || 0);
-                if (isLocalPricing()) return "₦" + n.toLocaleString("en-NG");
+                return "₦" + n.toLocaleString("en-NG");
+            }
+
+            function fmtUsd(n) {
+                n = Math.round(Number(n) || 0);
                 return "$" + n.toLocaleString("en-US");
             }
 
+            /** Always show both currencies */
+            function fmtBoth(ngn, usd) {
+                return fmtNgn(ngn) + " · " + fmtUsd(usd);
+            }
+
+            function fmt(n) {
+                // legacy: primary by region (still used for single-value paths)
+                n = Math.round(Number(n) || 0);
+                if (isLocalPricing()) return fmtNgn(n);
+                return fmtUsd(n);
+            }
+
+            function addonUnitPriceLocal(a) {
+                return Number(a.priceLocal || 0);
+            }
+            function addonUnitPriceOffshore(a) {
+                return Number(a.priceOffshore || 0);
+            }
+
             function addonUnitPrice(a) {
-                return isLocalPricing() ? Number(a.priceLocal || 0) : Number(a.priceOffshore || 0);
+                return isLocalPricing() ? addonUnitPriceLocal(a) : addonUnitPriceOffshore(a);
+            }
+
+            function optionUnitPriceLocal(opt) {
+                if (!opt) return 0;
+                return Number(opt.getAttribute("data-price-local") || opt.getAttribute("data-price") || 0);
+            }
+            function optionUnitPriceOffshore(opt) {
+                if (!opt) return 0;
+                return Number(opt.getAttribute("data-price-offshore") || opt.getAttribute("data-price") || 0);
             }
 
             function optionUnitPrice(opt) {
                 if (!opt) return 0;
-                if (isLocalPricing()) return Number(opt.getAttribute("data-price-local") || opt.getAttribute("data-price") || 0);
-                return Number(opt.getAttribute("data-price-offshore") || opt.getAttribute("data-price") || 0);
+                if (isLocalPricing()) return optionUnitPriceLocal(opt);
+                return optionUnitPriceOffshore(opt);
             }
 
             function monthsOptionsHtml() {
@@ -784,7 +817,7 @@
                         '<div class="addon-row" data-addon="' + a.id + '">' +
                         '<label class="check">' +
                         '<input type="checkbox" name="addon" value="' + a.id + '" data-price="' + a.price + '" />' +
-                        '<span><strong>' + a.label + '</strong><div class="meta">' + a.meta + " · from " + fmt(addonUnitPrice(a)) + "/mo</div></span>" +
+                        '<span><strong>' + a.label + '</strong><div class="meta">' + a.meta + " · from " + fmtBoth(addonUnitPriceLocal(a), addonUnitPriceOffshore(a)) + "/mo</div></span>" +
                         "</label>" +
                         '<select class="months" name="addonMonths_' + a.id + '" disabled title="Months for this add-on">' +
                         monthsOptionsHtml() +
@@ -812,14 +845,20 @@
                 document.querySelectorAll('input[name="addon"]:checked').forEach(function (cb) {
                     var id = cb.value;
                     var aDef = ADDONS.filter(function (x) { return x.id === id; })[0];
-                    var price = aDef ? addonUnitPrice(aDef) : Number(cb.getAttribute("data-price") || 0);
+                    var priceLocal = aDef ? addonUnitPriceLocal(aDef) : 0;
+                    var priceUsd = aDef ? addonUnitPriceOffshore(aDef) : 0;
+                    var price = isLocalPricing() ? priceLocal : priceUsd;
                     var row = cb.closest(".addon-row");
                     var months = Number((row && row.querySelector("select.months") || {}).value || 1);
                     out.push({
                         id: id,
                         pricePerMonth: price,
+                        pricePerMonthNgn: priceLocal,
+                        pricePerMonthUsd: priceUsd,
                         months: months,
                         lineTotal: price * months,
+                        lineTotalNgn: priceLocal * months,
+                        lineTotalUsd: priceUsd * months,
                         currency: isLocalPricing() ? "NGN" : "USD",
                         region: isLocalPricing() ? "local" : "offshore"
                     });
@@ -831,14 +870,22 @@
                 var ops = document.getElementById("opsTier");
                 var dig = document.getElementById("digitalTier");
                 var months = Number(document.getElementById("packageMonths").value || 1);
-                var opsPrice = 0, digPrice = 0;
-                if (ops && ops.selectedOptions[0]) opsPrice = optionUnitPrice(ops.selectedOptions[0]);
-                if (dig && dig.selectedOptions[0]) digPrice = optionUnitPrice(dig.selectedOptions[0]);
+                var opsN = 0, digN = 0, opsU = 0, digU = 0;
+                if (ops && ops.selectedOptions[0]) {
+                    opsN = optionUnitPriceLocal(ops.selectedOptions[0]);
+                    opsU = optionUnitPriceOffshore(ops.selectedOptions[0]);
+                }
+                if (dig && dig.selectedOptions[0]) {
+                    digN = optionUnitPriceLocal(dig.selectedOptions[0]);
+                    digU = optionUnitPriceOffshore(dig.selectedOptions[0]);
+                }
                 return {
                     opsTier: (ops && ops.value) || "",
                     digitalTier: (dig && dig.value) || "",
                     months: months,
-                    lineTotal: (opsPrice + digPrice) * months
+                    lineTotalNgn: (opsN + digN) * months,
+                    lineTotalUsd: (opsU + digU) * months,
+                    lineTotal: isLocalPricing() ? (opsN + digN) * months : (opsU + digU) * months
                 };
             }
 
@@ -846,24 +893,49 @@
                 isPreLaunch = Date.now() < LAUNCH_MS;
                 var pkg = packageLine();
                 var adds = selectedAddons();
-                var addTotal = adds.reduce(function (s, a) { return s + a.lineTotal; }, 0);
-                var sub = pkg.lineTotal + addTotal;
-                var disc = isPreLaunch ? Math.round(sub * DISCOUNT) : 0;
-                var total = sub - disc;
+                var addNgn = adds.reduce(function (s, a) { return s + (a.lineTotalNgn || 0); }, 0);
+                var addUsd = adds.reduce(function (s, a) { return s + (a.lineTotalUsd || 0); }, 0);
+                var subNgn = (pkg.lineTotalNgn || 0) + addNgn;
+                var subUsd = (pkg.lineTotalUsd || 0) + addUsd;
+                var discNgn = isPreLaunch ? Math.round(subNgn * DISCOUNT) : 0;
+                var discUsd = isPreLaunch ? Math.round(subUsd * DISCOUNT) : 0;
+                var totalNgn = subNgn - discNgn;
+                var totalUsd = subUsd - discUsd;
+                var sub = isLocalPricing() ? subNgn : subUsd;
+                var disc = isLocalPricing() ? discNgn : discUsd;
+                var total = isLocalPricing() ? totalNgn : totalUsd;
+
                 var reg = document.getElementById("sumRegion");
-                if (reg) reg.textContent = isLocalPricing() ? "Local (Nigeria · ₦)" : "Offshore (USD)";
-                document.getElementById("sumPkg").textContent = fmt(pkg.lineTotal);
-                document.getElementById("sumAdd").textContent = fmt(addTotal);
-                document.getElementById("sumSub").textContent = fmt(sub);
+                if (reg) {
+                    reg.textContent = isLocalPricing()
+                        ? "Primary: Nigeria (₦) · also shown in USD"
+                        : "Primary: Offshore (USD) · also shown in ₦";
+                }
+                document.getElementById("sumPkg").textContent = fmtBoth(pkg.lineTotalNgn || 0, pkg.lineTotalUsd || 0);
+                document.getElementById("sumAdd").textContent = fmtBoth(addNgn, addUsd);
+                document.getElementById("sumSub").textContent = fmtBoth(subNgn, subUsd);
                 var discLine = document.getElementById("sumDiscLine");
-                if (disc > 0) {
+                if (discNgn > 0 || discUsd > 0) {
                     discLine.style.display = "flex";
-                    document.getElementById("sumDisc").textContent = "−" + fmt(disc);
+                    document.getElementById("sumDisc").textContent = "−" + fmtBoth(discNgn, discUsd);
                 } else {
                     discLine.style.display = "none";
                 }
-                document.getElementById("sumTotal").textContent = fmt(total);
-                return { pkg: pkg, addons: adds, subtotal: sub, discount: disc, total: total, preLaunch: isPreLaunch };
+                document.getElementById("sumTotal").textContent = fmtBoth(totalNgn, totalUsd);
+                return {
+                    pkg: pkg,
+                    addons: adds,
+                    subtotal: sub,
+                    subtotalNgn: subNgn,
+                    subtotalUsd: subUsd,
+                    discount: disc,
+                    discountNgn: discNgn,
+                    discountUsd: discUsd,
+                    total: total,
+                    totalNgn: totalNgn,
+                    totalUsd: totalUsd,
+                    preLaunch: isPreLaunch
+                };
             }
 
             function applyLaunchMode() {
@@ -1065,8 +1137,14 @@
                     packageMonths: pricing.pkg.months,
                     addons: pricing.addons,
                     estimatedSubtotal: pricing.subtotal,
+                    estimatedSubtotalNgn: pricing.subtotalNgn,
+                    estimatedSubtotalUsd: pricing.subtotalUsd,
                     estimatedDiscount: pricing.discount,
+                    estimatedDiscountNgn: pricing.discountNgn,
+                    estimatedDiscountUsd: pricing.discountUsd,
                     estimatedTotal: pricing.total,
+                    estimatedTotalNgn: pricing.totalNgn,
+                    estimatedTotalUsd: pricing.totalUsd,
                     discountPercent: pricing.preLaunch ? 20 : 0,
                     preLaunch: pricing.preLaunch,
                     formMode: pricing.preLaunch ? "waitlist_prelaunch" : "interest",
