@@ -11746,6 +11746,157 @@
         })();
     </script>
 
+
+    <script>
+        /* Platform service availability — hide/disable buy & renew when admin turns services off */
+        (function () {
+            window.__VIC_SERVICE_AVAIL = window.__VIC_SERVICE_AVAIL || { availability: {}, loaded: false };
+
+            window.clientLoadServiceAvailability = async function () {
+                try {
+                    if (typeof callGateway !== "function") return null;
+                    var res = await callGateway("clientportal", "clientPortalGetServiceAvailability", {});
+                    if (!res || !res.success) {
+                        // fallback admin action name via agent path
+                        try {
+                            res = await callGateway("agent", "agent-get-platform-service-availability", {});
+                        } catch (_) { }
+                    }
+                    if (res && res.availability) {
+                        window.__VIC_SERVICE_AVAIL.availability = res.availability;
+                        window.__VIC_SERVICE_AVAIL.unavailable = res.unavailable || [];
+                        window.__VIC_SERVICE_AVAIL.loaded = true;
+                    }
+                    try { clientApplyServiceAvailabilityUI(); } catch (_) { }
+                    return res;
+                } catch (e) {
+                    try { console.warn("service availability", e); } catch (_) { }
+                    return null;
+                }
+            };
+
+            window.clientIsServiceAvailable = function (key) {
+                if (!key) return true;
+                var map = (window.__VIC_SERVICE_AVAIL && window.__VIC_SERVICE_AVAIL.availability) || {};
+                if (!map || !Object.keys(map).length) return true; // fail open if not loaded
+                if (map.hasOwnProperty(key)) return map[key] !== false;
+                // aliases
+                var aliases = {
+                    starter_ops: "ops_lite", growth_ops: "ops_grow", enterprise_ops: "ops_firm",
+                    digital_launch: "digital_start", digital_accelerate: "digital_steady", digital_scale: "digital_push"
+                };
+                var a = aliases[key];
+                if (a && map.hasOwnProperty(a)) return map[a] !== false;
+                return true;
+            };
+
+            window.clientServiceUnavailableMessage = function (key) {
+                return "This service is not currently available" + (key ? (" (" + key + ")") : "") + ". Please choose another option or contact support.";
+            };
+
+            window.clientGuardPurchase = function (itemKey, surface) {
+                surface = surface || "purchase";
+                if (surface === "renew" && !clientIsServiceAvailable("billing.renew")) {
+                    var m = "Subscription renewals are not currently available. Please try again later or contact support.";
+                    if (typeof clientFeedback === "function") clientFeedback(m, true);
+                    else if (typeof notifyUser === "function") notifyUser(m, "error");
+                    else if (typeof toast === "function") toast(m, true);
+                    else alert(m);
+                    return false;
+                }
+                if (surface === "purchaseAddon" && !clientIsServiceAvailable("billing.purchaseAddon")) {
+                    var m2 = "Add-on purchases are not currently available.";
+                    if (typeof clientFeedback === "function") clientFeedback(m2, true);
+                    else alert(m2);
+                    return false;
+                }
+                if (itemKey && !clientIsServiceAvailable(itemKey)) {
+                    var m3 = clientServiceUnavailableMessage(itemKey);
+                    if (typeof clientFeedback === "function") clientFeedback(m3, true);
+                    else if (typeof notifyUser === "function") notifyUser(m3, "error");
+                    else alert(m3);
+                    return false;
+                }
+                return true;
+            };
+
+            window.clientApplyServiceAvailabilityUI = function () {
+                var map = (window.__VIC_SERVICE_AVAIL && window.__VIC_SERVICE_AVAIL.availability) || {};
+                // Disable options in selects that match tier ids
+                document.querySelectorAll("select").forEach(function (sel) {
+                    Array.prototype.forEach.call(sel.options || [], function (opt) {
+                        var v = opt.value;
+                        if (!v) return;
+                        if (map.hasOwnProperty(v) && map[v] === false) {
+                            opt.disabled = true;
+                            if (opt.text.indexOf("unavailable") < 0) opt.text = opt.text + " (unavailable)";
+                        }
+                    });
+                });
+                // Banner on billing view
+                var bill = document.getElementById("view-billing") || document.querySelector('[id*="billing"]');
+                var host = document.getElementById("serviceAvailBanner");
+                if (!host) {
+                    host = document.createElement("div");
+                    host.id = "serviceAvailBanner";
+                    host.className = "hidden mb-3 p-3 rounded-lg border border-amber-800/50 bg-amber-950/40 text-amber-200 text-xs";
+                    var main = document.querySelector("#mainView main .flex-1") || document.body;
+                    if (main && main.firstChild) main.insertBefore(host, main.firstChild);
+                    else if (main) main.appendChild(host);
+                }
+                var off = (window.__VIC_SERVICE_AVAIL.unavailable || []).filter(function (k) {
+                    return !/^billing\./.test(k);
+                });
+                if (off.length) {
+                    host.classList.remove("hidden");
+                    host.textContent = "Some packages are temporarily unavailable for purchase or renewal: " + off.slice(0, 8).join(", ") + (off.length > 8 ? "…" : "");
+                } else {
+                    host.classList.add("hidden");
+                    host.textContent = "";
+                }
+            };
+
+            // Patch common purchase entry points when they appear
+            function patchFn(name, surface, keyFromArgs) {
+                var tries = 0;
+                function go() {
+                    if (typeof window[name] !== "function") {
+                        if (tries++ < 40) return setTimeout(go, 250);
+                        return;
+                    }
+                    if (window["__availPatched_" + name]) return;
+                    window["__availPatched_" + name] = true;
+                    var orig = window[name];
+                    window[name] = function () {
+                        var key = keyFromArgs ? keyFromArgs.apply(null, arguments) : null;
+                        if (!clientGuardPurchase(key, surface)) return Promise.resolve({ success: false, message: clientServiceUnavailableMessage(key) });
+                        return orig.apply(this, arguments);
+                    };
+                }
+                go();
+            }
+            patchFn("clientRenewSubscription", "renew", function () { return null; });
+            patchFn("clientPurchaseAddon", "purchaseAddon", function (a) { return a; });
+            patchFn("clientBuyAddon", "purchaseAddon", function (a) { return a; });
+            patchFn("clientUpgradeTier", "purchase", function (a) { return a; });
+
+            document.addEventListener("DOMContentLoaded", function () {
+                setTimeout(function () { try { clientLoadServiceAvailability(); } catch (_) { } }, 1800);
+            });
+            var _sv = window.showView;
+            if (typeof _sv === "function" && !window.__availShowViewPatch) {
+                window.__availShowViewPatch = true;
+                window.showView = function (name) {
+                    var r = _sv.apply(this, arguments);
+                    if (name === "billing" || name === "overview" || name === "addons") {
+                        try { clientLoadServiceAvailability(); } catch (_) { }
+                    }
+                    return r;
+                };
+            }
+        })();
+    </script>
+
 </body>
 
 </html>

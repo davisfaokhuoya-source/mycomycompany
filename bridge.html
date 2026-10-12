@@ -483,6 +483,10 @@
                     class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:bg-slate-900 hover:text-emerald-300 border-l-2 border-transparent">
                     <i class="fa-solid fa-building-user w-5 text-slate-400"></i> Self Session
                 </button>
+                <button type="button" onclick="adminOpenPlatformAvailability()" id="nav-service-avail"
+                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:bg-slate-900 hover:text-amber-300 border-l-2 border-transparent">
+                    <i class="fa-solid fa-toggle-on w-5 text-slate-400"></i> Service On/Off
+                </button>
             </nav>
             <div class="p-3 border-t border-slate-800">
                 <button onclick="terminateTerminalSession()"
@@ -22196,6 +22200,86 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                     window.VIC_SELF_CLIENT_ID = s;
                 }
             } catch (_) { }
+        })();
+    </script>
+
+
+    <!-- Platform Service Availability (global on/off for sellable packages) -->
+    <div id="platformAvailabilityPanel"
+        class="hidden fixed inset-0 z-[70] bg-black/75 flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full p-5 max-h-[90vh] overflow-y-auto space-y-3">
+            <div class="flex justify-between items-start gap-2">
+                <div>
+                    <h3 class="text-white font-bold text-sm">Service availability (buy / renew)</h3>
+                    <p class="text-[11px] text-slate-400 mt-1">Turn packages off so clients cannot buy or renew them.
+                        Usage flags remain separate.</p>
+                </div>
+                <button type="button" class="text-slate-400 text-lg"
+                    onclick="document.getElementById('platformAvailabilityPanel').classList.add('hidden')">&times;</button>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" onclick="adminLoadPlatformAvailability()"
+                    class="text-xs px-3 py-1.5 rounded bg-slate-800 text-white">Refresh</button>
+                <button type="button" onclick="adminSavePlatformAvailability()"
+                    class="text-xs px-3 py-1.5 rounded bg-emerald-700 text-white">Save changes</button>
+            </div>
+            <p id="platformAvailStatus" class="text-[11px] text-slate-500">Load to edit.</p>
+            <div id="platformAvailList" class="space-y-1 text-xs"></div>
+        </div>
+    </div>
+    <script>
+        (function () {
+            window.__platformAvailDraft = {};
+            window.adminOpenPlatformAvailability = function () {
+                var p = document.getElementById("platformAvailabilityPanel");
+                if (p) p.classList.remove("hidden");
+                adminLoadPlatformAvailability();
+            };
+            window.adminLoadPlatformAvailability = async function () {
+                var st = document.getElementById("platformAvailStatus");
+                var list = document.getElementById("platformAvailList");
+                if (st) st.textContent = "Loading…";
+                try {
+                    var res = await executeSecureBridgeCall("agent", "agent-get-platform-service-availability", {});
+                    if (!res || !res.success) {
+                        if (st) st.textContent = (res && res.message) || "Failed to load";
+                        return;
+                    }
+                    window.__platformAvailDraft = Object.assign({}, res.availability || {});
+                    var keys = Object.keys(window.__platformAvailDraft).sort();
+                    if (list) {
+                        list.innerHTML = keys.map(function (k) {
+                            var on = !!window.__platformAvailDraft[k];
+                            return '<label class="flex items-center justify-between gap-3 border border-slate-800 rounded-lg px-3 py-2 hover:bg-slate-950/80">' +
+                                '<span class="font-mono text-slate-300">' + k + '</span>' +
+                                '<span class="flex items-center gap-2">' +
+                                '<span class="text-[10px] ' + (on ? "text-emerald-400" : "text-amber-400") + '">' + (on ? "ON (buyable)" : "OFF (blocked)") + "</span>" +
+                                '<input type="checkbox" data-avail-key="' + k + '" ' + (on ? "checked" : "") +
+                                ' onchange="window.__platformAvailDraft[this.getAttribute(\'data-avail-key\')]=this.checked;this.parentElement.querySelector(\'span\').textContent=this.checked?\'ON (buyable)\':\'OFF (blocked)\';this.parentElement.querySelector(\'span\').className=\'text-[10px] \'+(this.checked?\'text-emerald-400\':\'text-amber-400\');" />' +
+                                "</span></label>";
+                        }).join("") || '<p class="text-slate-500">No keys</p>';
+                    }
+                    if (st) st.textContent = (res.unavailable && res.unavailable.length)
+                        ? (res.unavailable.length + " currently OFF")
+                        : "All listed services ON";
+                } catch (e) {
+                    if (st) st.textContent = String(e.message || e);
+                }
+            };
+            window.adminSavePlatformAvailability = async function () {
+                var st = document.getElementById("platformAvailStatus");
+                try {
+                    var res = await executeSecureBridgeCall("agent", "agent-set-platform-service-availability", {
+                        availability: window.__platformAvailDraft || {}
+                    });
+                    if (typeof showToast === "function") showToast((res && res.message) || (res && res.success ? "Saved" : "Failed"), res && res.success ? "success" : "error");
+                    if (st) st.textContent = (res && res.message) || "";
+                    adminLoadPlatformAvailability();
+                } catch (e) {
+                    if (typeof showToast === "function") showToast(String(e.message || e), "error");
+                }
+            };
         })();
     </script>
 
