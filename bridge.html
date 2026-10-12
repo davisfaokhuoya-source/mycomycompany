@@ -479,6 +479,10 @@
                     class="hub-nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:bg-slate-900 hover:text-white border-l-2 border-transparent">
                     <i class="fa-solid fa-heart-pulse w-5 text-slate-400"></i> Ops Monitor
                 </button>
+                <button type="button" onclick="vicOpenSelfSessionPanel()" id="nav-selfsession"
+                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:bg-slate-900 hover:text-emerald-300 border-l-2 border-transparent">
+                    <i class="fa-solid fa-building-user w-5 text-slate-400"></i> Self Session
+                </button>
             </nav>
             <div class="p-3 border-t border-slate-800">
                 <button onclick="terminateTerminalSession()"
@@ -5535,7 +5539,8 @@
                                     </select>
                                 </label>
                                 <p class="text-[10px] text-slate-500 mt-1">Every catalog add-on appears here. Or use
-                                    <b>Edit</b> on any table row.</p>
+                                    <b>Edit</b> on any table row.
+                                </p>
                             </div>
                             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                                 <label class="text-slate-400">Item key<input id="pae_key"
@@ -8455,39 +8460,96 @@
         // are actually billed — see refreshAgentTierInfoPricing().
         // ===================================================================
         const AGENT_TIER_INFO = {
+            // Canonical 2026 dual-suite tiers (keep in sync with interest form + AgentLib)
+            ops_lite: {
+                suite: 'ops', label: 'Ops Lite', priceNgn: 150000, priceUsd: 99,
+                hours: 0, emails: 40, proposals: 0, mailboxes: 1, documents: 12,
+                summary: '12 docs/mo · 1 mailbox · 40 emails/mo · 30 WhatsApp msgs · AI included · no dedicated human hours'
+            },
+            ops_grow: {
+                suite: 'ops', label: 'Ops Grow', priceNgn: 280000, priceUsd: 199,
+                hours: 0, emails: 120, proposals: 1, mailboxes: 2, documents: 12,
+                summary: '12 docs/mo · 1 proposal/mo · 2 mailboxes · 120 emails · 80 WhatsApp · AI included'
+            },
+            ops_firm: {
+                suite: 'ops', label: 'Ops Firm', priceNgn: 450000, priceUsd: 349,
+                hours: 1, emails: 300, proposals: 3, mailboxes: 4, documents: 25,
+                summary: '25 docs/mo · 3 proposals · 4 mailboxes · 300 emails · 200 WhatsApp · 1 courtesy human hour · AI included'
+            },
+            digital_start: {
+                suite: 'digital', label: 'Digital Start', priceNgn: 120000, priceUsd: 79,
+                hours: 0, socialAssets: 12, posts: 12,
+                summary: '12 social posts/mo · up to 3 platforms · 1 content calendar · AI drafting · 1 performance report'
+            },
+            digital_steady: {
+                suite: 'digital', label: 'Digital Steady', priceNgn: 220000, priceUsd: 149,
+                hours: 0, socialAssets: 24, posts: 24,
+                summary: '24 posts/mo · up to 4 platforms · 2 LinkedIn docs · 20 WA replies/wk · biweekly reports'
+            },
+            digital_push: {
+                suite: 'digital', label: 'Digital Push', priceNgn: 380000, priceUsd: 279,
+                hours: 1, socialAssets: 48, posts: 48,
+                summary: '48 posts/mo · up to 6 platforms · 6 LinkedIn docs · 50 WA replies/wk · 2 video slots · weekly reports'
+            },
+            // Legacy aliases → same suite metadata (old client rows still resolve)
             starter_ops: {
-                suite: 'ops', label: 'Starter Ops', priceNgn: 250000,
-                hours: 20, emails: 50, proposals: 1, mailboxes: 1,
-                summary: '20 hrs/mo · 1 mailbox · 50 emails/mo · 1 proposal/mo · no CRM · no lead gen'
+                suite: 'ops', label: 'Ops Lite (legacy Starter)', priceNgn: 150000, priceUsd: 99, aliasOf: 'ops_lite',
+                hours: 0, emails: 40, proposals: 0, mailboxes: 1, documents: 12,
+                summary: 'Legacy id starter_ops → Ops Lite'
             },
             growth_ops: {
-                suite: 'ops', label: 'Growth Ops', priceNgn: 650000,
-                hours: 40, emails: 200, proposals: 3, mailboxes: 3,
-                summary: '40 hrs/mo · up to 3 mailboxes · 200 emails/mo · 3 proposals/mo · CRM connection · medium lead gen'
+                suite: 'ops', label: 'Ops Grow (legacy Growth)', priceNgn: 280000, priceUsd: 199, aliasOf: 'ops_grow',
+                hours: 0, emails: 120, proposals: 1, mailboxes: 2, documents: 12,
+                summary: 'Legacy id growth_ops → Ops Grow'
             },
             enterprise_ops: {
-                suite: 'ops', label: 'Enterprise Ops', priceNgn: null, priceFrom: 1360000,
-                hours: 150, emails: null, proposals: null, mailboxes: 8,
-                summary: '80–150+ hrs/mo · up to 8 mailboxes · unlimited emails/proposals · multi-CRM · lead gen included — set exact limits via Enterprise Limits'
+                suite: 'ops', label: 'Ops Firm (legacy Enterprise)', priceNgn: 450000, priceUsd: 349, aliasOf: 'ops_firm',
+                hours: 1, emails: 300, proposals: 3, mailboxes: 4, documents: 25,
+                summary: 'Legacy id enterprise_ops → Ops Firm (custom limits still supported)'
             },
             digital_launch: {
-                suite: 'digital', label: 'Digital Launch', priceNgn: 250000,
-                hours: 10, socialAssets: 12,
-                summary: '10 hrs content review/mo · 12 social assets/mo · weekly LinkedIn posts · monthly content calendar'
+                suite: 'digital', label: 'Digital Start (legacy Launch)', priceNgn: 120000, priceUsd: 79, aliasOf: 'digital_start',
+                hours: 0, socialAssets: 12, posts: 12,
+                summary: 'Legacy id digital_launch → Digital Start'
             },
             digital_accelerate: {
-                suite: 'digital', label: 'Digital Accelerate', priceNgn: 400000,
-                hours: 20, socialAssets: null,
-                summary: '20 hrs content review/mo · ABM campaigns · daily LinkedIn engagement · AI outreach · SEO foundations'
+                suite: 'digital', label: 'Digital Steady (legacy Accelerate)', priceNgn: 220000, priceUsd: 149, aliasOf: 'digital_steady',
+                hours: 0, socialAssets: 24, posts: 24,
+                summary: 'Legacy id digital_accelerate → Digital Steady'
             },
             digital_scale: {
-                suite: 'digital', label: 'Digital Scale', priceNgn: null, priceFrom: 700000,
-                hours: null, socialAssets: null,
-                summary: 'Unlimited campaigns · paid amplification · dedicated strategist · predictive lead scoring — admin-quoted'
+                suite: 'digital', label: 'Digital Push (legacy Scale)', priceNgn: 380000, priceUsd: 279, aliasOf: 'digital_push',
+                hours: 1, socialAssets: 48, posts: 48,
+                summary: 'Legacy id digital_scale → Digital Push (custom price still supported)'
             }
         };
-        let OPS_TIER_KEYS = Object.keys(AGENT_TIER_INFO).filter(k => AGENT_TIER_INFO[k].suite === 'ops');
-        let DIGITAL_TIER_KEYS = Object.keys(AGENT_TIER_INFO).filter(k => AGENT_TIER_INFO[k].suite === 'digital');
+
+        /** Map any legacy or display name to canonical tier id */
+        function normalizeTierId(raw) {
+            if (!raw) return '';
+            var k = String(raw).trim();
+            var low = k.toLowerCase().replace(/[\s\-]+/g, '_');
+            var map = {
+                ops_lite: 'ops_lite', starter_ops: 'ops_lite', 'ops lite': 'ops_lite', starterops: 'ops_lite',
+                ops_grow: 'ops_grow', growth_ops: 'ops_grow', 'ops grow': 'ops_grow', growthops: 'ops_grow',
+                ops_firm: 'ops_firm', enterprise_ops: 'ops_firm', 'ops firm': 'ops_firm', enterpriseops: 'ops_firm',
+                digital_start: 'digital_start', digital_launch: 'digital_start', 'digital start': 'digital_start', digitallaunch: 'digital_start',
+                digital_steady: 'digital_steady', digital_accelerate: 'digital_steady', 'digital steady': 'digital_steady', digitalaccelerate: 'digital_steady',
+                digital_push: 'digital_push', digital_scale: 'digital_push', 'digital push': 'digital_push', digitalscale: 'digital_push'
+            };
+            if (map[low]) return map[low];
+            if (map[k]) return map[k];
+            if (AGENT_TIER_INFO[k]) return (AGENT_TIER_INFO[k].aliasOf || k);
+            if (AGENT_TIER_INFO[low]) return (AGENT_TIER_INFO[low].aliasOf || low);
+            return k;
+        }
+
+        // Prefer canonical keys in dropdowns (hide pure legacy aliases from new registrations)
+        const CANONICAL_OPS_KEYS = ['ops_lite', 'ops_grow', 'ops_firm'];
+        const CANONICAL_DIGITAL_KEYS = ['digital_start', 'digital_steady', 'digital_push'];
+
+        let OPS_TIER_KEYS = CANONICAL_OPS_KEYS.slice();
+        let DIGITAL_TIER_KEYS = CANONICAL_DIGITAL_KEYS.slice();
 
         async function syncRegistrationTiersFromCatalog() {
             try {
@@ -8532,8 +8594,12 @@
                     }
                 });
                 // rebuild key lists
-                window.OPS_TIER_KEYS = Object.keys(AGENT_TIER_INFO).filter(function (k) { return AGENT_TIER_INFO[k].suite === 'ops'; });
-                window.DIGITAL_TIER_KEYS = Object.keys(AGENT_TIER_INFO).filter(function (k) { return AGENT_TIER_INFO[k].suite === 'digital'; });
+                var allOps = Object.keys(AGENT_TIER_INFO).filter(function (k) { return AGENT_TIER_INFO[k].suite === 'ops' && !AGENT_TIER_INFO[k].aliasOf; });
+                var allDig = Object.keys(AGENT_TIER_INFO).filter(function (k) { return AGENT_TIER_INFO[k].suite === 'digital' && !AGENT_TIER_INFO[k].aliasOf; });
+                window.OPS_TIER_KEYS = allOps.length ? allOps : CANONICAL_OPS_KEYS.slice();
+                window.DIGITAL_TIER_KEYS = allDig.length ? allDig : CANONICAL_DIGITAL_KEYS.slice();
+                OPS_TIER_KEYS = window.OPS_TIER_KEYS;
+                DIGITAL_TIER_KEYS = window.DIGITAL_TIER_KEYS;
                 // refresh register dropdowns if present
                 try {
                     var ops = document.getElementById('agentOpsTier');
@@ -8563,6 +8629,7 @@
         // or older clients silently look tier-less (e.g. "Client is not on
         // Digital Scale" even though they are, just via the legacy column).
         function getClientOpsTier(c) {
+            /* normalized to ops_lite|ops_grow|ops_firm when possible */
             if (!c) return '';
             const raw = c.OpsTier || c.opsTier || '';
             if (raw && OPS_TIER_KEYS.includes(String(raw))) return String(raw);
@@ -8580,7 +8647,7 @@
                 const norm = k.toLowerCase().replace(/\s+/g, '_');
                 if (DIGITAL_TIER_KEYS.includes(k)) return k;
                 if (DIGITAL_TIER_KEYS.includes(norm)) return norm;
-                if (norm === 'digitalscale') return 'digital_scale';
+                if (norm === 'digitalscale' || norm === 'digitalpush') return normalizeTierId(norm) || 'digital_push';
             }
             return '';
         }
@@ -8661,8 +8728,19 @@
             return t.label + ' (' + fmtTierPrice(key) + ')';
         }
         function buildTierOptionsHtml(keys, includeNone, noneLabel) {
-            const none = includeNone ? `<option value="">${escapeHtml(noneLabel || '— None —')}</option>` : '';
-            return none + keys.map(k => `<option value="${k}">${escapeHtml(tierOptionLabel(k))}</option>`).join('');
+            keys = keys || [];
+            var html = includeNone ? ('<option value="">' + (noneLabel || '— None —') + '</option>') : '';
+            keys.forEach(function (key) {
+                var info = AGENT_TIER_INFO[key] || {};
+                var label = info.label || key;
+                var priceBits = [];
+                if (info.priceNgn != null) priceBits.push('₦' + Number(info.priceNgn).toLocaleString('en-NG'));
+                if (info.priceUsd != null) priceBits.push('$' + Number(info.priceUsd).toLocaleString('en-US'));
+                if (info.priceFrom != null && info.priceNgn == null) priceBits.push('from ₦' + Number(info.priceFrom).toLocaleString('en-NG'));
+                var priceStr = priceBits.length ? (' — ' + priceBits.join(' / ') + '/mo') : '';
+                html += '<option value="' + key + '">' + label + priceStr + '</option>';
+            });
+            return html;
         }
         async function refreshAgentTierInfoPricing() {
             try {
@@ -12466,7 +12544,7 @@
             const clientHasCustomQuote = c => (clientOpsTier(c) === 'enterprise_ops' || clientDigitalTier(c) === 'digital_scale') && !!c.CustomPriceNGN;
             const suitePrice = (c, tierKey) => {
                 if (!tierKey) return 0;
-                if (tierKey === 'enterprise_ops' || tierKey === 'digital_scale') return 0; // priced via the shared custom quote below
+                if ((tierKey === 'enterprise_ops' || tierKey === 'ops_firm') || (tierKey === 'digital_scale' || tierKey === 'digital_push')) return 0; // priced via the shared custom quote below
                 return pricing[tierKey]?.priceNgn ?? AGENT_TIER_INFO[tierKey]?.priceNgn ?? 0;
             };
 
@@ -12493,7 +12571,7 @@
                 const hasCustom = clientHasCustomQuote(c);
                 const totalPrice = isCustom ? (parseFloat(c.CustomPriceNGN) || 0)
                     : suitePrice(c, opsTier) + suitePrice(c, digitalTier) + (hasCustom ? (parseFloat(c.CustomPriceNGN) || 0) : 0);
-                const hasAnyQuotePricing = (opsTier === 'enterprise_ops' || digitalTier === 'digital_scale') && !hasCustom;
+                const hasAnyQuotePricing = ((opsTier === 'enterprise_ops' || opsTier === 'ops_firm') || (digitalTier === 'digital_scale' || digitalTier === 'digital_push')) && !hasCustom;
 
                 const endDate = c.EndDate || c.endDate || '—';
                 const daysLeft = c.EndDate ? Math.floor((new Date(c.EndDate) - new Date()) / 86400000) : null;
@@ -12526,7 +12604,7 @@
         class="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">Edit Tier</button>
     <button onclick="openAgentRenewModal('${escapeHtml(c.ClientID || '')}', '${escapeHtml(c.CompanyName || '')}')"
         class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white">Renew</button>
-    ${(opsTier === 'enterprise_ops' || !!digitalTier) ? `<button onclick='openAgentEnterpriseLimitsModal("${escapeHtml(c.ClientID || '')}", "${escapeHtml(c.CompanyName || '')}", ${JSON.stringify(c).replace(/"/g, '&quot;')})' class="text-xs px-2 py-1 bg-amber-700 hover:bg-amber-600 rounded text-white">Limits</button>` : ''}
+    ${((opsTier === 'enterprise_ops' || opsTier === 'ops_firm') || !!digitalTier) ? `<button onclick='openAgentEnterpriseLimitsModal("${escapeHtml(c.ClientID || '')}", "${escapeHtml(c.CompanyName || '')}", ${JSON.stringify(c).replace(/"/g, '&quot;')})' class="text-xs px-2 py-1 bg-amber-700 hover:bg-amber-600 rounded text-white">Limits</button>` : ''}
 </td>
         </tr>`;
             }).join('');
@@ -12744,8 +12822,8 @@
             // Ops and Digital Scale each get their own admin-priced fields —
             // a dual-suite client needs both blocks visible at once, each
             // feeding a separate price column so neither overwrites the other.
-            const opsNeedsLimits = opsTier === 'enterprise_ops';
-            const digitalNeedsPrice = digitalTier === 'digital_scale';
+            const opsNeedsLimits = (opsTier === 'enterprise_ops' || opsTier === 'ops_firm');
+            const digitalNeedsPrice = (digitalTier === 'digital_scale' || digitalTier === 'digital_push');
             enterpriseFields.classList.toggle('hidden', !opsNeedsLimits);
             digitalScaleFields.classList.toggle('hidden', !digitalNeedsPrice);
             quotedNote.classList.toggle('hidden', !(opsNeedsLimits || digitalNeedsPrice));
@@ -12799,7 +12877,7 @@
 
         function renderSocialPlatformChecklist(clientId, tierKey, enabledCsv) {
             const enabled = new Set((enabledCsv || '').split(',').map(p => p.trim()).filter(Boolean));
-            const isScale = tierKey === 'digital_scale';
+            const isScale = (tierKey === 'digital_scale' || tierKey === 'digital_push');
             const container = document.getElementById('socialPlatformChecklist');
             if (!container) return;
             container.innerHTML = Object.keys(SOCIAL_PLATFORM_META).map(key => {
@@ -12826,7 +12904,7 @@
             }
             showToast(platform + ' ' + (enabled ? 'enabled' : 'disabled') + ' for this client.', 'success');
             const tierKey = document.getElementById('entLimitsClientId').dataset.tier;
-            if (tierKey === 'digital_scale') {
+            if ((tierKey === 'digital_scale' || tierKey === 'digital_push')) {
                 loadScalePlatformQuotas(clientId);
             } else if (tierKey === 'digital_launch' || tierKey === 'digital_accelerate') {
                 loadWeeklyPlatformQuotasDisplay(clientId);
@@ -12944,7 +13022,7 @@
             // controls below, which DO apply to every tier.
             const opsTier = getClientOpsTier(client);
             const digitalTier = getClientDigitalTier(client);
-            const bulkLimitsEligible = opsTier === 'enterprise_ops' || digitalTier === 'digital_scale' || client.Tier === 'custom';
+            const bulkLimitsEligible = (opsTier === 'enterprise_ops' || opsTier === 'ops_firm') || (digitalTier === 'digital_scale' || digitalTier === 'digital_push') || client.Tier === 'custom';
             document.getElementById('agentEnterpriseLimitsForm').classList.toggle('hidden', !bulkLimitsEligible);
 
             renderSocialPlatformChecklist(clientId, digitalTier, client.EnabledSocialPlatforms);
@@ -12953,7 +13031,7 @@
             document.getElementById('weeklyPlatformQuotaPanel').classList.add('hidden');
             document.getElementById('weeklyPlatformQuotaRows').innerHTML = '';
             document.getElementById('whatsappReplyQuotaStatus').classList.add('hidden');
-            if (digitalTier === 'digital_scale') {
+            if ((digitalTier === 'digital_scale' || digitalTier === 'digital_push')) {
                 loadScalePlatformQuotas(clientId);
             } else if (digitalTier === 'digital_launch' || digitalTier === 'digital_accelerate') {
                 loadWeeklyPlatformQuotasDisplay(clientId);
@@ -12995,7 +13073,7 @@
             const btn = event.target.querySelector('button[type=submit]');
             if (btn) { btn.disabled = true; btn.textContent = 'Applying…'; }
 
-            if (opsTier === 'enterprise_ops') {
+            if ((opsTier === 'enterprise_ops' || opsTier === 'ops_firm')) {
                 results.push(await executeSecureBridgeCall('agent', 'agent-set-enterprise-limits', {
                     clientId, suite: 'ops',
                     hours: num('entLimitsHours'),
@@ -13011,7 +13089,7 @@
                     priceNgn: parseFloat(document.getElementById('entLimitsPriceNgn').value) || undefined
                 }));
             }
-            if (digitalTier === 'digital_scale') {
+            if ((digitalTier === 'digital_scale' || digitalTier === 'digital_push')) {
                 results.push(await executeSecureBridgeCall('agent', 'agent-set-enterprise-limits', {
                     clientId, suite: 'digital',
                     socialPostsPerWeek: num('entLimitsSocialPostsPerWeek'),
@@ -13094,7 +13172,7 @@
             // Digital Scale price is a completely separate field so a
             // dual-suite registration never lets one suite's price clobber
             // the other's (see AgentLib's suite-aware agent-set-enterprise-limits).
-            if (opsTier === 'enterprise_ops') {
+            if ((opsTier === 'enterprise_ops' || opsTier === 'ops_firm')) {
                 const num = id => parseInt(document.getElementById(id).value) || undefined;
                 payload.customHours = num('entHours');
                 payload.customEmails = num('entEmails');
@@ -13105,7 +13183,7 @@
                 payload.customDocsPerMonth = num('entDocsPerMonth');
                 payload.customPriceNgn = parseFloat(document.getElementById('entPriceNgn').value) || undefined;
             }
-            if (digitalTier === 'digital_scale') {
+            if ((digitalTier === 'digital_scale' || digitalTier === 'digital_push')) {
                 payload.digitalPriceNgn = parseFloat(document.getElementById('entDigitalPriceNgn').value) || undefined;
             }
 
@@ -18179,8 +18257,8 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             // Ops and Digital Scale toggle independently — a dual-suite client
             // needs both blocks visible together, each writing to its own
             // suite-specific price/quota columns.
-            document.getElementById('updateTierEnterpriseFields').classList.toggle('hidden', ops !== 'enterprise_ops');
-            document.getElementById('updateTierDigitalScaleFields').classList.toggle('hidden', digital !== 'digital_scale');
+            document.getElementById('updateTierEnterpriseFields').classList.toggle('hidden', (ops !== 'enterprise_ops' && ops !== 'ops_firm'));
+            document.getElementById('updateTierDigitalScaleFields').classList.toggle('hidden', (digital !== 'digital_scale' && digital !== 'digital_push'));
         }
 
         async function submitAgentUpdateTier(event) {
@@ -18222,7 +18300,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 // Enterprise Ops and Digital Scale each have their own
                 // admin-priced fields and their own suite-tagged call, so
                 // setting one never touches the other's price/quota columns.
-                if (opsTier === 'enterprise_ops') {
+                if ((opsTier === 'enterprise_ops' || opsTier === 'ops_firm')) {
                     const num = id => { const v = parseInt(document.getElementById(id).value); return isNaN(v) ? undefined : v; };
                     results.push(await executeSecureBridgeCall('agent', 'agent-set-enterprise-limits', {
                         clientId, suite: 'ops',
@@ -18236,7 +18314,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                         priceNgn: parseFloat(document.getElementById('updEntPriceNgn').value) || undefined
                     }));
                 }
-                if (digitalTier === 'digital_scale') {
+                if ((digitalTier === 'digital_scale' || digitalTier === 'digital_push')) {
                     const digitalPrice = parseFloat(document.getElementById('updEntDigitalPriceNgn').value) || undefined;
                     if (digitalPrice !== undefined) {
                         results.push(await executeSecureBridgeCall('agent', 'agent-set-enterprise-limits', {
@@ -21956,6 +22034,169 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             document.getElementById("leadEmailPanelVic").classList.remove("hidden");
             vicLoadLeadMailPipeline();
         };
+    </script>
+
+
+    <!-- ========== SELF SESSION (The Victorias internal client) ========== -->
+    <div id="selfSessionPanelVic" class="hidden fixed inset-0 z-[60] bg-black/75 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-emerald-700/40 rounded-xl max-w-lg w-full p-5 space-y-3 shadow-2xl">
+            <div class="flex justify-between items-start gap-3">
+                <div>
+                    <h3 class="text-white font-bold text-sm">Company Self Session</h3>
+                    <p class="text-[11px] text-slate-400 mt-1">Run Victorias as a full client: leads, email, WhatsApp,
+                        templates, docs, social — same tools clients use.</p>
+                </div>
+                <button type="button" onclick="document.getElementById('selfSessionPanelVic').classList.add('hidden')"
+                    class="text-slate-400 text-lg leading-none">&times;</button>
+            </div>
+            <div class="text-[11px] text-slate-300 bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-1">
+                <p><span class="text-slate-500">Client ID:</span> <code id="selfSessionClientId"
+                        class="text-emerald-400">CLT-VICTORIAS-SELF</code></p>
+                <p><span class="text-slate-500">Suites:</span> Ops Firm + Digital Push (full stack)</p>
+                <p id="selfSessionStatus" class="text-slate-500">Not loaded yet.</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button type="button" onclick="vicEnsureSelfClient()"
+                    class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold py-2.5 rounded-lg">Ensure
+                    / refresh self client</button>
+                <button type="button" onclick="vicEnterSelfSession()"
+                    class="bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-semibold py-2.5 rounded-lg">Enter
+                    self session</button>
+                <button type="button" onclick="vicOpenSelfLeads()"
+                    class="bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs py-2 rounded-lg">Leads for self
+                    client</button>
+                <button type="button" onclick="vicExitSelfSession()"
+                    class="bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs py-2 rounded-lg">Exit self
+                    session</button>
+            </div>
+            <p class="text-[10px] text-slate-500">While active, agent list/filter actions default to <code
+                    class="text-slate-400">CLT-VICTORIAS-SELF</code>. Team templates, mailbox, and chat use the same
+                client context.</p>
+        </div>
+    </div>
+    <script>
+        (function () {
+            var SELF_ID = "CLT-VICTORIAS-SELF";
+            window.VIC_SELF_CLIENT_ID = SELF_ID;
+
+            function setStatus(msg) {
+                var el = document.getElementById("selfSessionStatus");
+                if (el) el.textContent = msg;
+            }
+
+            window.vicOpenSelfSessionPanel = function () {
+                var p = document.getElementById("selfSessionPanelVic");
+                if (p) p.classList.remove("hidden");
+                var cid = document.getElementById("selfSessionClientId");
+                if (cid) cid.textContent = SELF_ID;
+                if (window.__vicSelfSessionActive) setStatus("ACTIVE — operating as " + SELF_ID);
+                else setStatus("Idle — ensure client, then Enter self session.");
+            };
+
+            window.vicEnsureSelfClient = async function () {
+                setStatus("Registering / updating self client…");
+                try {
+                    var payload = {
+                        companyName: "The Victorias Ltd (Internal)",
+                        contactName: "Victorias Operations",
+                        contactEmail: "ops@thevictorias.com.ng",
+                        phone: "+2348055538518",
+                        country: "NG",
+                        website: "https://thevictorias.com.ng",
+                        industry: "Professional services",
+                        opsTier: "ops_firm",
+                        digitalTier: "digital_push",
+                        clientId: SELF_ID,
+                        isInternal: true,
+                        selfService: true,
+                        about: "Internal dogfood client — full access for Victorias team to use leads, email, chat, templates, and all product features."
+                    };
+                    var res = await executeSecureBridgeCall("agent", "agent-register-client", payload);
+                    if (!res || res.success === false) {
+                        // fallback: update subscription on existing
+                        try {
+                            await executeSecureBridgeCall("agent", "agent-update-subscription", {
+                                clientId: SELF_ID, opsTier: "ops_firm", digitalTier: "digital_push"
+                            });
+                            setStatus("Self client updated (subscription). ID=" + SELF_ID);
+                            if (typeof showToast === "function") showToast("Self client ready", "success");
+                            return;
+                        } catch (e2) {
+                            setStatus((res && res.message) || (e2 && e2.message) || "Failed");
+                            if (typeof showToast === "function") showToast((res && res.message) || "Failed", "error");
+                            return;
+                        }
+                    }
+                    var id = res.clientId || res.ClientID || SELF_ID;
+                    if (id && id !== SELF_ID) {
+                        // backend assigned different id — store it
+                        SELF_ID = String(id);
+                        window.VIC_SELF_CLIENT_ID = SELF_ID;
+                        var cid = document.getElementById("selfSessionClientId");
+                        if (cid) cid.textContent = SELF_ID;
+                    }
+                    setStatus("Ready. Client ID=" + SELF_ID);
+                    if (typeof showToast === "function") showToast("Self client ensured", "success");
+                } catch (e) {
+                    setStatus(String(e.message || e));
+                    if (typeof showToast === "function") showToast(String(e.message || e), "error");
+                }
+            };
+
+            window.vicEnterSelfSession = function () {
+                window.__vicSelfSessionActive = true;
+                window.__vicActiveClientId = SELF_ID;
+                try { sessionStorage.setItem("vicSelfSessionClientId", SELF_ID); } catch (_) { }
+                setStatus("ACTIVE — operating as " + SELF_ID);
+                if (typeof showToast === "function") showToast("Self session ON: " + SELF_ID, "success");
+                // Prefill common agent client filters
+                ["agentClientFilter", "vaFollowupClientFilter", "pubCommentsClientId", "agentLeadClientId"].forEach(function (id) {
+                    var el = document.getElementById(id);
+                    if (el) el.value = SELF_ID;
+                });
+            };
+
+            window.vicExitSelfSession = function () {
+                window.__vicSelfSessionActive = false;
+                window.__vicActiveClientId = "";
+                try { sessionStorage.removeItem("vicSelfSessionClientId"); } catch (_) { }
+                setStatus("Exited. Back to normal admin context.");
+                if (typeof showToast === "function") showToast("Self session off", "success");
+            };
+
+            window.vicOpenSelfLeads = function () {
+                vicEnterSelfSession();
+                try {
+                    if (typeof switchMasterHub === "function") switchMasterHub("leads");
+                } catch (_) { }
+                try {
+                    if (typeof switchMasterHub === "function") switchMasterHub("agent");
+                } catch (_) { }
+                setTimeout(function () {
+                    if (typeof loadAgentClients === "function") loadAgentClients();
+                }, 200);
+            };
+
+            window.vicGetActiveClientId = function (fallback) {
+                if (window.__vicSelfSessionActive && window.__vicActiveClientId) return window.__vicActiveClientId;
+                try {
+                    var s = sessionStorage.getItem("vicSelfSessionClientId");
+                    if (s) return s;
+                } catch (_) { }
+                return fallback || "";
+            };
+
+            // Restore session flag after reload
+            try {
+                var s = sessionStorage.getItem("vicSelfSessionClientId");
+                if (s) {
+                    window.__vicSelfSessionActive = true;
+                    window.__vicActiveClientId = s;
+                    SELF_ID = s;
+                    window.VIC_SELF_CLIENT_ID = s;
+                }
+            } catch (_) { }
+        })();
     </script>
 
 </body>
