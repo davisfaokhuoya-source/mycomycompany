@@ -1317,8 +1317,7 @@
                                 <i class="fas fa-book"></i> Platform Guide
                             </button>
 
-                            <button type="button" class="tv-sb-link" data-tab="campaigns"
-                                onclick="showCareerTab && showCareerTab('campaigns'); loadPartnerCampaigns();">
+                            <button type="button" class="tv-sb-link" data-tab="campaigns" onclick="showTab(16)">
                                 <i class="fas fa-bullseye"></i> Sales Campaigns
                             </button>
 
@@ -2112,38 +2111,7 @@
                             <h5><i class="fas fa-user-friends"></i> My Team</h5>
 
                             <!-- Suspended notice when admin has not re-authorized team features -->
-                            <div <!-- Partner Sales Campaigns panel -->
-                                <div id="tab-campaigns" class="tab-pane career-tab-panel d-none">
-                                    <div class="tv-content-card">
-                                        <h5 class="mb-1">Sales Campaigns</h5>
-                                        <p class="text-muted small mb-3">Work assigned client sales (real estate, air
-                                            tickets, reservations, events, and more).</p>
-                                        <div class="d-flex gap-2 mb-3 flex-wrap">
-                                            <button type="button" class="btn btn-sm btn-primary"
-                                                onclick="loadPartnerCampaigns()">My campaigns</button>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary"
-                                                onclick="loadPartnerSupportiveTasks()">Supportive tasks</button>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary"
-                                                onclick="loadPartnerCommissions()">Earnings</button>
-                                        </div>
-                                        <div id="partnerCampList" class="mb-3"></div>
-                                        <div class="mb-2">
-                                            <label class="form-label small">Campaign ID for leads</label>
-                                            <div class="input-group input-group-sm">
-                                                <input id="partnerLeadCampId" class="form-control"
-                                                    placeholder="campaignId" />
-                                                <button class="btn btn-outline-primary" type="button"
-                                                    onclick="loadPartnerCampaignLeads()">Load leads</button>
-                                            </div>
-                                        </div>
-                                        <div id="partnerLeadList"></div>
-                                        <hr />
-                                        <div id="partnerTaskList"></div>
-                                        <div id="partnerComList" class="mt-3"></div>
-                                    </div>
-                                </div>
-
-                                id="teamFeaturesSuspendedPanel"
+                            <div id="teamFeaturesSuspendedPanel"
                                 class="d-none alert alert-warning border-0 shadow-sm mb-3" role="status">
                                 <div class="d-flex align-items-start gap-2">
                                     <i class="fas fa-pause-circle fa-lg mt-1"></i>
@@ -2222,6 +2190,39 @@
                                 </div>
                             </div>
                         </div>
+                        <div id="tabContent16" class="d-none">
+                            <h5><i class="fas fa-bullhorn"></i> Sales Campaigns</h5>
+                            <div id="tab-campaigns">
+                                <div class="tv-content-card">
+                                    <h5 class="mb-1">Sales Campaigns</h5>
+                                    <p class="text-muted small mb-3">Work assigned client sales (real estate, air
+                                        tickets, reservations, events, and more).</p>
+                                    <div class="d-flex gap-2 mb-3 flex-wrap">
+                                        <button type="button" class="btn btn-sm btn-primary"
+                                            onclick="loadPartnerCampaigns()">My campaigns</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            onclick="loadPartnerSupportiveTasks()">Supportive tasks</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            onclick="loadPartnerCommissions()">Earnings</button>
+                                    </div>
+                                    <div id="partnerCampList" class="mb-3"></div>
+                                    <div class="mb-2">
+                                        <label class="form-label small">Campaign ID for leads</label>
+                                        <div class="input-group input-group-sm">
+                                            <input id="partnerLeadCampId" class="form-control"
+                                                placeholder="campaignId" />
+                                            <button class="btn btn-outline-primary" type="button"
+                                                onclick="loadPartnerCampaignLeads()">Load leads</button>
+                                        </div>
+                                    </div>
+                                    <div id="partnerLeadList"></div>
+                                    <hr />
+                                    <div id="partnerTaskList"></div>
+                                    <div id="partnerComList" class="mt-3"></div>
+                                </div>
+                            </div>
+                        </div>
+
 
                     </div><!-- end tv-content-card (sub dashboard) -->
                 </main>
@@ -2781,7 +2782,7 @@
                     { idx: 2, icon: "fas fa-paper-plane", label: "Submit Request" },
                     { idx: 1, icon: "fas fa-clipboard-list", label: "My Records" },
                     { idx: 3, icon: "fas fa-arrow-up", label: "My Upgrades" },
-                    { idx: 15, icon: "fas fa-bullhorn", label: "Sales Campaigns" }
+                    { idx: 16, icon: "fas fa-bullhorn", label: "Sales Campaigns" }
                 ]
             },
             {
@@ -3751,7 +3752,7 @@
                 showToast("Complete your training and assessment to unlock this section.", "warning");
                 idx = 6;
             }
-            for (let i = 0; i <= 15; i++) {
+            for (let i = 0; i <= 16; i++) {
                 const el = document.getElementById(`tabContent${i}`);
                 if (el) el.classList.add("d-none");
             }
@@ -3768,6 +3769,7 @@
             if (idx === 1) loadMyRecords();
             if (idx === 14) loadPerformanceTab();
             if (idx === 15) loadMyTeamTab();
+            if (idx === 16) loadPartnerCampaigns();
             if (idx === 3) loadMyUpgrades();
             if (idx === 4) loadEarningsAndPayout();
             if (idx === 5) { loadProfileData(); loadPassportCard(); }
@@ -3787,6 +3789,90 @@
             if (idx === 12) loadComplaints();
             if (idx === 13) loadAICoachTab();
         }
+
+
+        // =========== SALES CAMPAIGNS (partner) ===========
+        // Backend action names — adjust here if your Apps Script uses different ones.
+        const PARTNER_CAMPAIGN_ACTIONS = {
+            campaigns: "chListMyCampaigns",
+            tasks: "chListMySupportiveTasks",
+            commissions: "chListMyCommissions",
+            leads: "chListCampaignLeads"
+        };
+        function partnerCampRows(res, keys) {
+            for (const k of keys) if (res && Array.isArray(res[k])) return res[k];
+            return [];
+        }
+        function partnerCampRender(el, rows, emptyMsg, titleFn, subFn) {
+            if (!el) return;
+            if (!rows.length) { el.innerHTML = `<p class="text-muted small mb-0">${emptyMsg}</p>`; return; }
+            el.innerHTML = rows.map(r => `<div class="border rounded p-2 mb-2">
+                <div class="fw-bold small">${escapeHtml(titleFn(r))}</div>
+                <div class="text-muted small">${escapeHtml(subFn(r))}</div></div>`).join("");
+        }
+        async function partnerCampFetch(key, body, el) {
+            if (el) el.innerHTML = '<p class="text-muted small mb-0">Loading…</p>';
+            try {
+                const res = await apiCall(PARTNER_CAMPAIGN_ACTIONS[key], body || {}, false);
+                if (!res || res.success === false) {
+                    if (el) el.innerHTML = `<p class="text-muted small mb-0">${escapeHtml((res && res.message) || "Nothing to show yet.")}</p>`;
+                    return null;
+                }
+                return res;
+            } catch (e) {
+                if (el) el.innerHTML = '<p class="text-danger small mb-0">Could not load. Please try again.</p>';
+                return null;
+            }
+        }
+        async function loadPartnerCampaigns() {
+            const el = document.getElementById("partnerCampList");
+            ["partnerTaskList", "partnerComList", "partnerLeadList"].forEach(id => { const x = document.getElementById(id); if (x) x.innerHTML = ""; });
+            const res = await partnerCampFetch("campaigns", {}, el);
+            if (!res) return;
+            const rows = partnerCampRows(res, ["campaigns", "data", "list", "items"]);
+            partnerCampRender(el, rows, "No campaigns assigned to you yet.",
+                r => (r.name || r.Name || r.CampaignName || r.campaignId || r.CampaignID || "Campaign"),
+                r => `ID: ${r.campaignId || r.CampaignID || r.id || "—"}${r.status || r.Status ? " · " + (r.status || r.Status) : ""}`);
+            // click a campaign to prefill the lead campaign ID
+            el.querySelectorAll(".border").forEach((node, i) => {
+                node.style.cursor = "pointer";
+                node.addEventListener("click", () => {
+                    const r = rows[i] || {};
+                    const inp = document.getElementById("partnerLeadCampId");
+                    if (inp) inp.value = r.campaignId || r.CampaignID || r.id || "";
+                });
+            });
+        }
+        async function loadPartnerSupportiveTasks() {
+            const el = document.getElementById("partnerTaskList");
+            const res = await partnerCampFetch("tasks", {}, el);
+            if (!res) return;
+            partnerCampRender(el, partnerCampRows(res, ["tasks", "data", "list", "items"]), "No supportive tasks assigned.",
+                r => (r.title || r.Title || r.TaskName || r.taskId || "Task"),
+                r => `${r.status || r.Status || ""}${r.dueDate || r.DueDate ? " · due " + (r.dueDate || r.DueDate) : ""}`);
+        }
+        async function loadPartnerCommissions() {
+            const el = document.getElementById("partnerComList");
+            const res = await partnerCampFetch("commissions", {}, el);
+            if (!res) return;
+            partnerCampRender(el, partnerCampRows(res, ["commissions", "data", "list", "items"]), "No campaign earnings yet.",
+                r => `₦${Number(r.amount || r.Amount || 0).toLocaleString()}`,
+                r => `${r.campaignId || r.CampaignID || ""} ${r.status || r.Status || ""}`.trim());
+        }
+        async function loadPartnerCampaignLeads() {
+            const el = document.getElementById("partnerLeadList");
+            const id = (document.getElementById("partnerLeadCampId") || {}).value;
+            if (!id || !id.trim()) { showToast("Enter or tap a campaign first.", "warning"); return; }
+            const res = await partnerCampFetch("leads", { campaignId: id.trim() }, el);
+            if (!res) return;
+            partnerCampRender(el, partnerCampRows(res, ["leads", "data", "list", "items"]), "No leads for this campaign yet.",
+                r => (r.name || r.Name || r.LeadName || r.email || "Lead"),
+                r => `${r.status || r.Status || ""} ${r.phone || r.Phone || r.email || r.Email || ""}`.trim());
+        }
+        // Aliases used by the work-area chooser
+        window.chListMyCampaigns = loadPartnerCampaigns;
+        window.chListMySupportiveTasks = function () { loadPartnerSupportiveTasks(); };
+        function showCareerTab(name) { if (name === "campaigns") showTab(16); }
 
         function updateDropdownButton(idx) {
             const btn = document.getElementById("tabDropdown");
@@ -5307,6 +5393,7 @@
     <script src="lib/easing/easing.min.js"></script>
     <script src="js/main.js"></script>
     <script type="module" src="js/social.js"></script>
+    <script type="module" src="js/policies.js"></script>
     <script type="module" src="js/footer.js"></script>
 
     <script>
@@ -5449,7 +5536,7 @@
                     // Submit Client
                     if (typeof showTab === "function") showTab(0);
                 } else if (area === "campaigns") {
-                    if (typeof showTab === "function") showTab(15);
+                    if (typeof showTab === "function") showTab(16);
                     setTimeout(function () {
                         if (typeof chListMyCampaigns === "function") chListMyCampaigns();
                         if (typeof loadMyCampaignsPanel === "function") loadMyCampaignsPanel();
@@ -5465,7 +5552,7 @@
                     if (typeof showTab === "function") {
                         // Prefer tab 15 campaigns supportive if same panel, else records
                         try {
-                            showTab(15);
+                            showTab(16);
                         } catch (_) {
                             showTab(1);
                         }
@@ -5488,6 +5575,7 @@
             window.vicOpenWorkArea = window.vicEnterWorkArea;
         })();
     </script>
+
 
 </body>
 
