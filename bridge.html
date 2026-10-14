@@ -9,6 +9,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <link rel="shortcut icon" type="image/x-icon" href="/img/The Victorias Logo.ico">
     <style>
+        /* Safety net: a modal with .hidden must always be hidden, even if JS left inline display:flex */
+        div[id^="modal"].hidden,
+        #edit-modal.hidden,
+        #staffAdminPanelVic.hidden,
+        #leadEmailPanelVic.hidden {
+            display: none !important;
+        }
+
         .custom-scrollbar::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -13376,6 +13384,7 @@
             }
         }
 
+        function onAgentRegisterTiersChange() { onAgentRegisterCustomChange(); }
         function onAgentRegisterCustomChange() {
             const isCustom = document.getElementById('agentTier').value === 'custom';
             document.getElementById('customTierFields').classList.toggle('hidden', !isCustom);
@@ -13422,6 +13431,13 @@
                 } catch (inner) {
                     console.warn('register modal field init', inner);
                 }
+                try {
+                    var indEl = document.getElementById('agentIndustry');
+                    if (indEl && indEl.options.length <= 1 && typeof INDUSTRY_OPTIONS !== 'undefined') {
+                        indEl.innerHTML = '<option value="">Select Industry</option>' +
+                            INDUSTRY_OPTIONS.map(function (o) { return '<option value="' + o.value + '">' + o.label + '</option>'; }).join('');
+                    }
+                } catch (indErr) { console.warn('industry init', indErr); }
                 modal.classList.remove('hidden');
                 modal.style.display = 'flex';
                 modal.style.zIndex = '90';
@@ -13700,7 +13716,7 @@
 
         function closeAgentClientRegisterModal() {
             const modal = document.getElementById('modalAgentClientRegister');
-            if (modal) modal.classList.add('hidden');
+            if (modal) { modal.classList.add('hidden'); modal.style.display = 'none'; }
             const form = document.getElementById('agentClientRegisterForm');
             if (form) form.reset();
         }
