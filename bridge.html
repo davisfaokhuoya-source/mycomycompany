@@ -614,8 +614,9 @@
                             onclick="adminGo('career','career-email-send')">Send email batches</button>
                         <button type="button" class="nav-sub-btn" data-hub="career" data-target-view="career-email-list"
                             onclick="adminGo('career','career-email-list')">Email campaign list</button>
-                        <button type="button" class="nav-sub-btn" onclick="openCampaignOnlyClientRegister()">Register
-                            campaign client</button>
+                        <button type="button" class="nav-sub-btn" id="btnRegisterCampaignClient"
+                            data-action="register-campaign-client"
+                            onclick="return openCampaignOnlyClientRegister(event);">Register campaign client</button>
                         <button type="button" class="nav-sub-btn" data-hub="agent" data-target-view="agent-clients"
                             onclick="adminGoCampaignClients()">Campaign clients roster</button>
                         <button type="button" class="nav-sub-btn" onclick="vicOpenSelfSessionPanel()">Self
@@ -13340,20 +13341,49 @@
 
         async function __openAgentClientRegisterWithTiers() { try { await syncRegistrationTiersFromCatalog(); } catch (_) { } }
         function openAgentClientRegisterModal() {
-            const modal = document.getElementById('modalAgentClientRegister');
-            if (!modal) return;
-
-            document.getElementById('agentOpsTier').innerHTML = buildTierOptionsHtml(OPS_TIER_KEYS, true);
-            document.getElementById('agentDigitalTier').innerHTML = buildTierOptionsHtml(DIGITAL_TIER_KEYS, true);
-            document.getElementById('agentTier').onchange = onAgentRegisterCustomChange;
-            document.getElementById('customTierFields').classList.add('hidden');
-            document.getElementById('enterpriseTierFields').classList.add('hidden');
-            document.getElementById('digitalScaleTierFields').classList.add('hidden');
-            document.getElementById('quotedTierNote').classList.add('hidden');
-            onAgentRegisterTierChange();
-
-            modal.classList.remove('hidden');
+            try {
+                var modal = document.getElementById('modalAgentClientRegister');
+                if (!modal) {
+                    if (typeof showToast === 'function') showToast('Register modal not found', 'error');
+                    else alert('Register modal not found — redeploy admin HTML');
+                    return;
+                }
+                try {
+                    var opsEl = document.getElementById('agentOpsTier');
+                    var digEl = document.getElementById('agentDigitalTier');
+                    if (opsEl && typeof buildTierOptionsHtml === 'function' && typeof OPS_TIER_KEYS !== 'undefined') {
+                        opsEl.innerHTML = buildTierOptionsHtml(OPS_TIER_KEYS, true);
+                    }
+                    if (digEl && typeof buildTierOptionsHtml === 'function' && typeof DIGITAL_TIER_KEYS !== 'undefined') {
+                        digEl.innerHTML = buildTierOptionsHtml(DIGITAL_TIER_KEYS, true);
+                    }
+                    var tierEl = document.getElementById('agentTier');
+                    if (tierEl && typeof onAgentRegisterCustomChange === 'function') {
+                        tierEl.onchange = onAgentRegisterCustomChange;
+                    }
+                    ['customTierFields', 'enterpriseTierFields', 'digitalScaleTierFields', 'quotedTierNote'].forEach(function (id) {
+                        var el = document.getElementById(id);
+                        if (el) el.classList.add('hidden');
+                    });
+                    if (typeof onAgentRegisterTiersChange === 'function') onAgentRegisterTiersChange();
+                } catch (inner) {
+                    console.warn('register modal field init', inner);
+                }
+                modal.classList.remove('hidden');
+                modal.style.display = 'flex';
+                modal.style.zIndex = '90';
+                setTimeout(function () {
+                    try {
+                        if (typeof loadAgentRegisterAddonOptions === 'function') loadAgentRegisterAddonOptions();
+                        if (typeof onAgentRegisterEngagementChange === 'function') onAgentRegisterEngagementChange();
+                    } catch (e2) { }
+                }, 50);
+            } catch (e) {
+                console.error(e);
+                alert('Could not open register client: ' + (e && e.message ? e.message : e));
+            }
         }
+        window.openAgentClientRegisterModal = openAgentClientRegisterModal;
 
         const SOCIAL_PLATFORM_META = {
             facebook: { label: 'Facebook Page', scaleOnly: false },
@@ -22932,27 +22962,29 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
 
 
     <script>
-        /* Register client: engagement types + add-on catalog loader */
+        /* Register client + campaign-only — production handlers */
         (function () {
             window.onAgentRegisterEngagementChange = function () {
-                var eng = (document.getElementById("agentClientEngagementType") || {}).value || "full_platform";
-                var ops = document.getElementById("agentOpsTier");
-                var dig = document.getElementById("agentDigitalTier");
-                var custom = document.getElementById("agentTier");
-                var hint = document.getElementById("agentEngagementHint");
-                var disableSuites = eng === "campaign_only" || eng === "addons_only";
-                if (ops) { ops.disabled = disableSuites || (custom && custom.value === "custom"); if (disableSuites) ops.value = ""; }
-                if (dig) { dig.disabled = disableSuites || (custom && custom.value === "custom"); if (disableSuites) dig.value = ""; }
-                if (custom) {
-                    if (eng === "custom") custom.value = "custom";
-                    else if (eng !== "custom" && custom.value === "custom") custom.value = "";
-                }
-                if (hint) {
-                    if (eng === "campaign_only") hint.textContent = "Campaign-only: no Ops/Digital. Use Sales campaigns with this clientId.";
-                    else if (eng === "addons_only") hint.textContent = "Add-ons only: select one or more add-ons. No Ops/Digital required.";
-                    else if (eng === "custom") hint.textContent = "Bespoke package — fill custom limits/price.";
-                    else hint.textContent = "Full platform: Ops and/or Digital. Add-ons optional.";
-                }
+                try {
+                    var eng = (document.getElementById("agentClientEngagementType") || {}).value || "full_platform";
+                    var ops = document.getElementById("agentOpsTier");
+                    var dig = document.getElementById("agentDigitalTier");
+                    var custom = document.getElementById("agentTier");
+                    var hint = document.getElementById("agentEngagementHint");
+                    var disableSuites = eng === "campaign_only" || eng === "addons_only";
+                    if (ops) { ops.disabled = disableSuites || (custom && custom.value === "custom"); if (disableSuites) ops.value = ""; }
+                    if (dig) { dig.disabled = disableSuites || (custom && custom.value === "custom"); if (disableSuites) dig.value = ""; }
+                    if (custom) {
+                        if (eng === "custom") custom.value = "custom";
+                        else if (eng !== "custom" && custom.value === "custom") custom.value = "";
+                    }
+                    if (hint) {
+                        if (eng === "campaign_only") hint.textContent = "Campaign-only: no Ops/Digital. Use Sales campaigns with this clientId.";
+                        else if (eng === "addons_only") hint.textContent = "Add-ons only: select one or more add-ons.";
+                        else if (eng === "custom") hint.textContent = "Bespoke package.";
+                        else hint.textContent = "Full platform: Ops and/or Digital. Add-ons optional.";
+                    }
+                } catch (e) { console.warn(e); }
             };
 
             window.loadAgentRegisterAddonOptions = async function () {
@@ -22960,33 +22992,18 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 if (!sel) return;
                 sel.innerHTML = '<option value="">Loading…</option>';
                 var addons = [];
-                function take(list) {
-                    if (!list) return;
-                    if (Array.isArray(list)) addons = addons.concat(list);
-                }
+                function take(list) { if (Array.isArray(list)) addons = addons.concat(list); }
                 try {
-                    var res = await executeSecureBridgeCall("agent", "agent-get-billing-catalog", { region: "NG" });
-                    if (res) {
-                        take(res.addons);
-                        take(res.catalog && res.catalog.addons);
-                        take(res.billing && res.billing.addons);
-                        take(res.data && res.data.addons);
+                    if (typeof executeSecureBridgeCall === "function") {
+                        var res = await executeSecureBridgeCall("agent", "agent-get-billing-catalog", { region: "NG" });
+                        if (res) {
+                            take(res.addons);
+                            take(res.catalog && res.catalog.addons);
+                            take(res.billing && res.billing.addons);
+                            take(res.data && res.data.addons);
+                        }
                     }
-                } catch (e1) { console.warn("billing catalog", e1); }
-                if (!addons.length) {
-                    try {
-                        var res2 = await executeSecureBridgeCall("agent", "agent-get-service-pricing", {});
-                        take(res2 && res2.addons);
-                        take(res2 && res2.pricing && res2.pricing.addons);
-                    } catch (e2) { }
-                }
-                if (!addons.length) {
-                    try {
-                        var res3 = await executeSecureBridgeCall("agent", "agent-list-service-tiers", {});
-                        take(res3 && res3.addons);
-                        take(res3 && res3.catalog && res3.catalog.addons);
-                    } catch (e3) { }
-                }
+                } catch (e1) { }
                 if (!addons.length) {
                     addons = [
                         { id: "leads_20", name: "Leads pack 20" },
@@ -22996,54 +23013,64 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                         { id: "human_hour", name: "Human hour" },
                         { id: "human_hours_5", name: "Human hours ×5" },
                         { id: "compliance_track_5", name: "Compliance track" },
-                        { id: "social_assets_20", name: "Social assets pack" },
-                        { id: "extra_docs_10", name: "Extra docs ×10" },
-                        { id: "extra_proposals_2", name: "Extra proposals ×2" }
+                        { id: "social_assets_20", name: "Social assets pack" }
                     ];
                 }
-                // de-dupe by id
                 var seen = {};
-                var opts = [];
-                addons.forEach(function (a) {
-                    var id, name, price;
-                    if (typeof a === "string") { id = a; name = a; price = ""; }
-                    else {
-                        id = a.id || a.key || a.addonKey || a.name || "";
-                        name = a.name || a.label || id;
-                        price = (a.priceNgn != null && a.priceNgn !== "") ? (" — ₦" + Number(a.priceNgn).toLocaleString()) :
-                            (a.priceUsd != null ? (" — $" + a.priceUsd) : "");
-                    }
-                    if (!id || seen[id]) return;
+                sel.innerHTML = addons.map(function (a) {
+                    var id = typeof a === "string" ? a : (a.id || a.key || a.addonKey || a.name || "");
+                    if (!id || seen[id]) return "";
                     seen[id] = true;
-                    opts.push('<option value="' + id + '">' + name + price + "</option>");
-                });
-                sel.innerHTML = opts.join("") || '<option value="">No add-ons found</option>';
+                    var name = typeof a === "string" ? a : (a.name || a.label || id);
+                    return '<option value="' + id + '">' + name + "</option>";
+                }).filter(Boolean).join("") || '<option value="">No add-ons</option>';
             };
 
-            var _openReg = window.openAgentClientRegisterModal;
-            window.openAgentClientRegisterModal = function () {
-                if (typeof _openReg === "function") {
-                    try { _openReg(); } catch (e) {
+            window.openCampaignOnlyClientRegister = function (ev) {
+                if (ev && ev.preventDefault) ev.preventDefault();
+                if (ev && ev.stopPropagation) ev.stopPropagation();
+                try {
+                    if (typeof openAgentClientRegisterModal === "function") {
+                        openAgentClientRegisterModal();
+                    } else {
                         var m = document.getElementById("modalAgentClientRegister");
-                        if (m) m.classList.remove("hidden");
+                        if (m) { m.classList.remove("hidden"); m.style.display = "flex"; }
+                        else { alert("Register modal missing — redeploy admin HTML"); return; }
                     }
-                } else {
-                    var m2 = document.getElementById("modalAgentClientRegister");
-                    if (m2) m2.classList.remove("hidden");
+                    setTimeout(function () {
+                        var eng = document.getElementById("agentClientEngagementType");
+                        if (eng) {
+                            eng.value = "campaign_only";
+                            if (typeof onAgentRegisterEngagementChange === "function") onAgentRegisterEngagementChange();
+                        }
+                        if (typeof loadAgentRegisterAddonOptions === "function") loadAgentRegisterAddonOptions();
+                    }, 100);
+                } catch (e) {
+                    console.error(e);
+                    alert("Register campaign client failed: " + (e.message || e));
                 }
-                setTimeout(function () {
-                    loadAgentRegisterAddonOptions();
-                    onAgentRegisterEngagementChange();
-                }, 80);
+                return false;
             };
 
-            window.openCampaignOnlyClientRegister = function () {
-                openAgentClientRegisterModal();
-                setTimeout(function () {
-                    var eng = document.getElementById("agentClientEngagementType");
-                    if (eng) { eng.value = "campaign_only"; onAgentRegisterEngagementChange(); }
-                }, 120);
-            };
+            // Event delegation so the nav button always works even if onclick is stripped
+            document.addEventListener("click", function (ev) {
+                var t = ev.target;
+                if (!t || !t.closest) return;
+                var btn = t.closest("[data-action='register-campaign-client'], #btnRegisterCampaignClient");
+                if (!btn) {
+                    // also match text
+                    btn = t.closest("button.nav-sub-btn");
+                    if (btn && /register campaign client/i.test(btn.textContent || "")) {
+                        /* ok */
+                    } else {
+                        btn = null;
+                    }
+                }
+                if (!btn) return;
+                ev.preventDefault();
+                ev.stopPropagation();
+                window.openCampaignOnlyClientRegister(ev);
+            }, true);
         })();
     </script>
 
