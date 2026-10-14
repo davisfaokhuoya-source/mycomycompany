@@ -23135,20 +23135,25 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         (function () {
             async function waBridge(actionCareer, actionAgent, payload) {
                 var lastErr = null;
-                // Prefer career system (CareerHub)
+                // Prefer agent (Gateway already admin-auth'd; AgentLib writes Mongo directly)
                 try {
                     if (typeof executeSecureBridgeCall === "function") {
-                        var r1 = await executeSecureBridgeCall("career", actionCareer, payload);
-                        if (r1 && (r1.success === true || r1.workAreas || r1.entitlement)) return r1;
-                        lastErr = (r1 && r1.message) || lastErr;
+                        var r2 = await executeSecureBridgeCall("agent", actionAgent, Object.assign({}, payload, {
+                            callerVerifiedAdmin: true
+                        }));
+                        if (r2 && r2.success !== false && (r2.success === true || r2.workAreas || r2.entitlement)) return r2;
+                        if (r2 && r2.success === true) return r2;
+                        lastErr = (r2 && r2.message) || lastErr;
                     }
-                } catch (e1) { lastErr = e1.message || String(e1); }
-                // Agent aliases
-                try {
-                    var r2 = await executeSecureBridgeCall("agent", actionAgent, payload);
-                    if (r2 && (r2.success === true || r2.workAreas || r2.entitlement)) return r2;
-                    lastErr = (r2 && r2.message) || lastErr;
                 } catch (e2) { lastErr = e2.message || String(e2); }
+                // Fallback career system
+                try {
+                    var r1 = await executeSecureBridgeCall("career", actionCareer, Object.assign({}, payload, {
+                        callerVerifiedAdmin: true
+                    }));
+                    if (r1 && (r1.success === true || r1.workAreas || r1.entitlement)) return r1;
+                    lastErr = (r1 && r1.message) || lastErr;
+                } catch (e1) { lastErr = e1.message || String(e1); }
                 return { success: false, message: lastErr || "Bridge call failed" };
             }
 
