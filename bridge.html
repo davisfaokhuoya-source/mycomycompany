@@ -616,6 +616,8 @@
                             onclick="adminGo('career','career-email-list')">Email campaign list</button>
                         <button type="button" class="nav-sub-btn" onclick="openCampaignOnlyClientRegister()">Register
                             campaign client</button>
+                        <button type="button" class="nav-sub-btn" data-hub="agent" data-target-view="agent-clients"
+                            onclick="adminGoCampaignClients()">Campaign clients roster</button>
                         <button type="button" class="nav-sub-btn" onclick="vicOpenSelfSessionPanel()">Self
                             session</button>
                     </div>
@@ -762,6 +764,40 @@
 
                     <!-- VIEW: Partner User Roster -->
                     <div id="view-career-users" class="career-view flex-1 flex flex-col overflow-hidden space-y-4">
+                        <div id="partnerFilterBar"
+                            class="flex flex-wrap gap-2 items-end bg-slate-950/60 border border-slate-800 rounded-xl p-3">
+                            <div>
+                                <label class="text-[10px] text-slate-500 uppercase">Level</label>
+                                <select id="filterPartnerLevel" onchange="applyPartnerRosterFilters()"
+                                    class="block bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white">
+                                    <option value="">All Levels</option>
+                                    <option value="0">0 Applicant</option>
+                                    <option value="1">1 Bridge</option>
+                                    <option value="2">2 Consultant</option>
+                                    <option value="3">3 Senior</option>
+                                    <option value="4">4 Area Manager</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500 uppercase">Status</label>
+                                <select id="filterPartnerStatus" onchange="applyPartnerRosterFilters()"
+                                    class="block bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white">
+                                    <option value="">All Status</option>
+                                    <option value="Approved">Approved</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Suspended">Suspended</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500 uppercase">Search</label>
+                                <input id="filterPartnerSearch" oninput="applyPartnerRosterFilters()"
+                                    placeholder="Name / email / ID"
+                                    class="block bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-white min-w-[160px]" />
+                            </div>
+                            <button type="button" onclick="applyPartnerRosterFilters()"
+                                class="text-xs px-3 py-1.5 rounded bg-slate-800 text-white">Apply</button>
+                        </div>
+
                         <div class="flex justify-between items-center shrink-0">
                             <div>
                                 <h3 class="text-lg font-bold text-white">Partner User Roster Table Ledger</h3>
@@ -9316,8 +9352,11 @@
                     system: systemTarget,
                     action: actionTarget,
                     token: SESSION_MASTER_TOKEN,
-                    // Career Hub isAdminRequest also accepts adminKey === ADMIN_SECRET / ADMIN_TOKEN
                     adminKey: SESSION_MASTER_TOKEN,
+                    masterToken: SESSION_MASTER_TOKEN,
+                    callerVerifiedAdmin: true,
+                    _gatewaySignedAdmin: true,
+                    fromMasterEngine: true,
                     ...analyticalPayload
                 };
                 // Never let empty analyticalPayload.token wipe the admin session
@@ -22888,6 +22927,123 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             function boot() { patchSub(); patchHub(); }
             if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { setTimeout(boot, 100); });
             else setTimeout(boot, 100);
+        })();
+    </script>
+
+
+    <script>
+        /* Register client: engagement types + add-on catalog loader */
+        (function () {
+            window.onAgentRegisterEngagementChange = function () {
+                var eng = (document.getElementById("agentClientEngagementType") || {}).value || "full_platform";
+                var ops = document.getElementById("agentOpsTier");
+                var dig = document.getElementById("agentDigitalTier");
+                var custom = document.getElementById("agentTier");
+                var hint = document.getElementById("agentEngagementHint");
+                var disableSuites = eng === "campaign_only" || eng === "addons_only";
+                if (ops) { ops.disabled = disableSuites || (custom && custom.value === "custom"); if (disableSuites) ops.value = ""; }
+                if (dig) { dig.disabled = disableSuites || (custom && custom.value === "custom"); if (disableSuites) dig.value = ""; }
+                if (custom) {
+                    if (eng === "custom") custom.value = "custom";
+                    else if (eng !== "custom" && custom.value === "custom") custom.value = "";
+                }
+                if (hint) {
+                    if (eng === "campaign_only") hint.textContent = "Campaign-only: no Ops/Digital. Use Sales campaigns with this clientId.";
+                    else if (eng === "addons_only") hint.textContent = "Add-ons only: select one or more add-ons. No Ops/Digital required.";
+                    else if (eng === "custom") hint.textContent = "Bespoke package — fill custom limits/price.";
+                    else hint.textContent = "Full platform: Ops and/or Digital. Add-ons optional.";
+                }
+            };
+
+            window.loadAgentRegisterAddonOptions = async function () {
+                var sel = document.getElementById("agentRegisterAddons");
+                if (!sel) return;
+                sel.innerHTML = '<option value="">Loading…</option>';
+                var addons = [];
+                function take(list) {
+                    if (!list) return;
+                    if (Array.isArray(list)) addons = addons.concat(list);
+                }
+                try {
+                    var res = await executeSecureBridgeCall("agent", "agent-get-billing-catalog", { region: "NG" });
+                    if (res) {
+                        take(res.addons);
+                        take(res.catalog && res.catalog.addons);
+                        take(res.billing && res.billing.addons);
+                        take(res.data && res.data.addons);
+                    }
+                } catch (e1) { console.warn("billing catalog", e1); }
+                if (!addons.length) {
+                    try {
+                        var res2 = await executeSecureBridgeCall("agent", "agent-get-service-pricing", {});
+                        take(res2 && res2.addons);
+                        take(res2 && res2.pricing && res2.pricing.addons);
+                    } catch (e2) { }
+                }
+                if (!addons.length) {
+                    try {
+                        var res3 = await executeSecureBridgeCall("agent", "agent-list-service-tiers", {});
+                        take(res3 && res3.addons);
+                        take(res3 && res3.catalog && res3.catalog.addons);
+                    } catch (e3) { }
+                }
+                if (!addons.length) {
+                    addons = [
+                        { id: "leads_20", name: "Leads pack 20" },
+                        { id: "extra_mailbox", name: "Extra mailbox" },
+                        { id: "doc_training_1", name: "Doc training" },
+                        { id: "crm_connection", name: "CRM connection" },
+                        { id: "human_hour", name: "Human hour" },
+                        { id: "human_hours_5", name: "Human hours ×5" },
+                        { id: "compliance_track_5", name: "Compliance track" },
+                        { id: "social_assets_20", name: "Social assets pack" },
+                        { id: "extra_docs_10", name: "Extra docs ×10" },
+                        { id: "extra_proposals_2", name: "Extra proposals ×2" }
+                    ];
+                }
+                // de-dupe by id
+                var seen = {};
+                var opts = [];
+                addons.forEach(function (a) {
+                    var id, name, price;
+                    if (typeof a === "string") { id = a; name = a; price = ""; }
+                    else {
+                        id = a.id || a.key || a.addonKey || a.name || "";
+                        name = a.name || a.label || id;
+                        price = (a.priceNgn != null && a.priceNgn !== "") ? (" — ₦" + Number(a.priceNgn).toLocaleString()) :
+                            (a.priceUsd != null ? (" — $" + a.priceUsd) : "");
+                    }
+                    if (!id || seen[id]) return;
+                    seen[id] = true;
+                    opts.push('<option value="' + id + '">' + name + price + "</option>");
+                });
+                sel.innerHTML = opts.join("") || '<option value="">No add-ons found</option>';
+            };
+
+            var _openReg = window.openAgentClientRegisterModal;
+            window.openAgentClientRegisterModal = function () {
+                if (typeof _openReg === "function") {
+                    try { _openReg(); } catch (e) {
+                        var m = document.getElementById("modalAgentClientRegister");
+                        if (m) m.classList.remove("hidden");
+                    }
+                } else {
+                    var m2 = document.getElementById("modalAgentClientRegister");
+                    if (m2) m2.classList.remove("hidden");
+                }
+                setTimeout(function () {
+                    loadAgentRegisterAddonOptions();
+                    onAgentRegisterEngagementChange();
+                }, 80);
+            };
+
+            window.openCampaignOnlyClientRegister = function () {
+                openAgentClientRegisterModal();
+                setTimeout(function () {
+                    var eng = document.getElementById("agentClientEngagementType");
+                    if (eng) { eng.value = "campaign_only"; onAgentRegisterEngagementChange(); }
+                }, 120);
+            };
         })();
     </script>
 

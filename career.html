@@ -1081,6 +1081,174 @@
 
         <!-- DASHBOARD -->
         <div id="dashboardSection" class="d-none">
+
+            <style>
+                .vic-work-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                    gap: 1rem;
+                    margin: 1rem 0 1.5rem
+                }
+
+                .vic-work-card {
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    padding: 1.25rem;
+                    background: #fff;
+                    position: relative;
+                    min-height: 140px;
+                    cursor: pointer;
+                    transition: .15s
+                }
+
+                .vic-work-card:hover {
+                    border-color: #10b981;
+                    box-shadow: 0 4px 14px rgba(16, 185, 129, .12)
+                }
+
+                .vic-work-card.locked {
+                    opacity: .72;
+                    cursor: not-allowed;
+                    background: #f8fafc
+                }
+
+                .vic-work-card.locked:hover {
+                    border-color: #e2e8f0;
+                    box-shadow: none
+                }
+
+                .vic-work-card h4 {
+                    margin: 0 0 .35rem;
+                    font-size: 1rem;
+                    font-weight: 700;
+                    color: #0f172a
+                }
+
+                .vic-work-card p {
+                    margin: 0;
+                    font-size: .8rem;
+                    color: #64748b
+                }
+
+                .vic-work-lock {
+                    position: absolute;
+                    top: .75rem;
+                    right: .75rem;
+                    color: #94a3b8;
+                    font-size: 1.1rem
+                }
+
+                .vic-work-badge {
+                    display: inline-block;
+                    margin-top: .6rem;
+                    font-size: .65rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: .04em;
+                    padding: .2rem .5rem;
+                    border-radius: 999px
+                }
+
+                .vic-work-badge.open {
+                    background: #ecfdf5;
+                    color: #047857
+                }
+
+                .vic-work-badge.lock {
+                    background: #f1f5f9;
+                    color: #64748b
+                }
+            </style>
+            <div id="vicWorkAreaCards" class="vic-work-grid d-none">
+                <div class="vic-work-card" data-area="ops" onclick="vicOpenWorkArea('ops')">
+                    <span class="vic-work-lock d-none" data-lock="ops"><i class="fa fa-lock"></i></span>
+                    <h4><i class="fa fa-briefcase text-success me-1"></i> Operations</h4>
+                    <p>Client ops tasks, VA work, and fulfillment assigned to you.</p>
+                    <span class="vic-work-badge open" data-badge="ops">Open</span>
+                </div>
+                <div class="vic-work-card" data-area="compliance" onclick="vicOpenWorkArea('compliance')">
+                    <span class="vic-work-lock d-none" data-lock="compliance"><i class="fa fa-lock"></i></span>
+                    <h4><i class="fa fa-shield-alt text-primary me-1"></i> Compliance submissions</h4>
+                    <p>Submit and track compliance / client documentation jobs.</p>
+                    <span class="vic-work-badge open" data-badge="compliance">Open</span>
+                </div>
+                <div class="vic-work-card" data-area="campaigns" onclick="vicOpenWorkArea('campaigns')">
+                    <span class="vic-work-lock d-none" data-lock="campaigns"><i class="fa fa-lock"></i></span>
+                    <h4><i class="fa fa-bullhorn text-warning me-1"></i> Sales campaigns</h4>
+                    <p>Call, email, and close leads for campaign-only and client sales desks.</p>
+                    <span class="vic-work-badge open" data-badge="campaigns">Open</span>
+                </div>
+            </div>
+            <script>
+                (function () {
+                    window.__vicWorkAccess = { ops: true, compliance: true, campaigns: false };
+                    function setLock(area, allowed) {
+                        window.__vicWorkAccess[area] = !!allowed;
+                        var card = document.querySelector('.vic-work-card[data-area="' + area + '"]');
+                        if (!card) return;
+                        card.classList.toggle('locked', !allowed);
+                        var lock = card.querySelector('[data-lock="' + area + '"]');
+                        var badge = card.querySelector('[data-badge="' + area + '"]');
+                        if (lock) lock.classList.toggle('d-none', !!allowed);
+                        if (badge) {
+                            badge.textContent = allowed ? 'Open' : 'Locked';
+                            badge.className = 'vic-work-badge ' + (allowed ? 'open' : 'lock');
+                        }
+                    }
+                    window.vicApplyWorkAreaAccess = function (user) {
+                        user = user || {};
+                        var level = parseInt(user.level, 10) || 0;
+                        var areas = user.workAreas || user.entitlements || {};
+                        // Defaults: level>=1 ops+compliance; campaigns if flagged or level>=2
+                        var ops = areas.ops !== false && level >= 1;
+                        var compliance = areas.compliance !== false && level >= 1;
+                        var campaigns = areas.campaigns === true || areas.sales === true || level >= 2;
+                        if (areas.ops === true) ops = true;
+                        if (areas.compliance === true) compliance = true;
+                        if (areas.campaigns === false) campaigns = false;
+                        setLock('ops', ops);
+                        setLock('compliance', compliance);
+                        setLock('campaigns', campaigns);
+                        var wrap = document.getElementById('vicWorkAreaCards');
+                        if (wrap) wrap.classList.remove('d-none');
+                    };
+                    window.vicOpenWorkArea = function (area) {
+                        if (!window.__vicWorkAccess[area]) {
+                            alert('This area is locked for your account. Ask admin to enable ' + area + ' access.');
+                            return;
+                        }
+                        if (area === 'campaigns') {
+                            var el = document.querySelector('[href="#campaignsTab"], [data-bs-target="#campaignsTab"], #navCampaigns');
+                            if (el) el.click();
+                            else if (typeof showCampaignsPanel === 'function') showCampaignsPanel();
+                            else if (typeof chListMyCampaigns === 'function') chListMyCampaigns();
+                            else alert('Open Sales Campaigns from the menu.');
+                            return;
+                        }
+                        if (area === 'compliance') {
+                            var c = document.querySelector('[href="#submitTab"], [href="#recordsTab"], #navSubmit');
+                            if (c) c.click();
+                            else alert('Open Compliance / Submit Client from the menu.');
+                            return;
+                        }
+                        if (area === 'ops') {
+                            var o = document.querySelector('[href="#tasksTab"], #navTasks, [href="#jobsTab"]');
+                            if (o) o.click();
+                            else alert('Open Tasks / Operations from the menu.');
+                        }
+                    };
+                    // Hook dashboard load
+                    var _orig = window.loadDashboard || window.fetchDashboard;
+                    window.vicAfterDashboard = function (res) {
+                        try {
+                            if (res && res.user) vicApplyWorkAreaAccess(res.user);
+                            else vicApplyWorkAreaAccess({ level: 1 });
+                        } catch (e) { }
+                    };
+                })();
+            </script>
+
+
             <div class="tv-shell">
 
                 <!-- ===== SIDEBAR (desktop/tablet-landscape only — see .tv-sidebar
@@ -3026,6 +3194,13 @@
                 document.getElementById("dashTierName").textContent =
                     TIER_NAMES[currentUser.level] || "Applicant";
                 buildTierLadder(getUserLevel());
+                try {
+                    if (typeof vicApplyWorkAreaAccess === "function") {
+                        vicApplyWorkAreaAccess(currentUser);
+                    } else if (typeof vicAfterDashboard === "function") {
+                        vicAfterDashboard(refreshRes);
+                    }
+                } catch (_wa) { }
 
                 buildDropdownMenu();
 
@@ -5028,6 +5203,7 @@
     <script src="lib/easing/easing.min.js"></script>
     <script src="js/main.js"></script>
     <script type="module" src="js/social.js"></script>
+    <script type="module" src="js/policies.js"></script>
     <script type="module" src="js/footer.js"></script>
 </body>
 
