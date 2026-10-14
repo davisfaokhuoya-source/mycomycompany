@@ -864,6 +864,141 @@
                 display: none;
             }
         }
+
+        /* Work area chooser (Ops / Compliance / Campaigns) */
+        .vic-wa-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin: 0 0 18px;
+        }
+
+        @media (max-width: 768px) {
+            .vic-wa-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .vic-wa-card {
+            border: 1px solid #E7E9EE;
+            border-radius: 14px;
+            padding: 18px 16px 16px;
+            background: #fff;
+            text-align: left;
+            position: relative;
+            min-height: 150px;
+            cursor: pointer;
+            transition: border-color .15s, box-shadow .15s, transform .15s;
+            width: 100%;
+        }
+
+        .vic-wa-card:hover:not(:disabled):not(.locked) {
+            border-color: #E07410;
+            box-shadow: 0 6px 18px rgba(224, 116, 16, .12);
+            transform: translateY(-1px);
+        }
+
+        .vic-wa-card.locked,
+        .vic-wa-card:disabled {
+            opacity: .7;
+            cursor: not-allowed;
+            background: #F8FAFC;
+        }
+
+        .vic-wa-card .wa-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .vic-wa-card.ops .wa-icon {
+            background: #EAF7EE;
+            color: #1E8E4F;
+        }
+
+        .vic-wa-card.compliance .wa-icon {
+            background: #E9F1FF;
+            color: #1E5FBF;
+        }
+
+        .vic-wa-card.campaigns .wa-icon {
+            background: #FBEBDD;
+            color: #C85E0A;
+        }
+
+        .vic-wa-card h4 {
+            font-size: 15px;
+            font-weight: 700;
+            margin: 0 0 6px;
+            color: #10151C;
+        }
+
+        .vic-wa-card p {
+            font-size: 12.5px;
+            color: #5B6472;
+            margin: 0;
+            line-height: 1.45;
+        }
+
+        .vic-wa-card .wa-lock {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            color: #94a3b8;
+            font-size: 16px;
+        }
+
+        .vic-wa-card .wa-status {
+            display: inline-block;
+            margin-top: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            padding: 3px 8px;
+            border-radius: 999px;
+        }
+
+        .vic-wa-card .wa-status.open {
+            background: #ecfdf5;
+            color: #047857;
+        }
+
+        .vic-wa-card .wa-status.lock {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .vic-wa-active-bar {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background: #0B1B2B;
+            color: #fff;
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 14px;
+            font-size: 13px;
+        }
+
+        .vic-wa-active-bar.show {
+            display: flex;
+        }
+
+        .vic-wa-active-bar button {
+            border: 1px solid rgba(255, 255, 255, .25);
+            background: transparent;
+            color: #fff;
+            border-radius: 8px;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
     </style>
 </head>
 
@@ -1159,96 +1294,6 @@
                     color: #64748b
                 }
             </style>
-            <div id="vicWorkAreaCards" class="vic-work-grid d-none">
-                <div class="vic-work-card" data-area="ops" onclick="vicOpenWorkArea('ops')">
-                    <span class="vic-work-lock d-none" data-lock="ops"><i class="fa fa-lock"></i></span>
-                    <h4><i class="fa fa-briefcase text-success me-1"></i> Operations</h4>
-                    <p>Client ops tasks, VA work, and fulfillment assigned to you.</p>
-                    <span class="vic-work-badge open" data-badge="ops">Open</span>
-                </div>
-                <div class="vic-work-card" data-area="compliance" onclick="vicOpenWorkArea('compliance')">
-                    <span class="vic-work-lock d-none" data-lock="compliance"><i class="fa fa-lock"></i></span>
-                    <h4><i class="fa fa-shield-alt text-primary me-1"></i> Compliance submissions</h4>
-                    <p>Submit and track compliance / client documentation jobs.</p>
-                    <span class="vic-work-badge open" data-badge="compliance">Open</span>
-                </div>
-                <div class="vic-work-card" data-area="campaigns" onclick="vicOpenWorkArea('campaigns')">
-                    <span class="vic-work-lock d-none" data-lock="campaigns"><i class="fa fa-lock"></i></span>
-                    <h4><i class="fa fa-bullhorn text-warning me-1"></i> Sales campaigns</h4>
-                    <p>Call, email, and close leads for campaign-only and client sales desks.</p>
-                    <span class="vic-work-badge open" data-badge="campaigns">Open</span>
-                </div>
-            </div>
-            <script>
-                (function () {
-                    window.__vicWorkAccess = { ops: true, compliance: true, campaigns: false };
-                    function setLock(area, allowed) {
-                        window.__vicWorkAccess[area] = !!allowed;
-                        var card = document.querySelector('.vic-work-card[data-area="' + area + '"]');
-                        if (!card) return;
-                        card.classList.toggle('locked', !allowed);
-                        var lock = card.querySelector('[data-lock="' + area + '"]');
-                        var badge = card.querySelector('[data-badge="' + area + '"]');
-                        if (lock) lock.classList.toggle('d-none', !!allowed);
-                        if (badge) {
-                            badge.textContent = allowed ? 'Open' : 'Locked';
-                            badge.className = 'vic-work-badge ' + (allowed ? 'open' : 'lock');
-                        }
-                    }
-                    window.vicApplyWorkAreaAccess = function (user) {
-                        user = user || {};
-                        var level = parseInt(user.level, 10) || 0;
-                        var areas = user.workAreas || user.entitlements || {};
-                        // Defaults: level>=1 ops+compliance; campaigns if flagged or level>=2
-                        var ops = areas.ops !== false && level >= 1;
-                        var compliance = areas.compliance !== false && level >= 1;
-                        var campaigns = areas.campaigns === true || areas.sales === true || level >= 2;
-                        if (areas.ops === true) ops = true;
-                        if (areas.compliance === true) compliance = true;
-                        if (areas.campaigns === false) campaigns = false;
-                        setLock('ops', ops);
-                        setLock('compliance', compliance);
-                        setLock('campaigns', campaigns);
-                        var wrap = document.getElementById('vicWorkAreaCards');
-                        if (wrap) wrap.classList.remove('d-none');
-                    };
-                    window.vicOpenWorkArea = function (area) {
-                        if (!window.__vicWorkAccess[area]) {
-                            alert('This area is locked for your account. Ask admin to enable ' + area + ' access.');
-                            return;
-                        }
-                        if (area === 'campaigns') {
-                            var el = document.querySelector('[href="#campaignsTab"], [data-bs-target="#campaignsTab"], #navCampaigns');
-                            if (el) el.click();
-                            else if (typeof showCampaignsPanel === 'function') showCampaignsPanel();
-                            else if (typeof chListMyCampaigns === 'function') chListMyCampaigns();
-                            else alert('Open Sales Campaigns from the menu.');
-                            return;
-                        }
-                        if (area === 'compliance') {
-                            var c = document.querySelector('[href="#submitTab"], [href="#recordsTab"], #navSubmit');
-                            if (c) c.click();
-                            else alert('Open Compliance / Submit Client from the menu.');
-                            return;
-                        }
-                        if (area === 'ops') {
-                            var o = document.querySelector('[href="#tasksTab"], #navTasks, [href="#jobsTab"]');
-                            if (o) o.click();
-                            else alert('Open Tasks / Operations from the menu.');
-                        }
-                    };
-                    // Hook dashboard load
-                    var _orig = window.loadDashboard || window.fetchDashboard;
-                    window.vicAfterDashboard = function (res) {
-                        try {
-                            if (res && res.user) vicApplyWorkAreaAccess(res.user);
-                            else vicApplyWorkAreaAccess({ level: 1 });
-                        } catch (e) { }
-                    };
-                })();
-            </script>
-
-
             <div class="tv-shell">
 
                 <!-- ===== SIDEBAR (desktop/tablet-landscape only — see .tv-sidebar
@@ -1423,6 +1468,64 @@
 
                     <!-- ===== SUB DASHBOARD: boxed panel holding whichever tab is
                  currently active ===== -->
+
+
+                    <!-- WORK AREAS: Operations | Compliance | Sales campaigns | Ops/Digital sales | Lead gen -->
+                    <div id="vicWorkAreaChooser" class="mb-3">
+                        <div class="tier-ladder-label" style="color:#5B6472;margin-bottom:8px;">Choose your work area
+                        </div>
+                        <div class="vic-wa-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));">
+                            <button type="button" class="vic-wa-card ops" id="waCardOps" data-area="ops"
+                                onclick="vicEnterWorkArea('ops')">
+                                <span class="wa-lock d-none" id="waLockOps"><i class="fas fa-lock"></i></span>
+                                <div class="wa-icon"><i class="fas fa-clipboard-list"></i></div>
+                                <h4>Operations</h4>
+                                <p>My Records — track jobs, status, and earnings for work you have submitted.</p>
+                                <span class="wa-status open" id="waStatusOps">Open</span>
+                            </button>
+                            <button type="button" class="vic-wa-card compliance" id="waCardCompliance"
+                                data-area="compliance" onclick="vicEnterWorkArea('compliance')">
+                                <span class="wa-lock d-none" id="waLockCompliance"><i class="fas fa-lock"></i></span>
+                                <div class="wa-icon"><i class="fas fa-shield-alt"></i></div>
+                                <h4>Compliance submissions</h4>
+                                <p>Submit Client — file compliance / client jobs you are assigned to handle.</p>
+                                <span class="wa-status open" id="waStatusCompliance">Open</span>
+                            </button>
+                            <button type="button" class="vic-wa-card campaigns" id="waCardCampaigns"
+                                data-area="campaigns" onclick="vicEnterWorkArea('campaigns')">
+                                <span class="wa-lock d-none" id="waLockCampaigns"><i class="fas fa-lock"></i></span>
+                                <div class="wa-icon"><i class="fas fa-bullhorn"></i></div>
+                                <h4>Sales campaigns</h4>
+                                <p>Work client sales campaigns (real estate, tickets, bookings, etc.) and report
+                                    outcomes.</p>
+                                <span class="wa-status lock" id="waStatusCampaigns">Locked</span>
+                            </button>
+                            <button type="button" class="vic-wa-card" id="waCardPackageSales" data-area="package_sales"
+                                onclick="vicEnterWorkArea('package_sales')" style="border-color:#c4b5fd;">
+                                <span class="wa-lock d-none" id="waLockPackage_sales"><i class="fas fa-lock"></i></span>
+                                <div class="wa-icon" style="background:#ede9fe;color:#6d28d9;"><i
+                                        class="fas fa-box-open"></i></div>
+                                <h4>Ops / Digital sales</h4>
+                                <p>Sell The Victorias Ops, Digital, and add-on packages and earn partner commission.</p>
+                                <span class="wa-status lock" id="waStatusPackage_sales">Locked</span>
+                            </button>
+                            <button type="button" class="vic-wa-card" id="waCardLeadGen" data-area="lead_gen"
+                                onclick="vicEnterWorkArea('lead_gen')" style="border-color:#fca5a5;">
+                                <span class="wa-lock d-none" id="waLockLead_gen"><i class="fas fa-lock"></i></span>
+                                <div class="wa-icon" style="background:#fef2f2;color:#b91c1c;"><i
+                                        class="fas fa-user-plus"></i></div>
+                                <h4>Lead generation</h4>
+                                <p>Mandatory supportive tasks — generate leads within the given timeframe when assigned.
+                                </p>
+                                <span class="wa-status open" id="waStatusLead_gen">Open</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="vic-wa-active-bar" id="vicWaActiveBar">
+                        <span id="vicWaActiveLabel">Working in: —</span>
+                        <button type="button" onclick="vicExitWorkArea()">Change work area</button>
+                    </div>
+
                     <div class="tv-content-card">
 
                         <!-- TAB 0: Submit Client -->
@@ -2677,7 +2780,8 @@
                     { idx: 0, icon: "fas fa-upload", label: "Submit Client" },
                     { idx: 2, icon: "fas fa-paper-plane", label: "Submit Request" },
                     { idx: 1, icon: "fas fa-clipboard-list", label: "My Records" },
-                    { idx: 3, icon: "fas fa-arrow-up", label: "My Upgrades" }
+                    { idx: 3, icon: "fas fa-arrow-up", label: "My Upgrades" },
+                    { idx: 15, icon: "fas fa-bullhorn", label: "Sales Campaigns" }
                 ]
             },
             {
@@ -5205,6 +5309,187 @@
     <script type="module" src="js/social.js"></script>
     <script type="module" src="js/policies.js"></script>
     <script type="module" src="js/footer.js"></script>
+
+    <script>
+        window.vicOpenWorkArea = function (area) {
+            if (typeof vicEnterWorkArea === "function") return vicEnterWorkArea(area);
+            alert("Work area module loading… refresh once.");
+        };
+    </script>
+
+
+    <script>
+        (function () {
+            /**
+             * Work areas (partner):
+             *  ops            → My Records (operations tracking)
+             *  compliance     → Submit Client
+             *  campaigns      → Sales campaigns (client vertical sales desk)
+             *  package_sales  → Selling Victorias Ops / Digital / add-on packages
+             *  lead_gen       → Mandatory "voluntary" supportive tasks (lead generation)
+             */
+            window.__vicWorkAccess = {
+                ops: false,
+                compliance: false,
+                campaigns: false,
+                package_sales: false,
+                lead_gen: false
+            };
+
+            window.vicComputeWorkAccess = function (user) {
+                user = user || window.currentUser || {};
+                var level = parseInt(user.level, 10);
+                if (isNaN(level)) level = 0;
+                var areas = user.workAreas || user.entitlements || {};
+
+                var access = {
+                    ops: level >= 1,
+                    compliance: level >= 1,
+                    campaigns: level >= 2,
+                    package_sales: level >= 1,
+                    lead_gen: level >= 1
+                };
+
+                ["ops", "compliance", "campaigns", "package_sales", "lead_gen"].forEach(function (k) {
+                    if (areas[k] === true || areas[k] === false) access[k] = !!areas[k];
+                });
+                // aliases
+                if (areas.sales === true) access.campaigns = true;
+                if (areas.supportive === true || areas.leadGeneration === true) access.lead_gen = true;
+                if (areas.digitalSales === true || areas.opsSales === true) access.package_sales = true;
+
+                if (level < 1) {
+                    access.ops = false;
+                    access.compliance = false;
+                    access.campaigns = false;
+                    access.package_sales = false;
+                    access.lead_gen = false;
+                }
+                return access;
+            };
+
+            window.vicApplyWorkAreaAccess = function (user) {
+                window.__vicWorkAccess = window.vicComputeWorkAccess(user);
+                function set(area, idSuffix) {
+                    var allowed = !!window.__vicWorkAccess[area];
+                    var card = document.getElementById("waCard" + idSuffix);
+                    var lock = document.getElementById("waLock" + idSuffix);
+                    var status = document.getElementById("waStatus" + idSuffix);
+                    if (card) {
+                        card.classList.toggle("locked", !allowed);
+                        card.disabled = !allowed;
+                    }
+                    if (lock) lock.classList.toggle("d-none", allowed);
+                    if (status) {
+                        status.textContent = allowed ? "Open" : "Locked";
+                        status.className = "wa-status " + (allowed ? "open" : "lock");
+                    }
+                }
+                set("ops", "Ops");
+                set("compliance", "Compliance");
+                set("campaigns", "Campaigns");
+                // HTML ids: waCardPackageSales, waLockPackage_sales, waStatusPackage_sales
+                set("package_sales", "PackageSales");
+                var psCard = document.getElementById("waCardPackageSales");
+                var psLock = document.getElementById("waLockPackage_sales");
+                var psStatus = document.getElementById("waStatusPackage_sales");
+                if (psCard) {
+                    var ok = !!window.__vicWorkAccess.package_sales;
+                    psCard.classList.toggle("locked", !ok);
+                    psCard.disabled = !ok;
+                    if (psLock) psLock.classList.toggle("d-none", ok);
+                    if (psStatus) {
+                        psStatus.textContent = ok ? "Open" : "Locked";
+                        psStatus.className = "wa-status " + (ok ? "open" : "lock");
+                    }
+                }
+                var lgCard = document.getElementById("waCardLeadGen");
+                var lgLock = document.getElementById("waLockLead_gen");
+                var lgStatus = document.getElementById("waStatusLead_gen");
+                if (lgCard) {
+                    var ok2 = !!window.__vicWorkAccess.lead_gen;
+                    lgCard.classList.toggle("locked", !ok2);
+                    lgCard.disabled = !ok2;
+                    if (lgLock) lgLock.classList.toggle("d-none", ok2);
+                    if (lgStatus) {
+                        lgStatus.textContent = ok2 ? "Open" : "Locked";
+                        lgStatus.className = "wa-status " + (ok2 ? "open" : "lock");
+                    }
+                }
+            };
+
+            window.vicEnterWorkArea = function (area) {
+                if (!window.__vicWorkAccess || !window.__vicWorkAccess[area]) {
+                    if (typeof showToast === "function")
+                        showToast("This work area is locked for your account. Ask admin to enable access.", "warning");
+                    else alert("This work area is locked for your account.");
+                    return;
+                }
+                window.__vicActiveWorkArea = area;
+                var bar = document.getElementById("vicWaActiveBar");
+                var label = document.getElementById("vicWaActiveLabel");
+                var names = {
+                    ops: "Operations (My Records)",
+                    compliance: "Compliance submissions (Submit Client)",
+                    campaigns: "Sales campaigns",
+                    package_sales: "Ops / Digital sales",
+                    lead_gen: "Lead generation (mandatory tasks)"
+                };
+                if (label) label.textContent = "Working in: " + (names[area] || area);
+                if (bar) bar.classList.add("show");
+
+                try {
+                    sessionStorage.setItem("vicPartnerWorkArea", area);
+                } catch (_) { }
+
+                if (area === "ops") {
+                    // My Records
+                    if (typeof showTab === "function") showTab(1);
+                    if (typeof loadMyRecords === "function") setTimeout(loadMyRecords, 100);
+                } else if (area === "compliance") {
+                    // Submit Client
+                    if (typeof showTab === "function") showTab(0);
+                } else if (area === "campaigns") {
+                    if (typeof showTab === "function") showTab(15);
+                    setTimeout(function () {
+                        if (typeof chListMyCampaigns === "function") chListMyCampaigns();
+                        if (typeof loadMyCampaignsPanel === "function") loadMyCampaignsPanel();
+                    }, 200);
+                } else if (area === "package_sales") {
+                    // Package sales: use Submit Request / upgrades / payment links as sales path
+                    // Prefer a dedicated tab if present; else Submit Request (2) + note
+                    if (typeof showTab === "function") showTab(2);
+                    if (typeof showToast === "function")
+                        showToast("Ops/Digital sales — use requests and package offers assigned to you.", "info", 2500);
+                } else if (area === "lead_gen") {
+                    // Mandatory supportive / lead generation tasks
+                    if (typeof showTab === "function") {
+                        // Prefer tab 15 campaigns supportive if same panel, else records
+                        try {
+                            showTab(15);
+                        } catch (_) {
+                            showTab(1);
+                        }
+                    }
+                    setTimeout(function () {
+                        if (typeof chListMySupportiveTasks === "function") chListMySupportiveTasks();
+                        else if (typeof loadSupportiveTasks === "function") loadSupportiveTasks();
+                        else if (typeof showToast === "function")
+                            showToast("Lead generation tasks will appear here when admin assigns them.", "info", 3000);
+                    }, 200);
+                }
+            };
+
+            window.vicExitWorkArea = function () {
+                window.__vicActiveWorkArea = null;
+                var bar = document.getElementById("vicWaActiveBar");
+                if (bar) bar.classList.remove("show");
+            };
+
+            window.vicOpenWorkArea = window.vicEnterWorkArea;
+        })();
+    </script>
+
 </body>
 
 </html>
