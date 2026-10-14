@@ -521,6 +521,16 @@
                     <a href="#" class="career-subview-link" data-target-view="career-teams">Teams</a>
                     <a href="#" class="career-subview-link" data-target-view="career-report-tools">Report Tools</a>
                     <a href="#" class="career-subview-link" data-target-view="career-target-tools">Target Tools</a>
+
+                    <a href="#" class="career-subview-link" data-target-view="career-campaigns"
+                        onclick="try{loadAdminCampaignsWorkspace()}catch(e){}">Sales Campaigns</a>
+                    <a href="#" class="career-subview-link" data-target-view="career-supportive-tasks"
+                        onclick="try{loadAdminSupportiveTasks()}catch(e){}">Supportive Tasks</a>
+
+                    <a href="#" class="career-subview-link" data-target-view="career-email-campaigns"
+                        onclick="try{loadAdminEmailCampaigns()}catch(e){}">Email Campaigns</a>
+
+
                     <div class="mt-4 border-t border-slate-800 pt-3 px-1">
                         <span
                             class="text-[10px] font-mono tracking-wider text-slate-500 uppercase px-2 mb-2 block">Universal
@@ -22203,6 +22213,206 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         })();
     </script>
 
+
+
+    <!-- ===== Sales Campaigns (AgentLib ↔ CareerHub Mongo) ===== -->
+    <div id="view-career-campaigns" class="career-view hidden flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6">
+        <div class="max-w-6xl mx-auto space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                    <h2 class="text-lg font-bold text-white">Sales Campaigns</h2>
+                    <p class="text-xs text-slate-400">Verticals: real estate · air tickets · reservations · events ·
+                        consultancy · other. API via Gateway → AgentLib → Mongo.</p>
+                </div>
+                <button type="button" onclick="loadAdminCampaignsWorkspace()"
+                    class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-white">Refresh</button>
+            </div>
+            <div class="grid md:grid-cols-3 gap-3">
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                    <p class="text-[10px] text-slate-500 uppercase">Campaigns</p>
+                    <p id="admCampCount" class="text-2xl font-bold text-white">—</p>
+                </div>
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                    <p class="text-[10px] text-slate-500 uppercase">Open tasks</p>
+                    <p id="admTaskCount" class="text-2xl font-bold text-white">—</p>
+                </div>
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                    <p class="text-[10px] text-slate-500 uppercase">Payable commissions</p>
+                    <p id="admComCount" class="text-2xl font-bold text-white">—</p>
+                </div>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                <h3 class="text-sm font-semibold text-white">Create campaign</h3>
+                <div class="grid md:grid-cols-2 gap-2">
+                    <input id="admCampClientId" placeholder="clientId CLT-..."
+                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                    <input id="admCampName" placeholder="Campaign name"
+                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                    <select id="admCampVertical"
+                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"></select>
+                    <input id="admCampProduct" placeholder="Product name"
+                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                    <input id="admCampList" type="number" placeholder="List price"
+                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                    <input id="admCampMin" type="number" placeholder="Min price"
+                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                    <input id="admCampPct" type="number" placeholder="Commission %"
+                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                    <input id="admCampFixed" type="number" placeholder="Fixed commission (optional)"
+                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                </div>
+                <button type="button" onclick="adminCreateCampaign()"
+                    class="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold">Save campaign</button>
+                <p id="admCampMsg" class="text-[11px] text-slate-400"></p>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                <h3 class="text-sm font-semibold text-white">Assign partner + import leads</h3>
+                <div class="grid md:grid-cols-2 gap-2">
+                    <input id="admAsgCampId" placeholder="campaignId"
+                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                    <input id="admAsgEmail" placeholder="partner email"
+                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                    <input id="admAsgClient" placeholder="clientId for leads"
+                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                    <input id="admAsgQuota" type="number" placeholder="lead quota"
+                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                </div>
+                <textarea id="admLeadsJson" rows="3"
+                    placeholder='[{"name":"...","phone":"...","email":"...","assigneeEmail":"..."}]'
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono"></textarea>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="adminAssignPartner()"
+                        class="text-xs px-3 py-2 rounded-lg bg-indigo-600 text-white">Assign partner</button>
+                    <button type="button" onclick="adminImportCampaignLeads()"
+                        class="text-xs px-3 py-2 rounded-lg bg-teal-600 text-white">Import leads</button>
+                </div>
+                <p id="admAsgMsg" class="text-[11px] text-slate-400"></p>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-x-auto">
+                <h3 class="text-sm font-semibold text-white mb-2">Campaign list</h3>
+                <table class="w-full text-xs text-left">
+                    <thead class="text-slate-500">
+                        <tr>
+                            <th class="p-2">ID</th>
+                            <th>Client</th>
+                            <th>Vertical</th>
+                            <th>Product</th>
+                            <th>Min</th>
+                            <th>%</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admCampTable" class="text-slate-300"></tbody>
+                </table>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                <h3 class="text-sm font-semibold text-white">Confirm sale (after client payment)</h3>
+                <div class="flex flex-wrap gap-2">
+                    <input id="admOutcomeId" placeholder="outcomeId"
+                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                    <input id="admPayRef" placeholder="paymentRef"
+                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                    <button type="button" onclick="adminConfirmOutcome()"
+                        class="text-xs px-3 py-2 rounded-lg bg-emerald-700 text-white">Confirm → commission</button>
+                </div>
+                <p id="admOutMsg" class="text-[11px] text-slate-400"></p>
+            </div>
+        </div>
+    </div>
+    <div <div id="view-career-email-campaigns"
+        class="career-view hidden flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6">
+        <div class="max-w-4xl mx-auto space-y-4">
+            <div class="flex flex-wrap justify-between gap-2 items-center">
+                <div>
+                    <h2 class="text-lg font-bold text-white">Email campaigns</h2>
+                    <p class="text-xs text-slate-400">Pitch services to leads in batches via Gateway → Gmail.
+                        Placeholders: {{name}} {{firstName}} {{ctaUrl}}</p>
+                </div>
+                <button type="button" onclick="loadAdminEmailCampaigns()"
+                    class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-white">Refresh</button>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                <h3 class="text-sm font-semibold text-white">Create campaign</h3>
+                <input id="emcName" placeholder="Campaign name"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                <input id="emcSubject" placeholder="Subject line"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                <textarea id="emcBody" rows="6" placeholder="Body (use {{firstName}}, {{ctaUrl}})"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"></textarea>
+                <input id="emcCta" placeholder="CTA URL (default interest form)"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"
+                    value="https://thevictorias.com.ng/interest" />
+                <input id="emcClientId" placeholder="Optional clientId to load leads from"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                <textarea id="emcManualRecipients" rows="3"
+                    placeholder='Optional JSON: [{"email":"a@b.com","name":"Ada"}]'
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono"></textarea>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="adminCreateEmailCampaign()"
+                        class="text-xs px-3 py-2 rounded-lg bg-emerald-600 text-white font-semibold">Save draft</button>
+                    <button type="button" onclick="adminCreateAndQueueFromLeads()"
+                        class="text-xs px-3 py-2 rounded-lg bg-indigo-600 text-white">Save + load client leads</button>
+                </div>
+                <p id="emcCreateMsg" class="text-[11px] text-slate-400"></p>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                <h3 class="text-sm font-semibold text-white">Send batches</h3>
+                <input id="emcActiveId" placeholder="campaignId"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="adminStartEmailCampaign()"
+                        class="text-xs px-3 py-2 rounded-lg bg-amber-600 text-white">Set status: sending</button>
+                    <button type="button" onclick="adminProcessEmailBatch()"
+                        class="text-xs px-3 py-2 rounded-lg bg-orange-600 text-white font-semibold">Send next batch
+                        (20)</button>
+                    <button type="button" onclick="adminPauseEmailCampaign()"
+                        class="text-xs px-3 py-2 rounded-lg bg-slate-700 text-white">Pause</button>
+                </div>
+                <p id="emcBatchMsg" class="text-[11px] text-slate-400"></p>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-x-auto">
+                <h3 class="text-sm font-semibold text-white mb-2">Campaigns</h3>
+                <table class="w-full text-xs">
+                    <thead class="text-slate-500">
+                        <tr>
+                            <th class="p-2 text-left">ID</th>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>Sent</th>
+                            <th>Pending</th>
+                            <th>Failed</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="emcTable" class="text-slate-300"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-career-supportive-tasks"
+        class="career-view hidden flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6">
+        <div class="max-w-3xl mx-auto space-y-4">
+            <h2 class="text-lg font-bold text-white">Supportive tasks</h2>
+            <p class="text-xs text-slate-400">Voluntary or required; partners must complete within the time window.</p>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                <input id="admTaskTitle" placeholder="Title"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                <textarea id="admTaskDesc" rows="2" placeholder="Description"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"></textarea>
+                <input id="admTaskHours" type="number" placeholder="Window hours (48)"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                <input id="admTaskEmails" placeholder="Assignee emails, comma-separated"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                <label class="flex items-center gap-2 text-xs text-slate-300"><input type="checkbox"
+                        id="admTaskRequired" /> Required</label>
+                <button type="button" onclick="adminCreateSupportiveTask()"
+                    class="text-xs px-4 py-2 rounded-lg bg-amber-600 text-white font-semibold">Create task</button>
+                <p id="admTaskMsg" class="text-[11px] text-slate-400"></p>
+            </div>
+            <div id="admTaskList" class="space-y-2 text-xs text-slate-300"></div>
+        </div>
+    </div>
 
     <!-- Platform Service Availability (global on/off for sellable packages) -->
     <div id="platformAvailabilityPanel"
