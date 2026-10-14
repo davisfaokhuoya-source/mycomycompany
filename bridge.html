@@ -405,6 +405,24 @@
             border-left-color: #34d399;
             font-weight: 600;
         }
+
+
+        /* ===== View visibility guard: .hidden always wins over inline display set by JS ===== */
+        [id^="view-"].hidden {
+            display: none !important;
+        }
+
+        [id^="view-"]:not(.hidden) {
+            display: flex !important;
+        }
+
+        [id^="view-"].grid:not(.hidden) {
+            display: grid !important;
+        }
+
+        [id^="view-"].block:not(.hidden) {
+            display: block !important;
+        }
     </style>
 </head>
 
@@ -571,9 +589,6 @@
                         <button type="button" class="nav-sub-btn" data-hub="career" data-target-view="career-campaigns"
                             onclick="adminGo('career','career-campaigns')">Sales campaigns</button>
                         <button type="button" class="nav-sub-btn" data-hub="career"
-                            data-target-view="career-email-campaigns"
-                            onclick="adminGo('career','career-email-campaigns')">Email campaigns</button>
-                        <button type="button" class="nav-sub-btn" data-hub="career"
                             data-target-view="career-supportive-tasks"
                             onclick="adminGo('career','career-supportive-tasks')">Supportive tasks</button>
                     </div>
@@ -588,10 +603,13 @@
                         <i class="fa-solid fa-chevron-right nav-caret"></i>
                     </button>
                     <div class="nav-group-panel" id="nav-panel-clients">
-                        <button type="button" class="nav-sub-btn" data-hub="client" onclick="adminGo('client')">Client
-                            service center</button>
-                        <button type="button" class="nav-sub-btn" data-hub="leads" onclick="adminGo('leads')">CRM &amp;
-                            leads</button>
+                        <button type="button" class="nav-sub-btn" data-hub="client" data-target-view="client-submitted"
+                            onclick="adminGo('client','client-submitted')">Client service center</button>
+                        <button type="button" class="nav-sub-btn" data-hub="leads" data-target-view="leads-matrix"
+                            onclick="adminGo('leads','leads-matrix')">CRM &amp; leads</button>
+                        <button type="button" class="nav-sub-btn" data-hub="career"
+                            data-target-view="career-email-campaigns"
+                            onclick="adminGo('career','career-email-campaigns')">Email campaigns</button>
                         <button type="button" class="nav-sub-btn" onclick="vicOpenSelfSessionPanel()">Self
                             session</button>
                     </div>
@@ -652,9 +670,9 @@
            HUB: CAREER
       ================================================================= -->
             <section id="hub-career" class="flex-1 flex overflow-hidden">
-                <div
-                    class="w-56 bg-slate-950/40 border-r border-slate-800/60 flex flex-col shrink-0 px-2 py-4 space-y-1">
-                    <!-- Career Sub-Nav -->
+                <div id="careerLegacySubnav"
+                    class="hidden w-56 bg-slate-950/40 border-r border-slate-800/60 flex-col shrink-0 px-2 py-4 space-y-1">
+                    <!-- Career Sub-Nav (legacy — hidden; use left dropdown groups) -->
                     <span class="text-[10px] font-mono tracking-wider text-slate-500 uppercase px-3 mb-2 block">Career
                         Sub-Modules</span>
                     <a href="#" data-target-view="career-users" class="career-subview-link active">Partner User
@@ -1262,214 +1280,216 @@
                         </div>
                     </div>
 
-                </div>
 
-                <div id="view-career-campaigns"
-                    class="career-view hidden flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6">
-                    <div class="max-w-6xl mx-auto space-y-4">
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <div>
-                                <h2 class="text-lg font-bold text-white">Sales Campaigns</h2>
-                                <p class="text-xs text-slate-400">Verticals: real estate · air tickets · reservations ·
-                                    events · consultancy · other. API via Gateway → AgentLib → Mongo.</p>
+                    <div id="view-career-campaigns"
+                        class="career-view hidden block flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6">
+                        <div class="max-w-6xl mx-auto space-y-4">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <h2 class="text-lg font-bold text-white">Sales Campaigns</h2>
+                                    <p class="text-xs text-slate-400">Verticals: real estate · air tickets ·
+                                        reservations · events · consultancy · other. API via Gateway → AgentLib → Mongo.
+                                    </p>
+                                </div>
+                                <button type="button" onclick="loadAdminCampaignsWorkspace()"
+                                    class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-white">Refresh</button>
                             </div>
-                            <button type="button" onclick="loadAdminCampaignsWorkspace()"
-                                class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-white">Refresh</button>
-                        </div>
-                        <div class="grid md:grid-cols-3 gap-3">
-                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
-                                <p class="text-[10px] text-slate-500 uppercase">Campaigns</p>
-                                <p id="admCampCount" class="text-2xl font-bold text-white">—</p>
+                            <div class="grid md:grid-cols-3 gap-3">
+                                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                                    <p class="text-[10px] text-slate-500 uppercase">Campaigns</p>
+                                    <p id="admCampCount" class="text-2xl font-bold text-white">—</p>
+                                </div>
+                                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                                    <p class="text-[10px] text-slate-500 uppercase">Open tasks</p>
+                                    <p id="admTaskCount" class="text-2xl font-bold text-white">—</p>
+                                </div>
+                                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                                    <p class="text-[10px] text-slate-500 uppercase">Payable commissions</p>
+                                    <p id="admComCount" class="text-2xl font-bold text-white">—</p>
+                                </div>
                             </div>
-                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
-                                <p class="text-[10px] text-slate-500 uppercase">Open tasks</p>
-                                <p id="admTaskCount" class="text-2xl font-bold text-white">—</p>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                                <h3 class="text-sm font-semibold text-white">Create campaign</h3>
+                                <div class="grid md:grid-cols-2 gap-2">
+                                    <input id="admCampClientId" placeholder="clientId CLT-..."
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="admCampName" placeholder="Campaign name"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <select id="admCampVertical"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"></select>
+                                    <input id="admCampProduct" placeholder="Product name"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="admCampList" type="number" placeholder="List price"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="admCampMin" type="number" placeholder="Min price"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="admCampPct" type="number" placeholder="Commission %"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="admCampFixed" type="number" placeholder="Fixed commission (optional)"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                </div>
+                                <button type="button" onclick="adminCreateCampaign()"
+                                    class="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold">Save
+                                    campaign</button>
+                                <p id="admCampMsg" class="text-[11px] text-slate-400"></p>
                             </div>
-                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
-                                <p class="text-[10px] text-slate-500 uppercase">Payable commissions</p>
-                                <p id="admComCount" class="text-2xl font-bold text-white">—</p>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                                <h3 class="text-sm font-semibold text-white">Assign partner + import leads</h3>
+                                <div class="grid md:grid-cols-2 gap-2">
+                                    <input id="admAsgCampId" placeholder="campaignId"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="admAsgEmail" placeholder="partner email"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="admAsgClient" placeholder="clientId for leads"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="admAsgQuota" type="number" placeholder="lead quota"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                </div>
+                                <textarea id="admLeadsJson" rows="3"
+                                    placeholder='[{"name":"...","phone":"...","email":"...","assigneeEmail":"..."}]'
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono"></textarea>
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" onclick="adminAssignPartner()"
+                                        class="text-xs px-3 py-2 rounded-lg bg-indigo-600 text-white">Assign
+                                        partner</button>
+                                    <button type="button" onclick="adminImportCampaignLeads()"
+                                        class="text-xs px-3 py-2 rounded-lg bg-teal-600 text-white">Import
+                                        leads</button>
+                                </div>
+                                <p id="admAsgMsg" class="text-[11px] text-slate-400"></p>
                             </div>
-                        </div>
-                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                            <h3 class="text-sm font-semibold text-white">Create campaign</h3>
-                            <div class="grid md:grid-cols-2 gap-2">
-                                <input id="admCampClientId" placeholder="clientId CLT-..."
-                                    class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                                <input id="admCampName" placeholder="Campaign name"
-                                    class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                                <select id="admCampVertical"
-                                    class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"></select>
-                                <input id="admCampProduct" placeholder="Product name"
-                                    class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                                <input id="admCampList" type="number" placeholder="List price"
-                                    class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                                <input id="admCampMin" type="number" placeholder="Min price"
-                                    class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                                <input id="admCampPct" type="number" placeholder="Commission %"
-                                    class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                                <input id="admCampFixed" type="number" placeholder="Fixed commission (optional)"
-                                    class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-x-auto">
+                                <h3 class="text-sm font-semibold text-white mb-2">Campaign list</h3>
+                                <table class="w-full text-xs text-left">
+                                    <thead class="text-slate-500">
+                                        <tr>
+                                            <th class="p-2">ID</th>
+                                            <th>Client</th>
+                                            <th>Vertical</th>
+                                            <th>Product</th>
+                                            <th>Min</th>
+                                            <th>%</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admCampTable" class="text-slate-300"></tbody>
+                                </table>
                             </div>
-                            <button type="button" onclick="adminCreateCampaign()"
-                                class="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold">Save
-                                campaign</button>
-                            <p id="admCampMsg" class="text-[11px] text-slate-400"></p>
-                        </div>
-                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                            <h3 class="text-sm font-semibold text-white">Assign partner + import leads</h3>
-                            <div class="grid md:grid-cols-2 gap-2">
-                                <input id="admAsgCampId" placeholder="campaignId"
-                                    class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                                <input id="admAsgEmail" placeholder="partner email"
-                                    class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                                <input id="admAsgClient" placeholder="clientId for leads"
-                                    class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                                <input id="admAsgQuota" type="number" placeholder="lead quota"
-                                    class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                                <h3 class="text-sm font-semibold text-white">Confirm sale (after client payment)</h3>
+                                <div class="flex flex-wrap gap-2">
+                                    <input id="admOutcomeId" placeholder="outcomeId"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="admPayRef" placeholder="paymentRef"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <button type="button" onclick="adminConfirmOutcome()"
+                                        class="text-xs px-3 py-2 rounded-lg bg-emerald-700 text-white">Confirm →
+                                        commission</button>
+                                </div>
+                                <p id="admOutMsg" class="text-[11px] text-slate-400"></p>
                             </div>
-                            <textarea id="admLeadsJson" rows="3"
-                                placeholder='[{"name":"...","phone":"...","email":"...","assigneeEmail":"..."}]'
-                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono"></textarea>
-                            <div class="flex flex-wrap gap-2">
-                                <button type="button" onclick="adminAssignPartner()"
-                                    class="text-xs px-3 py-2 rounded-lg bg-indigo-600 text-white">Assign
-                                    partner</button>
-                                <button type="button" onclick="adminImportCampaignLeads()"
-                                    class="text-xs px-3 py-2 rounded-lg bg-teal-600 text-white">Import leads</button>
-                            </div>
-                            <p id="admAsgMsg" class="text-[11px] text-slate-400"></p>
-                        </div>
-                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-x-auto">
-                            <h3 class="text-sm font-semibold text-white mb-2">Campaign list</h3>
-                            <table class="w-full text-xs text-left">
-                                <thead class="text-slate-500">
-                                    <tr>
-                                        <th class="p-2">ID</th>
-                                        <th>Client</th>
-                                        <th>Vertical</th>
-                                        <th>Product</th>
-                                        <th>Min</th>
-                                        <th>%</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="admCampTable" class="text-slate-300"></tbody>
-                            </table>
-                        </div>
-                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
-                            <h3 class="text-sm font-semibold text-white">Confirm sale (after client payment)</h3>
-                            <div class="flex flex-wrap gap-2">
-                                <input id="admOutcomeId" placeholder="outcomeId"
-                                    class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                                <input id="admPayRef" placeholder="paymentRef"
-                                    class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                                <button type="button" onclick="adminConfirmOutcome()"
-                                    class="text-xs px-3 py-2 rounded-lg bg-emerald-700 text-white">Confirm →
-                                    commission</button>
-                            </div>
-                            <p id="admOutMsg" class="text-[11px] text-slate-400"></p>
-                        </div>
-                    </div>
-                </div>
-                <div id="view-career-email-campaigns"
-                    class="career-view hidden flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6">
-                    <div class="max-w-4xl mx-auto space-y-4">
-                        <div class="flex flex-wrap justify-between gap-2 items-center">
-                            <div>
-                                <h2 class="text-lg font-bold text-white">Email campaigns</h2>
-                                <p class="text-xs text-slate-400">Pitch services to leads in batches via Gateway →
-                                    Gmail. Placeholders: {{name}} {{firstName}} {{ctaUrl}}</p>
-                            </div>
-                            <button type="button" onclick="loadAdminEmailCampaigns()"
-                                class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-white">Refresh</button>
-                        </div>
-                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
-                            <h3 class="text-sm font-semibold text-white">Create campaign</h3>
-                            <input id="emcName" placeholder="Campaign name"
-                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                            <input id="emcSubject" placeholder="Subject line"
-                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                            <textarea id="emcBody" rows="6" placeholder="Body (use {{firstName}}, {{ctaUrl}})"
-                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"></textarea>
-                            <input id="emcCta" placeholder="CTA URL (default interest form)"
-                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"
-                                value="https://thevictorias.com.ng/interest" />
-                            <input id="emcClientId" placeholder="Optional clientId to load leads from"
-                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                            <textarea id="emcManualRecipients" rows="3"
-                                placeholder='Optional JSON: [{"email":"a@b.com","name":"Ada"}]'
-                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono"></textarea>
-                            <div class="flex flex-wrap gap-2">
-                                <button type="button" onclick="adminCreateEmailCampaign()"
-                                    class="text-xs px-3 py-2 rounded-lg bg-emerald-600 text-white font-semibold">Save
-                                    draft</button>
-                                <button type="button" onclick="adminCreateAndQueueFromLeads()"
-                                    class="text-xs px-3 py-2 rounded-lg bg-indigo-600 text-white">Save + load client
-                                    leads</button>
-                            </div>
-                            <p id="emcCreateMsg" class="text-[11px] text-slate-400"></p>
-                        </div>
-                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
-                            <h3 class="text-sm font-semibold text-white">Send batches</h3>
-                            <input id="emcActiveId" placeholder="campaignId"
-                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                            <div class="flex flex-wrap gap-2">
-                                <button type="button" onclick="adminStartEmailCampaign()"
-                                    class="text-xs px-3 py-2 rounded-lg bg-amber-600 text-white">Set status:
-                                    sending</button>
-                                <button type="button" onclick="adminProcessEmailBatch()"
-                                    class="text-xs px-3 py-2 rounded-lg bg-orange-600 text-white font-semibold">Send
-                                    next batch (20)</button>
-                                <button type="button" onclick="adminPauseEmailCampaign()"
-                                    class="text-xs px-3 py-2 rounded-lg bg-slate-700 text-white">Pause</button>
-                            </div>
-                            <p id="emcBatchMsg" class="text-[11px] text-slate-400"></p>
-                        </div>
-                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-x-auto">
-                            <h3 class="text-sm font-semibold text-white mb-2">Campaigns</h3>
-                            <table class="w-full text-xs">
-                                <thead class="text-slate-500">
-                                    <tr>
-                                        <th class="p-2 text-left">ID</th>
-                                        <th>Name</th>
-                                        <th>Status</th>
-                                        <th>Sent</th>
-                                        <th>Pending</th>
-                                        <th>Failed</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="emcTable" class="text-slate-300"></tbody>
-                            </table>
                         </div>
                     </div>
-                </div>
-                <div id="view-career-supportive-tasks"
-                    class="career-view hidden flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6">
-                    <div class="max-w-3xl mx-auto space-y-4">
-                        <h2 class="text-lg font-bold text-white">Supportive tasks</h2>
-                        <p class="text-xs text-slate-400">Voluntary or required; partners must complete within the time
-                            window.</p>
-                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
-                            <input id="admTaskTitle" placeholder="Title"
-                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                            <textarea id="admTaskDesc" rows="2" placeholder="Description"
-                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"></textarea>
-                            <input id="admTaskHours" type="number" placeholder="Window hours (48)"
-                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                            <input id="admTaskEmails" placeholder="Assignee emails, comma-separated"
-                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                            <label class="flex items-center gap-2 text-xs text-slate-300"><input type="checkbox"
-                                    id="admTaskRequired" /> Required</label>
-                            <button type="button" onclick="adminCreateSupportiveTask()"
-                                class="text-xs px-4 py-2 rounded-lg bg-amber-600 text-white font-semibold">Create
-                                task</button>
-                            <p id="admTaskMsg" class="text-[11px] text-slate-400"></p>
+                    <div id="view-career-email-campaigns"
+                        class="career-view hidden block flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6">
+                        <div class="max-w-4xl mx-auto space-y-4">
+                            <div class="flex flex-wrap justify-between gap-2 items-center">
+                                <div>
+                                    <h2 class="text-lg font-bold text-white">Email campaigns</h2>
+                                    <p class="text-xs text-slate-400">Pitch services to leads in batches via Gateway →
+                                        Gmail. Placeholders: {{name}} {{firstName}} {{ctaUrl}}</p>
+                                </div>
+                                <button type="button" onclick="loadAdminEmailCampaigns()"
+                                    class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-white">Refresh</button>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                                <h3 class="text-sm font-semibold text-white">Create campaign</h3>
+                                <input id="emcName" placeholder="Campaign name"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                <input id="emcSubject" placeholder="Subject line"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                <textarea id="emcBody" rows="6" placeholder="Body (use {{firstName}}, {{ctaUrl}})"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"></textarea>
+                                <input id="emcCta" placeholder="CTA URL (default interest form)"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"
+                                    value="https://thevictorias.com.ng/interest" />
+                                <input id="emcClientId" placeholder="Optional clientId to load leads from"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                <textarea id="emcManualRecipients" rows="3"
+                                    placeholder='Optional JSON: [{"email":"a@b.com","name":"Ada"}]'
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono"></textarea>
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" onclick="adminCreateEmailCampaign()"
+                                        class="text-xs px-3 py-2 rounded-lg bg-emerald-600 text-white font-semibold">Save
+                                        draft</button>
+                                    <button type="button" onclick="adminCreateAndQueueFromLeads()"
+                                        class="text-xs px-3 py-2 rounded-lg bg-indigo-600 text-white">Save + load client
+                                        leads</button>
+                                </div>
+                                <p id="emcCreateMsg" class="text-[11px] text-slate-400"></p>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                                <h3 class="text-sm font-semibold text-white">Send batches</h3>
+                                <input id="emcActiveId" placeholder="campaignId"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" onclick="adminStartEmailCampaign()"
+                                        class="text-xs px-3 py-2 rounded-lg bg-amber-600 text-white">Set status:
+                                        sending</button>
+                                    <button type="button" onclick="adminProcessEmailBatch()"
+                                        class="text-xs px-3 py-2 rounded-lg bg-orange-600 text-white font-semibold">Send
+                                        next batch (20)</button>
+                                    <button type="button" onclick="adminPauseEmailCampaign()"
+                                        class="text-xs px-3 py-2 rounded-lg bg-slate-700 text-white">Pause</button>
+                                </div>
+                                <p id="emcBatchMsg" class="text-[11px] text-slate-400"></p>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-x-auto">
+                                <h3 class="text-sm font-semibold text-white mb-2">Campaigns</h3>
+                                <table class="w-full text-xs">
+                                    <thead class="text-slate-500">
+                                        <tr>
+                                            <th class="p-2 text-left">ID</th>
+                                            <th>Name</th>
+                                            <th>Status</th>
+                                            <th>Sent</th>
+                                            <th>Pending</th>
+                                            <th>Failed</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="emcTable" class="text-slate-300"></tbody>
+                                </table>
+                            </div>
                         </div>
-                        <div id="admTaskList" class="space-y-2 text-xs text-slate-300"></div>
                     </div>
-                </div>
+                    <div id="view-career-supportive-tasks"
+                        class="career-view hidden block flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6">
+                        <div class="max-w-3xl mx-auto space-y-4">
+                            <h2 class="text-lg font-bold text-white">Supportive tasks</h2>
+                            <p class="text-xs text-slate-400">Voluntary or required; partners must complete within the
+                                time window.</p>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                                <input id="admTaskTitle" placeholder="Title"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                <textarea id="admTaskDesc" rows="2" placeholder="Description"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"></textarea>
+                                <input id="admTaskHours" type="number" placeholder="Window hours (48)"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                <input id="admTaskEmails" placeholder="Assignee emails, comma-separated"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                <label class="flex items-center gap-2 text-xs text-slate-300"><input type="checkbox"
+                                        id="admTaskRequired" /> Required</label>
+                                <button type="button" onclick="adminCreateSupportiveTask()"
+                                    class="text-xs px-4 py-2 rounded-lg bg-amber-600 text-white font-semibold">Create
+                                    task</button>
+                                <p id="admTaskMsg" class="text-[11px] text-slate-400"></p>
+                            </div>
+                            <div id="admTaskList" class="space-y-2 text-xs text-slate-300"></div>
+                        </div>
+                    </div>
 
+                </div><!-- /career views container -->
             </section>
 
             <!-- ================================================================
@@ -1995,9 +2015,8 @@
 
                 </div><!-- /assessment views container -->
             </section><!-- /Assessment Portal -->
-            <!-- 1. change the opening tag -->
             <section id="hub-client" class="hidden flex-1 flex overflow-hidden">
-                <div id="hub-client" class="hidden flex-1 flex overflow-hidden">
+                <div id="hub-client-body" class="flex-1 flex overflow-hidden">
                     <div
                         class="w-56 bg-slate-950/40 border-r border-slate-800/60 flex flex-col shrink-0 px-2 py-4 space-y-1">
                         <span
@@ -2108,62 +2127,64 @@
                                 </table>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- VIEW: Interest applications (companies requesting service access) -->
-                    <div id="view-client-interest"
-                        class="client-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
-                        <div class="flex flex-wrap justify-between items-center gap-2 shrink-0">
-                            <div>
-                                <h3 class="text-lg font-bold text-white">Interest applications</h3>
-                                <p class="text-xs text-slate-400">Companies that asked to join the service queue.
-                                    Review,
-                                    note, and move status as you contact them.</p>
+                        <!-- VIEW: Interest applications (companies requesting service access) -->
+                        <div id="view-client-interest"
+                            class="client-view hidden flex-1 flex flex-col overflow-hidden space-y-4">
+                            <div class="flex flex-wrap justify-between items-center gap-2 shrink-0">
+                                <div>
+                                    <h3 class="text-lg font-bold text-white">Interest applications</h3>
+                                    <p class="text-xs text-slate-400">Companies that asked to join the service queue.
+                                        Review,
+                                        note, and move status as you contact them.</p>
+                                </div>
+                                <div class="flex gap-2 items-center">
+                                    <select id="interestStatusFilter" onchange="loadInterestApplications()"
+                                        class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-200">
+                                        <option value="">All statuses</option>
+                                        <option value="New">New</option>
+                                        <option value="Contacted">Contacted</option>
+                                        <option value="Qualified">Qualified</option>
+                                        <option value="Onboarding">Onboarding</option>
+                                        <option value="Converted">Converted</option>
+                                        <option value="Declined">Declined</option>
+                                    </select>
+                                    <button type="button" onclick="loadInterestApplications()"
+                                        class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700">
+                                        <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                                    </button>
+                                    <a href="/interest-form.html" target="_blank" rel="noopener"
+                                        class="text-[10px] text-emerald-400 hover:text-emerald-300 underline self-center">Open
+                                        public form</a>
+                                </div>
                             </div>
-                            <div class="flex gap-2 items-center">
-                                <select id="interestStatusFilter" onchange="loadInterestApplications()"
-                                    class="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-200">
-                                    <option value="">All statuses</option>
-                                    <option value="New">New</option>
-                                    <option value="Contacted">Contacted</option>
-                                    <option value="Qualified">Qualified</option>
-                                    <option value="Onboarding">Onboarding</option>
-                                    <option value="Converted">Converted</option>
-                                    <option value="Declined">Declined</option>
-                                </select>
-                                <button type="button" onclick="loadInterestApplications()"
-                                    class="bg-slate-800 hover:bg-slate-700 text-xs text-white font-medium py-1.5 px-3 rounded border border-slate-700">
-                                    <i class="fa-solid fa-arrows-rotate"></i> Refresh
-                                </button>
-                                <a href="/interest-form.html" target="_blank" rel="noopener"
-                                    class="text-[10px] text-emerald-400 hover:text-emerald-300 underline self-center">Open
-                                    public form</a>
+                            <div class="flex-1 overflow-auto custom-scrollbar border border-slate-800 rounded-lg">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-slate-900/80 text-slate-500 sticky top-0">
+                                        <tr>
+                                            <th class="p-2 font-medium whitespace-nowrap">When</th>
+                                            <th class="p-2 font-medium">Company</th>
+                                            <th class="p-2 font-medium">Contact</th>
+                                            <th class="p-2 font-medium">Services / packages</th>
+                                            <th class="p-2 font-medium">Region</th>
+                                            <th class="p-2 font-medium">Status</th>
+                                            <th class="p-2 font-medium">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="interestApplicationsBody"
+                                        class="divide-y divide-slate-800/80 text-slate-300">
+                                        <tr>
+                                            <td colspan="6" class="p-4 text-slate-600">Open this tab to load
+                                                applications.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                        <div class="flex-1 overflow-auto custom-scrollbar border border-slate-800 rounded-lg">
-                            <table class="w-full text-left text-xs">
-                                <thead class="bg-slate-900/80 text-slate-500 sticky top-0">
-                                    <tr>
-                                        <th class="p-2 font-medium whitespace-nowrap">When</th>
-                                        <th class="p-2 font-medium">Company</th>
-                                        <th class="p-2 font-medium">Contact</th>
-                                        <th class="p-2 font-medium">Services / packages</th>
-                                        <th class="p-2 font-medium">Region</th>
-                                        <th class="p-2 font-medium">Status</th>
-                                        <th class="p-2 font-medium">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="interestApplicationsBody"
-                                    class="divide-y divide-slate-800/80 text-slate-300">
-                                    <tr>
-                                        <td colspan="6" class="p-4 text-slate-600">Open this tab to load applications.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
 
+                    </div><!-- /client views container -->
+                </div><!-- /hub-client-body -->
             </section>
 
             <!-- ================================================================
@@ -2288,7 +2309,7 @@
                                     lead</button> <button type="button" onclick="vicRunSystemAiHealth()"
                                     class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-200 border border-slate-700">System
                                     AI tips</button>
-                                </button>
+
                                 <button type="button" onclick="openLeadAiOutreachPanel()"
                                     class="bg-blue-600 hover:bg-blue-500 text-xs text-white font-medium py-1.5 px-3 rounded shadow flex items-center gap-1">
                                     <i class="fa-solid fa-wand-magic-sparkles"></i> AI email selected
@@ -5589,8 +5610,8 @@
 
                     <!-- JOB QUEUE -->
 
-                    <div id="view-monitor-error-codes" class="agent-view hidden flex-1 flex-col overflow-hidden p-4"
-                        style="display:none;">
+                    <div id="view-monitor-error-codes"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden p-4" style="display:none;">
                         <div class="flex items-center justify-between mb-3">
                             <div>
                                 <h2 class="text-sm font-bold text-white">Client error codes</h2>
@@ -5604,8 +5625,8 @@
                         </div>
                     </div>
 
-                    <div id="view-monitor-service-flags" class="agent-view hidden flex-1 flex-col overflow-hidden p-4"
-                        style="display:none;">
+                    <div id="view-monitor-service-flags"
+                        class="agent-view hidden flex-1 flex flex-col overflow-hidden p-4" style="display:none;">
                         <div class="flex flex-wrap items-end gap-2 mb-3">
                             <div class="flex-1 min-w-[12rem]">
                                 <h2 class="text-sm font-bold text-white">Client service switches</h2>
@@ -22574,179 +22595,189 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
 
     <!-- ===== Sales Campaigns (AgentLib ↔ CareerHub Mongo) ===== -->
 
-    <div <!-- Platform Service Availability (global on/off for sellable packages) -->
-        <div id="platformAvailabilityPanel"
-            class="hidden fixed inset-0 z-[70] bg-black/75 flex items-center justify-center p-4">
-            <div
-                class="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full p-5 max-h-[90vh] overflow-y-auto space-y-3">
-                <div class="flex justify-between items-start gap-2">
-                    <div>
-                        <h3 class="text-white font-bold text-sm">Service availability (buy / renew)</h3>
-                        <p class="text-[11px] text-slate-400 mt-1">Turn packages off so clients cannot buy or renew
-                            them.
-                            Usage flags remain separate.</p>
-                    </div>
-                    <button type="button" class="text-slate-400 text-lg"
-                        onclick="document.getElementById('platformAvailabilityPanel').classList.add('hidden')">&times;</button>
+    <!-- Platform Service Availability (global on/off for sellable packages) -->
+    <div id="platformAvailabilityPanel"
+        class="hidden fixed inset-0 z-[70] bg-black/75 flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full p-5 max-h-[90vh] overflow-y-auto space-y-3">
+            <div class="flex justify-between items-start gap-2">
+                <div>
+                    <h3 class="text-white font-bold text-sm">Service availability (buy / renew)</h3>
+                    <p class="text-[11px] text-slate-400 mt-1">Turn packages off so clients cannot buy or renew them.
+                        Usage flags remain separate.</p>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    <button type="button" onclick="adminLoadPlatformAvailability()"
-                        class="text-xs px-3 py-1.5 rounded bg-slate-800 text-white">Refresh</button>
-                    <button type="button" onclick="adminSavePlatformAvailability()"
-                        class="text-xs px-3 py-1.5 rounded bg-emerald-700 text-white">Save changes</button>
-                </div>
-                <p id="platformAvailStatus" class="text-[11px] text-slate-500">Load to edit.</p>
-                <div id="platformAvailList" class="space-y-1 text-xs"></div>
+                <button type="button" class="text-slate-400 text-lg"
+                    onclick="document.getElementById('platformAvailabilityPanel').classList.add('hidden')">&times;</button>
             </div>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" onclick="adminLoadPlatformAvailability()"
+                    class="text-xs px-3 py-1.5 rounded bg-slate-800 text-white">Refresh</button>
+                <button type="button" onclick="adminSavePlatformAvailability()"
+                    class="text-xs px-3 py-1.5 rounded bg-emerald-700 text-white">Save changes</button>
+            </div>
+            <p id="platformAvailStatus" class="text-[11px] text-slate-500">Load to edit.</p>
+            <div id="platformAvailList" class="space-y-1 text-xs"></div>
         </div>
-        <script>
-            (function () {
-                window.__platformAvailDraft = {};
-                window.adminOpenPlatformAvailability = function () {
-                    var p = document.getElementById("platformAvailabilityPanel");
-                    if (p) p.classList.remove("hidden");
-                    adminLoadPlatformAvailability();
-                };
-                window.adminLoadPlatformAvailability = async function () {
-                    var st = document.getElementById("platformAvailStatus");
-                    var list = document.getElementById("platformAvailList");
-                    if (st) st.textContent = "Loading…";
-                    try {
-                        var res = await executeSecureBridgeCall("agent", "agent-get-platform-service-availability", {});
-                        if (!res || !res.success) {
-                            if (st) st.textContent = (res && res.message) || "Failed to load";
-                            return;
-                        }
-                        window.__platformAvailDraft = Object.assign({}, res.availability || {});
-                        var keys = Object.keys(window.__platformAvailDraft).sort();
-                        if (list) {
-                            list.innerHTML = keys.map(function (k) {
-                                var on = !!window.__platformAvailDraft[k];
-                                return '<label class="flex items-center justify-between gap-3 border border-slate-800 rounded-lg px-3 py-2 hover:bg-slate-950/80">' +
-                                    '<span class="font-mono text-slate-300">' + k + '</span>' +
-                                    '<span class="flex items-center gap-2">' +
-                                    '<span class="text-[10px] ' + (on ? "text-emerald-400" : "text-amber-400") + '">' + (on ? "ON (buyable)" : "OFF (blocked)") + "</span>" +
-                                    '<input type="checkbox" data-avail-key="' + k + '" ' + (on ? "checked" : "") +
-                                    ' onchange="window.__platformAvailDraft[this.getAttribute(\'data-avail-key\')]=this.checked;this.parentElement.querySelector(\'span\').textContent=this.checked?\'ON (buyable)\':\'OFF (blocked)\';this.parentElement.querySelector(\'span\').className=\'text-[10px] \'+(this.checked?\'text-emerald-400\':\'text-amber-400\');" />' +
-                                    "</span></label>";
-                            }).join("") || '<p class="text-slate-500">No keys</p>';
-                        }
-                        if (st) st.textContent = (res.unavailable && res.unavailable.length)
-                            ? (res.unavailable.length + " currently OFF")
-                            : "All listed services ON";
-                    } catch (e) {
-                        if (st) st.textContent = String(e.message || e);
+    </div>
+    <script>
+        (function () {
+            window.__platformAvailDraft = {};
+            window.adminOpenPlatformAvailability = function () {
+                var p = document.getElementById("platformAvailabilityPanel");
+                if (p) p.classList.remove("hidden");
+                adminLoadPlatformAvailability();
+            };
+            window.adminLoadPlatformAvailability = async function () {
+                var st = document.getElementById("platformAvailStatus");
+                var list = document.getElementById("platformAvailList");
+                if (st) st.textContent = "Loading…";
+                try {
+                    var res = await executeSecureBridgeCall("agent", "agent-get-platform-service-availability", {});
+                    if (!res || !res.success) {
+                        if (st) st.textContent = (res && res.message) || "Failed to load";
+                        return;
                     }
-                };
-                window.adminSavePlatformAvailability = async function () {
-                    var st = document.getElementById("platformAvailStatus");
-                    try {
-                        var res = await executeSecureBridgeCall("agent", "agent-set-platform-service-availability", {
-                            availability: window.__platformAvailDraft || {}
-                        });
-                        if (typeof showToast === "function") showToast((res && res.message) || (res && res.success ? "Saved" : "Failed"), res && res.success ? "success" : "error");
-                        if (st) st.textContent = (res && res.message) || "";
-                        adminLoadPlatformAvailability();
-                    } catch (e) {
-                        if (typeof showToast === "function") showToast(String(e.message || e), "error");
+                    window.__platformAvailDraft = Object.assign({}, res.availability || {});
+                    var keys = Object.keys(window.__platformAvailDraft).sort();
+                    if (list) {
+                        list.innerHTML = keys.map(function (k) {
+                            var on = !!window.__platformAvailDraft[k];
+                            return '<label class="flex items-center justify-between gap-3 border border-slate-800 rounded-lg px-3 py-2 hover:bg-slate-950/80">' +
+                                '<span class="font-mono text-slate-300">' + k + '</span>' +
+                                '<span class="flex items-center gap-2">' +
+                                '<span class="text-[10px] ' + (on ? "text-emerald-400" : "text-amber-400") + '">' + (on ? "ON (buyable)" : "OFF (blocked)") + "</span>" +
+                                '<input type="checkbox" data-avail-key="' + k + '" ' + (on ? "checked" : "") +
+                                ' onchange="window.__platformAvailDraft[this.getAttribute(\'data-avail-key\')]=this.checked;this.parentElement.querySelector(\'span\').textContent=this.checked?\'ON (buyable)\':\'OFF (blocked)\';this.parentElement.querySelector(\'span\').className=\'text-[10px] \'+(this.checked?\'text-emerald-400\':\'text-amber-400\');" />' +
+                                "</span></label>";
+                        }).join("") || '<p class="text-slate-500">No keys</p>';
                     }
-                };
-            })();
-        </script>
-
-
-        <script>
-            (function () {
-                function whenReady(fn) {
-                    if (typeof switchMasterHub === "function") return fn();
-                    setTimeout(function () { whenReady(fn); }, 50);
+                    if (st) st.textContent = (res.unavailable && res.unavailable.length)
+                        ? (res.unavailable.length + " currently OFF")
+                        : "All listed services ON";
+                } catch (e) {
+                    if (st) st.textContent = String(e.message || e);
                 }
-                whenReady(function () {
-                    if (window.__vicHubPatched) return;
-                    window.__vicHubPatched = true;
-                    var _orig = switchMasterHub;
-                    window.switchMasterHub = function (hubId) {
-                        _orig(hubId);
-                        // Default sub-view for career hub so content is not blank
-                        if (hubId === "career") {
-                            var active = document.querySelector('#nav-panel-career .nav-sub-btn.active');
-                            var view = (active && active.getAttribute("data-target-view")) || "career-users";
-                            setTimeout(function () {
-                                if (typeof switchSubSection === "function") switchSubSection("career", view);
-                            }, 30);
-                        }
-                    };
-                });
-            })();
-        </script>
-
-
-        <script>
-            /* Admin sidebar: 5 dropdown groups + campaign sub-views */
-            (function () {
-                window.toggleAdminNavGroup = function (id) {
-                    var panel = document.getElementById("nav-panel-" + id);
-                    var btn = document.querySelector('.nav-group-btn[data-nav-group="' + id + '"]');
-                    if (!panel || !btn) return;
-                    var open = !panel.classList.contains("open");
-                    panel.classList.toggle("open", open);
-                    btn.classList.toggle("open", open);
-                };
-
-                window.adminGo = function (hubId, subView) {
-                    try {
-                        if (typeof switchMasterHub === "function") switchMasterHub(hubId);
-                    } catch (e) { console.warn(e); }
-                    document.querySelectorAll(".nav-sub-btn").forEach(function (b) { b.classList.remove("active"); });
-                    document.querySelectorAll(".nav-sub-btn").forEach(function (b) {
-                        if (subView && b.getAttribute("data-target-view") === subView) b.classList.add("active");
-                        else if (!subView && b.getAttribute("data-hub") === hubId && !b.getAttribute("data-target-view")) b.classList.add("active");
+            };
+            window.adminSavePlatformAvailability = async function () {
+                var st = document.getElementById("platformAvailStatus");
+                try {
+                    var res = await executeSecureBridgeCall("agent", "agent-set-platform-service-availability", {
+                        availability: window.__platformAvailDraft || {}
                     });
-                    if (subView) {
+                    if (typeof showToast === "function") showToast((res && res.message) || (res && res.success ? "Saved" : "Failed"), res && res.success ? "success" : "error");
+                    if (st) st.textContent = (res && res.message) || "";
+                    adminLoadPlatformAvailability();
+                } catch (e) {
+                    if (typeof showToast === "function") showToast(String(e.message || e), "error");
+                }
+            };
+        })();
+    </script>
+
+
+    <script>
+        (function () {
+            function whenReady(fn) {
+                if (typeof switchMasterHub === "function") return fn();
+                setTimeout(function () { whenReady(fn); }, 50);
+            }
+            whenReady(function () {
+                if (window.__vicHubPatched) return;
+                window.__vicHubPatched = true;
+                var _orig = switchMasterHub;
+                window.switchMasterHub = function (hubId) {
+                    _orig(hubId);
+                    // Default sub-view for career hub so content is not blank
+                    if (hubId === "career") {
+                        var active = document.querySelector('#nav-panel-career .nav-sub-btn.active');
+                        var view = (active && active.getAttribute("data-target-view")) || "career-users";
                         setTimeout(function () {
-                            try {
-                                if (typeof switchSubSection === "function") switchSubSection(String(subView).split("-")[0], subView);
-                            } catch (e2) { console.warn(e2); }
-                            if (subView === "career-campaigns" && typeof loadAdminCampaignsWorkspace === "function") loadAdminCampaignsWorkspace();
-                            if (subView === "career-email-campaigns" && typeof loadAdminEmailCampaigns === "function") loadAdminEmailCampaigns();
-                            if (subView === "career-supportive-tasks" && typeof loadAdminSupportiveTasks === "function") loadAdminSupportiveTasks();
-                        }, 50);
+                            if (typeof switchSubSection === "function") switchSubSection("career", view);
+                        }, 30);
                     }
                 };
+            });
+        })();
+    </script>
 
-                function patchSub() {
-                    if (typeof switchSubSection !== "function" || window.__vicSubPatched) return;
-                    window.__vicSubPatched = true;
-                    var _orig = switchSubSection;
-                    window.switchSubSection = function (system, action) {
-                        _orig(system, action);
+
+    <script>
+        /* Admin sidebar: 5 dropdown groups + campaign sub-views */
+        (function () {
+            window.toggleAdminNavGroup = function (id) {
+                var panel = document.getElementById("nav-panel-" + id);
+                var btn = document.querySelector('.nav-group-btn[data-nav-group="' + id + '"]');
+                if (!panel || !btn) return;
+                var open = !panel.classList.contains("open");
+                panel.classList.toggle("open", open);
+                btn.classList.toggle("open", open);
+            };
+
+            window.adminGo = function (hubId, subView) {
+                try {
+                    if (typeof switchMasterHub === "function") switchMasterHub(hubId);
+                } catch (e) { console.warn(e); }
+                document.querySelectorAll(".nav-sub-btn").forEach(function (b) { b.classList.remove("active"); });
+                document.querySelectorAll(".nav-sub-btn").forEach(function (b) {
+                    if (subView && b.getAttribute("data-target-view") === subView) b.classList.add("active");
+                    else if (!subView && b.getAttribute("data-hub") === hubId && !b.getAttribute("data-target-view")) b.classList.add("active");
+                });
+                if (subView) {
+                    setTimeout(function () {
                         try {
-                            if (action === "career-campaigns" && typeof loadAdminCampaignsWorkspace === "function") loadAdminCampaignsWorkspace();
-                            if (action === "career-email-campaigns" && typeof loadAdminEmailCampaigns === "function") loadAdminEmailCampaigns();
-                            if (action === "career-supportive-tasks" && typeof loadAdminSupportiveTasks === "function") loadAdminSupportiveTasks();
-                        } catch (e) { }
-                    };
+                            if (typeof switchSubSection === "function") switchSubSection(String(subView).split("-")[0], subView);
+                        } catch (e2) { console.warn(e2); }
+                        if (subView === "career-campaigns" && typeof loadAdminCampaignsWorkspace === "function") loadAdminCampaignsWorkspace();
+                        if (subView === "career-email-campaigns" && typeof loadAdminEmailCampaigns === "function") loadAdminEmailCampaigns();
+                        if (subView === "career-supportive-tasks" && typeof loadAdminSupportiveTasks === "function") loadAdminSupportiveTasks();
+                    }, 50);
                 }
-                function patchHub() {
-                    if (typeof switchMasterHub !== "function" || window.__vicHubPatched2) return;
-                    window.__vicHubPatched2 = true;
-                    var _origH = switchMasterHub;
-                    window.switchMasterHub = function (hubId) {
-                        _origH(hubId);
-                        if (hubId === "career") {
-                            var active = document.querySelector("#nav-panel-career .nav-sub-btn.active");
-                            var view = (active && active.getAttribute("data-target-view")) || "career-users";
-                            setTimeout(function () {
-                                if (typeof switchSubSection === "function") switchSubSection("career", view);
-                            }, 40);
-                        }
+            };
+
+            function patchSub() {
+                if (typeof switchSubSection !== "function" || window.__vicSubPatched) return;
+                window.__vicSubPatched = true;
+                var _orig = switchSubSection;
+                window.switchSubSection = function (system, action) {
+                    _orig(system, action);
+                    try {
+                        if (action === "career-campaigns" && typeof loadAdminCampaignsWorkspace === "function") loadAdminCampaignsWorkspace();
+                        if (action === "career-email-campaigns" && typeof loadAdminEmailCampaigns === "function") loadAdminEmailCampaigns();
+                        if (action === "career-supportive-tasks" && typeof loadAdminSupportiveTasks === "function") loadAdminSupportiveTasks();
+                    } catch (e) { }
+                };
+            }
+            function patchHub() {
+                if (typeof switchMasterHub !== "function" || window.__vicHubPatched2) return;
+                window.__vicHubPatched2 = true;
+                var _origH = switchMasterHub;
+                window.switchMasterHub = function (hubId) {
+                    _origH(hubId);
+                    var defaults = {
+                        career: "career-users",
+                        client: "client-submitted",
+                        leads: "leads-matrix",
+                        assessment: "assessment-students",
+                        agent: null,
+                        v5: null
                     };
-                }
-                function boot() { patchSub(); patchHub(); }
-                if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { setTimeout(boot, 100); });
-                else setTimeout(boot, 100);
-            })();
-        </script>
+                    var view = defaults[hubId];
+                    if (hubId === "career") {
+                        var active = document.querySelector("#nav-panel-career .nav-sub-btn.active");
+                        if (active && active.getAttribute("data-target-view")) view = active.getAttribute("data-target-view");
+                    }
+                    if (view && typeof switchSubSection === "function") {
+                        setTimeout(function () {
+                            try { switchSubSection(String(view).split("-")[0], view); } catch (e) { console.warn(e); }
+                        }, 40);
+                    }
+                };
+            }
+            function boot() { patchSub(); patchHub(); }
+            if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { setTimeout(boot, 100); });
+            else setTimeout(boot, 100);
+        })();
+    </script>
 
 </body>
 
