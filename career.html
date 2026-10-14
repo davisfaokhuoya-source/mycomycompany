@@ -2195,6 +2195,11 @@
                             <div id="tab-campaigns">
                                 <div class="tv-content-card">
                                     <h5 class="mb-1">Sales Campaigns</h5>
+                                    <p class="small text-muted mb-2">How to use: (1) Admin creates a campaign and
+                                        assigns you.
+                                        (2) Open <strong>My campaigns</strong> and tap a campaign. (3) Leads load below
+                                        — call/email and report outcomes.
+                                        Supportive tasks = mandatory lead-gen tasks. Earnings = your commission.</p>
                                     <p class="text-muted small mb-3">Work assigned client sales (real estate, air
                                         tickets, reservations, events, and more).</p>
                                     <div class="d-flex gap-2 mb-3 flex-wrap">
@@ -3797,7 +3802,7 @@
             campaigns: "chListMyCampaigns",
             tasks: "chListMySupportiveTasks",
             commissions: "chListMyCommissions",
-            leads: "chListCampaignLeads"
+            leads: "chListMyCampaignLeads"
         };
         function partnerCampRows(res, keys) {
             for (const k of keys) if (res && Array.isArray(res[k])) return res[k];
@@ -3826,20 +3831,47 @@
         }
         async function loadPartnerCampaigns() {
             const el = document.getElementById("partnerCampList");
-            ["partnerTaskList", "partnerComList", "partnerLeadList"].forEach(id => { const x = document.getElementById(id); if (x) x.innerHTML = ""; });
+            ["partnerTaskList", "partnerComList", "partnerLeadList"].forEach(id => {
+                const x = document.getElementById(id);
+                if (x) x.innerHTML = "";
+            });
             const res = await partnerCampFetch("campaigns", {}, el);
             if (!res) return;
-            const rows = partnerCampRows(res, ["campaigns", "data", "list", "items"]);
-            partnerCampRender(el, rows, "No campaigns assigned to you yet.",
-                r => (r.name || r.Name || r.CampaignName || r.campaignId || r.CampaignID || "Campaign"),
-                r => `ID: ${r.campaignId || r.CampaignID || r.id || "—"}${r.status || r.Status ? " · " + (r.status || r.Status) : ""}`);
-            // click a campaign to prefill the lead campaign ID
-            el.querySelectorAll(".border").forEach((node, i) => {
+            // Backend returns { campaigns: [ { campaign: {...}, assignment: {...} }, ... ] }
+            var raw = partnerCampRows(res, ["campaigns", "data", "list", "items"]);
+            var rows = (raw || []).map(function (r) {
+                var c = (r && r.campaign) ? r.campaign : r;
+                var a = (r && r.assignment) ? r.assignment : {};
+                return {
+                    campaignId: c.campaignId || c.CampaignID || c.id || a.campaignId || "",
+                    name: c.name || c.Name || c.CampaignName || c.title || "Campaign",
+                    status: c.status || a.status || "",
+                    clientId: c.clientId || a.clientId || "",
+                    vertical: c.vertical || c.type || c.campaignType || "sales",
+                    assignment: a,
+                    campaign: c
+                };
+            }).filter(function (r) { return r.campaignId; });
+            partnerCampRender(
+                el,
+                rows,
+                "No campaigns assigned to you yet. Ask admin to create a Sales campaign and assign your email under Campaigns → Sales campaigns.",
+                function (r) { return r.name; },
+                function (r) {
+                    return "ID: " + r.campaignId +
+                        (r.vertical ? " · " + r.vertical : "") +
+                        (r.status ? " · " + r.status : "") +
+                        " — tap to load leads";
+                }
+            );
+            el.querySelectorAll(".border").forEach(function (node, i) {
                 node.style.cursor = "pointer";
-                node.addEventListener("click", () => {
-                    const r = rows[i] || {};
-                    const inp = document.getElementById("partnerLeadCampId");
-                    if (inp) inp.value = r.campaignId || r.CampaignID || r.id || "";
+                node.title = "Click to load leads for this campaign";
+                node.addEventListener("click", function () {
+                    var r = rows[i] || {};
+                    var inp = document.getElementById("partnerLeadCampId");
+                    if (inp) inp.value = r.campaignId || "";
+                    if (r.campaignId) loadPartnerCampaignLeads();
                 });
             });
         }
@@ -3862,12 +3894,24 @@
         async function loadPartnerCampaignLeads() {
             const el = document.getElementById("partnerLeadList");
             const id = (document.getElementById("partnerLeadCampId") || {}).value;
-            if (!id || !id.trim()) { showToast("Enter or tap a campaign first.", "warning"); return; }
+            if (!id || !id.trim()) {
+                showToast("Tap a campaign above first (or paste its Campaign ID).", "warning");
+                return;
+            }
             const res = await partnerCampFetch("leads", { campaignId: id.trim() }, el);
             if (!res) return;
-            partnerCampRender(el, partnerCampRows(res, ["leads", "data", "list", "items"]), "No leads for this campaign yet.",
-                r => (r.name || r.Name || r.LeadName || r.email || "Lead"),
-                r => `${r.status || r.Status || ""} ${r.phone || r.Phone || r.email || r.Email || ""}`.trim());
+            const rows = partnerCampRows(res, ["leads", "data", "list", "items"]);
+            partnerCampRender(
+                el,
+                rows,
+                "No leads for this campaign yet. Admin must import/assign leads to the campaign.",
+                function (r) { return r.name || r.Name || r.LeadName || r.email || r.Email || "Lead"; },
+                function (r) {
+                    return [r.status || r.Status || "", r.phone || r.Phone || "", r.email || r.Email || ""]
+                        .filter(Boolean).join(" · ");
+                }
+            );
+            if (rows.length) showToast(rows.length + " lead(s) loaded", "success", 2000);
         }
         // Aliases used by the work-area chooser
         window.chListMyCampaigns = loadPartnerCampaigns;
