@@ -612,21 +612,30 @@
                         <button type="button" class="nav-sub-btn" data-hub="client" data-target-view="client-submitted"
                             onclick="adminGo('client','client-submitted')">Client service center</button>
                         <button type="button" class="nav-sub-btn" data-hub="leads" data-target-view="leads-matrix"
-                            onclick="adminGo('leads','leads-matrix')">CRM &amp; leads</button>
-                        <button type="button" class="nav-sub-btn" data-hub="career" data-target-view="career-vic-leads"
-                            onclick="adminGo('career','career-vic-leads')">Our leads library</button>
-                        <button type="button" class="nav-sub-btn" data-hub="career"
-                            data-target-view="career-vic-email-create"
-                            onclick="adminGo('career','career-vic-email-create')">Create email message</button>
-                        <button type="button" class="nav-sub-btn" data-hub="career"
-                            data-target-view="career-vic-email-audience"
-                            onclick="adminGo('career','career-vic-email-audience')">Attach leads to campaign</button>
-                        <button type="button" class="nav-sub-btn" data-hub="career"
-                            data-target-view="career-vic-email-send"
-                            onclick="adminGo('career','career-vic-email-send')">Send batches</button>
-                        <button type="button" class="nav-sub-btn" data-hub="career"
-                            data-target-view="career-vic-email-list"
-                            onclick="adminGo('career','career-vic-email-list')">Email campaign list</button>
+                            onclick="adminGo('leads','leads-matrix')">CRM &amp; leads</button> <button type="button"
+                            class="nav-sub-btn" data-hub="career" onclick="toggleVicOutreachSub(this)"
+                            id="btnVicOutreachGroup">
+                            <span class="flex-1 text-left">Our outreach (Victorias)</span>
+                            <i class="fa-solid fa-chevron-right text-[9px] text-slate-500 vic-out-caret"></i>
+                        </button>
+                        <div id="vicOutreachSub" class="hidden pl-3 ml-2 border-l border-slate-800 space-y-0.5 mb-1">
+                            <button type="button" class="nav-sub-btn" data-hub="career"
+                                data-target-view="career-vic-leads" onclick="adminGo('career','career-vic-leads')">Our
+                                leads library</button>
+                            <button type="button" class="nav-sub-btn" data-hub="career"
+                                data-target-view="career-vic-email-create"
+                                onclick="adminGo('career','career-vic-email-create')">Create email message</button>
+                            <button type="button" class="nav-sub-btn" data-hub="career"
+                                data-target-view="career-vic-email-audience"
+                                onclick="adminGo('career','career-vic-email-audience')">Attach leads to
+                                campaign</button>
+                            <button type="button" class="nav-sub-btn" data-hub="career"
+                                data-target-view="career-vic-email-send"
+                                onclick="adminGo('career','career-vic-email-send')">Send batches</button>
+                            <button type="button" class="nav-sub-btn" data-hub="career"
+                                data-target-view="career-vic-email-list"
+                                onclick="adminGo('career','career-vic-email-list')">Email campaign list</button>
+                        </div>
                         <button type="button" class="nav-sub-btn" id="btnRegisterCampaignClient"
                             data-action="register-campaign-client"
                             onclick="return openCampaignOnlyClientRegister(event);">Register campaign client</button>
@@ -1638,8 +1647,8 @@
                             </div>
                             <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
                                 <h3 class="text-sm font-semibold text-white">Import CSV into library</h3>
-                                <p class="text-[10px] text-slate-500">Headers optional: email, name, phone, company,
-                                    title, linkedin, companyLinkedin, website, industry, country, notes</p>
+                                <p class="text-[10px] text-slate-500">Works with Apollo exports (Email, First Name, Last
+                                    Name, Company Name, Title, LinkedIn…). AI cleans columns if headers vary.</p>
                                 <input type="file" id="vicLeadCsvFile" accept=".csv,text/csv,text/plain"
                                     class="block w-full text-xs text-slate-300" />
                                 <button type="button" onclick="vicImportOutreachLeadsCsv()"
@@ -1891,8 +1900,7 @@
                             </div>
                             <p class="text-xs text-slate-500 mt-3">Staff sales report: partners only enter
                                 <strong>closing amount</strong>. Commission waits for payment confirmation. Install
-                                30-min trigger from AgentLib: <code>agentInstallAiAutopilotTrigger</code>.
-                            </p>
+                                30-min trigger from AgentLib: <code>agentInstallAiAutopilotTrigger</code>.</p>
                         </div>
                     </div>
 
@@ -24239,6 +24247,239 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                             try { loadAdminEmailWorkspace(); } catch (e) { }
                         }
                     }, 80);
+                };
+            }
+        })();
+    </script>
+
+
+    <script>
+        (function () {
+            window.toggleVicOutreachSub = function (btn) {
+                var panel = document.getElementById("vicOutreachSub");
+                if (!panel) return;
+                var open = panel.classList.toggle("hidden") === false;
+                // if was hidden, toggle removes hidden -> open true when classList.toggle returns false? 
+                // classList.toggle("hidden") returns true if class is NOW present
+                var nowHidden = panel.classList.contains("hidden");
+                if (btn) {
+                    var caret = btn.querySelector(".vic-out-caret");
+                    if (caret) caret.style.transform = nowHidden ? "" : "rotate(90deg)";
+                }
+            };
+
+            /** Robust CSV line split (quoted commas) */
+            function splitCsvLine(line, sep) {
+                var out = [], cur = "", inQ = false;
+                for (var i = 0; i < line.length; i++) {
+                    var ch = line[i];
+                    if (ch === '"') {
+                        if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+                        else inQ = !inQ;
+                    } else if (ch === sep && !inQ) {
+                        out.push(cur); cur = "";
+                    } else cur += ch;
+                }
+                out.push(cur);
+                return out.map(function (s) { return String(s || "").trim().replace(/^"|"$/g, ""); });
+            }
+
+            function detectSep(line) {
+                var commas = (line.match(/,/g) || []).length;
+                var semis = (line.match(/;/g) || []).length;
+                var tabs = (line.match(/\t/g) || []).length;
+                if (tabs >= commas && tabs >= semis) return "\t";
+                if (semis > commas) return ";";
+                return ",";
+            }
+
+            function normHeader(h) {
+                return String(h || "")
+                    .toLowerCase()
+                    .replace(/^\uFEFF/, "")
+                    .replace(/['"]/g, "")
+                    .replace(/\s+/g, " ")
+                    .trim();
+            }
+
+            /** Map any Apollo / HubSpot / generic header → our fields */
+            function mapHeaderToField(h) {
+                h = normHeader(h);
+                if (!h) return null;
+                // email
+                if (h === "email" || h === "email address" || h === "work email" || h === "e-mail" ||
+                    h.indexOf("email") >= 0 && h.indexOf("company") < 0) return "email";
+                // names
+                if (h === "first name" || h === "firstname" || h === "first") return "firstName";
+                if (h === "last name" || h === "lastname" || h === "last") return "lastName";
+                if (h === "name" || h === "full name" || h === "contact name" || h === "person name") return "name";
+                // company
+                if (h === "company" || h === "company name" || h === "organization" || h === "organisation" ||
+                    h === "account name" || h === "employer") return "company";
+                // title
+                if (h === "title" || h === "job title" || h === "position" || h === "role" || h === "headline") return "title";
+                // phone
+                if (h.indexOf("phone") >= 0 || h.indexOf("mobile") >= 0 || h.indexOf("whatsapp") >= 0) return "phone";
+                // linkedin person
+                if (h.indexOf("linkedin") >= 0 && (h.indexOf("company") >= 0 || h.indexOf("org") >= 0)) return "companyLinkedin";
+                if (h.indexOf("linkedin") >= 0 || h === "profile url" || h === "person linkedin url") return "linkedin";
+                // website
+                if (h === "website" || h === "company website" || h === "domain" || h === "company domain" || h === "url") return "website";
+                if (h === "industry" || h === "sector") return "industry";
+                if (h === "country" || h === "city" || h === "location" || h === "hq location") return "country";
+                if (h.indexOf("note") >= 0) return "notes";
+                return null;
+            }
+
+            function isEmail(v) {
+                v = String(v || "").trim();
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+            }
+
+            window.vicParseLeadsCsvText = function (text) {
+                text = String(text || "").replace(/^\uFEFF/, "");
+                var lines = text.split(/\r?\n/).filter(function (l) { return l.trim().length; });
+                if (!lines.length) return { rows: [], error: "Empty file" };
+
+                var sep = detectSep(lines[0]);
+                var headerCells = splitCsvLine(lines[0], sep);
+                var fieldAt = [];
+                var mapped = 0;
+                headerCells.forEach(function (cell, idx) {
+                    var f = mapHeaderToField(cell);
+                    fieldAt[idx] = f;
+                    if (f) mapped++;
+                });
+
+                // If almost no headers matched, try second line as header (some exports)
+                if (mapped < 1 && lines.length > 1) {
+                    var h2 = splitCsvLine(lines[1], sep);
+                    var m2 = 0, fa2 = [];
+                    h2.forEach(function (cell, idx) {
+                        var f = mapHeaderToField(cell);
+                        fa2[idx] = f;
+                        if (f) m2++;
+                    });
+                    if (m2 > mapped) {
+                        fieldAt = fa2;
+                        mapped = m2;
+                        lines = lines.slice(1);
+                        headerCells = h2;
+                    }
+                }
+
+                var start = mapped >= 1 ? 1 : 0;
+                var rows = [];
+                var sampleHeaders = headerCells;
+
+                for (var i = start; i < lines.length; i++) {
+                    var parts = splitCsvLine(lines[i], sep);
+                    var rec = {
+                        email: "", name: "", firstName: "", lastName: "", phone: "", company: "",
+                        title: "", linkedin: "", companyLinkedin: "", website: "", industry: "",
+                        country: "", notes: "", owner: "victorias", source: "csv_upload"
+                    };
+                    if (mapped >= 1) {
+                        for (var c = 0; c < parts.length; c++) {
+                            var f = fieldAt[c];
+                            if (f && parts[c]) rec[f] = parts[c];
+                        }
+                    } else {
+                        // positional fallback: scan every cell for email
+                        for (var c2 = 0; c2 < parts.length; c2++) {
+                            if (isEmail(parts[c2])) { rec.email = parts[c2]; break; }
+                        }
+                        if (!rec.name && parts[0] && !isEmail(parts[0])) rec.name = parts[0];
+                        if (!rec.company && parts[1] && !isEmail(parts[1])) rec.company = parts[1];
+                    }
+                    if (!rec.name && (rec.firstName || rec.lastName)) {
+                        rec.name = [rec.firstName, rec.lastName].filter(Boolean).join(" ").trim();
+                    }
+                    // last resort: any cell looks like email
+                    if (!rec.email) {
+                        for (var c3 = 0; c3 < parts.length; c3++) {
+                            if (isEmail(parts[c3])) { rec.email = parts[c3]; break; }
+                        }
+                    }
+                    if (isEmail(rec.email)) rows.push(rec);
+                }
+
+                return {
+                    rows: rows,
+                    mappedHeaders: mapped,
+                    headers: sampleHeaders,
+                    error: rows.length ? null : "No valid emails found after parse"
+                };
+            };
+
+            window.vicImportOutreachLeadsCsv = function () {
+                var input = document.getElementById("vicLeadCsvFile");
+                if (!input || !input.files || !input.files[0]) {
+                    if (typeof showToast === "function") showToast("Choose a CSV file", "error");
+                    return;
+                }
+                var file = input.files[0];
+                var reader = new FileReader();
+                reader.onload = async function () {
+                    var msg = document.getElementById("vicLeadCsvMsg");
+                    var parsed = vicParseLeadsCsvText(reader.result);
+                    if (msg) {
+                        msg.textContent = parsed.rows.length
+                            ? ("Parsed " + parsed.rows.length + " email(s). Headers mapped: " + parsed.mappedHeaders)
+                            : (parsed.error || "No emails");
+                    }
+                    if (!parsed.rows.length) {
+                        // AI fallback
+                        if (msg) msg.textContent = "Local parse found 0 emails — asking AI to extract…";
+                        try {
+                            var aiRes = await executeSecureBridgeCall("agent", "agent-ai-extract-outreach-leads", {
+                                csvText: String(reader.result || "").slice(0, 120000),
+                                fileName: file.name
+                            });
+                            if (aiRes && aiRes.success && (aiRes.rows || aiRes.leads || []).length) {
+                                parsed.rows = aiRes.rows || aiRes.leads;
+                                if (msg) msg.textContent = "AI extracted " + parsed.rows.length + " lead(s)";
+                            } else {
+                                if (typeof showToast === "function") {
+                                    showToast((aiRes && aiRes.message) || "No valid emails — check CSV is comma-separated with an Email column", "error");
+                                }
+                                return;
+                            }
+                        } catch (e) {
+                            if (typeof showToast === "function") showToast(String(e.message || e), "error");
+                            return;
+                        }
+                    }
+                    if (msg) msg.textContent = "Importing " + parsed.rows.length + " to Mongo…";
+                    try {
+                        var res = await executeSecureBridgeCall("agent", "agent-import-outreach-leads", {
+                            rows: parsed.rows,
+                            owner: "victorias"
+                        });
+                        if (msg) msg.textContent = (res && res.message) || ("Imported " + parsed.rows.length);
+                        if (typeof showToast === "function") {
+                            showToast((res && res.message) || "Import done", res && res.success !== false ? "success" : "error");
+                        }
+                        if (typeof vicLoadOutreachLeads === "function") vicLoadOutreachLeads();
+                    } catch (e2) {
+                        if (typeof showToast === "function") showToast(String(e2.message || e2), "error");
+                    }
+                };
+                reader.onerror = function () {
+                    if (typeof showToast === "function") showToast("Could not read file", "error");
+                };
+                reader.readAsText(file);
+            };
+
+            // Open subgroup when opening any vic view
+            var _ago = window.adminGo;
+            if (typeof _ago === "function") {
+                window.adminGo = function (hub, view) {
+                    if (String(view || "").indexOf("career-vic-") === 0) {
+                        var panel = document.getElementById("vicOutreachSub");
+                        if (panel) panel.classList.remove("hidden");
+                    }
+                    return _ago(hub, view);
                 };
             }
         })();
