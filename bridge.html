@@ -1657,19 +1657,29 @@
                                 <p id="vicLeadCsvMsg" class="text-[11px] text-slate-400"></p>
                             </div>
                             <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-x-auto">
-                                <div class="flex justify-between items-center mb-2">
-                                    <h3 class="text-sm font-semibold text-white">Library</h3>
-                                    <button type="button" onclick="vicLoadOutreachLeads()"
-                                        class="text-xs px-3 py-1.5 rounded bg-slate-800 text-white">Refresh</button>
+                                <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
+                                    <h3 class="text-sm font-semibold text-white">Library <span id="vicLeadsCount"
+                                            class="text-slate-500 font-normal"></span></h3>
+                                    <div class="flex gap-2">
+                                        <input id="vicLeadSearch" placeholder="Search name, email, company…"
+                                            oninput="vicFilterOutreachLeads()"
+                                            class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white w-48" />
+                                        <button type="button" onclick="vicLoadOutreachLeads()"
+                                            class="text-xs px-3 py-1.5 rounded bg-slate-800 text-white">Refresh</button>
+                                    </div>
                                 </div>
-                                <table class="w-full text-xs">
-                                    <thead class="text-slate-500">
+                                <table class="w-full text-xs min-w-[900px]">
+                                    <thead class="text-slate-500 border-b border-slate-800">
                                         <tr>
+                                            <th class="p-2 text-left">#</th>
                                             <th class="p-2 text-left">Name</th>
-                                            <th class="text-left">Email</th>
-                                            <th class="text-left">Company</th>
-                                            <th class="text-left">LinkedIn</th>
-                                            <th>Stage</th>
+                                            <th class="p-2 text-left">Email</th>
+                                            <th class="p-2 text-left">Phone</th>
+                                            <th class="p-2 text-left">Position</th>
+                                            <th class="p-2 text-left">Company</th>
+                                            <th class="p-2 text-left">LinkedIn</th>
+                                            <th class="p-2 text-left">Stage</th>
+                                            <th class="p-2 text-left">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="vicLeadsTable" class="text-slate-300"></tbody>
@@ -1677,6 +1687,60 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Edit outreach lead modal -->
+                    <div id="vicLeadEditModal"
+                        class="fixed inset-0 z-[80] hidden items-center justify-center bg-black/60 p-4">
+                        <div
+                            class="bg-slate-900 border border-slate-700 rounded-xl p-5 w-full max-w-lg space-y-2 max-h-[90vh] overflow-y-auto">
+                            <div class="flex justify-between items-center">
+                                <h3 class="text-sm font-bold text-white">Edit lead</h3>
+                                <button type="button" onclick="vicCloseLeadEdit()"
+                                    class="text-slate-400 hover:text-white text-lg leading-none">&times;</button>
+                            </div>
+                            <input type="hidden" id="vicEditLeadId" />
+                            <input id="vicEditName" placeholder="Name"
+                                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                            <input id="vicEditEmail" placeholder="Email"
+                                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                            <input id="vicEditPhone" placeholder="Phone"
+                                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                            <input id="vicEditTitle" placeholder="Position / title"
+                                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                            <input id="vicEditCompany" placeholder="Company"
+                                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                            <input id="vicEditWebsite" placeholder="Website"
+                                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                            <input id="vicEditLinkedin" placeholder="LinkedIn URL"
+                                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                            <input id="vicEditCompanyLinkedin" placeholder="Company LinkedIn"
+                                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                            <input id="vicEditIndustry" placeholder="Industry"
+                                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                            <input id="vicEditCountry" placeholder="Country / city"
+                                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                            <select id="vicEditStage"
+                                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+                                <option value="new">New</option>
+                                <option value="researching">Researching</option>
+                                <option value="contacted">Contacted</option>
+                                <option value="replied">Replied</option>
+                                <option value="qualified">Qualified</option>
+                                <option value="won">Won</option>
+                                <option value="lost">Lost</option>
+                            </select>
+                            <textarea id="vicEditNotes" rows="2" placeholder="Notes"
+                                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"></textarea>
+                            <div class="flex gap-2 pt-2">
+                                <button type="button" onclick="vicSubmitLeadEdit()"
+                                    class="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold">Save
+                                    changes</button>
+                                <button type="button" onclick="vicCloseLeadEdit()"
+                                    class="text-xs px-4 py-2 rounded-lg bg-slate-700 text-white">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
 
                     <!-- ========== CREATE EMAIL MESSAGE ========== -->
                     <div id="view-career-vic-email-create"
@@ -24482,6 +24546,168 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                     return _ago(hub, view);
                 };
             }
+        })();
+    </script>
+
+
+    <script>
+        (function () {
+            function toast(m, k) {
+                if (typeof showToast === "function") showToast(m, k || "info");
+                else console.log(m);
+            }
+            function esc(s) {
+                return String(s == null ? "" : s)
+                    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+            }
+
+            function leadKey(r) {
+                return String(r.leadId || r.id || r.email || "").trim();
+            }
+
+            window.vicRenderOutreachLeadsTable = function (rows) {
+                rows = rows || window.__vicOutreachLeads || [];
+                window.__vicOutreachLeads = rows;
+                var q = (document.getElementById("vicLeadSearch") && document.getElementById("vicLeadSearch").value || "").toLowerCase().trim();
+                var filtered = !q ? rows : rows.filter(function (r) {
+                    var blob = [r.name, r.email, r.company, r.title, r.phone, r.stage].join(" ").toLowerCase();
+                    return blob.indexOf(q) >= 0;
+                });
+                var t1 = document.getElementById("vicLeadsTable");
+                var countEl = document.getElementById("vicLeadsCount");
+                if (countEl) countEl.textContent = "(" + filtered.length + (q ? " filtered" : "") + " / " + rows.length + ")";
+                if (!t1) return;
+                if (!filtered.length) {
+                    t1.innerHTML = '<tr><td colspan="9" class="p-3 text-slate-500">No leads yet</td></tr>';
+                    return;
+                }
+                t1.innerHTML = filtered.map(function (r, idx) {
+                    var li = r.linkedin || r.linkedIn || "";
+                    var liHtml = li
+                        ? '<a class="text-sky-400 underline" href="' + esc(li) + '" target="_blank" rel="noopener">Profile</a>'
+                        : "—";
+                    var id = leadKey(r);
+                    return '<tr class="border-t border-slate-800 hover:bg-slate-900/50">' +
+                        '<td class="p-2 text-slate-500">' + (idx + 1) + '</td>' +
+                        '<td class="p-2">' + esc(r.name || "") + '</td>' +
+                        '<td class="p-2 font-mono text-[10px]">' + esc(r.email || "") + '</td>' +
+                        '<td class="p-2">' + esc(r.phone || "") + '</td>' +
+                        '<td class="p-2">' + esc(r.title || r.position || "") + '</td>' +
+                        '<td class="p-2">' + esc(r.company || "") + '</td>' +
+                        '<td class="p-2">' + liHtml + '</td>' +
+                        '<td class="p-2"><span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px]">' + esc(r.stage || "new") + '</span></td>' +
+                        '<td class="p-2 whitespace-nowrap">' +
+                        '<button type="button" class="text-emerald-400 hover:underline mr-2" data-vic-edit="' + esc(id) + '">Edit</button>' +
+                        '<button type="button" class="text-red-400 hover:underline" data-vic-del="' + esc(id) + '">Delete</button>' +
+                        '</td></tr>';
+                }).join("");
+                t1.querySelectorAll("[data-vic-edit]").forEach(function (btn) {
+                    btn.onclick = function () { vicOpenLeadEdit(btn.getAttribute("data-vic-edit")); };
+                });
+                t1.querySelectorAll("[data-vic-del]").forEach(function (btn) {
+                    btn.onclick = function () { vicDeleteOutreachLead(btn.getAttribute("data-vic-del")); };
+                });
+                // pick table too
+                var t2 = document.getElementById("vicLeadsPickTable");
+                if (t2) {
+                    t2.innerHTML = filtered.map(function (r) {
+                        return '<tr class="border-t border-slate-800"><td class="p-2"><input type="checkbox" class="vic-lead-cb" data-email="' + esc(r.email || "") + '"/></td>' +
+                            '<td class="p-2">' + esc(r.name || "") + '</td><td class="p-2">' + esc(r.email || "") + '</td><td class="p-2">' + esc(r.company || "") + '</td></tr>';
+                    }).join("") || '<tr><td colspan="4" class="p-2 text-slate-500">No leads</td></tr>';
+                }
+            };
+
+            window.vicFilterOutreachLeads = function () {
+                vicRenderOutreachLeadsTable(window.__vicOutreachLeads || []);
+            };
+
+            var _load = window.vicLoadOutreachLeads;
+            window.vicLoadOutreachLeads = async function () {
+                try {
+                    var res = await executeSecureBridgeCall("agent", "agent-list-outreach-leads", { owner: "victorias", limit: 1000 });
+                    var rows = (res && (res.leads || res.rows || res.data)) || [];
+                    window.__vicOutreachLeads = rows;
+                    vicRenderOutreachLeadsTable(rows);
+                } catch (e) {
+                    toast(String(e.message || e), "error");
+                }
+            };
+
+            window.vicOpenLeadEdit = function (id) {
+                var rows = window.__vicOutreachLeads || [];
+                var r = rows.find(function (x) { return leadKey(x) === id || String(x.email) === id; });
+                if (!r) return toast("Lead not found", "error");
+                document.getElementById("vicEditLeadId").value = leadKey(r);
+                document.getElementById("vicEditName").value = r.name || "";
+                document.getElementById("vicEditEmail").value = r.email || "";
+                document.getElementById("vicEditPhone").value = r.phone || "";
+                document.getElementById("vicEditTitle").value = r.title || r.position || "";
+                document.getElementById("vicEditCompany").value = r.company || "";
+                var w = document.getElementById("vicEditWebsite"); if (w) w.value = r.website || "";
+                document.getElementById("vicEditLinkedin").value = r.linkedin || r.linkedIn || "";
+                var cl = document.getElementById("vicEditCompanyLinkedin"); if (cl) cl.value = r.companyLinkedin || "";
+                var ind = document.getElementById("vicEditIndustry"); if (ind) ind.value = r.industry || "";
+                var co = document.getElementById("vicEditCountry"); if (co) co.value = r.country || "";
+                document.getElementById("vicEditStage").value = r.stage || "new";
+                document.getElementById("vicEditNotes").value = r.notes || "";
+                var modal = document.getElementById("vicLeadEditModal");
+                if (modal) {
+                    modal.classList.remove("hidden");
+                    modal.style.display = "flex";
+                }
+            };
+
+            window.vicCloseLeadEdit = function () {
+                var modal = document.getElementById("vicLeadEditModal");
+                if (modal) {
+                    modal.classList.add("hidden");
+                    modal.style.display = "none";
+                }
+            };
+
+            window.vicSubmitLeadEdit = async function () {
+                var payload = {
+                    leadId: document.getElementById("vicEditLeadId").value,
+                    name: document.getElementById("vicEditName").value.trim(),
+                    email: document.getElementById("vicEditEmail").value.trim(),
+                    phone: document.getElementById("vicEditPhone").value.trim(),
+                    title: document.getElementById("vicEditTitle").value.trim(),
+                    company: document.getElementById("vicEditCompany").value.trim(),
+                    website: (document.getElementById("vicEditWebsite") || {}).value || "",
+                    linkedin: document.getElementById("vicEditLinkedin").value.trim(),
+                    companyLinkedin: (document.getElementById("vicEditCompanyLinkedin") || {}).value || "",
+                    industry: (document.getElementById("vicEditIndustry") || {}).value || "",
+                    country: (document.getElementById("vicEditCountry") || {}).value || "",
+                    stage: document.getElementById("vicEditStage").value,
+                    notes: document.getElementById("vicEditNotes").value.trim(),
+                    owner: "victorias",
+                    update: true
+                };
+                if (!payload.email) return toast("Email required", "error");
+                var res = await executeSecureBridgeCall("agent", "agent-save-outreach-lead", payload);
+                if (res && res.success !== false) {
+                    toast("Lead updated", "success");
+                    vicCloseLeadEdit();
+                    vicLoadOutreachLeads();
+                } else toast((res && res.message) || "Update failed", "error");
+            };
+
+            window.vicDeleteOutreachLead = async function (id) {
+                if (!id) return;
+                if (!confirm("Delete this lead from our library? This cannot be undone.")) return;
+                var rows = window.__vicOutreachLeads || [];
+                var r = rows.find(function (x) { return leadKey(x) === id || String(x.email) === id; });
+                var email = r ? r.email : id;
+                var res = await executeSecureBridgeCall("agent", "agent-delete-outreach-lead", {
+                    leadId: id,
+                    email: email,
+                    owner: "victorias"
+                });
+                if (res && res.success !== false) {
+                    toast("Lead deleted", "success");
+                    vicLoadOutreachLeads();
+                } else toast((res && res.message) || "Delete failed", "error");
+            };
         })();
     </script>
 
