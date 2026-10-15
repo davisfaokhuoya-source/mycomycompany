@@ -13031,7 +13031,8 @@
             document.getElementById('cpClientName').textContent = companyName || clientId;
             document.getElementById('cpCredentialsBox').classList.add('hidden');
             document.getElementById('cpStatusBox').textContent = 'Loading status…';
-            document.getElementById('modalClientPortal').classList.remove('hidden');
+            var __mcp = document.getElementById('modalClientPortal');
+            if (__mcp) { __mcp.classList.remove('hidden'); __mcp.style.display = 'flex'; }
             refreshClientPortalStatus();
         }
 
@@ -23628,6 +23629,68 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                     if (String(view || "").indexOf("email") >= 0) setTimeout(function () { try { loadAdminEmailCampaigns(); } catch (_) { } }, 80);
                 };
             }
+        })();
+    </script>
+
+
+    <script>
+        /* Fix Tailwind hidden+flex conflict on modals — X buttons must fully hide */
+        (function () {
+            window.vicCloseModal = function (id) {
+                var el = typeof id === "string" ? document.getElementById(id) : id;
+                if (!el) return;
+                el.classList.add("hidden");
+                el.style.display = "none";
+            };
+            window.vicOpenModal = function (id) {
+                var el = typeof id === "string" ? document.getElementById(id) : id;
+                if (!el) return;
+                el.classList.remove("hidden");
+                el.style.display = "flex";
+            };
+            // Patch known close helpers
+            var _ccp = window.closeClientPortalModal;
+            window.closeClientPortalModal = function () {
+                vicCloseModal("modalClientPortal");
+                if (typeof _ccp === "function") { try { /* already closed */ } catch (_) { } }
+            };
+            var _ocp = window.openClientPortalModal;
+            window.openClientPortalModal = function (clientId, companyName) {
+                if (typeof _ocp === "function") _ocp(clientId, companyName);
+                vicOpenModal("modalClientPortal");
+            };
+            // Event delegation: any &times; or [data-close-modal] inside a fixed inset modal
+            document.addEventListener("click", function (ev) {
+                var t = ev.target;
+                if (!t || !t.closest) return;
+                var btn = t.closest("button");
+                if (!btn) return;
+                var label = (btn.getAttribute("aria-label") || "").toLowerCase();
+                var txt = (btn.textContent || "").trim();
+                var isX = txt === "×" || txt === "✕" || txt === "x" || txt === "X" || label === "close" || btn.hasAttribute("data-close-modal");
+                if (!isX) return;
+                var modal = btn.closest("[id^='modal'], .fixed.inset-0");
+                if (!modal || !modal.id) return;
+                // Don't steal clicks from intentional non-close buttons that happen to contain ×
+                if (btn.onclick || btn.getAttribute("onclick")) {
+                    // still force hide if onclick only toggles classList.hidden (flex conflict)
+                    setTimeout(function () {
+                        if (modal.classList.contains("hidden")) modal.style.display = "none";
+                    }, 0);
+                    return;
+                }
+                ev.preventDefault();
+                ev.stopPropagation();
+                vicCloseModal(modal);
+            }, true);
+            // Backdrop click closes
+            document.addEventListener("click", function (ev) {
+                var t = ev.target;
+                if (!t || !t.id) return;
+                if (String(t.id).indexOf("modal") === 0 && t.classList.contains("fixed")) {
+                    vicCloseModal(t);
+                }
+            }, false);
         })();
     </script>
 
