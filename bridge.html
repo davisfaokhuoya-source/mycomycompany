@@ -613,9 +613,20 @@
                             onclick="adminGo('client','client-submitted')">Client service center</button>
                         <button type="button" class="nav-sub-btn" data-hub="leads" data-target-view="leads-matrix"
                             onclick="adminGo('leads','leads-matrix')">CRM &amp; leads</button>
+                        <button type="button" class="nav-sub-btn" data-hub="career" data-target-view="career-vic-leads"
+                            onclick="adminGo('career','career-vic-leads')">Our leads library</button>
                         <button type="button" class="nav-sub-btn" data-hub="career"
-                            data-target-view="career-email-workspace"
-                            onclick="adminGo('career','career-email-workspace')">Our leads & email (Victorias)</button>
+                            data-target-view="career-vic-email-create"
+                            onclick="adminGo('career','career-vic-email-create')">Create email message</button>
+                        <button type="button" class="nav-sub-btn" data-hub="career"
+                            data-target-view="career-vic-email-audience"
+                            onclick="adminGo('career','career-vic-email-audience')">Attach leads to campaign</button>
+                        <button type="button" class="nav-sub-btn" data-hub="career"
+                            data-target-view="career-vic-email-send"
+                            onclick="adminGo('career','career-vic-email-send')">Send batches</button>
+                        <button type="button" class="nav-sub-btn" data-hub="career"
+                            data-target-view="career-vic-email-list"
+                            onclick="adminGo('career','career-vic-email-list')">Email campaign list</button>
                         <button type="button" class="nav-sub-btn" id="btnRegisterCampaignClient"
                             data-action="register-campaign-client"
                             onclick="return openCampaignOnlyClientRegister(event);">Register campaign client</button>
@@ -1438,7 +1449,7 @@
                         </div>
                     </div>
 
-                    <div id="view-career-email-workspace"
+                    <div id="view-career-email-workspace-legacy"
                         class="career-view hidden flex-1 flex-col overflow-y-auto custom-scrollbar p-4 md:p-6">
                         <div class="max-w-5xl w-full mx-auto space-y-5">
                             <div class="flex flex-wrap justify-between gap-2 items-start">
@@ -1572,6 +1583,232 @@
                     <div id="view-career-email-send" class="career-view hidden"></div>
                     <div id="view-career-email-list" class="career-view hidden"></div>
 
+
+                    <!-- ========== VICTORIAS: LEADS LIBRARY (separate from client CRM) ========== -->
+                    <div id="view-career-vic-leads"
+                        class="career-view hidden flex-1 flex-col overflow-y-auto custom-scrollbar p-4 md:p-6">
+                        <div class="max-w-5xl w-full mx-auto space-y-4">
+                            <div>
+                                <h2 class="text-lg font-bold text-white">Our leads library</h2>
+                                <p class="text-xs text-slate-400 mt-1">Prospects for <strong
+                                        class="text-emerald-400">The Victorias</strong> only (win new clients). Not
+                                    client sales leads. Use these when you create messages and attach an audience.</p>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                                <h3 class="text-sm font-semibold text-white">Add lead</h3>
+                                <div class="grid md:grid-cols-2 gap-2">
+                                    <input id="vicLeadName" placeholder="Full name *"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="vicLeadEmail" placeholder="Email *"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="vicLeadPhone" placeholder="Phone / WhatsApp"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="vicLeadTitle" placeholder="Job title"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="vicLeadCompany" placeholder="Company name *"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="vicLeadWebsite" placeholder="Company website"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="vicLeadLinkedin" placeholder="LinkedIn profile URL"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white md:col-span-2" />
+                                    <input id="vicLeadCompanyLinkedin" placeholder="Company LinkedIn URL"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="vicLeadIndustry" placeholder="Industry / sector"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="vicLeadCountry" placeholder="Country / city"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <select id="vicLeadStage"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+                                        <option value="new">Stage: New</option>
+                                        <option value="researching">Researching</option>
+                                        <option value="contacted">Contacted</option>
+                                        <option value="replied">Replied</option>
+                                        <option value="qualified">Qualified</option>
+                                        <option value="won">Won</option>
+                                        <option value="lost">Lost</option>
+                                    </select>
+                                    <textarea id="vicLeadNotes" rows="2"
+                                        placeholder="Notes (pain points, how we found them…)"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white md:col-span-2"></textarea>
+                                </div>
+                                <button type="button" onclick="vicSaveOutreachLead()"
+                                    class="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold">Save
+                                    lead to library</button>
+                                <p id="vicLeadMsg" class="text-[11px] text-slate-400"></p>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                                <h3 class="text-sm font-semibold text-white">Import CSV into library</h3>
+                                <p class="text-[10px] text-slate-500">Headers optional: email, name, phone, company,
+                                    title, linkedin, companyLinkedin, website, industry, country, notes</p>
+                                <input type="file" id="vicLeadCsvFile" accept=".csv,text/csv,text/plain"
+                                    class="block w-full text-xs text-slate-300" />
+                                <button type="button" onclick="vicImportOutreachLeadsCsv()"
+                                    class="text-xs px-3 py-2 rounded-lg bg-indigo-600 text-white">Import CSV to
+                                    library</button>
+                                <p id="vicLeadCsvMsg" class="text-[11px] text-slate-400"></p>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-x-auto">
+                                <div class="flex justify-between items-center mb-2">
+                                    <h3 class="text-sm font-semibold text-white">Library</h3>
+                                    <button type="button" onclick="vicLoadOutreachLeads()"
+                                        class="text-xs px-3 py-1.5 rounded bg-slate-800 text-white">Refresh</button>
+                                </div>
+                                <table class="w-full text-xs">
+                                    <thead class="text-slate-500">
+                                        <tr>
+                                            <th class="p-2 text-left">Name</th>
+                                            <th class="text-left">Email</th>
+                                            <th class="text-left">Company</th>
+                                            <th class="text-left">LinkedIn</th>
+                                            <th>Stage</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="vicLeadsTable" class="text-slate-300"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ========== CREATE EMAIL MESSAGE ========== -->
+                    <div id="view-career-vic-email-create"
+                        class="career-view hidden flex-1 flex-col overflow-y-auto custom-scrollbar p-4 md:p-6">
+                        <div class="max-w-3xl w-full mx-auto space-y-4">
+                            <div>
+                                <h2 class="text-lg font-bold text-white">Create email message</h2>
+                                <p class="text-xs text-slate-400">Draft only. Audience is attached on the next screen.
+                                    Placeholders: {{name}} {{firstName}} {{email}} {{company}} {{title}} {{ctaUrl}}</p>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                                <input id="emcName" placeholder="Campaign name (internal)"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                <input id="emcSubject" placeholder="Subject line"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                <label class="text-[10px] text-slate-500 uppercase">HTML body</label>
+                                <textarea id="emcBody" rows="12"
+                                    placeholder="&lt;p&gt;Hi {{firstName}},&lt;/p&gt;&#10;&lt;p&gt;I noticed {{company}}…&lt;/p&gt;"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono"></textarea>
+                                <div class="grid md:grid-cols-2 gap-2">
+                                    <input id="emcCta" value="https://thevictorias.com.ng/interest"
+                                        placeholder="CTA URL"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="emcFromName" placeholder="From name"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                </div>
+                                <button type="button" onclick="adminCreateEmailCampaign()"
+                                    class="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold">Save
+                                    draft message</button>
+                                <p id="emcCreateMsg" class="text-[11px] text-slate-400"></p>
+                                <p class="text-[10px] text-slate-500">After save, open <strong>Attach leads to
+                                        campaign</strong> and select this campaignId.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ========== ATTACH LEADS ========== -->
+                    <div id="view-career-vic-email-audience"
+                        class="career-view hidden flex-1 flex-col overflow-y-auto custom-scrollbar p-4 md:p-6">
+                        <div class="max-w-3xl w-full mx-auto space-y-4">
+                            <div>
+                                <h2 class="text-lg font-bold text-white">Attach leads to campaign</h2>
+                                <p class="text-xs text-slate-400">Link people from <strong>Our leads library</strong>
+                                    (or a one-off CSV) to a draft message. Does not mix client CRM leads.</p>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                                <input id="emcActiveId" placeholder="campaignId from Create email message"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono" />
+                                <button type="button" onclick="vicAttachAllLibraryLeads()"
+                                    class="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold">Attach
+                                    all library leads</button>
+                                <button type="button" onclick="vicAttachSelectedLibraryLeads()"
+                                    class="text-xs px-3 py-2 rounded-lg bg-indigo-600 text-white">Attach selected rows
+                                    only</button>
+                                <p class="text-[10px] text-slate-500 border-t border-slate-800 pt-3">Or one-off CSV for
+                                    this campaign only (also saved into library when possible)</p>
+                                <input type="file" id="emcCsvFile" accept=".csv,text/csv,text/plain"
+                                    class="block w-full text-xs text-slate-300" />
+                                <button type="button" onclick="adminImportEmailCsv()"
+                                    class="text-xs px-3 py-2 rounded-lg bg-slate-700 text-white">Import CSV → this
+                                    campaign</button>
+                                <p id="emcImportMsg" class="text-[11px] text-slate-400"></p>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-x-auto">
+                                <button type="button" onclick="vicLoadOutreachLeads()"
+                                    class="text-xs px-3 py-1.5 rounded bg-slate-800 text-white mb-2">Refresh
+                                    library</button>
+                                <table class="w-full text-xs">
+                                    <thead class="text-slate-500">
+                                        <tr>
+                                            <th class="p-2"><input type="checkbox" id="vicLeadSelectAll"
+                                                    onchange="vicToggleSelectAllLeads(this.checked)" /></th>
+                                            <th class="text-left">Name</th>
+                                            <th class="text-left">Email</th>
+                                            <th class="text-left">Company</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="vicLeadsPickTable" class="text-slate-300"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ========== SEND ========== -->
+                    <div id="view-career-vic-email-send"
+                        class="career-view hidden flex-1 flex-col overflow-y-auto custom-scrollbar p-4 md:p-6">
+                        <div class="max-w-xl w-full mx-auto space-y-4">
+                            <div>
+                                <h2 class="text-lg font-bold text-white">Send batches</h2>
+                                <p class="text-xs text-slate-400">HTML via Gmail. ~20 per click. Run until pending is 0.
+                                </p>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                                <input id="emcSendId" placeholder="campaignId"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono" />
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" onclick="adminStartEmailCampaign()"
+                                        class="text-xs px-3 py-2 rounded-lg bg-amber-600 text-white">Start
+                                        (sending)</button>
+                                    <button type="button" onclick="adminProcessEmailBatch()"
+                                        class="text-xs px-3 py-2 rounded-lg bg-orange-600 text-white font-semibold">Send
+                                        next batch</button>
+                                    <button type="button" onclick="adminPauseEmailCampaign()"
+                                        class="text-xs px-3 py-2 rounded-lg bg-slate-700 text-white">Pause</button>
+                                </div>
+                                <p id="emcBatchMsg" class="text-[11px] text-slate-400"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ========== LIST ========== -->
+                    <div id="view-career-vic-email-list"
+                        class="career-view hidden flex-1 flex-col overflow-y-auto custom-scrollbar p-4 md:p-6">
+                        <div class="max-w-4xl w-full mx-auto space-y-4">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h2 class="text-lg font-bold text-white">Email campaign list</h2>
+                                    <p class="text-xs text-slate-400">Victorias outreach only (owner=victorias).</p>
+                                </div>
+                                <button type="button" onclick="loadAdminEmailWorkspace()"
+                                    class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-white">Refresh</button>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-x-auto">
+                                <table class="w-full text-xs">
+                                    <thead class="text-slate-500">
+                                        <tr>
+                                            <th class="p-2 text-left">ID</th>
+                                            <th class="text-left">Name</th>
+                                            <th>Status</th>
+                                            <th>Sent</th>
+                                            <th>Pending</th>
+                                            <th>Failed</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="emcTable" class="text-slate-300"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
                     <div id="view-career-supportive-tasks"
                         class="career-view hidden flex-1 flex-col overflow-y-auto custom-scrollbar p-4 md:p-6">
                         <div class="max-w-3xl w-full mx-auto space-y-4">
@@ -1654,7 +1891,8 @@
                             </div>
                             <p class="text-xs text-slate-500 mt-3">Staff sales report: partners only enter
                                 <strong>closing amount</strong>. Commission waits for payment confirmation. Install
-                                30-min trigger from AgentLib: <code>agentInstallAiAutopilotTrigger</code>.</p>
+                                30-min trigger from AgentLib: <code>agentInstallAiAutopilotTrigger</code>.
+                            </p>
                         </div>
                     </div>
 
@@ -23819,6 +24057,190 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 reader.readAsText(input.files[0]);
             };
             window.loadAdminEmailWorkspace = window.loadAdminEmailCampaigns || window.loadAdminEmailWorkspace;
+        })();
+    </script>
+
+
+    <script>
+        /* Victorias leads library + split email screens (production) */
+        (function () {
+            function toast(m, k) {
+                if (typeof showToast === "function") showToast(m, k || "info");
+                else console.log(m);
+            }
+            function val(id) {
+                var e = document.getElementById(id);
+                return e ? String(e.value || "").trim() : "";
+            }
+            function bridge(action, payload) {
+                return executeSecureBridgeCall("agent", action, payload || {});
+            }
+            function parseRichCsv(text) {
+                text = String(text || "").replace(/^\uFEFF/, "");
+                var lines = text.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+                if (!lines.length) return [];
+                var sep = lines[0].indexOf("\t") >= 0 ? "\t" : ",";
+                var headers = null, start = 0;
+                if (/email|name|company|linkedin/i.test(lines[0])) {
+                    headers = lines[0].split(sep).map(function (x) {
+                        return x.trim().toLowerCase().replace(/^"|"$/g, "").replace(/\s+/g, "");
+                    });
+                    start = 1;
+                }
+                var rows = [];
+                for (var i = start; i < lines.length; i++) {
+                    var parts = lines[i].split(sep).map(function (p) { return p.trim().replace(/^"|"$/g, ""); });
+                    var rec = { email: "", name: "", phone: "", company: "", title: "", linkedin: "", companyLinkedin: "", website: "", industry: "", country: "", notes: "", owner: "victorias", source: "csv_upload" };
+                    if (headers) {
+                        headers.forEach(function (hh, idx) {
+                            var v = parts[idx] || "";
+                            if (/e-?mail|mail/.test(hh)) rec.email = v;
+                            else if (/^name|fullname/.test(hh)) rec.name = v;
+                            else if (/phone|mobile|whatsapp|tel/.test(hh)) rec.phone = v;
+                            else if (/^company$|organisation|organization/.test(hh)) rec.company = v;
+                            else if (/title|position|role|job/.test(hh)) rec.title = v;
+                            else if (/companylinkedin|company_linkedin/.test(hh)) rec.companyLinkedin = v;
+                            else if (/linkedin|profile/.test(hh)) rec.linkedin = v;
+                            else if (/website|url|site/.test(hh)) rec.website = v;
+                            else if (/industry|sector/.test(hh)) rec.industry = v;
+                            else if (/country|city|location/.test(hh)) rec.country = v;
+                            else if (/note/.test(hh)) rec.notes = v;
+                        });
+                    } else {
+                        rec.email = parts[0] || ""; rec.name = parts[1] || ""; rec.phone = parts[2] || "";
+                        rec.company = parts[3] || ""; rec.linkedin = parts[4] || ""; rec.title = parts[5] || "";
+                    }
+                    if (rec.email && rec.email.indexOf("@") > 0) rows.push(rec);
+                }
+                return rows;
+            }
+            window.vicSaveOutreachLead = async function () {
+                var lead = {
+                    name: val("vicLeadName"), email: val("vicLeadEmail"), phone: val("vicLeadPhone"),
+                    title: val("vicLeadTitle"), company: val("vicLeadCompany"), website: val("vicLeadWebsite"),
+                    linkedin: val("vicLeadLinkedin"), companyLinkedin: val("vicLeadCompanyLinkedin"),
+                    industry: val("vicLeadIndustry"), country: val("vicLeadCountry"),
+                    stage: val("vicLeadStage") || "new", notes: val("vicLeadNotes"),
+                    owner: "victorias", purpose: "company_client_acquisition", source: "manual"
+                };
+                var msg = document.getElementById("vicLeadMsg");
+                if (!lead.email || lead.email.indexOf("@") < 0) return toast("Valid email required", "error");
+                if (msg) msg.textContent = "Saving…";
+                try {
+                    var res = await bridge("agent-save-outreach-lead", lead);
+                    if (!res || res.success === false) res = await bridge("agent-import-outreach-leads", { rows: [lead] });
+                    if (res && res.success !== false) {
+                        if (msg) msg.textContent = "Saved to our library.";
+                        toast("Lead saved", "success");
+                        vicLoadOutreachLeads();
+                    } else {
+                        if (msg) msg.textContent = (res && res.message) || "Failed";
+                        toast((res && res.message) || "Failed", "error");
+                    }
+                } catch (e) {
+                    toast(String(e.message || e), "error");
+                }
+            };
+            window.vicImportOutreachLeadsCsv = function () {
+                var input = document.getElementById("vicLeadCsvFile");
+                if (!input || !input.files || !input.files[0]) return toast("Choose CSV", "error");
+                var reader = new FileReader();
+                reader.onload = async function () {
+                    var rows = parseRichCsv(reader.result);
+                    var msg = document.getElementById("vicLeadCsvMsg");
+                    if (!rows.length) return toast("No valid emails", "error");
+                    if (msg) msg.textContent = "Importing " + rows.length + "…";
+                    var res = await bridge("agent-import-outreach-leads", { rows: rows, owner: "victorias" });
+                    if (msg) msg.textContent = (res && res.message) || ("Imported " + rows.length);
+                    toast((res && res.message) || "Done", res && res.success !== false ? "success" : "error");
+                    vicLoadOutreachLeads();
+                };
+                reader.readAsText(input.files[0]);
+            };
+            function renderLeadsTables(rows) {
+                rows = rows || [];
+                window.__vicOutreachLeads = rows;
+                var t1 = document.getElementById("vicLeadsTable");
+                var t2 = document.getElementById("vicLeadsPickTable");
+                if (t1) {
+                    t1.innerHTML = rows.map(function (r) {
+                        var li = r.linkedin || "";
+                        var a = li ? '<a class="text-sky-400 underline" target="_blank" rel="noopener" href="' + li + '">Profile</a>' : "—";
+                        return '<tr class="border-t border-slate-800"><td class="p-2">' + (r.name || "") + '</td><td class="p-2">' + (r.email || "") +
+                            '</td><td class="p-2">' + (r.company || "") + '</td><td class="p-2">' + a + '</td><td class="p-2 text-center">' + (r.stage || "") + '</td></tr>';
+                    }).join("") || '<tr><td colspan="5" class="p-2 text-slate-500">No leads yet</td></tr>';
+                }
+                if (t2) {
+                    t2.innerHTML = rows.map(function (r) {
+                        return '<tr class="border-t border-slate-800"><td class="p-2"><input type="checkbox" class="vic-lead-cb" data-email="' + (r.email || "") + '"/></td>' +
+                            '<td class="p-2">' + (r.name || "") + '</td><td class="p-2">' + (r.email || "") + '</td><td class="p-2">' + (r.company || "") + '</td></tr>';
+                    }).join("") || '<tr><td colspan="4" class="p-2 text-slate-500">No leads</td></tr>';
+                }
+            }
+            window.vicLoadOutreachLeads = async function () {
+                try {
+                    var res = await bridge("agent-list-outreach-leads", { owner: "victorias", limit: 500 });
+                    renderLeadsTables((res && (res.leads || res.rows || res.data)) || []);
+                } catch (e) { toast(String(e.message || e), "error"); }
+            };
+            window.vicToggleSelectAllLeads = function (on) {
+                document.querySelectorAll(".vic-lead-cb").forEach(function (cb) { cb.checked = !!on; });
+            };
+            async function attachRows(rows) {
+                var id = val("emcActiveId");
+                var msg = document.getElementById("emcImportMsg");
+                if (!id) return toast("Enter campaignId", "error");
+                if (!rows.length) return toast("No leads", "error");
+                if (msg) msg.textContent = "Attaching " + rows.length + "…";
+                var res = await bridge("agent-add-email-campaign-recipients", { campaignId: id, rows: rows, recipients: rows, owner: "victorias" });
+                if (msg) msg.textContent = (res && res.message) || ("Attached " + rows.length);
+                toast((res && res.message) || "Attached", res && res.success !== false ? "success" : "error");
+            }
+            window.vicAttachAllLibraryLeads = async function () {
+                if (!window.__vicOutreachLeads || !window.__vicOutreachLeads.length) await vicLoadOutreachLeads();
+                attachRows(window.__vicOutreachLeads || []);
+            };
+            window.vicAttachSelectedLibraryLeads = function () {
+                var map = {};
+                (window.__vicOutreachLeads || []).forEach(function (r) { map[String(r.email || "").toLowerCase()] = r; });
+                var rows = [];
+                document.querySelectorAll(".vic-lead-cb:checked").forEach(function (cb) {
+                    var em = (cb.getAttribute("data-email") || "").toLowerCase();
+                    if (map[em]) rows.push(map[em]);
+                });
+                attachRows(rows);
+            };
+            // campaign id sync for send screen
+            function syncCampId() {
+                var a = document.getElementById("emcActiveId");
+                var s = document.getElementById("emcSendId");
+                if (a && s) {
+                    if (s.value) a.value = s.value;
+                    else if (a.value) s.value = a.value;
+                }
+            }
+            var _s = window.adminStartEmailCampaign;
+            window.adminStartEmailCampaign = async function () { syncCampId(); if (_s) return _s(); };
+            var _b = window.adminProcessEmailBatch;
+            window.adminProcessEmailBatch = async function () { syncCampId(); if (_b) return _b(); };
+            var _p = window.adminPauseEmailCampaign;
+            window.adminPauseEmailCampaign = async function () { syncCampId(); if (_p) return _p(); };
+
+            var _ago = window.adminGo;
+            if (typeof _ago === "function") {
+                window.adminGo = function (hub, view) {
+                    if (view === "career-email-workspace") view = "career-vic-leads";
+                    _ago(hub, view);
+                    setTimeout(function () {
+                        if (view === "career-vic-leads" || view === "career-vic-email-audience") {
+                            try { vicLoadOutreachLeads(); } catch (e) { }
+                        }
+                        if (view === "career-vic-email-list" && typeof loadAdminEmailWorkspace === "function") {
+                            try { loadAdminEmailWorkspace(); } catch (e) { }
+                        }
+                    }, 80);
+                };
+            }
         })();
     </script>
 
