@@ -1664,6 +1664,9 @@
                                         <input id="vicLeadSearch" placeholder="Search name, email, company…"
                                             oninput="vicFilterOutreachLeads()"
                                             class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white w-48" />
+                                        <button type="button" onclick="vicCleanOutreachLeads()"
+                                            class="text-xs px-3 py-1.5 rounded bg-amber-700 text-white">Clean
+                                            duplicates</button>
                                         <button type="button" onclick="vicLoadOutreachLeads()"
                                             class="text-xs px-3 py-1.5 rounded bg-slate-800 text-white">Refresh</button>
                                     </div>
@@ -1964,7 +1967,8 @@
                             </div>
                             <p class="text-xs text-slate-500 mt-3">Staff sales report: partners only enter
                                 <strong>closing amount</strong>. Commission waits for payment confirmation. Install
-                                30-min trigger from AgentLib: <code>agentInstallAiAutopilotTrigger</code>.</p>
+                                30-min trigger from AgentLib: <code>agentInstallAiAutopilotTrigger</code>.
+                            </p>
                         </div>
                     </div>
 
@@ -24707,6 +24711,70 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                     toast("Lead deleted", "success");
                     vicLoadOutreachLeads();
                 } else toast((res && res.message) || "Delete failed", "error");
+            };
+        })();
+    </script>
+
+
+    <script>
+        (function () {
+            window.vicCleanOutreachLeads = async function () {
+                if (!confirm("Remove duplicate emails from Our leads library? Keeps one record per email (richest data).")) return;
+                try {
+                    var res = await executeSecureBridgeCall("agent", "agent-clean-outreach-leads", { owner: "victorias" });
+                    if (typeof showToast === "function") {
+                        showToast((res && res.message) || "Done", res && res.success !== false ? "success" : "error");
+                    }
+                    if (typeof vicLoadOutreachLeads === "function") vicLoadOutreachLeads();
+                } catch (e) {
+                    if (typeof showToast === "function") showToast(String(e.message || e), "error");
+                }
+            };
+
+            window.vicImportOutreachLeadsCsv = function () {
+                var input = document.getElementById("vicLeadCsvFile");
+                if (!input || !input.files || !input.files[0]) {
+                    if (typeof showToast === "function") showToast("Choose a CSV file", "error");
+                    return;
+                }
+                var file = input.files[0];
+                var reader = new FileReader();
+                reader.onload = async function () {
+                    var msg = document.getElementById("vicLeadCsvMsg");
+                    var text = String(reader.result || "");
+                    if (msg) msg.textContent = "Parsing all rows on server…";
+                    try {
+                        var extract = await executeSecureBridgeCall("agent", "agent-ai-extract-outreach-leads", {
+                            csvText: text,
+                            fileName: file.name
+                        });
+                        var rows = (extract && (extract.rows || extract.leads)) || [];
+                        if (!rows.length) {
+                            if (msg) msg.textContent = (extract && extract.message) || "No emails found";
+                            if (typeof showToast === "function") showToast("No valid emails", "error");
+                            return;
+                        }
+                        if (msg) {
+                            msg.textContent = "Extracted " + rows.length + " unique lead(s). Upserting (no duplicates)…";
+                        }
+                        var res = await executeSecureBridgeCall("agent", "agent-import-outreach-leads", {
+                            rows: rows,
+                            owner: "victorias"
+                        });
+                        if (msg) msg.textContent = (res && res.message) || ("Upserted " + rows.length);
+                        if (typeof showToast === "function") {
+                            showToast((res && res.message) || "Import complete", res && res.success !== false ? "success" : "error");
+                        }
+                        try {
+                            await executeSecureBridgeCall("agent", "agent-clean-outreach-leads", { owner: "victorias" });
+                        } catch (_) { }
+                        if (typeof vicLoadOutreachLeads === "function") vicLoadOutreachLeads();
+                    } catch (e) {
+                        if (msg) msg.textContent = String(e.message || e);
+                        if (typeof showToast === "function") showToast(String(e.message || e), "error");
+                    }
+                };
+                reader.readAsText(file);
             };
         })();
     </script>
