@@ -1687,6 +1687,16 @@
                                     </thead>
                                     <tbody id="vicLeadsTable" class="text-slate-300"></tbody>
                                 </table>
+                                <div id="vicLeadsPager"
+                                    class="flex flex-wrap items-center justify-between gap-2 mt-3 text-xs text-slate-400">
+                                    <span id="vicLeadsPageInfo">Page 1</span>
+                                    <div class="flex gap-2">
+                                        <button type="button" onclick="vicLeadsPrevPage()"
+                                            class="px-3 py-1.5 rounded bg-slate-800 text-white">Prev</button>
+                                        <button type="button" onclick="vicLeadsNextPage()"
+                                            class="px-3 py-1.5 rounded bg-slate-800 text-white">Next</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1967,8 +1977,7 @@
                             </div>
                             <p class="text-xs text-slate-500 mt-3">Staff sales report: partners only enter
                                 <strong>closing amount</strong>. Commission waits for payment confirmation. Install
-                                30-min trigger from AgentLib: <code>agentInstallAiAutopilotTrigger</code>.
-                            </p>
+                                30-min trigger from AgentLib: <code>agentInstallAiAutopilotTrigger</code>.</p>
                         </div>
                     </div>
 
@@ -24775,6 +24784,107 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                     }
                 };
                 reader.readAsText(file);
+            };
+        })();
+    </script>
+
+
+    <script>
+        (function () {
+            window.__vicLeadsPage = 1;
+            window.__vicLeadsPageSize = 50;
+
+            window.vicRenderOutreachLeadsTable = function (rows) {
+                rows = rows || window.__vicOutreachLeads || [];
+                // hide deleted stages client-side too
+                rows = rows.filter(function (r) {
+                    return String(r.stage || "") !== "deleted" && String(r.status || "") !== "deleted";
+                });
+                // dedupe by email for display
+                var byE = {};
+                rows.forEach(function (r) {
+                    var em = String(r.email || "").toLowerCase();
+                    if (!em) return;
+                    if (!byE[em]) byE[em] = r;
+                });
+                rows = Object.keys(byE).map(function (k) { return byE[k]; });
+                window.__vicOutreachLeads = rows;
+
+                var q = (document.getElementById("vicLeadSearch") && document.getElementById("vicLeadSearch").value || "").toLowerCase().trim();
+                var filtered = !q ? rows : rows.filter(function (r) {
+                    var blob = [r.name, r.email, r.company, r.title, r.phone, r.stage].join(" ").toLowerCase();
+                    return blob.indexOf(q) >= 0;
+                });
+
+                var pageSize = window.__vicLeadsPageSize || 50;
+                var totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+                if (window.__vicLeadsPage > totalPages) window.__vicLeadsPage = totalPages;
+                if (window.__vicLeadsPage < 1) window.__vicLeadsPage = 1;
+                var page = window.__vicLeadsPage;
+                var start = (page - 1) * pageSize;
+                var pageRows = filtered.slice(start, start + pageSize);
+
+                var t1 = document.getElementById("vicLeadsTable");
+                var countEl = document.getElementById("vicLeadsCount");
+                var info = document.getElementById("vicLeadsPageInfo");
+                if (countEl) countEl.textContent = "(" + filtered.length + (q ? " filtered" : "") + " / " + rows.length + ")";
+                if (info) info.textContent = "Page " + page + " of " + totalPages + " · " + pageSize + " per page · showing " + pageRows.length;
+
+                function esc(s) {
+                    return String(s == null ? "" : s)
+                        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+                }
+                function leadKey(r) {
+                    return String(r.leadId || r.email || "").trim();
+                }
+
+                if (!t1) return;
+                if (!pageRows.length) {
+                    t1.innerHTML = '<tr><td colspan="9" class="p-3 text-slate-500">No leads yet</td></tr>';
+                    return;
+                }
+                t1.innerHTML = pageRows.map(function (r, idx) {
+                    var li = r.linkedin || r.linkedIn || "";
+                    var liHtml = li
+                        ? '<a class="text-sky-400 underline" href="' + esc(li) + '" target="_blank" rel="noopener">Profile</a>'
+                        : "—";
+                    var id = leadKey(r);
+                    var num = start + idx + 1;
+                    return '<tr class="border-t border-slate-800 hover:bg-slate-900/50">' +
+                        '<td class="p-2 text-slate-500">' + num + '</td>' +
+                        '<td class="p-2">' + esc(r.name || "") + '</td>' +
+                        '<td class="p-2 font-mono text-[10px]">' + esc(r.email || "") + '</td>' +
+                        '<td class="p-2">' + esc(r.phone || "") + '</td>' +
+                        '<td class="p-2">' + esc(r.title || r.position || "") + '</td>' +
+                        '<td class="p-2">' + esc(r.company || "") + '</td>' +
+                        '<td class="p-2">' + liHtml + '</td>' +
+                        '<td class="p-2"><span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px]">' + esc(r.stage || "new") + '</span></td>' +
+                        '<td class="p-2 whitespace-nowrap">' +
+                        '<button type="button" class="text-emerald-400 hover:underline mr-2" data-vic-edit="' + esc(id) + '">Edit</button>' +
+                        '<button type="button" class="text-red-400 hover:underline" data-vic-del="' + esc(id) + '">Delete</button>' +
+                        '</td></tr>';
+                }).join("");
+
+                t1.querySelectorAll("[data-vic-edit]").forEach(function (btn) {
+                    btn.onclick = function () { if (typeof vicOpenLeadEdit === "function") vicOpenLeadEdit(btn.getAttribute("data-vic-edit")); };
+                });
+                t1.querySelectorAll("[data-vic-del]").forEach(function (btn) {
+                    btn.onclick = function () { if (typeof vicDeleteOutreachLead === "function") vicDeleteOutreachLead(btn.getAttribute("data-vic-del")); };
+                });
+            };
+
+            window.vicLeadsPrevPage = function () {
+                window.__vicLeadsPage = Math.max(1, (window.__vicLeadsPage || 1) - 1);
+                vicRenderOutreachLeadsTable(window.__vicOutreachLeads);
+            };
+            window.vicLeadsNextPage = function () {
+                window.__vicLeadsPage = (window.__vicLeadsPage || 1) + 1;
+                vicRenderOutreachLeadsTable(window.__vicOutreachLeads);
+            };
+            var _filter = window.vicFilterOutreachLeads;
+            window.vicFilterOutreachLeads = function () {
+                window.__vicLeadsPage = 1;
+                vicRenderOutreachLeadsTable(window.__vicOutreachLeads || []);
             };
         })();
     </script>
