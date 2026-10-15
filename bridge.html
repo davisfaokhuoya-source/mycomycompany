@@ -587,7 +587,7 @@
                     </button>
                     <div class="nav-group-panel" id="nav-panel-campaigns">
                         <button type="button" class="nav-sub-btn" data-hub="career" data-target-view="career-campaigns"
-                            onclick="adminGo('career','career-campaigns')">Sales campaigns</button>
+                            onclick="adminGo('career','career-campaigns')">Client sales campaigns</button>
                         <button type="button" class="nav-sub-btn" data-hub="career"
                             data-target-view="career-supportive-tasks"
                             onclick="adminGo('career','career-supportive-tasks')">Lead generation tasks</button>
@@ -614,12 +614,8 @@
                         <button type="button" class="nav-sub-btn" data-hub="leads" data-target-view="leads-matrix"
                             onclick="adminGo('leads','leads-matrix')">CRM &amp; leads</button>
                         <button type="button" class="nav-sub-btn" data-hub="career"
-                            data-target-view="career-email-create"
-                            onclick="adminGo('career','career-email-create')">Create email campaign</button>
-                        <button type="button" class="nav-sub-btn" data-hub="career" data-target-view="career-email-send"
-                            onclick="adminGo('career','career-email-send')">Send email batches</button>
-                        <button type="button" class="nav-sub-btn" data-hub="career" data-target-view="career-email-list"
-                            onclick="adminGo('career','career-email-list')">Email campaign list</button>
+                            data-target-view="career-email-workspace"
+                            onclick="adminGo('career','career-email-workspace')">Our leads & email (Victorias)</button>
                         <button type="button" class="nav-sub-btn" id="btnRegisterCampaignClient"
                             data-action="register-campaign-client"
                             onclick="return openCampaignOnlyClientRegister(event);">Register campaign client</button>
@@ -710,12 +706,8 @@
                     <a href="#" class="career-subview-link" data-target-view="career-supportive-tasks"
                         onclick="try{loadAdminSupportiveTasks()}catch(e){}">Supportive Tasks</a>
 
-                    <a href="#" class="career-subview-link" data-target-view="career-email-create"
-                        onclick="try{loadAdminEmailCampaigns()}catch(e){}">Create Email Campaign</a>
-                    <a href="#" class="career-subview-link" data-target-view="career-email-send"
-                        onclick="try{loadAdminEmailCampaigns()}catch(e){}">Send Email Batches</a>
-                    <a href="#" class="career-subview-link" data-target-view="career-email-list"
-                        onclick="try{loadAdminEmailCampaigns()}catch(e){}">Email Campaign List</a>
+                    <a href="#" class="career-subview-link" data-target-view="career-email-workspace"
+                        onclick="try{loadAdminEmailWorkspace()}catch(e){}">Our leads &amp; email (Victorias)</a>
 
 
                     <div class="mt-4 border-t border-slate-800 pt-3 px-1">
@@ -1342,9 +1334,9 @@
                             <div class="flex flex-wrap items-center justify-between gap-2">
                                 <div>
                                     <h2 class="text-lg font-bold text-white">Sales Campaigns</h2>
-                                    <p class="text-xs text-slate-400">Verticals: real estate · air tickets ·
-                                        reservations · events · consultancy · other. API via Gateway → AgentLib → Mongo.
-                                    </p>
+                                    <p class="text-xs text-slate-400">CLIENT work only: partners sell for a client (real
+                                        estate, tickets, etc.). Leads belong to that client. Not for pitching Victorias
+                                        services.</p>
                                 </div>
                                 <button type="button" onclick="loadAdminCampaignsWorkspace()"
                                     class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-white">Refresh</button>
@@ -1445,91 +1437,123 @@
                             </div>
                         </div>
                     </div>
-                    <div id="view-career-email-create"
+
+                    <div id="view-career-email-workspace"
                         class="career-view hidden flex-1 flex-col overflow-y-auto custom-scrollbar p-4 md:p-6">
-                        <div class="max-w-4xl w-full mx-auto space-y-4">
-                            <div class="flex flex-wrap justify-between gap-2 items-center">
+                        <div class="max-w-5xl w-full mx-auto space-y-5">
+                            <div class="flex flex-wrap justify-between gap-2 items-start">
                                 <div>
-                                    <h2 class="text-lg font-bold text-white">Create email campaign</h2>
-                                    <p class="text-xs text-slate-400">Draft a pitch to leads. Placeholders: {{name}}
-                                        {{firstName}} {{ctaUrl}}</p>
+                                    <h2 class="text-lg font-bold text-white">Victorias leads &amp; email</h2>
+                                    <p class="text-xs text-slate-400 mt-1 max-w-3xl">
+                                        <strong class="text-emerald-400">Company outreach only</strong> — your list to
+                                        win <em>new clients for The Victorias</em>
+                                        (FDI / ops / digital pitch). Stored as <code
+                                            class="text-slate-300">owner=victorias</code>, separate from any client’s
+                                        leads.
+                                        Do <strong>not</strong> use Client sales campaigns here. Workflow: HTML email →
+                                        CSV of <em>your</em> prospects → send batches.
+                                    </p>
                                 </div>
+                                <button type="button" onclick="loadAdminEmailWorkspace()"
+                                    class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-white">Refresh list</button>
                             </div>
-                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
-                                <h3 class="text-sm font-semibold text-white">Create campaign</h3>
-                                <input id="emcName" placeholder="Campaign name"
+
+                            <!-- Step 1: Draft -->
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                                <h3 class="text-sm font-semibold text-white flex items-center gap-2"><span
+                                        class="text-emerald-400 font-mono text-xs">1</span> Create HTML email campaign
+                                </h3>
+                                <input id="emcName" placeholder="Campaign name (internal)"
                                     class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
                                 <input id="emcSubject" placeholder="Subject line"
                                     class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                                <textarea id="emcBody" rows="6" placeholder="Body (use {{firstName}}, {{ctaUrl}})"
-                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"></textarea>
-                                <input id="emcCta" placeholder="CTA URL (default interest form)"
-                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"
-                                    value="https://thevictorias.com.ng/interest" />
-                                <input id="emcClientId" placeholder="Optional clientId to load leads from"
-                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                                <textarea id="emcManualRecipients" rows="3"
-                                    placeholder='Optional JSON: [{"email":"a@b.com","name":"Ada"}]'
-                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono"></textarea>
-                                <div class="flex flex-wrap gap-2">
-                                    <button type="button" onclick="adminCreateEmailCampaign()"
-                                        class="text-xs px-3 py-2 rounded-lg bg-emerald-600 text-white font-semibold">Save
-                                        draft</button>
-                                    <button type="button" onclick="adminCreateAndQueueFromLeads()"
-                                        class="text-xs px-3 py-2 rounded-lg bg-indigo-600 text-white">Save + load client
-                                        leads</button>
+                                <div>
+                                    <label class="text-[10px] text-slate-500 uppercase">HTML body (allowed).
+                                        Placeholders: {{name}} {{firstName}} {{email}} {{ctaUrl}}</label>
+                                    <textarea id="emcBody" rows="10"
+                                        placeholder="&lt;p&gt;Hi {{firstName}},&lt;/p&gt;&#10;&lt;p&gt;We help companies expand into Nigeria…&lt;/p&gt;&#10;&lt;p&gt;&lt;a href=&quot;{{ctaUrl}}&quot;&gt;Book a call&lt;/a&gt;&lt;/p&gt;"
+                                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono"></textarea>
                                 </div>
+                                <div class="grid md:grid-cols-2 gap-2">
+                                    <input id="emcCta" placeholder="CTA URL"
+                                        value="https://thevictorias.com.ng/interest"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                    <input id="emcFromName" placeholder="From name (e.g. The Victorias)"
+                                        class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                </div>
+                                <button type="button" onclick="adminCreateEmailCampaign()"
+                                    class="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold">Save
+                                    draft campaign</button>
                                 <p id="emcCreateMsg" class="text-[11px] text-slate-400"></p>
                             </div>
-                        </div>
-                    </div>
-                    <div id="view-career-email-send"
-                        class="career-view hidden flex-1 flex-col overflow-y-auto custom-scrollbar p-4 md:p-6">
-                        <div class="max-w-4xl w-full mx-auto space-y-4">
-                            <div class="flex flex-wrap justify-between gap-2 items-center">
-                                <div>
-                                    <h2 class="text-lg font-bold text-white">Send email batches</h2>
-                                    <p class="text-xs text-slate-400">Start, send and pause batches via Gateway → Gmail.
-                                        Paste the campaignId from the campaign list.</p>
+
+                            <!-- Step 2: Recipients -->
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                                <h3 class="text-sm font-semibold text-white flex items-center gap-2"><span
+                                        class="text-emerald-400 font-mono text-xs">2</span> Import <em>our</em>
+                                    prospects (CSV)</h3>
+                                <input id="emcActiveId" placeholder="campaignId (from step 1 or list below)"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono" />
+                                <div class="grid md:grid-cols-2 gap-3">
+                                    <div class="border border-slate-800 rounded-lg p-3 space-y-2">
+                                        <p class="text-[11px] text-slate-400 font-semibold">Upload CSV</p>
+                                        <p class="text-[10px] text-slate-500">Columns: email, name, phone, company
+                                            (header row optional). One contact per line.</p>
+                                        <input type="file" id="emcCsvFile" accept=".csv,text/csv,text/plain"
+                                            class="block w-full text-xs text-slate-300" />
+                                        <button type="button" onclick="adminImportEmailCsv()"
+                                            class="text-xs px-3 py-2 rounded-lg bg-indigo-600 text-white">Import CSV
+                                            into campaign</button>
+                                    </div>
+                                    <div class="border border-slate-800 rounded-lg p-3 space-y-2">
+                                        <p class="text-[11px] text-amber-400/90 font-semibold">Advanced (usually skip)
+                                        </p>
+                                        <p class="text-[10px] text-slate-500">Copy from a <em>client</em> CRM list only
+                                            if you intentionally reuse contacts. Prefer your own CSV for Victorias
+                                            outreach.</p>
+                                        <input id="emcClientId" placeholder="clientId (optional — mixes client data)"
+                                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+                                        <button type="button" onclick="adminImportEmailFromClientLeads()"
+                                            class="text-xs px-3 py-2 rounded-lg bg-slate-700 text-slate-200">Import from
+                                            client leads (not recommended)</button>
+                                    </div>
                                 </div>
+                                <textarea id="emcManualRecipients" rows="3"
+                                    placeholder="Optional paste: email,name per line  OR  JSON [{&quot;email&quot;:&quot;a@b.com&quot;,&quot;name&quot;:&quot;Ada&quot;}]"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono"></textarea>
+                                <button type="button" onclick="adminImportEmailManual()"
+                                    class="text-xs px-3 py-2 rounded-lg bg-slate-700 text-white">Add pasted
+                                    recipients</button>
+                                <p id="emcImportMsg" class="text-[11px] text-slate-400"></p>
                             </div>
-                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
-                                <h3 class="text-sm font-semibold text-white">Send batches</h3>
-                                <input id="emcActiveId" placeholder="campaignId"
-                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+
+                            <!-- Step 3: Send -->
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                                <h3 class="text-sm font-semibold text-white flex items-center gap-2"><span
+                                        class="text-emerald-400 font-mono text-xs">3</span> Send HTML batches</h3>
+                                <p class="text-[11px] text-slate-500">Uses campaignId above. Sends ~20 per click (Gmail
+                                    HTML). Run again until pending = 0.</p>
                                 <div class="flex flex-wrap gap-2">
                                     <button type="button" onclick="adminStartEmailCampaign()"
-                                        class="text-xs px-3 py-2 rounded-lg bg-amber-600 text-white">Set status:
-                                        sending</button>
+                                        class="text-xs px-3 py-2 rounded-lg bg-amber-600 text-white">Start (status:
+                                        sending)</button>
                                     <button type="button" onclick="adminProcessEmailBatch()"
                                         class="text-xs px-3 py-2 rounded-lg bg-orange-600 text-white font-semibold">Send
-                                        next batch (20)</button>
+                                        next batch</button>
                                     <button type="button" onclick="adminPauseEmailCampaign()"
                                         class="text-xs px-3 py-2 rounded-lg bg-slate-700 text-white">Pause</button>
                                 </div>
                                 <p id="emcBatchMsg" class="text-[11px] text-slate-400"></p>
                             </div>
-                        </div>
-                    </div>
-                    <div id="view-career-email-list"
-                        class="career-view hidden flex-1 flex-col overflow-y-auto custom-scrollbar p-4 md:p-6">
-                        <div class="max-w-4xl w-full mx-auto space-y-4">
-                            <div class="flex flex-wrap justify-between gap-2 items-center">
-                                <div>
-                                    <h2 class="text-lg font-bold text-white">Email campaign list</h2>
-                                    <p class="text-xs text-slate-400">All email campaigns with sent, pending and failed
-                                        counts.</p>
-                                </div>
-                                <button type="button" onclick="loadAdminEmailCampaigns()"
-                                    class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-white">Refresh</button>
-                            </div>
+
+                            <!-- List -->
                             <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-x-auto">
-                                <h3 class="text-sm font-semibold text-white mb-2">Campaigns</h3>
+                                <h3 class="text-sm font-semibold text-white mb-2">Your email campaigns</h3>
                                 <table class="w-full text-xs">
                                     <thead class="text-slate-500">
                                         <tr>
                                             <th class="p-2 text-left">ID</th>
-                                            <th>Name</th>
+                                            <th class="text-left">Name</th>
                                             <th>Status</th>
                                             <th>Sent</th>
                                             <th>Pending</th>
@@ -1542,6 +1566,12 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Keep old view ids as thin aliases so existing adminGo targets do not 404 -->
+                    <div id="view-career-email-create" class="career-view hidden"></div>
+                    <div id="view-career-email-send" class="career-view hidden"></div>
+                    <div id="view-career-email-list" class="career-view hidden"></div>
+
                     <div id="view-career-supportive-tasks"
                         class="career-view hidden flex-1 flex-col overflow-y-auto custom-scrollbar p-4 md:p-6">
                         <div class="max-w-3xl w-full mx-auto space-y-4">
@@ -15553,16 +15583,13 @@
                     var res = null;
                     try {
                         res = await executeSecureBridgeCall('career', 'deletePartner', {
-                            uniqueId: userId,
-                            userId: userId,
-                            email: em,
-                            partnerEmail: em
+                            uniqueId: userId, userId: userId, email: em, partnerEmail: em
                         });
                     } catch (e1) { res = { success: false, message: e1.message }; }
                     if (!res || res.success === false) {
                         try {
                             res = await executeSecureBridgeCall('career', 'adminDeleteUser', {
-                                uniqueId: userId, email: em
+                                uniqueId: userId, email: em, partnerEmail: em
                             });
                         } catch (e2) { res = { success: false, message: e2.message }; }
                     }
@@ -23691,6 +23718,107 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                     vicCloseModal(t);
                 }
             }, false);
+        })();
+    </script>
+
+
+    <script>
+        /* Separate Victorias outreach from client sales campaigns */
+        (function () {
+            var _create = window.adminCreateEmailCampaign;
+            window.adminCreateEmailCampaign = async function () {
+                // Force company-owned campaign metadata
+                var origBridge = window.executeSecureBridgeCall;
+                if (typeof origBridge === "function" && !window.__vicEmailOwnerPatched) {
+                    window.__vicEmailOwnerPatched = true;
+                    window.executeSecureBridgeCall = async function (system, action, payload) {
+                        payload = payload || {};
+                        if (action === "agent-create-email-campaign") {
+                            payload.owner = "victorias";
+                            payload.purpose = "company_client_acquisition";
+                            payload.scope = "internal_outreach";
+                            payload.clientId = payload.clientId || ""; // empty = not a client campaign
+                            payload.isClientCampaign = false;
+                        }
+                        if (action === "agent-add-email-campaign-recipients" || action === "agent-add-email-campaign-recipients-from-leads") {
+                            payload.owner = "victorias";
+                        }
+                        return origBridge(system, action, payload);
+                    };
+                }
+                if (typeof _create === "function") return _create();
+            };
+
+            // Banner on sales view if missing
+            document.addEventListener("DOMContentLoaded", function () {
+                var sales = document.getElementById("view-career-campaigns");
+                if (sales && !document.getElementById("vicSalesVsEmailNote")) {
+                    var note = document.createElement("div");
+                    note.id = "vicSalesVsEmailNote";
+                    note.className = "mb-3 text-[11px] text-slate-400 border border-slate-800 rounded-lg px-3 py-2 bg-slate-950/80";
+                    note.innerHTML = "<strong class=\"text-white\">Client sales campaigns</strong> = partners work <em>for a client</em>. " +
+                        "<strong class=\"text-emerald-400\">Victorias leads &amp; email</strong> (sidebar) = our list to acquire clients. Different data, different screens.";
+                    sales.insertBefore(note, sales.firstChild);
+                }
+            });
+        })();
+    </script>
+
+
+    <script>
+        (function () {
+            function toast(m, k) { if (typeof showToast === "function") showToast(m, k || "info"); else console.log(m); }
+            function val(id) { var e = document.getElementById(id); return e ? String(e.value || "").trim() : ""; }
+            function parseCsvText(text) {
+                text = String(text || "").replace(/^\uFEFF/, "");
+                var lines = text.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+                if (!lines.length) return [];
+                var rows = [], start = 0, headers = null;
+                var first = lines[0].toLowerCase();
+                if (/email|e-mail|mail/.test(first)) {
+                    var sep = first.indexOf("\t") >= 0 ? "\t" : (first.indexOf(";") >= 0 ? ";" : ",");
+                    headers = lines[0].split(sep).map(function (x) { return x.trim().toLowerCase().replace(/^"|"$/g, ""); });
+                    start = 1;
+                }
+                for (var i = start; i < lines.length; i++) {
+                    var line = lines[i];
+                    var sep2 = line.indexOf("\t") >= 0 ? "\t" : ",";
+                    var parts = line.split(sep2).map(function (p) { return p.trim().replace(/^"|"$/g, ""); });
+                    var rec = { email: "", name: "", phone: "", company: "", owner: "victorias", source: "csv_upload" };
+                    if (headers) {
+                        headers.forEach(function (hh, idx) {
+                            var v = parts[idx] || "";
+                            if (/e-?mail|mail/.test(hh)) rec.email = v;
+                            else if (/name|contact/.test(hh)) rec.name = v;
+                            else if (/phone|mobile|tel/.test(hh)) rec.phone = v;
+                            else if (/company|org/.test(hh)) rec.company = v;
+                        });
+                    } else {
+                        rec.email = parts[0] || ""; rec.name = parts[1] || ""; rec.phone = parts[2] || ""; rec.company = parts[3] || "";
+                    }
+                    if (rec.email && rec.email.indexOf("@") > 0) rows.push(rec);
+                }
+                return rows;
+            }
+            window.adminImportEmailCsv = function () {
+                var input = document.getElementById("emcCsvFile");
+                if (!input || !input.files || !input.files[0]) return toast("Choose a CSV file", "error");
+                var reader = new FileReader();
+                reader.onload = async function () {
+                    var rows = parseCsvText(reader.result);
+                    var id = val("emcActiveId");
+                    if (!id) return toast("Save draft first (campaignId)", "error");
+                    if (!rows.length) return toast("No emails in CSV", "error");
+                    var res = await executeSecureBridgeCall("agent", "agent-add-email-campaign-recipients", {
+                        campaignId: id, rows: rows, recipients: rows, owner: "victorias"
+                    });
+                    toast((res && res.message) || (res && res.success !== false ? ("Imported " + rows.length) : "Failed"),
+                        res && res.success !== false ? "success" : "error");
+                    if (typeof loadAdminEmailWorkspace === "function") loadAdminEmailWorkspace();
+                };
+                reader.readAsText(input.files[0]);
+            };
+            window.loadAdminEmailWorkspace = window.loadAdminEmailCampaigns || window.loadAdminEmailWorkspace;
         })();
     </script>
 
