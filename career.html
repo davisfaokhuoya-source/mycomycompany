@@ -1200,6 +1200,14 @@
                                                 onclick="handleVerifyAgent()">Verify</button>
                                         </div>
                                         <div id="verifyResult"></div>
+
+                                        <hr class="my-3" />
+                                        <h6 class="mb-2">Accredited Partner Directory</h6>
+                                        <input type="text" id="directorySearch"
+                                            class="form-control form-control-sm mb-2"
+                                            placeholder="Search by name or state" oninput="filterDirectory()" />
+                                        <div id="agentDirectoryList" class="text-start small"
+                                            style="max-height:240px;overflow-y:auto;"></div>
                                         <p class="text-muted mt-3" style="font-size:0.8rem;">Having trouble? Contact us
                                             at
                                             <a
@@ -2218,7 +2226,27 @@
                                                 placeholder="campaignId" />
                                             <button class="btn btn-outline-primary" type="button"
                                                 onclick="loadPartnerCampaignLeads()">Load leads</button>
+
                                         </div>
+                                    </div>
+
+                                    <div class="border rounded p-3 mt-3 bg-light">
+                                        <div class="fw-semibold small mb-2">Report a sale (closing amount only)</div>
+                                        <div class="row g-2">
+                                            <div class="col-md-4"><input id="saleLeadId"
+                                                    class="form-control form-control-sm" placeholder="leadId" /></div>
+                                            <div class="col-md-3"><input id="saleCampId"
+                                                    class="form-control form-control-sm" placeholder="campaignId" />
+                                            </div>
+                                            <div class="col-md-3"><input id="saleClosing" type="number"
+                                                    class="form-control form-control-sm" placeholder="Closing amount" />
+                                            </div>
+                                            <div class="col-md-2"><button type="button"
+                                                    class="btn btn-sm btn-success w-100"
+                                                    onclick="partnerReportClosing()">Report</button></div>
+                                        </div>
+                                        <p class="text-muted small mb-0 mt-1">Only the closing amount is required.
+                                            Commission is calculated after payment confirmation.</p>
                                     </div>
                                     <div id="partnerLeadList"></div>
                                     <hr />
@@ -3802,7 +3830,8 @@
             campaigns: "chListMyCampaigns",
             tasks: "chListMySupportiveTasks",
             commissions: "chListMyCommissions",
-            leads: "chListMyCampaignLeads"
+            leads: "chListMyCampaignLeads",
+            closing: "chReportClosing"
         };
         function partnerCampRows(res, keys) {
             for (const k of keys) if (res && Array.isArray(res[k])) return res[k];
@@ -3912,6 +3941,22 @@
                 }
             );
             if (rows.length) showToast(rows.length + " lead(s) loaded", "success", 2000);
+        }
+        async function partnerReportClosing() {
+            const leadId = ((document.getElementById("saleLeadId") || {}).value || "").trim();
+            const campaignId = ((document.getElementById("saleCampId") || {}).value || "").trim();
+            const closingAmount = Number((document.getElementById("saleClosing") || {}).value);
+            if (!leadId || !campaignId || !(closingAmount > 0)) {
+                showToast("Enter the lead ID, campaign ID and a closing amount greater than zero.", "warning");
+                return;
+            }
+            const res = await apiCall(PARTNER_CAMPAIGN_ACTIONS.closing, { leadId, campaignId, closingAmount }, true);
+            if (!res || res.success === false) {
+                showToast((res && res.message) || "Could not report this sale. Please try again.", "error");
+                return;
+            }
+            showToast(res.message || "Sale reported. Commission is calculated after payment confirmation.", "success");
+            ["saleLeadId", "saleCampId", "saleClosing"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
         }
         // Aliases used by the work-area chooser
         window.chListMyCampaigns = loadPartnerCampaigns;
@@ -5294,12 +5339,14 @@
         async function loadAgentDirectory() {
             const res = await apiCall("getAccreditedAgents", {}, false);
             if (!res.success) return;
-            allAccreditedAgents = res.agents;
+            allAccreditedAgents = res.agents || [];
             renderDirectory(allAccreditedAgents);
         }
 
         function renderDirectory(agents) {
-            document.getElementById("agentDirectoryList").innerHTML = agents.map(a => `
+            const listEl = document.getElementById("agentDirectoryList");
+            if (!listEl) return;
+            listEl.innerHTML = agents.map(a => `
     <div class="d-flex justify-content-between border-bottom py-1">
       <span>${a.name} <span class="badge bg-light text-dark">${a.tier}</span></span>
       <span class="text-muted small">${a.state} · #${a.accreditationNo}</span>
@@ -5308,7 +5355,8 @@
         }
 
         function filterDirectory() {
-            const q = document.getElementById("directorySearch").value.toLowerCase();
+            const searchEl = document.getElementById("directorySearch");
+            const q = (searchEl ? searchEl.value : "").toLowerCase();
             renderDirectory(allAccreditedAgents.filter(a =>
                 a.name.toLowerCase().includes(q) || a.state.toLowerCase().includes(q)
             ));
