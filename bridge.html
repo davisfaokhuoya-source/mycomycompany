@@ -1691,10 +1691,10 @@
                                     class="flex flex-wrap items-center justify-between gap-2 mt-3 text-xs text-slate-400">
                                     <span id="vicLeadsPageInfo">Page 1</span>
                                     <div class="flex gap-2">
-                                        <button type="button" onclick="vicLeadsPrevPage()"
-                                            class="px-3 py-1.5 rounded bg-slate-800 text-white">Prev</button>
-                                        <button type="button" onclick="vicLeadsNextPage()"
-                                            class="px-3 py-1.5 rounded bg-slate-800 text-white">Next</button>
+                                        <button type="button" id="vicLeadsPrevBtn"
+                                            class="px-3 py-1.5 rounded bg-slate-800 text-white hover:bg-slate-700">Prev</button>
+                                        <button type="button" id="vicLeadsNextBtn"
+                                            class="px-3 py-1.5 rounded bg-slate-800 text-white hover:bg-slate-700">Next</button>
                                     </div>
                                 </div>
                             </div>
@@ -24886,6 +24886,191 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 window.__vicLeadsPage = 1;
                 vicRenderOutreachLeadsTable(window.__vicOutreachLeads || []);
             };
+        })();
+    </script>
+
+
+    <script>
+        (function () {
+            window.__vicLeadsPage = window.__vicLeadsPage || 1;
+            window.__vicLeadsPageSize = 50;
+
+            function esc(s) {
+                return String(s == null ? "" : s)
+                    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+            }
+            function leadKey(r) {
+                return String((r && (r.leadId || r.email)) || "").trim();
+            }
+
+            window.vicGetFilteredOutreachLeads = function () {
+                var rows = window.__vicOutreachLeads || [];
+                rows = rows.filter(function (r) {
+                    return String(r.stage || "") !== "deleted" && String(r.status || "") !== "deleted";
+                });
+                var byE = {};
+                rows.forEach(function (r) {
+                    var em = String(r.email || "").toLowerCase();
+                    if (!em) return;
+                    if (!byE[em]) byE[em] = r;
+                });
+                rows = Object.keys(byE).map(function (k) { return byE[k]; });
+                var q = "";
+                var se = document.getElementById("vicLeadSearch");
+                if (se) q = String(se.value || "").toLowerCase().trim();
+                if (q) {
+                    rows = rows.filter(function (r) {
+                        var blob = [r.name, r.email, r.company, r.title, r.phone, r.stage].join(" ").toLowerCase();
+                        return blob.indexOf(q) >= 0;
+                    });
+                }
+                return rows;
+            };
+
+            window.vicRenderOutreachLeadsTable = function (rows) {
+                if (rows) {
+                    // store full set when caller passes data
+                    window.__vicOutreachLeads = rows;
+                }
+                var filtered = vicGetFilteredOutreachLeads();
+                var pageSize = Number(window.__vicLeadsPageSize) || 50;
+                var totalPages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
+                var page = Number(window.__vicLeadsPage) || 1;
+                if (page > totalPages) page = totalPages;
+                if (page < 1) page = 1;
+                window.__vicLeadsPage = page;
+
+                var start = (page - 1) * pageSize;
+                var pageRows = filtered.slice(start, start + pageSize);
+
+                var t1 = document.getElementById("vicLeadsTable");
+                var countEl = document.getElementById("vicLeadsCount");
+                var info = document.getElementById("vicLeadsPageInfo");
+                if (countEl) {
+                    countEl.textContent = "(" + filtered.length + " shown / " + (window.__vicOutreachLeads || []).length + " loaded)";
+                }
+                if (info) {
+                    info.textContent = "Page " + page + " of " + totalPages + " · " + pageSize + " per page · showing " + pageRows.length + " of " + filtered.length;
+                }
+
+                var prevBtn = document.getElementById("vicLeadsPrevBtn");
+                var nextBtn = document.getElementById("vicLeadsNextBtn");
+                if (prevBtn) {
+                    prevBtn.disabled = page <= 1;
+                    prevBtn.classList.toggle("opacity-40", page <= 1);
+                }
+                if (nextBtn) {
+                    nextBtn.disabled = page >= totalPages;
+                    nextBtn.classList.toggle("opacity-40", page >= totalPages);
+                }
+
+                if (!t1) return;
+                if (!pageRows.length) {
+                    t1.innerHTML = '<tr><td colspan="9" class="p-3 text-slate-500">No leads on this page</td></tr>';
+                    return;
+                }
+                t1.innerHTML = pageRows.map(function (r, idx) {
+                    var li = r.linkedin || r.linkedIn || "";
+                    var liHtml = li
+                        ? '<a class="text-sky-400 underline" href="' + esc(li) + '" target="_blank" rel="noopener">Profile</a>'
+                        : "—";
+                    var id = leadKey(r);
+                    var num = start + idx + 1;
+                    return '<tr class="border-t border-slate-800 hover:bg-slate-900/50">' +
+                        '<td class="p-2 text-slate-500">' + num + '</td>' +
+                        '<td class="p-2">' + esc(r.name || "") + '</td>' +
+                        '<td class="p-2 font-mono text-[10px]">' + esc(r.email || "") + '</td>' +
+                        '<td class="p-2">' + esc(r.phone || "") + '</td>' +
+                        '<td class="p-2">' + esc(r.title || r.position || "") + '</td>' +
+                        '<td class="p-2">' + esc(r.company || "") + '</td>' +
+                        '<td class="p-2">' + liHtml + '</td>' +
+                        '<td class="p-2"><span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px]">' + esc(r.stage || "new") + '</span></td>' +
+                        '<td class="p-2 whitespace-nowrap">' +
+                        '<button type="button" class="text-emerald-400 hover:underline mr-2" data-vic-edit="' + esc(id) + '">Edit</button>' +
+                        '<button type="button" class="text-red-400 hover:underline" data-vic-del="' + esc(id) + '">Delete</button>' +
+                        '</td></tr>';
+                }).join("");
+
+                t1.querySelectorAll("[data-vic-edit]").forEach(function (btn) {
+                    btn.onclick = function (ev) {
+                        ev.preventDefault();
+                        if (typeof vicOpenLeadEdit === "function") vicOpenLeadEdit(btn.getAttribute("data-vic-edit"));
+                    };
+                });
+                t1.querySelectorAll("[data-vic-del]").forEach(function (btn) {
+                    btn.onclick = function (ev) {
+                        ev.preventDefault();
+                        if (typeof vicDeleteOutreachLead === "function") vicDeleteOutreachLead(btn.getAttribute("data-vic-del"));
+                    };
+                });
+            };
+
+            window.vicLeadsPrevPage = function (ev) {
+                if (ev) ev.preventDefault();
+                var filtered = vicGetFilteredOutreachLeads();
+                var pageSize = Number(window.__vicLeadsPageSize) || 50;
+                var totalPages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
+                window.__vicLeadsPage = Math.max(1, (Number(window.__vicLeadsPage) || 1) - 1);
+                if (window.__vicLeadsPage > totalPages) window.__vicLeadsPage = totalPages;
+                vicRenderOutreachLeadsTable();
+                try {
+                    var table = document.getElementById("vicLeadsTable");
+                    if (table) table.scrollIntoView({ behavior: "smooth", block: "start" });
+                } catch (_) { }
+                return false;
+            };
+
+            window.vicLeadsNextPage = function (ev) {
+                if (ev) ev.preventDefault();
+                var filtered = vicGetFilteredOutreachLeads();
+                var pageSize = Number(window.__vicLeadsPageSize) || 50;
+                var totalPages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
+                var cur = Number(window.__vicLeadsPage) || 1;
+                window.__vicLeadsPage = Math.min(totalPages, cur + 1);
+                vicRenderOutreachLeadsTable();
+                try {
+                    var table = document.getElementById("vicLeadsTable");
+                    if (table) table.scrollIntoView({ behavior: "smooth", block: "start" });
+                } catch (_) { }
+                return false;
+            };
+
+            window.vicFilterOutreachLeads = function () {
+                window.__vicLeadsPage = 1;
+                vicRenderOutreachLeadsTable();
+            };
+
+            // Wire buttons by id (more reliable than inline onclick alone)
+            function wirePager() {
+                var prev = document.getElementById("vicLeadsPrevBtn");
+                var next = document.getElementById("vicLeadsNextBtn");
+                if (prev) {
+                    prev.onclick = function (e) { return vicLeadsPrevPage(e); };
+                }
+                if (next) {
+                    next.onclick = function (e) { return vicLeadsNextPage(e); };
+                }
+            }
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", wirePager);
+            } else {
+                wirePager();
+            }
+            // re-wire when opening the view
+            var _ago = window.adminGo;
+            if (typeof _ago === "function" && !window.__vicPagerAdminGoPatched) {
+                window.__vicPagerAdminGoPatched = true;
+                window.adminGo = function (hub, view) {
+                    var r = _ago(hub, view);
+                    if (view === "career-vic-leads") {
+                        setTimeout(function () {
+                            wirePager();
+                            if (typeof vicLoadOutreachLeads === "function") vicLoadOutreachLeads();
+                        }, 100);
+                    }
+                    return r;
+                };
+            }
         })();
     </script>
 
