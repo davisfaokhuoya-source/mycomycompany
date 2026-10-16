@@ -1765,25 +1765,29 @@
                                     Placeholders: {{name}} {{firstName}} {{email}} {{company}} {{title}} {{ctaUrl}}</p>
                             </div>
                             <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                                <input id="emcName" placeholder="Campaign name (internal)"
+                                <input type="hidden" id="emcEditId" value="" />
+                                <input id="vicEmcName" placeholder="Campaign name (internal)"
                                     class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                                <input id="emcSubject" placeholder="Subject line"
+                                <input id="vicEmcSubject" placeholder="Subject line"
                                     class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
                                 <label class="text-[10px] text-slate-500 uppercase">HTML body</label>
-                                <textarea id="emcBody" rows="12"
-                                    placeholder="&lt;p&gt;Hi {{firstName}},&lt;/p&gt;&#10;&lt;p&gt;I noticed {{company}}…&lt;/p&gt;"
+                                <textarea id="vicEmcBody" rows="12" placeholder="&lt;p&gt;Hi {{firstName}},&lt;/p&gt;"
                                     class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono"></textarea>
                                 <div class="grid md:grid-cols-2 gap-2">
-                                    <input id="emcCta" value="https://thevictorias.com.ng/interest"
+                                    <input id="vicEmcCta" value="https://thevictorias.com.ng/interest"
                                         placeholder="CTA URL"
                                         class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                                    <input id="emcFromName" placeholder="From name"
+                                    <input id="vicEmcFromName" placeholder="From name"
                                         class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
                                 </div>
-                                <button type="button" onclick="adminCreateEmailCampaign()"
-                                    class="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold">Save
-                                    draft message</button>
-                                <p id="emcCreateMsg" class="text-[11px] text-slate-400"></p>
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" id="vicEmcSaveBtn" onclick="adminCreateEmailCampaign()"
+                                        class="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold">Save
+                                        draft message</button>
+                                    <button type="button" onclick="vicClearEmailDraft()"
+                                        class="text-xs px-3 py-2 rounded-lg bg-slate-800 text-white">Clear</button>
+                                </div>
+                                <p id="vicEmcCreateMsg" class="text-[11px] text-slate-400"></p>
                                 <p class="text-[10px] text-slate-500">After save, open <strong>Attach leads to
                                         campaign</strong> and select this campaignId.</p>
                             </div>
@@ -1977,7 +1981,8 @@
                             </div>
                             <p class="text-xs text-slate-500 mt-3">Staff sales report: partners only enter
                                 <strong>closing amount</strong>. Commission waits for payment confirmation. Install
-                                30-min trigger from AgentLib: <code>agentInstallAiAutopilotTrigger</code>.</p>
+                                30-min trigger from AgentLib: <code>agentInstallAiAutopilotTrigger</code>.
+                            </p>
                         </div>
                     </div>
 
@@ -25071,6 +25076,232 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                     return r;
                 };
             }
+        })();
+    </script>
+
+
+    <script>
+        (function () {
+            function toast(m, k) {
+                if (typeof showToast === "function") showToast(m, k || "info");
+                else console.log(m);
+            }
+            function val(id) {
+                var e = document.getElementById(id);
+                return e ? String(e.value || "").trim() : "";
+            }
+            function setVal(id, v) {
+                var e = document.getElementById(id);
+                if (e) e.value = v == null ? "" : String(v);
+            }
+            function bridge(action, payload) {
+                if (typeof executeSecureBridgeCall === "function") {
+                    return executeSecureBridgeCall("agent", action, payload || {});
+                }
+                return Promise.reject(new Error("Bridge not ready"));
+            }
+
+            function readCreateForm() {
+                // Prefer unique create-screen IDs; fall back to any filled emc* on page
+                var name = val("vicEmcName") || val("emcName");
+                var subject = val("vicEmcSubject") || val("emcSubject");
+                var body = val("vicEmcBody") || val("emcBody");
+                var cta = val("vicEmcCta") || val("emcCta") || "https://thevictorias.com.ng/interest";
+                var fromName = val("vicEmcFromName") || val("emcFromName") || "The Victorias Ltd";
+                // If duplicates exist and first is empty, scan all matching textareas
+                if (!body) {
+                    var areas = document.querySelectorAll("textarea[id='emcBody'], textarea[id='vicEmcBody']");
+                    for (var i = 0; i < areas.length; i++) {
+                        if (String(areas[i].value || "").trim()) {
+                            body = String(areas[i].value).trim();
+                            break;
+                        }
+                    }
+                }
+                if (!subject) {
+                    var subjects = document.querySelectorAll("input[id='emcSubject'], input[id='vicEmcSubject']");
+                    for (var j = 0; j < subjects.length; j++) {
+                        if (String(subjects[j].value || "").trim()) {
+                            subject = String(subjects[j].value).trim();
+                            break;
+                        }
+                    }
+                }
+                return {
+                    name: name || subject,
+                    subject: subject,
+                    body: body,
+                    bodyHtml: body,
+                    ctaUrl: cta,
+                    fromName: fromName,
+                    owner: "victorias",
+                    purpose: "company_client_acquisition",
+                    scope: "internal_outreach",
+                    isClientCampaign: false,
+                    isHtml: true
+                };
+            }
+
+            window.vicClearEmailDraft = function () {
+                setVal("emcEditId", "");
+                setVal("vicEmcName", "");
+                setVal("vicEmcSubject", "");
+                setVal("vicEmcBody", "");
+                setVal("vicEmcCta", "https://thevictorias.com.ng/interest");
+                setVal("vicEmcFromName", "");
+                var msg = document.getElementById("vicEmcCreateMsg");
+                if (msg) msg.textContent = "";
+                var btn = document.getElementById("vicEmcSaveBtn");
+                if (btn) btn.textContent = "Save draft message";
+            };
+
+            window.adminCreateEmailCampaign = async function () {
+                var btn = document.getElementById("vicEmcSaveBtn");
+                var msg = document.getElementById("vicEmcCreateMsg") || document.getElementById("emcCreateMsg");
+                var payload = readCreateForm();
+                if (!payload.subject || !payload.body) {
+                    toast("Subject and body are required", "error");
+                    if (msg) msg.textContent = "Fill subject and HTML body, then save.";
+                    return;
+                }
+                var editId = val("emcEditId");
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = "Saving…";
+                }
+                try {
+                    var res;
+                    if (editId) {
+                        payload.campaignId = editId;
+                        res = await bridge("agent-update-email-campaign", payload);
+                    } else {
+                        res = await bridge("agent-create-email-campaign", payload);
+                    }
+                    var ok = res && res.success !== false;
+                    var camp = (res && (res.campaign || res.data)) || {};
+                    var id = camp.campaignId || camp.id || res.campaignId || editId || "";
+                    toast((res && res.message) || (ok ? (editId ? "Campaign updated" : "Draft saved") : "Failed"), ok ? "success" : "error");
+                    if (msg) {
+                        msg.textContent = ok
+                            ? ((editId ? "Updated" : "Saved") + (id ? (". Campaign ID: " + id) : ""))
+                            : String((res && res.message) || "Failed");
+                    }
+                    if (ok && id) {
+                        setVal("emcActiveId", id);
+                        setVal("emcSendId", id);
+                        setVal("emcEditId", "");
+                        var btn2 = document.getElementById("vicEmcSaveBtn");
+                        if (btn2) btn2.textContent = "Save draft message";
+                    }
+                    if (typeof loadAdminEmailCampaigns === "function") loadAdminEmailCampaigns();
+                    if (typeof loadAdminEmailWorkspace === "function") loadAdminEmailWorkspace();
+                } catch (e) {
+                    toast(String(e.message || e), "error");
+                    if (msg) msg.textContent = String(e.message || e);
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        if (!val("emcEditId")) btn.textContent = "Save draft message";
+                    }
+                }
+            };
+
+            window.adminEditEmailCampaign = async function (campaignId) {
+                if (!campaignId) return toast("No campaign id", "error");
+                try {
+                    var res = await bridge("agent-get-email-campaign", { campaignId: campaignId });
+                    var c = (res && (res.campaign || res.data)) || res || {};
+                    if (!c.subject && !c.body && !c.bodyHtml) {
+                        // fallback from list cache
+                        c = (window.__vicEmailCamps || []).filter(function (x) {
+                            return String(x.campaignId || x.id) === String(campaignId);
+                        })[0] || c;
+                    }
+                    setVal("emcEditId", campaignId);
+                    setVal("vicEmcName", c.name || "");
+                    setVal("vicEmcSubject", c.subject || "");
+                    setVal("vicEmcBody", c.bodyHtml || c.body || c.message || "");
+                    setVal("vicEmcCta", c.ctaUrl || "https://thevictorias.com.ng/interest");
+                    setVal("vicEmcFromName", c.fromName || "");
+                    var btn = document.getElementById("vicEmcSaveBtn");
+                    if (btn) btn.textContent = "Update message";
+                    if (typeof adminGo === "function") adminGo("career", "career-vic-email-create");
+                    toast("Loaded for edit", "success");
+                } catch (e) {
+                    toast(String(e.message || e), "error");
+                }
+            };
+
+            window.adminDeleteEmailCampaign = async function (campaignId) {
+                if (!campaignId) return toast("No campaign id", "error");
+                if (!confirm("Delete this email campaign? This cannot be undone from the list.")) return;
+                try {
+                    var res = await bridge("agent-delete-email-campaign", { campaignId: campaignId });
+                    toast((res && res.message) || (res && res.success !== false ? "Deleted" : "Failed"),
+                        res && res.success !== false ? "success" : "error");
+                    if (typeof loadAdminEmailCampaigns === "function") loadAdminEmailCampaigns();
+                    if (typeof loadAdminEmailWorkspace === "function") loadAdminEmailWorkspace();
+                } catch (e) {
+                    toast(String(e.message || e), "error");
+                }
+            };
+
+            window.loadAdminEmailCampaigns = async function () {
+                try {
+                    var res = await bridge("agent-list-email-campaigns", { owner: "victorias" });
+                    var rows = (res && (res.campaigns || res.data)) || [];
+                    rows = rows.filter(function (c) {
+                        return String(c.status || "") !== "deleted";
+                    });
+                    window.__vicEmailCamps = rows;
+                    function paint(el) {
+                        if (!el) return;
+                        if (!rows.length) {
+                            el.innerHTML = '<p class="text-slate-500 text-xs">No email campaigns yet</p>';
+                            return;
+                        }
+                        el.innerHTML = rows.map(function (c) {
+                            var id = c.campaignId || c.id || "";
+                            var name = c.name || c.subject || id;
+                            var st = c.status || "draft";
+                            return '<div class="text-xs border border-slate-800 rounded-lg p-3 mb-2 flex flex-wrap items-start justify-between gap-2">' +
+                                '<div class="min-w-0">' +
+                                '<div class="text-white font-medium">' + String(name).replace(/</g, "&lt;") + '</div>' +
+                                '<div class="text-slate-500 font-mono text-[10px] mt-0.5">' + String(id).replace(/</g, "&lt;") + '</div>' +
+                                '<div class="text-slate-400 mt-1">Status: ' + String(st) +
+                                ' · sent ' + (c.sentCount || 0) +
+                                (c.subject ? (' · ' + String(c.subject).slice(0, 60).replace(/</g, "&lt;")) : "") +
+                                '</div></div>' +
+                                '<div class="flex flex-wrap gap-2 shrink-0">' +
+                                '<button type="button" class="text-emerald-400 hover:underline" data-em-edit="' + String(id).replace(/"/g, "") + '">Edit</button>' +
+                                '<button type="button" class="text-sky-400 hover:underline" data-em-use="' + String(id).replace(/"/g, "") + '">Use ID</button>' +
+                                '<button type="button" class="text-red-400 hover:underline" data-em-del="' + String(id).replace(/"/g, "") + '">Delete</button>' +
+                                '</div></div>';
+                        }).join("");
+                        el.querySelectorAll("[data-em-edit]").forEach(function (b) {
+                            b.onclick = function () { adminEditEmailCampaign(b.getAttribute("data-em-edit")); };
+                        });
+                        el.querySelectorAll("[data-em-del]").forEach(function (b) {
+                            b.onclick = function () { adminDeleteEmailCampaign(b.getAttribute("data-em-del")); };
+                        });
+                        el.querySelectorAll("[data-em-use]").forEach(function (b) {
+                            b.onclick = function () {
+                                var id = b.getAttribute("data-em-use");
+                                setVal("emcActiveId", id);
+                                setVal("emcSendId", id);
+                                toast("Campaign ID set for attach / send", "success");
+                            };
+                        });
+                    }
+                    paint(document.getElementById("vicEmailCampList"));
+                    paint(document.getElementById("admEmailCampList"));
+                    paint(document.getElementById("emcCampList"));
+                } catch (e) {
+                    toast(String(e.message || e), "error");
+                }
+            };
+
+            window.loadAdminEmailWorkspace = window.loadAdminEmailCampaigns;
         })();
     </script>
 
