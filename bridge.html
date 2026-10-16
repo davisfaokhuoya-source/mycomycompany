@@ -1800,20 +1800,34 @@
                         <div class="max-w-3xl w-full mx-auto space-y-4">
                             <div>
                                 <h2 class="text-lg font-bold text-white">Attach leads to campaign</h2>
-                                <p class="text-xs text-slate-400">Link people from <strong>Our leads library</strong>
-                                    (or a one-off CSV) to a draft message. Does not mix client CRM leads.</p>
+                                <p class="text-xs text-slate-400">Pick a saved message below, then link people from
+                                    <strong>Our leads library</strong>. Does not mix client CRM leads.</p>
                             </div>
+
                             <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                                <input id="emcActiveId" placeholder="campaignId from Create email message"
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <label class="text-[10px] text-slate-500 uppercase">Your campaigns</label>
+                                    <button type="button" onclick="loadAdminEmailCampaigns()"
+                                        class="text-xs px-2 py-1 rounded bg-slate-800 text-white">Refresh
+                                        campaigns</button>
+                                </div>
+                                <select id="vicCampPickSelect" onchange="vicOnCampPickChange(this.value)"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+                                    <option value="">Select a campaign…</option>
+                                </select>
+                                <input id="emcActiveId" placeholder="Or paste campaignId"
                                     class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono" />
-                                <button type="button" onclick="vicAttachAllLibraryLeads()"
-                                    class="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold">Attach
-                                    all library leads</button>
-                                <button type="button" onclick="vicAttachSelectedLibraryLeads()"
-                                    class="text-xs px-3 py-2 rounded-lg bg-indigo-600 text-white">Attach selected rows
-                                    only</button>
+                                <div id="vicCampPickList" class="max-h-40 overflow-y-auto space-y-1 text-xs"></div>
+                                <div class="flex flex-wrap gap-2 pt-1">
+                                    <button type="button" onclick="vicAttachAllLibraryLeads()"
+                                        class="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold">Attach
+                                        all library leads</button>
+                                    <button type="button" onclick="vicAttachSelectedLibraryLeads()"
+                                        class="text-xs px-3 py-2 rounded-lg bg-indigo-600 text-white">Attach selected
+                                        rows only</button>
+                                </div>
                                 <p class="text-[10px] text-slate-500 border-t border-slate-800 pt-3">Or one-off CSV for
-                                    this campaign only (also saved into library when possible)</p>
+                                    this campaign only</p>
                                 <input type="file" id="emcCsvFile" accept=".csv,text/csv,text/plain"
                                     class="block w-full text-xs text-slate-300" />
                                 <button type="button" onclick="adminImportEmailCsv()"
@@ -1821,18 +1835,22 @@
                                     campaign</button>
                                 <p id="emcImportMsg" class="text-[11px] text-slate-400"></p>
                             </div>
+
                             <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-x-auto">
-                                <button type="button" onclick="vicLoadOutreachLeads()"
-                                    class="text-xs px-3 py-1.5 rounded bg-slate-800 text-white mb-2">Refresh
-                                    library</button>
+                                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                    <span class="text-[10px] text-slate-500 uppercase">Library leads</span>
+                                    <button type="button" onclick="vicLoadOutreachLeadsForAttach()"
+                                        class="text-xs px-3 py-1.5 rounded bg-slate-800 text-white">Refresh
+                                        library</button>
+                                </div>
                                 <table class="w-full text-xs">
                                     <thead class="text-slate-500">
                                         <tr>
                                             <th class="p-2"><input type="checkbox" id="vicLeadSelectAll"
                                                     onchange="vicToggleSelectAllLeads(this.checked)" /></th>
-                                            <th class="text-left">Name</th>
-                                            <th class="text-left">Email</th>
-                                            <th class="text-left">Company</th>
+                                            <th class="text-left p-2">Name</th>
+                                            <th class="text-left p-2">Email</th>
+                                            <th class="text-left p-2">Company</th>
                                         </tr>
                                     </thead>
                                     <tbody id="vicLeadsPickTable" class="text-slate-300"></tbody>
@@ -1851,7 +1869,16 @@
                                 </p>
                             </div>
                             <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                                <input id="emcSendId" placeholder="campaignId"
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <label class="text-[10px] text-slate-500 uppercase">Campaign</label>
+                                    <button type="button" onclick="loadAdminEmailCampaigns()"
+                                        class="text-xs px-2 py-1 rounded bg-slate-800 text-white">Refresh</button>
+                                </div>
+                                <select id="vicCampSendSelect" onchange="vicOnCampSendChange(this.value)"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+                                    <option value="">Select a campaign…</option>
+                                </select>
+                                <input id="emcSendId" placeholder="Or paste campaignId"
                                     class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono" />
                                 <div class="flex flex-wrap gap-2">
                                     <button type="button" onclick="adminStartEmailCampaign()"
@@ -1880,8 +1907,10 @@
                                 <button type="button" onclick="loadAdminEmailWorkspace()"
                                     class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-white">Refresh</button>
                             </div>
-                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-x-auto">
-                                <table class="w-full text-xs">
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                                <div id="vicEmailCampList" class="space-y-2"></div>
+                                <div id="emcCampList" class="space-y-2"></div>
+                                <table class="w-full text-xs mt-2">
                                     <thead class="text-slate-500">
                                         <tr>
                                             <th class="p-2 text-left">ID</th>
@@ -1890,7 +1919,7 @@
                                             <th>Sent</th>
                                             <th>Pending</th>
                                             <th>Failed</th>
-                                            <th></th>
+                                            <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="emcTable" class="text-slate-300"></tbody>
@@ -1981,8 +2010,7 @@
                             </div>
                             <p class="text-xs text-slate-500 mt-3">Staff sales report: partners only enter
                                 <strong>closing amount</strong>. Commission waits for payment confirmation. Install
-                                30-min trigger from AgentLib: <code>agentInstallAiAutopilotTrigger</code>.
-                            </p>
+                                30-min trigger from AgentLib: <code>agentInstallAiAutopilotTrigger</code>.</p>
                         </div>
                     </div>
 
@@ -25302,6 +25330,298 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             };
 
             window.loadAdminEmailWorkspace = window.loadAdminEmailCampaigns;
+        })();
+    </script>
+
+
+    <script>
+        (function () {
+            function toast(m, k) {
+                if (typeof showToast === "function") showToast(m, k || "info");
+                else console.log(m);
+            }
+            function val(id) {
+                var e = document.getElementById(id);
+                return e ? String(e.value || "").trim() : "";
+            }
+            function setVal(id, v) {
+                var els = document.querySelectorAll("#" + id);
+                // getElementById only first; set all duplicates
+                var e = document.getElementById(id);
+                if (e) e.value = v == null ? "" : String(v);
+                document.querySelectorAll('input[id="' + id + '"]').forEach(function (n) {
+                    n.value = v == null ? "" : String(v);
+                });
+            }
+            function bridge(action, payload) {
+                if (typeof executeSecureBridgeCall === "function") {
+                    return executeSecureBridgeCall("agent", action, payload || {});
+                }
+                return Promise.reject(new Error("Bridge not ready"));
+            }
+            function esc(s) {
+                return String(s == null ? "" : s)
+                    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+            }
+
+            window.vicOnCampPickChange = function (id) {
+                setVal("emcActiveId", id || "");
+                setVal("emcSendId", id || "");
+            };
+            window.vicOnCampSendChange = function (id) {
+                setVal("emcSendId", id || "");
+                setVal("emcActiveId", id || "");
+            };
+
+            function fillCampSelects(rows) {
+                rows = rows || [];
+                function fill(selId) {
+                    var sel = document.getElementById(selId);
+                    if (!sel) return;
+                    var cur = sel.value;
+                    sel.innerHTML = '<option value="">Select a campaign…</option>' +
+                        rows.map(function (c) {
+                            var id = c.campaignId || c.id || "";
+                            var label = (c.name || c.subject || id) + " · " + (c.status || "draft");
+                            return '<option value="' + esc(id) + '">' + esc(label) + "</option>";
+                        }).join("");
+                    if (cur) sel.value = cur;
+                }
+                fill("vicCampPickSelect");
+                fill("vicCampSendSelect");
+            }
+
+            function paintCampCards(el, rows) {
+                if (!el) return;
+                if (!rows.length) {
+                    el.innerHTML = '<p class="text-slate-500 text-[11px]">No campaigns yet. Create one under Create email message.</p>';
+                    return;
+                }
+                el.innerHTML = rows.map(function (c) {
+                    var id = c.campaignId || c.id || "";
+                    return '<div class="border border-slate-800 rounded-lg p-2 flex flex-wrap items-center justify-between gap-2">' +
+                        '<div class="min-w-0">' +
+                        '<div class="text-white text-[11px] font-medium">' + esc(c.name || c.subject || id) + '</div>' +
+                        '<div class="text-slate-500 font-mono text-[10px]">' + esc(id) + '</div>' +
+                        '<div class="text-slate-400 text-[10px]">' + esc(c.status || "draft") +
+                        " · pending " + (c.pendingCount || 0) + " · sent " + (c.sentCount || 0) + "</div>" +
+                        "</div>" +
+                        '<div class="flex flex-wrap gap-2 text-[11px]">' +
+                        '<button type="button" class="text-sky-400 hover:underline" data-use="' + esc(id) + '">Select</button>' +
+                        '<button type="button" class="text-emerald-400 hover:underline" data-edit="' + esc(id) + '">Edit</button>' +
+                        '<button type="button" class="text-red-400 hover:underline" data-del="' + esc(id) + '">Delete</button>' +
+                        "</div></div>";
+                }).join("");
+                el.querySelectorAll("[data-use]").forEach(function (b) {
+                    b.onclick = function () {
+                        var id = b.getAttribute("data-use");
+                        setVal("emcActiveId", id);
+                        setVal("emcSendId", id);
+                        var s1 = document.getElementById("vicCampPickSelect");
+                        var s2 = document.getElementById("vicCampSendSelect");
+                        if (s1) s1.value = id;
+                        if (s2) s2.value = id;
+                        toast("Campaign selected", "success");
+                    };
+                });
+                el.querySelectorAll("[data-edit]").forEach(function (b) {
+                    b.onclick = function () {
+                        if (typeof adminEditEmailCampaign === "function") adminEditEmailCampaign(b.getAttribute("data-edit"));
+                    };
+                });
+                el.querySelectorAll("[data-del]").forEach(function (b) {
+                    b.onclick = function () {
+                        if (typeof adminDeleteEmailCampaign === "function") adminDeleteEmailCampaign(b.getAttribute("data-del"));
+                    };
+                });
+            }
+
+            var _load = window.loadAdminEmailCampaigns;
+            window.loadAdminEmailCampaigns = async function () {
+                try {
+                    var res = await bridge("agent-list-email-campaigns", { owner: "victorias" });
+                    var rows = (res && (res.campaigns || res.data)) || [];
+                    rows = rows.filter(function (c) {
+                        return String(c.status || "") !== "deleted";
+                    });
+                    window.__vicEmailCamps = rows;
+                    fillCampSelects(rows);
+                    paintCampCards(document.getElementById("vicCampPickList"), rows);
+                    paintCampCards(document.getElementById("vicEmailCampList"), rows);
+                    paintCampCards(document.getElementById("admEmailCampList"), rows);
+                    paintCampCards(document.getElementById("emcCampList"), rows);
+                    if (!rows.length) toast("No campaigns yet — create a message first", "info");
+                } catch (e) {
+                    toast(String(e.message || e), "error");
+                    if (typeof _load === "function") {
+                        try { await _load(); } catch (_) { }
+                    }
+                }
+            };
+            window.loadAdminEmailWorkspace = window.loadAdminEmailCampaigns;
+
+            window.vicLoadOutreachLeadsForAttach = async function () {
+                try {
+                    if (typeof vicLoadOutreachLeads === "function") await vicLoadOutreachLeads();
+                    var rows = window.__vicOutreachLeads || [];
+                    var tbody = document.getElementById("vicLeadsPickTable");
+                    if (!tbody) return;
+                    if (!rows.length) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="p-3 text-slate-500">No library leads. Import under Our leads library first.</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = rows.map(function (r, i) {
+                        var em = esc(r.email || "");
+                        return '<tr class="border-t border-slate-800">' +
+                            '<td class="p-2"><input type="checkbox" class="vic-lead-pick" data-email="' + em + '" data-idx="' + i + '" /></td>' +
+                            '<td class="p-2">' + esc(r.name || "") + "</td>" +
+                            '<td class="p-2 font-mono text-[10px]">' + em + "</td>" +
+                            '<td class="p-2">' + esc(r.company || "") + "</td></tr>";
+                    }).join("");
+                } catch (e) {
+                    toast(String(e.message || e), "error");
+                }
+            };
+
+            window.vicToggleSelectAllLeads = function (on) {
+                document.querySelectorAll(".vic-lead-pick").forEach(function (c) {
+                    c.checked = !!on;
+                });
+            };
+
+            window.vicAttachAllLibraryLeads = async function () {
+                var id = val("emcActiveId");
+                if (!id) return toast("Select a campaign first", "error");
+                var rows = window.__vicOutreachLeads || [];
+                if (!rows.length) {
+                    await vicLoadOutreachLeadsForAttach();
+                    rows = window.__vicOutreachLeads || [];
+                }
+                if (!rows.length) return toast("No library leads to attach", "error");
+                var payload = {
+                    campaignId: id,
+                    rows: rows.map(function (r) {
+                        return {
+                            email: r.email,
+                            name: r.name || "",
+                            company: r.company || "",
+                            leadId: r.leadId || "",
+                            owner: "victorias"
+                        };
+                    }),
+                    owner: "victorias"
+                };
+                try {
+                    var res = await bridge("agent-add-email-campaign-recipients", payload);
+                    toast((res && res.message) || (res && res.success !== false ? ("Attached " + payload.rows.length) : "Failed"),
+                        res && res.success !== false ? "success" : "error");
+                    loadAdminEmailCampaigns();
+                } catch (e) {
+                    toast(String(e.message || e), "error");
+                }
+            };
+
+            window.vicAttachSelectedLibraryLeads = async function () {
+                var id = val("emcActiveId");
+                if (!id) return toast("Select a campaign first", "error");
+                var rows = window.__vicOutreachLeads || [];
+                var picked = [];
+                document.querySelectorAll(".vic-lead-pick:checked").forEach(function (c) {
+                    var idx = Number(c.getAttribute("data-idx"));
+                    if (rows[idx]) picked.push(rows[idx]);
+                    else if (c.getAttribute("data-email")) {
+                        picked.push({ email: c.getAttribute("data-email") });
+                    }
+                });
+                if (!picked.length) return toast("Select at least one lead", "error");
+                try {
+                    var res = await bridge("agent-add-email-campaign-recipients", {
+                        campaignId: id,
+                        rows: picked.map(function (r) {
+                            return { email: r.email, name: r.name || "", company: r.company || "", leadId: r.leadId || "", owner: "victorias" };
+                        }),
+                        owner: "victorias"
+                    });
+                    toast((res && res.message) || ("Attached " + picked.length), res && res.success !== false ? "success" : "error");
+                    loadAdminEmailCampaigns();
+                } catch (e) {
+                    toast(String(e.message || e), "error");
+                }
+            };
+
+            // Auto-load when opening attach / send / list
+            var _ago = window.adminGo;
+            if (typeof _ago === "function" && !window.__vicCampPickGoPatched) {
+                window.__vicCampPickGoPatched = true;
+                window.adminGo = function (hub, view) {
+                    var r = _ago(hub, view);
+                    if (String(view || "").indexOf("email") >= 0 || String(view || "").indexOf("vic-email") >= 0) {
+                        setTimeout(function () {
+                            try { loadAdminEmailCampaigns(); } catch (_) { }
+                            try { vicLoadOutreachLeadsForAttach(); } catch (_) { }
+                        }, 120);
+                    }
+                    return r;
+                };
+            }
+        })();
+    </script>
+
+
+    <script>
+        (function () {
+            var _load = window.loadAdminEmailCampaigns;
+            window.loadAdminEmailCampaigns = async function () {
+                if (typeof _load === "function") {
+                    try { await _load(); } catch (e) { console.warn(e); }
+                }
+                var rows = window.__vicEmailCamps || [];
+                var tb = document.getElementById("emcTable");
+                if (!tb) return;
+                function esc(s) {
+                    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+                }
+                if (!rows.length) {
+                    tb.innerHTML = '<tr><td colspan="7" class="p-3 text-slate-500">No campaigns</td></tr>';
+                    return;
+                }
+                tb.innerHTML = rows.map(function (c) {
+                    var id = c.campaignId || c.id || "";
+                    return "<tr class=\"border-t border-slate-800\">" +
+                        "<td class=\"p-2 font-mono text-[10px]\">" + esc(id) + "</td>" +
+                        "<td class=\"p-2\">" + esc(c.name || c.subject || "") + "</td>" +
+                        "<td class=\"p-2 text-center\">" + esc(c.status || "draft") + "</td>" +
+                        "<td class=\"p-2 text-center\">" + (c.sentCount || 0) + "</td>" +
+                        "<td class=\"p-2 text-center\">" + (c.pendingCount || 0) + "</td>" +
+                        "<td class=\"p-2 text-center\">" + (c.failedCount || 0) + "</td>" +
+                        "<td class=\"p-2 whitespace-nowrap\">" +
+                        "<button type=\"button\" class=\"text-sky-400 hover:underline mr-2\" data-u=\"" + esc(id) + "\">Select</button>" +
+                        "<button type=\"button\" class=\"text-emerald-400 hover:underline mr-2\" data-e=\"" + esc(id) + "\">Edit</button>" +
+                        "<button type=\"button\" class=\"text-red-400 hover:underline\" data-d=\"" + esc(id) + "\">Delete</button>" +
+                        "</td></tr>";
+                }).join("");
+                tb.querySelectorAll("[data-u]").forEach(function (b) {
+                    b.onclick = function () {
+                        var id = b.getAttribute("data-u");
+                        document.querySelectorAll('input[id="emcActiveId"],input[id="emcSendId"]').forEach(function (n) { n.value = id; });
+                        var s1 = document.getElementById("vicCampPickSelect");
+                        var s2 = document.getElementById("vicCampSendSelect");
+                        if (s1) s1.value = id;
+                        if (s2) s2.value = id;
+                        if (typeof showToast === "function") showToast("Campaign selected", "success");
+                    };
+                });
+                tb.querySelectorAll("[data-e]").forEach(function (b) {
+                    b.onclick = function () {
+                        if (typeof adminEditEmailCampaign === "function") adminEditEmailCampaign(b.getAttribute("data-e"));
+                    };
+                });
+                tb.querySelectorAll("[data-d]").forEach(function (b) {
+                    b.onclick = function () {
+                        if (typeof adminDeleteEmailCampaign === "function") adminDeleteEmailCampaign(b.getAttribute("data-d"));
+                    };
+                });
+            };
         })();
     </script>
 
