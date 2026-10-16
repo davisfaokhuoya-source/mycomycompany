@@ -1826,6 +1826,9 @@
                                     <button type="button" onclick="vicAttachSelectedLibraryLeads()"
                                         class="text-xs px-3 py-2 rounded-lg bg-indigo-600 text-white">Attach selected
                                         rows only</button>
+                                    <button type="button" onclick="vicAttachFilteredByRole()"
+                                        class="text-xs px-3 py-2 rounded-lg bg-violet-700 text-white">Attach all
+                                        matching role filter</button>
                                 </div>
                                 <p class="text-[10px] text-slate-500 border-t border-slate-800 pt-3">Or one-off CSV for
                                     this campaign only</p>
@@ -1837,19 +1840,55 @@
                                 <p id="emcImportMsg" class="text-[11px] text-slate-400"></p>
                             </div>
 
-                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-x-auto">
-                                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-x-auto space-y-3">
+                                <div class="flex flex-wrap items-center justify-between gap-2">
                                     <span class="text-[10px] text-slate-500 uppercase">Library leads</span>
                                     <button type="button" onclick="vicLoadOutreachLeadsForAttach()"
                                         class="text-xs px-3 py-1.5 rounded bg-slate-800 text-white">Refresh
                                         library</button>
                                 </div>
+                                <div class="flex flex-wrap gap-2 items-end">
+                                    <div class="flex-1 min-w-[140px]">
+                                        <label class="text-[10px] text-slate-500 uppercase">Filter by role /
+                                            title</label>
+                                        <select id="vicRoleFilter" onchange="vicApplyRoleFilter()"
+                                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
+                                            <option value="">All roles</option>
+                                            <option value="CEO">CEO / Chief Executive</option>
+                                            <option value="COO">COO / Chief Operating</option>
+                                            <option value="CFO">CFO / Chief Financial</option>
+                                            <option value="CTO">CTO / Chief Technology</option>
+                                            <option value="President">President</option>
+                                            <option value="Founder">Founder / Owner</option>
+                                            <option value="VP">VP / Vice President</option>
+                                            <option value="Director">Director</option>
+                                            <option value="Partner">Partner</option>
+                                            <option value="Manager">Manager</option>
+                                            <option value="Sales">Sales / Business Development</option>
+                                            <option value="Other">Other / unknown title</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex-1 min-w-[140px]">
+                                        <label class="text-[10px] text-slate-500 uppercase">Search title text</label>
+                                        <input id="vicRoleSearch" oninput="vicApplyRoleFilter()"
+                                            placeholder="e.g. Chief Operating"
+                                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white" />
+                                    </div>
+                                    <button type="button" onclick="vicSelectVisibleLeads(true)"
+                                        class="text-xs px-3 py-1.5 rounded bg-indigo-700 text-white">Select
+                                        visible</button>
+                                    <button type="button" onclick="vicSelectVisibleLeads(false)"
+                                        class="text-xs px-3 py-1.5 rounded bg-slate-700 text-white">Clear
+                                        selection</button>
+                                </div>
+                                <p id="vicRoleFilterMsg" class="text-[11px] text-slate-400"></p>
                                 <table class="w-full text-xs">
                                     <thead class="text-slate-500">
                                         <tr>
                                             <th class="p-2"><input type="checkbox" id="vicLeadSelectAll"
                                                     onchange="vicToggleSelectAllLeads(this.checked)" /></th>
                                             <th class="text-left p-2">Name</th>
+                                            <th class="text-left p-2">Title / role</th>
                                             <th class="text-left p-2">Email</th>
                                             <th class="text-left p-2">Company</th>
                                         </tr>
@@ -11079,7 +11118,6 @@
                     ? 'px-3 py-1 bg-orange-950 text-orange-400 text-xs rounded border border-orange-800 font-medium'
                     : 'px-3 py-1 bg-slate-950 text-slate-400 text-xs rounded border border-slate-800 font-medium hover:text-white';
             }
-
             const res = await executeSecureBridgeCall('assessment', 'assessment-certificates', {});
             let data = res.data || [];
 
@@ -24597,6 +24635,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         })();
     </script>
 
+
     <script>
         (function () {
             function toast(m, k) {
@@ -25622,6 +25661,316 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                         if (typeof adminDeleteEmailCampaign === "function") adminDeleteEmailCampaign(b.getAttribute("data-d"));
                     };
                 });
+            };
+        })();
+    </script>
+
+
+    <script>
+        (function () {
+            function toast(m, k) {
+                if (typeof showToast === "function") showToast(m, k || "info");
+                else console.log(m);
+            }
+            function bridge(system, action, payload) {
+                if (typeof executeSecureBridgeCall === "function") {
+                    return executeSecureBridgeCall(system, action, payload || {});
+                }
+                return Promise.reject(new Error("Bridge not ready"));
+            }
+            /** Resolve campaign id from send UI, attach UI, or dropdowns */
+            window.vicResolveCampaignId = function () {
+                function v(id) {
+                    var e = document.getElementById(id);
+                    return e ? String(e.value || "").trim() : "";
+                }
+                var id =
+                    v("emcSendId") ||
+                    v("emcActiveId") ||
+                    v("vicCampSendSelect") ||
+                    v("vicCampPickSelect") ||
+                    v("admEmCampId") ||
+                    v("emCampId");
+                // last resort: any visible input showing EMC-
+                if (!id) {
+                    document.querySelectorAll("input").forEach(function (inp) {
+                        var x = String(inp.value || "").trim();
+                        if (!id && /^EMC-/i.test(x)) id = x;
+                    });
+                }
+                return id;
+            };
+
+            window.adminStartEmailCampaign = async function () {
+                var id = vicResolveCampaignId();
+                if (!id) return toast("campaign id required — select a campaign first", "error");
+                // keep fields in sync
+                document.querySelectorAll('input[id="emcSendId"],input[id="emcActiveId"]').forEach(function (n) {
+                    n.value = id;
+                });
+                try {
+                    var res = await bridge("agent", "agent-set-email-campaign-status", { campaignId: id, status: "sending" });
+                    if (res && res.success === false) {
+                        res = await bridge("agent", "agent-start-email-campaign", { campaignId: id });
+                    }
+                    toast((res && res.message) || (res && res.success !== false ? "Status: sending" : "Failed"),
+                        res && res.success !== false ? "success" : "error");
+                    var msg = document.getElementById("emcBatchMsg");
+                    if (msg) msg.textContent = "Campaign " + id + " → sending. Click Send next batch.";
+                    if (typeof loadAdminEmailCampaigns === "function") loadAdminEmailCampaigns();
+                } catch (e) {
+                    toast(String(e.message || e), "error");
+                }
+            };
+
+            window.adminPauseEmailCampaign = async function () {
+                var id = vicResolveCampaignId();
+                if (!id) return toast("campaign id required — select a campaign first", "error");
+                try {
+                    var res = await bridge("agent", "agent-set-email-campaign-status", { campaignId: id, status: "paused" });
+                    if (res && res.success === false) {
+                        res = await bridge("agent", "agent-pause-email-campaign", { campaignId: id });
+                    }
+                    toast((res && res.message) || (res && res.success !== false ? "Paused" : "Failed"),
+                        res && res.success !== false ? "success" : "error");
+                    var msg = document.getElementById("emcBatchMsg");
+                    if (msg) msg.textContent = "Campaign " + id + " paused.";
+                } catch (e) {
+                    toast(String(e.message || e), "error");
+                }
+            };
+
+            window.adminProcessEmailBatch = async function () {
+                var id = vicResolveCampaignId();
+                if (!id) return toast("campaign id required — select a campaign first", "error");
+                document.querySelectorAll('input[id="emcSendId"],input[id="emcActiveId"]').forEach(function (n) {
+                    n.value = id;
+                });
+                var msg = document.getElementById("emcBatchMsg");
+                if (msg) msg.textContent = "Sending batch for " + id + "…";
+                try {
+                    var res = await bridge("agent", "agent-process-email-campaign-batch", {
+                        campaignId: id,
+                        limit: 20
+                    });
+                    var ok = res && res.success !== false;
+                    var text =
+                        (res && res.message) ||
+                        (ok
+                            ? ("Batch done. sent=" + (res.sent || res.sentCount || 0) +
+                                " failed=" + (res.failed || res.failedCount || 0) +
+                                " pending=" + (res.pending || res.pendingCount || "?"))
+                            : "Batch failed");
+                    toast(text, ok ? "success" : "error");
+                    if (msg) msg.textContent = text;
+                    if (typeof loadAdminEmailCampaigns === "function") loadAdminEmailCampaigns();
+                } catch (e) {
+                    toast(String(e.message || e), "error");
+                    if (msg) msg.textContent = String(e.message || e);
+                }
+            };
+
+            // Ensure dropdown change always fills emcSendId
+            window.vicOnCampSendChange = function (id) {
+                id = String(id || "").trim();
+                document.querySelectorAll('input[id="emcSendId"],input[id="emcActiveId"]').forEach(function (n) {
+                    n.value = id;
+                });
+            };
+            window.vicOnCampPickChange = function (id) {
+                id = String(id || "").trim();
+                document.querySelectorAll('input[id="emcSendId"],input[id="emcActiveId"]').forEach(function (n) {
+                    n.value = id;
+                });
+            };
+        })();
+    </script>
+
+
+    <script>
+        (function () {
+            function toast(m, k) {
+                if (typeof showToast === "function") showToast(m, k || "info");
+                else console.log(m);
+            }
+            function esc(s) {
+                return String(s == null ? "" : s)
+                    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+            }
+            function leadTitle(r) {
+                return String(r.title || r.position || r.jobTitle || r.seniority || "").trim();
+            }
+            /** Map free-text title to coarse role bucket */
+            function roleBucket(title) {
+                var t = String(title || "").toLowerCase();
+                if (!t) return "Other";
+                if (/\bceo\b|chief executive|managing director|\bmd\b/.test(t)) return "CEO";
+                if (/\bcoo\b|chief operating|chief operations|head of operations|operations officer/.test(t)) return "COO";
+                if (/\bcfo\b|chief financial|finance officer|evp\/cfo|evp\/cfo/.test(t)) return "CFO";
+                if (/\bcto\b|chief technology|chief technical|chief information|\bcio\b/.test(t)) return "CTO";
+                if (/\bpresident\b|co-president/.test(t)) return "President";
+                if (/\bfounder\b|\bowner\b|co-founder|co founder/.test(t)) return "Founder";
+                if (/\bvp\b|vice president|svp|evp/.test(t)) return "VP";
+                if (/\bdirector\b/.test(t)) return "Director";
+                if (/\bpartner\b|principal\b/.test(t)) return "Partner";
+                if (/\bmanager\b|head of\b/.test(t)) return "Manager";
+                if (/\bsales\b|business development|\bbd\b|revenue|growth/.test(t)) return "Sales";
+                return "Other";
+            }
+            function filteredLibraryRows() {
+                var rows = window.__vicOutreachLeads || [];
+                var role = "";
+                var se = document.getElementById("vicRoleFilter");
+                if (se) role = String(se.value || "").trim();
+                var q = "";
+                var qi = document.getElementById("vicRoleSearch");
+                if (qi) q = String(qi.value || "").toLowerCase().trim();
+                return rows.filter(function (r) {
+                    var title = leadTitle(r);
+                    var bucket = roleBucket(title);
+                    if (role && bucket !== role) return false;
+                    if (q && title.toLowerCase().indexOf(q) < 0 &&
+                        String(r.name || "").toLowerCase().indexOf(q) < 0 &&
+                        String(r.company || "").toLowerCase().indexOf(q) < 0) {
+                        return false;
+                    }
+                    return true;
+                });
+            }
+
+            window.vicApplyRoleFilter = function () {
+                var rows = filteredLibraryRows();
+                var all = window.__vicOutreachLeads || [];
+                var msg = document.getElementById("vicRoleFilterMsg");
+                if (msg) {
+                    msg.textContent = "Showing " + rows.length + " of " + all.length + " library lead(s)";
+                }
+                var tbody = document.getElementById("vicLeadsPickTable");
+                if (!tbody) return;
+                if (!rows.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="p-3 text-slate-500">No leads match this role filter</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = rows.map(function (r) {
+                    var em = esc(r.email || "");
+                    var title = leadTitle(r);
+                    var bucket = roleBucket(title);
+                    // index in full library for attach
+                    var fullIdx = all.indexOf(r);
+                    if (fullIdx < 0) {
+                        fullIdx = all.findIndex(function (x) {
+                            return String(x.email || "").toLowerCase() === String(r.email || "").toLowerCase();
+                        });
+                    }
+                    return '<tr class="border-t border-slate-800">' +
+                        '<td class="p-2"><input type="checkbox" class="vic-lead-pick" data-email="' + em +
+                        '" data-idx="' + fullIdx + '" data-role="' + esc(bucket) + '" /></td>' +
+                        '<td class="p-2">' + esc(r.name || "") + '</td>' +
+                        '<td class="p-2"><span class="text-slate-200">' + esc(title || "—") +
+                        '</span> <span class="text-[10px] text-slate-500">(' + esc(bucket) + ')</span></td>' +
+                        '<td class="p-2 font-mono text-[10px]">' + em + '</td>' +
+                        '<td class="p-2">' + esc(r.company || "") + '</td></tr>';
+                }).join("");
+            };
+
+            window.vicSelectVisibleLeads = function (on) {
+                document.querySelectorAll("#vicLeadsPickTable .vic-lead-pick").forEach(function (c) {
+                    c.checked = !!on;
+                });
+                var all = document.getElementById("vicLeadSelectAll");
+                if (all) all.checked = !!on;
+            };
+
+            window.vicToggleSelectAllLeads = function (on) {
+                vicSelectVisibleLeads(on);
+            };
+
+            var _loadAttach = window.vicLoadOutreachLeadsForAttach;
+            window.vicLoadOutreachLeadsForAttach = async function () {
+                if (typeof _loadAttach === "function") {
+                    try { await _loadAttach(); } catch (e) { console.warn(e); }
+                } else if (typeof vicLoadOutreachLeads === "function") {
+                    try { await vicLoadOutreachLeads(); } catch (e) { }
+                }
+                // ensure we have data
+                if (!(window.__vicOutreachLeads || []).length && typeof vicLoadOutreachLeads === "function") {
+                    try { await vicLoadOutreachLeads(); } catch (e) { }
+                }
+                vicApplyRoleFilter();
+            };
+
+            // Attach selected should use role-filtered checkboxes (already data-idx into full list)
+            var _sel = window.vicAttachSelectedLibraryLeads;
+            window.vicAttachSelectedLibraryLeads = async function () {
+                var id = (typeof vicResolveCampaignId === "function" && vicResolveCampaignId()) ||
+                    (document.getElementById("emcActiveId") && document.getElementById("emcActiveId").value) || "";
+                id = String(id || "").trim();
+                if (!id) return toast("Select a campaign first", "error");
+                var rows = window.__vicOutreachLeads || [];
+                var picked = [];
+                document.querySelectorAll("#vicLeadsPickTable .vic-lead-pick:checked").forEach(function (c) {
+                    var idx = Number(c.getAttribute("data-idx"));
+                    if (rows[idx]) picked.push(rows[idx]);
+                    else {
+                        var em = c.getAttribute("data-email");
+                        var hit = rows.filter(function (r) {
+                            return String(r.email || "").toLowerCase() === String(em || "").toLowerCase();
+                        })[0];
+                        if (hit) picked.push(hit);
+                    }
+                });
+                if (!picked.length) return toast("Select at least one lead (use role filter + Select visible)", "error");
+                try {
+                    var res = await executeSecureBridgeCall("agent", "agent-add-email-campaign-recipients", {
+                        campaignId: id,
+                        rows: picked.map(function (r) {
+                            return {
+                                email: r.email,
+                                name: r.name || "",
+                                company: r.company || "",
+                                title: leadTitle(r),
+                                leadId: r.leadId || "",
+                                owner: "victorias"
+                            };
+                        }),
+                        owner: "victorias"
+                    });
+                    toast((res && res.message) || ("Attached " + picked.length + " by role filter"),
+                        res && res.success !== false ? "success" : "error");
+                    if (typeof loadAdminEmailCampaigns === "function") loadAdminEmailCampaigns();
+                } catch (e) {
+                    toast(String(e.message || e), "error");
+                }
+            };
+
+            // Quick: attach only current role filter (all visible, not only checked)
+            window.vicAttachFilteredByRole = async function () {
+                var id = (typeof vicResolveCampaignId === "function" && vicResolveCampaignId()) ||
+                    (document.getElementById("emcActiveId") && document.getElementById("emcActiveId").value) || "";
+                id = String(id || "").trim();
+                if (!id) return toast("Select a campaign first", "error");
+                var rows = filteredLibraryRows();
+                if (!rows.length) return toast("No leads for this role filter", "error");
+                try {
+                    var res = await executeSecureBridgeCall("agent", "agent-add-email-campaign-recipients", {
+                        campaignId: id,
+                        rows: rows.map(function (r) {
+                            return {
+                                email: r.email,
+                                name: r.name || "",
+                                company: r.company || "",
+                                title: leadTitle(r),
+                                leadId: r.leadId || "",
+                                owner: "victorias"
+                            };
+                        }),
+                        owner: "victorias"
+                    });
+                    toast((res && res.message) || ("Attached " + rows.length + " matching role"),
+                        res && res.success !== false ? "success" : "error");
+                } catch (e) {
+                    toast(String(e.message || e), "error");
+                }
             };
         })();
     </script>
