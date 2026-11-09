@@ -1525,25 +1525,7 @@
                                             class="text-xs px-3 py-2 rounded-lg bg-indigo-600 text-white">Import CSV
                                             into campaign</button>
                                     </div>
-                                    <div class="border border-slate-800 rounded-lg p-3 space-y-2">
-                                        <p class="text-[11px] text-amber-400/90 font-semibold">Advanced (usually skip)
-                                        </p>
-                                        <p class="text-[10px] text-slate-500">Copy from a <em>client</em> CRM list only
-                                            if you intentionally reuse contacts. Prefer your own CSV for Victorias
-                                            outreach.</p>
-                                        <input id="emcClientId" placeholder="clientId (optional — mixes client data)"
-                                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-                                        <button type="button" onclick="adminImportEmailFromClientLeads()"
-                                            class="text-xs px-3 py-2 rounded-lg bg-slate-700 text-slate-200">Import from
-                                            client leads (not recommended)</button>
-                                    </div>
                                 </div>
-                                <textarea id="emcManualRecipients" rows="3"
-                                    placeholder="Optional paste: email,name per line  OR  JSON [{&quot;email&quot;:&quot;a@b.com&quot;,&quot;name&quot;:&quot;Ada&quot;}]"
-                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono"></textarea>
-                                <button type="button" onclick="adminImportEmailManual()"
-                                    class="text-xs px-3 py-2 rounded-lg bg-slate-700 text-white">Add pasted
-                                    recipients</button>
                                 <p id="emcImportMsg" class="text-[11px] text-slate-400"></p>
                             </div>
 
@@ -1551,15 +1533,15 @@
                             <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
                                 <h3 class="text-sm font-semibold text-white flex items-center gap-2"><span
                                         class="text-emerald-400 font-mono text-xs">3</span> Send HTML batches</h3>
-                                <p class="text-[11px] text-slate-500">Uses campaignId above. Sends ~20 per click (Gmail
-                                    HTML). Run again until pending = 0.</p>
+                                <p class="text-[11px] text-slate-500">Uses campaignId above. One click sends all
+                                    remaining (batched ~20 per round until pending = 0).</p>
                                 <div class="flex flex-wrap gap-2">
                                     <button type="button" onclick="adminStartEmailCampaign()"
                                         class="text-xs px-3 py-2 rounded-lg bg-amber-600 text-white">Start (status:
                                         sending)</button>
-                                    <button type="button" onclick="adminProcessEmailBatch()"
-                                        class="text-xs px-3 py-2 rounded-lg bg-orange-600 text-white font-semibold">Send
-                                        next batch</button>
+                                    <button type="button" onclick="adminProcessEmailBatch({ runAll: true })"
+                                        class="text-xs px-3 py-2 rounded-lg bg-orange-600 text-white font-semibold">Run
+                                        until done</button>
                                     <button type="button" onclick="adminPauseEmailCampaign()"
                                         class="text-xs px-3 py-2 rounded-lg bg-slate-700 text-white">Pause</button>
                                 </div>
@@ -1905,8 +1887,8 @@
                         <div class="max-w-xl w-full mx-auto space-y-4">
                             <div>
                                 <h2 class="text-lg font-bold text-white">Send batches</h2>
-                                <p class="text-xs text-slate-400">HTML via Gmail. ~20 per click. Run until pending is 0.
-                                </p>
+                                <p class="text-xs text-slate-400">HTML send. One click runs all batches until pending is
+                                    0.</p>
                             </div>
                             <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
                                 <div class="flex flex-wrap items-center justify-between gap-2">
@@ -1924,9 +1906,9 @@
                                     <button type="button" onclick="adminStartEmailCampaign()"
                                         class="text-xs px-3 py-2 rounded-lg bg-amber-600 text-white">Start
                                         (sending)</button>
-                                    <button type="button" onclick="adminProcessEmailBatch()"
-                                        class="text-xs px-3 py-2 rounded-lg bg-orange-600 text-white font-semibold">Send
-                                        next batch</button>
+                                    <button type="button" onclick="adminProcessEmailBatch({ runAll: true })"
+                                        class="text-xs px-3 py-2 rounded-lg bg-orange-600 text-white font-semibold">Run
+                                        until done</button>
                                     <button type="button" onclick="adminPauseEmailCampaign()"
                                         class="text-xs px-3 py-2 rounded-lg bg-slate-700 text-white">Pause</button>
                                 </div>
@@ -7524,7 +7506,7 @@
                 <div class="pt-2 border-t border-slate-800">
                     <label class="block text-xs text-slate-400 mb-1">— OR — Fully bespoke package <span
                             class="text-slate-600">(instead of standard tiers, not in addition)</span></label>
-                    <select id="agentTier" onchange="onAgentRegisterTiersChange()"
+                    <select id="agentTier"
                         class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500">
                         <option value="">— Not custom —</option>
                         <option value="custom">Custom Tier (Bespoke)</option>
@@ -9237,7 +9219,7 @@
          view-publish-settings). -->
 
     <script>
-        let WEBAPP_URL = localStorage.getItem('api.thevictorias.com.ng');
+        let WEBAPP_URL = (function () { try { return localStorage.getItem('VIC_WEBAPP_URL') || 'https://app.thevictorias.com.ng'; } catch (_) { return 'https://app.thevictorias.com.ng'; } })();
         let SESSION_MASTER_TOKEN = localStorage.getItem('VIC_MASTER_TOKEN') || "";
         let CURRENT_ADMIN_IDENTITY = localStorage.getItem('VIC_ADMIN_EMAIL') || "Unauthenticated Session";
 
@@ -11118,6 +11100,7 @@
                     ? 'px-3 py-1 bg-orange-950 text-orange-400 text-xs rounded border border-orange-800 font-medium'
                     : 'px-3 py-1 bg-slate-950 text-slate-400 text-xs rounded border border-slate-800 font-medium hover:text-white';
             }
+
             const res = await executeSecureBridgeCall('assessment', 'assessment-certificates', {});
             let data = res.data || [];
 
@@ -13879,7 +13862,6 @@
                         var el = document.getElementById(id);
                         if (el) el.classList.add('hidden');
                     });
-                    if (typeof onAgentRegisterTiersChange === 'function') onAgentRegisterTiersChange();
                 } catch (inner) {
                     console.warn('register modal field init', inner);
                 }
@@ -14590,19 +14572,7 @@
             }
         }
 
-        function _setClientAddonsWithEffects(payload) {
-            const { clientId, addons } = payload;
 
-            const client = _getClient({ clientId });
-            const previousAddons = client.success ? _parseAddonsJson(client.client.Addons) : [];
-            const previousKeys = new Set(previousAddons.filter(a => a.status === "Active").map(a => a.catalogKey));
-            const newKeys = new Set(addons.filter(a => a.status === "Active").map(a => a.catalogKey));
-
-            newKeys.forEach(key => { if (!previousKeys.has(key)) _applyAddonEffect(clientId, key, "add"); });
-            previousKeys.forEach(key => { if (!newKeys.has(key)) _applyAddonEffect(clientId, key, "remove"); });
-
-            return _setClientAddons(payload);
-        }
 
         async function loadSignupCodes() {
             const tbody = document.getElementById('signupCodesTableBody');
@@ -17446,8 +17416,6 @@ ${a.Status === 'Pending Review' ? `
                 <details class="ds-review-section border border-slate-800 rounded-lg bg-slate-900/50">
                     <summary class="cursor-pointer select-none px-3 py-2 text-[11px] font-medium text-slate-200 flex items-center justify-between">
                         <span><i class="fa-solid fa-code text-slate-500 mr-1"></i> Clone template (designCode JSON)</span>
-                        <button type="button" onclick="event.preventDefault(); event.stopPropagation(); dsReviewFormatJson();"
-                            class="text-[10px] text-slate-400 hover:text-emerald-400 font-normal">Format JSON</button>
                     </summary>
                     <div class="px-3 pb-3 border-t border-slate-800/80 space-y-2">
                         <p class="text-[10px] text-slate-600 mt-2">Advanced: edit the full clone program. Worker builds from this JSON when confirmed.</p>
@@ -18054,32 +18022,7 @@ ${a.Status === 'Pending Review' ? `
                 return null;
             }
         }
-        async function saveAdminClientBusinessAbout(clientId) {
-            var cid = clientId || adminCurrentClientId();
-            var hint = document.getElementById('adminBusinessAboutHint');
-            var ta = document.getElementById('editClientAbout');
-            if (!cid) {
-                if (typeof showToast === 'function') showToast('Select a client first', 'info');
-                return;
-            }
-            var about = ta ? ta.value : '';
-            if (hint) hint.textContent = 'Saving…';
-            try {
-                var res = await callGateway('agent', 'agent-set-business-about', { clientId: cid, about: about });
-                if (res && res.success) {
-                    if (hint) hint.textContent = 'Saved';
-                    if (typeof showToast === 'function') showToast(res.message || 'Business about saved', 'success');
-                } else {
-                    if (hint) hint.textContent = 'Save failed';
-                    if (typeof showToast === 'function') showToast((res && res.message) || 'Could not save', 'info');
-                }
-                return res;
-            } catch (e) {
-                if (hint) hint.textContent = 'Save failed';
-                if (typeof showToast === 'function') showToast(String(e.message || e), 'info');
-                return null;
-            }
-        }
+
 
         async function saveAdminClientSignatory() {
             const clientId = document.getElementById('adminSigClientId')?.value || document.getElementById('dsUploadClientId')?.value;
@@ -20672,20 +20615,7 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
             return 'text-slate-400';
         }
 
-        async function startHubSpotAuth(clientId) {
-            clientId = clientId || getIntegrationsClientId(); // same helper Zoho/Salesforce use
-            if (!clientId) { showToast('Select a client first.', 'error'); return; }
-            const btn = document.getElementById('hubspotAuthBtn'); // use your real button id
-            if (typeof setBtnBusy === 'function') setBtnBusy(btn, true, { busyLabel: 'Opening…' });
-            const res = await executeSecureBridgeCall('agent', 'agent-start-hubspot-auth', { clientId }, { silent: true });
-            if (typeof setBtnBusy === 'function') setBtnBusy(btn, false);
-            if (res && res.success && res.authUrl) {
-                window.open(res.authUrl, '_blank', 'noopener');
-                showToast('Complete HubSpot authorization in the new tab.', 'success');
-            } else {
-                showToast((res && res.message) || 'Could not start HubSpot auth.', 'error');
-            }
-        }
+
 
 
         const ADMIN_SERVICE_FLAG_LABELS = {
@@ -25716,7 +25646,8 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                     toast((res && res.message) || (res && res.success !== false ? "Status: sending" : "Failed"),
                         res && res.success !== false ? "success" : "error");
                     var msg = document.getElementById("emcBatchMsg");
-                    if (msg) msg.textContent = "Campaign " + id + " → sending. Click Send next batch.";
+                    if (msg) msg.textContent = "Campaign " + id + " → sending. Starting full run…";
+                    try { await window.adminProcessEmailBatch({ runAll: true }); } catch (_e) { }
                     if (typeof loadAdminEmailCampaigns === "function") loadAdminEmailCampaigns();
                 } catch (e) {
                     toast(String(e.message || e), "error");
@@ -25740,33 +25671,77 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
                 }
             };
 
-            window.adminProcessEmailBatch = async function () {
-                var id = vicResolveCampaignId();
+            window.__emcRunAllLock = window.__emcRunAllLock || false;
+            window.adminProcessEmailBatch = async function (opts) {
+                opts = opts || {};
+                var runAll = opts.runAll !== false; // default: keep going until pending = 0
+                var id = (typeof vicResolveCampaignId === "function" ? vicResolveCampaignId() : "") ||
+                    (document.getElementById("emcSendId") && document.getElementById("emcSendId").value) ||
+                    (document.getElementById("admEmCampId") && document.getElementById("admEmCampId").value) ||
+                    (document.getElementById("emCampId") && document.getElementById("emCampId").value) || "";
+                id = String(id || "").trim();
                 if (!id) return toast("campaign id required — select a campaign first", "error");
+                if (window.__emcRunAllLock) {
+                    return toast("Already sending this campaign — wait until it finishes", "info");
+                }
                 document.querySelectorAll('input[id="emcSendId"],input[id="emcActiveId"]').forEach(function (n) {
                     n.value = id;
                 });
                 var msg = document.getElementById("emcBatchMsg");
-                if (msg) msg.textContent = "Sending batch for " + id + "…";
+                window.__emcRunAllLock = true;
+                var totalSent = 0, totalFailed = 0, rounds = 0;
+                var maxRounds = Number(opts.maxRounds) || 200; // safety cap
                 try {
-                    var res = await bridge("agent", "agent-process-email-campaign-batch", {
-                        campaignId: id,
-                        limit: 20
-                    });
-                    var ok = res && res.success !== false;
-                    var text =
-                        (res && res.message) ||
-                        (ok
-                            ? ("Batch done. sent=" + (res.sent || res.sentCount || 0) +
-                                " failed=" + (res.failed || res.failedCount || 0) +
-                                " pending=" + (res.pending || res.pendingCount || "?"))
-                            : "Batch failed");
-                    toast(text, ok ? "success" : "error");
-                    if (msg) msg.textContent = text;
+                    if (msg) msg.textContent = "Starting full send for " + id + " (runs until pending = 0)…";
+                    toast("Sending campaign " + id + " — will continue until pending is 0", "info");
+                    while (rounds < maxRounds) {
+                        rounds++;
+                        if (msg) msg.textContent = "Round " + rounds + " — sending batch…";
+                        var res = await bridge("agent", "agent-process-email-campaign-batch", {
+                            campaignId: id,
+                            limit: Number(opts.limit) || 20
+                        });
+                        var ok = res && res.success !== false;
+                        if (!ok) {
+                            var errText = (res && res.message) || "Batch failed";
+                            toast(errText, "error");
+                            if (msg) msg.textContent = errText;
+                            break;
+                        }
+                        var sent = Number(res.sent || res.sentCount || 0);
+                        var failed = Number(res.failed || res.failedCount || 0);
+                        var pending = res.pending != null ? Number(res.pending) : (res.pendingCount != null ? Number(res.pendingCount) : null);
+                        var claimed = Number(res.claimed || 0);
+                        totalSent += sent;
+                        totalFailed += failed;
+                        var line = "Round " + rounds + ": sent " + sent + ", failed " + failed +
+                            (pending != null ? ", pending " + pending : "") +
+                            " | totals sent " + totalSent + " failed " + totalFailed;
+                        if (msg) msg.textContent = line;
+                        // Stop when nothing left to claim
+                        if (claimed === 0 || (pending != null && pending <= 0) || (sent === 0 && failed === 0 && claimed === 0)) {
+                            var done = "Done. Total sent " + totalSent + ", failed " + totalFailed +
+                                (pending != null ? ", pending " + pending : "");
+                            toast(done, totalFailed && !totalSent ? "error" : "success");
+                            if (msg) msg.textContent = done;
+                            break;
+                        }
+                        if (!runAll) {
+                            toast(line, "success");
+                            break;
+                        }
+                        // brief pause between rounds (rate limit / UI breath)
+                        await new Promise(function (r) { setTimeout(r, 800); });
+                    }
+                    if (rounds >= maxRounds) {
+                        toast("Stopped after " + maxRounds + " rounds (safety). Click Start again if pending remains.", "info");
+                    }
                     if (typeof loadAdminEmailCampaigns === "function") loadAdminEmailCampaigns();
                 } catch (e) {
                     toast(String(e.message || e), "error");
                     if (msg) msg.textContent = String(e.message || e);
+                } finally {
+                    window.__emcRunAllLock = false;
                 }
             };
 
@@ -25975,6 +25950,21 @@ ${i.type === 'email' ? `<button onclick="openSendViaIntegrationModal('${escapeHt
         })();
     </script>
 
+    <script>
+        /* Duplicate IDs (email campaign screens reuse the same ids): return the visible instance. */
+        (function () {
+            var DUP = { emcActiveId: 1, emcCsvFile: 1, emcImportMsg: 1, emcBatchMsg: 1, emcTable: 1 };
+            var orig = document.getElementById.bind(document);
+            document.getElementById = function (id) {
+                if (DUP[id]) {
+                    var all = document.querySelectorAll('[id="' + id + '"]');
+                    for (var i = 0; i < all.length; i++) { if (all[i].offsetParent !== null) return all[i]; }
+                    return all[0] || null;
+                }
+                return orig(id);
+            };
+        })();
+    </script>
 </body>
 
 </html>
